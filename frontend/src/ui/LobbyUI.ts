@@ -192,7 +192,9 @@ export class LobbyUI {
               <option value="2">2 Bots</option>
               <option value="3">3 Bots</option>
               <option value="4">4 Bots</option>
+              <option value="5">5 Bots</option>
               <option value="6">6 Bots</option>
+              <option value="7">7 Bots</option>
             </select>
           </div>
           <div class="form-group" id="bot-difficulty-row" style="display:none;">
