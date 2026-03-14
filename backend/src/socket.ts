@@ -3,8 +3,8 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { getConfig } from './config';
 import { logger } from './utils/logger';
-import { sanitizeChatMessage } from './utils/sanitize';
 import * as lobbyService from './services/lobby';
+import { RoomManager } from './game/RoomManager';
 import {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -12,17 +12,20 @@ import {
   SocketData,
   AuthPayload,
   PublicUser,
+  COUNTDOWN_SECONDS,
 } from '@blast-arena/shared';
 
 export function createSocketServer(httpServer: HttpServer): Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData> {
   const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(httpServer, {
     cors: {
-      origin: process.env.APP_URL || 'http://localhost:8080',
+      origin: true,
       credentials: true,
     },
     pingInterval: 25000,
     pingTimeout: 60000,
   });
+
+  const roomManager = new RoomManager(io as any);
 
   // Auth middleware
   io.use((socket, next) => {
@@ -80,6 +83,12 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
       const roomCode = await lobbyService.getPlayerRoom(socket.data.userId);
       if (!roomCode) return;
 
+      // If game is running, notify the game room
+      const gameRoom = roomManager.getRoom(roomCode);
+      if (gameRoom) {
+        gameRoom.handlePlayerDisconnect(socket.data.userId);
+      }
+
       const room = await lobbyService.leaveRoom(roomCode, socket.data.userId);
       socket.leave(`room:${roomCode}`);
       if (room) {
@@ -122,37 +131,52 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
         return;
       }
 
-      if (room.players.length < 2) {
+      const totalPlayers = room.players.length + (room.config.botCount || 0);
+      if (totalPlayers < 2) {
         socket.emit('error', { message: 'Need at least 2 players' });
+        return;
+      }
+
+      // Prevent double-start
+      if (roomManager.getRoom(roomCode)) {
+        socket.emit('error', { message: 'Game already starting' });
         return;
       }
 
       // Start countdown
       await lobbyService.updateRoomStatus(roomCode, 'countdown');
-      io.to(`room:${roomCode}`).emit('room:countdown', { seconds: 3 });
+      io.to(`room:${roomCode}`).emit('room:countdown', { seconds: COUNTDOWN_SECONDS });
+      logger.info({ roomCode }, 'Game countdown started');
 
-      // TODO: After countdown, create GameRoom and start game loop
-      logger.info({ roomCode }, 'Game starting (countdown)');
+      // After countdown, create GameRoom and start game loop
+      setTimeout(async () => {
+        try {
+          // Re-fetch room to get latest state
+          const currentRoom = await lobbyService.getRoom(roomCode);
+          if (!currentRoom) {
+            logger.warn({ roomCode }, 'Room disappeared during countdown');
+            return;
+          }
+
+          const gameRoom = await roomManager.createGame(currentRoom);
+          logger.info({ roomCode, players: currentRoom.players.length }, 'Game started');
+        } catch (err) {
+          logger.error({ err, roomCode }, 'Failed to start game');
+          io.to(`room:${roomCode}`).emit('error', { message: 'Failed to start game' });
+          await lobbyService.updateRoomStatus(roomCode, 'waiting');
+        }
+      }, COUNTDOWN_SECONDS * 1000);
     });
 
     // Game input
-    socket.on('game:input', (input) => {
-      // TODO: Forward to game room's input buffer
-    });
-
-    // Chat
-    socket.on('chat:message', async (data) => {
+    socket.on('game:input', async (input) => {
       const roomCode = await lobbyService.getPlayerRoom(socket.data.userId);
       if (!roomCode) return;
 
-      const sanitized = sanitizeChatMessage(data.message);
-      if (!sanitized) return;
-
-      io.to(`room:${roomCode}`).emit('chat:message', {
-        user: currentUser,
-        message: sanitized,
-        timestamp: Date.now(),
-      });
+      const gameRoom = roomManager.getRoom(roomCode);
+      if (gameRoom) {
+        gameRoom.handleInput(socket.data.userId, input);
+      }
     });
 
     // Disconnect
@@ -161,6 +185,12 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
 
       const roomCode = await lobbyService.getPlayerRoom(socket.data.userId);
       if (roomCode) {
+        // If game is running, notify game room
+        const gameRoom = roomManager.getRoom(roomCode);
+        if (gameRoom) {
+          gameRoom.handlePlayerDisconnect(socket.data.userId);
+        }
+
         const room = await lobbyService.leaveRoom(roomCode, socket.data.userId);
         if (room) {
           io.to(`room:${roomCode}`).emit('room:playerLeft', socket.data.userId);
@@ -169,6 +199,11 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
       }
     });
   });
+
+  // Periodic cleanup of finished game rooms
+  setInterval(() => {
+    roomManager.cleanup();
+  }, 30000);
 
   return io;
 }

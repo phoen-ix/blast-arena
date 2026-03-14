@@ -8,7 +8,7 @@ export function createApp(): express.Express {
   const app = express();
 
   app.use(cors({
-    origin: process.env.APP_URL || 'http://localhost:8080',
+    origin: true,
     credentials: true,
   }));
   app.use(express.json({ limit: '1mb' }));

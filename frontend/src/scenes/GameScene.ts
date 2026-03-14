@@ -1,12 +1,16 @@
 import Phaser from 'phaser';
 import { SocketClient } from '../network/SocketClient';
+import { AuthManager } from '../network/AuthManager';
 import { GameState, PlayerState, BombState, ExplosionState, PowerUpState, TileType } from '@blast-arena/shared';
-import { TILE_SIZE } from '@blast-arena/shared';
+import { TILE_SIZE, TICK_MS } from '@blast-arena/shared';
 
 export class GameScene extends Phaser.Scene {
   private socketClient!: SocketClient;
+  private authManager!: AuthManager;
+  private localPlayerId!: number;
   private tileMap!: Phaser.GameObjects.Group;
   private playerSprites: Map<number, Phaser.GameObjects.Sprite> = new Map();
+  private playerLabels: Map<number, Phaser.GameObjects.Text> = new Map();
   private bombSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   private explosionSprites: Map<string, Phaser.GameObjects.Sprite[]> = new Map();
   private powerUpSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
@@ -16,6 +20,7 @@ export class GameScene extends Phaser.Scene {
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private lastInputSeq: number = 0;
   private lastGameState: GameState | null = null;
+  private lastInputTime: number = 0;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -23,7 +28,11 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.socketClient = this.registry.get('socketClient');
+    this.authManager = this.registry.get('authManager');
+    this.localPlayerId = this.authManager.getUser()?.id ?? 0;
     const initialState: GameState = this.registry.get('initialGameState');
+
+    console.log('[GameScene] create() called, initialState:', initialState ? `${initialState.players.length} players, map ${initialState.map.width}x${initialState.map.height}` : 'NULL');
 
     // Setup input
     if (this.input.keyboard) {
@@ -45,32 +54,51 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Listen for state updates
-    this.socketClient.on('game:state', (state: GameState) => {
+    this.socketClient.on('game:state', ((state: GameState) => {
       this.updateState(state);
-    });
+    }) as any);
 
-    this.socketClient.on('game:over', (data: any) => {
+    this.socketClient.on('game:over', ((data: any) => {
       this.registry.set('gameOverData', data);
       this.scene.stop('HUDScene');
       this.scene.start('GameOverScene');
-    });
+    }) as any);
 
-    // Center camera
+    // Camera setup: bounds to full map, follow local player
     if (initialState) {
-      this.cameras.main.setBounds(
-        0, 0,
-        initialState.map.width * TILE_SIZE,
-        initialState.map.height * TILE_SIZE
-      );
+      const worldW = initialState.map.width * TILE_SIZE;
+      const worldH = initialState.map.height * TILE_SIZE;
+      this.cameras.main.setBounds(0, 0, worldW, worldH);
+
+      // If map fits on screen, center it; otherwise camera will follow player in update()
+      const cam = this.cameras.main;
+      if (worldW <= cam.width && worldH <= cam.height) {
+        cam.centerOn(worldW / 2, worldH / 2);
+      }
     }
   }
 
   update(): void {
     this.processInput();
+    this.updateCamera();
+  }
+
+  private updateCamera(): void {
+    const sprite = this.playerSprites.get(this.localPlayerId);
+    if (!sprite) return;
+
+    const cam = this.cameras.main;
+    // Smooth lerp toward player position
+    cam.scrollX = Phaser.Math.Linear(cam.scrollX, sprite.x - cam.width / 2, 0.15);
+    cam.scrollY = Phaser.Math.Linear(cam.scrollY, sprite.y - cam.height / 2, 0.15);
   }
 
   private processInput(): void {
     if (!this.cursors) return;
+
+    // Rate-limit input to match server tick rate (no point sending faster)
+    const now = Date.now();
+    if (now - this.lastInputTime < TICK_MS) return;
 
     let direction: string | null = null;
     let action: string | null = null;
@@ -83,6 +111,7 @@ export class GameScene extends Phaser.Scene {
     if (this.spaceKey?.isDown) action = 'bomb';
 
     if (direction || action) {
+      this.lastInputTime = now;
       this.lastInputSeq++;
       this.socketClient.emit('game:input', {
         seq: this.lastInputSeq,
@@ -156,43 +185,77 @@ export class GameScene extends Phaser.Scene {
       if (!activeIds.has(id)) {
         sprite.destroy();
         this.playerSprites.delete(id);
+        const label = this.playerLabels.get(id);
+        if (label) {
+          label.destroy();
+          this.playerLabels.delete(id);
+        }
       }
     }
 
     // Update/create players
     players.forEach((player, index) => {
+      const targetX = player.position.x * TILE_SIZE + TILE_SIZE / 2;
+      const targetY = player.position.y * TILE_SIZE + TILE_SIZE / 2;
+
       if (!player.alive) {
+        // Remove dead players from the scene entirely
         const existing = this.playerSprites.get(player.id);
         if (existing) {
-          existing.setAlpha(0.3);
+          existing.destroy();
+          this.playerSprites.delete(player.id);
+        }
+        const existingLabel = this.playerLabels.get(player.id);
+        if (existingLabel) {
+          existingLabel.destroy();
+          this.playerLabels.delete(player.id);
         }
         return;
       }
 
       let sprite = this.playerSprites.get(player.id);
       if (!sprite) {
-        sprite = this.add.sprite(
-          player.position.x * TILE_SIZE + TILE_SIZE / 2,
-          player.position.y * TILE_SIZE + TILE_SIZE / 2,
-          `player_${index % 8}`
-        );
+        const colors = [0xe94560, 0x44aaff, 0x44ff44, 0xff8800, 0xcc44ff, 0xffff44, 0xff44ff, 0x44ffff];
+        const textureKey = `player_${index % 8}`;
+        if (this.textures.exists(textureKey)) {
+          sprite = this.add.sprite(targetX, targetY, textureKey);
+        } else {
+          // Generate a texture for this player color so sprite moves properly
+          const genKey = `player_gen_${index % 8}`;
+          if (!this.textures.exists(genKey)) {
+            const gfx = this.add.graphics();
+            gfx.fillStyle(colors[index % 8], 1);
+            gfx.fillRoundedRect(0, 0, TILE_SIZE - 4, TILE_SIZE - 4, 4);
+            gfx.generateTexture(genKey, TILE_SIZE - 4, TILE_SIZE - 4);
+            gfx.destroy();
+          }
+          sprite = this.add.sprite(targetX, targetY, genKey);
+        }
         sprite.setDepth(10);
+        sprite.setDisplaySize(TILE_SIZE - 4, TILE_SIZE - 4);
         this.playerSprites.set(player.id, sprite);
+        console.log(`[GameScene] Created player sprite for ${player.displayName} (id=${player.id}) at tile (${player.position.x}, ${player.position.y})`);
 
         // Add name label
-        this.add.text(
-          player.position.x * TILE_SIZE + TILE_SIZE / 2,
-          player.position.y * TILE_SIZE - 4,
-          player.displayName,
-          { fontSize: '11px', color: '#fff' }
-        ).setOrigin(0.5, 1).setDepth(11);
+        const label = this.add.text(targetX, targetY - TILE_SIZE / 2 - 2, player.displayName, {
+          fontSize: '11px',
+          color: '#fff',
+          stroke: '#000',
+          strokeThickness: 2,
+        }).setOrigin(0.5, 1).setDepth(11);
+        this.playerLabels.set(player.id, label);
       }
 
       // Interpolate position
-      const targetX = player.position.x * TILE_SIZE + TILE_SIZE / 2;
-      const targetY = player.position.y * TILE_SIZE + TILE_SIZE / 2;
       sprite.x = Phaser.Math.Linear(sprite.x, targetX, 0.3);
       sprite.y = Phaser.Math.Linear(sprite.y, targetY, 0.3);
+
+      // Update label position to follow sprite
+      const label = this.playerLabels.get(player.id);
+      if (label) {
+        label.x = sprite.x;
+        label.y = sprite.y - TILE_SIZE / 2 - 2;
+      }
     });
   }
 
@@ -292,11 +355,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    // Clean up socket listeners to prevent leaks
+    this.socketClient.off('game:state' as any);
+    this.socketClient.off('game:over' as any);
+
     this.playerSprites.forEach(s => s.destroy());
+    this.playerLabels.forEach(s => s.destroy());
     this.bombSprites.forEach(s => s.destroy());
     this.explosionSprites.forEach(sprites => sprites.forEach(s => s.destroy()));
     this.powerUpSprites.forEach(s => s.destroy());
     this.playerSprites.clear();
+    this.playerLabels.clear();
     this.bombSprites.clear();
     this.explosionSprites.clear();
     this.powerUpSprites.clear();

@@ -1,5 +1,5 @@
 import { GameMap, TileType, Position } from '@blast-arena/shared';
-import { DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, DESTRUCTIBLE_FILL_RATE, SPAWN_CLEAR_RADIUS } from '@blast-arena/shared';
+import { DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, DEFAULT_WALL_DENSITY, SPAWN_CLEAR_RADIUS } from '@blast-arena/shared';
 
 // Simple seeded random number generator
 class SeededRandom {
@@ -15,7 +15,7 @@ class SeededRandom {
   }
 }
 
-export function generateMap(width: number = DEFAULT_MAP_WIDTH, height: number = DEFAULT_MAP_HEIGHT, seed?: number): GameMap {
+export function generateMap(width: number = DEFAULT_MAP_WIDTH, height: number = DEFAULT_MAP_HEIGHT, seed?: number, wallDensity: number = DEFAULT_WALL_DENSITY): GameMap {
   const mapSeed = seed ?? Math.floor(Math.random() * 2147483647);
   const rng = new SeededRandom(mapSeed);
 
@@ -44,15 +44,18 @@ export function generateMap(width: number = DEFAULT_MAP_WIDTH, height: number = 
   }
 
   // Define spawn points at corners and edges
+  // Ensure mid-points are on odd coordinates to avoid indestructible wall grid
+  const midX = Math.floor(width / 2) % 2 === 0 ? Math.floor(width / 2) - 1 : Math.floor(width / 2);
+  const midY = Math.floor(height / 2) % 2 === 0 ? Math.floor(height / 2) - 1 : Math.floor(height / 2);
   const spawnPoints: Position[] = [
     { x: 1, y: 1 },                          // top-left
     { x: width - 2, y: 1 },                  // top-right
     { x: 1, y: height - 2 },                 // bottom-left
     { x: width - 2, y: height - 2 },         // bottom-right
-    { x: Math.floor(width / 2), y: 1 },      // top-center
-    { x: Math.floor(width / 2), y: height - 2 }, // bottom-center
-    { x: 1, y: Math.floor(height / 2) },     // left-center
-    { x: width - 2, y: Math.floor(height / 2) }, // right-center
+    { x: midX, y: 1 },                       // top-center
+    { x: midX, y: height - 2 },              // bottom-center
+    { x: 1, y: midY },                       // left-center
+    { x: width - 2, y: midY },               // right-center
   ];
 
   // Mark spawn points
@@ -82,7 +85,7 @@ export function generateMap(width: number = DEFAULT_MAP_WIDTH, height: number = 
       if (tiles[y][x] !== 'empty') continue;
       if (clearCells.has(`${x},${y}`)) continue;
 
-      if (rng.next() < DESTRUCTIBLE_FILL_RATE) {
+      if (rng.next() < wallDensity) {
         tiles[y][x] = 'destructible';
       }
     }

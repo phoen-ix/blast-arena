@@ -70,7 +70,7 @@ router.post('/auth/login',
       const config = getConfig();
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: config.NODE_ENV === 'production',
+        secure: config.APP_URL.startsWith('https'),
         sameSite: 'strict',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: '/api/auth',
@@ -109,7 +109,7 @@ router.post('/auth/refresh', async (req, res, next) => {
     const config = getConfig();
     res.cookie('refreshToken', newRefreshToken, {
       httpOnly: true,
-      secure: config.NODE_ENV === 'production',
+      secure: config.APP_URL.startsWith('https'),
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/api/auth',

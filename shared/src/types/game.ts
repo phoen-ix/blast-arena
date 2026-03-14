@@ -29,6 +29,7 @@ export interface PlayerState {
   hasKick: boolean;
   team: number | null;
   direction: Direction;
+  isBot: boolean;
 }
 
 export interface BombState {
@@ -71,6 +72,7 @@ export interface GameState {
   status: 'countdown' | 'playing' | 'finished';
   winnerId: number | null;
   winnerTeam: number | null;
+  roundTime: number;
   timeElapsed: number;
 }
 

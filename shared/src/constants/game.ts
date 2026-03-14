@@ -5,7 +5,8 @@ export const TILE_SIZE = 48; // pixels
 // Map defaults
 export const DEFAULT_MAP_WIDTH = 15;
 export const DEFAULT_MAP_HEIGHT = 13;
-export const DESTRUCTIBLE_FILL_RATE = 0.65;
+export const DEFAULT_WALL_DENSITY = 0.65;
+export const DEFAULT_POWERUP_DROP_RATE = 0.3;
 export const SPAWN_CLEAR_RADIUS = 2;
 
 // Player defaults
@@ -15,6 +16,10 @@ export const DEFAULT_FIRE_RANGE = 1;
 export const MAX_SPEED = 5;
 export const MAX_BOMBS = 8;
 export const MAX_FIRE_RANGE = 8;
+
+// Movement cooldown (in ticks) - higher = slower
+// At speed 1: 5 ticks (4 moves/sec), speed 5: 1 tick (20 moves/sec)
+export const MOVE_COOLDOWN_BASE = 5;
 
 // Timings (in ticks at 20 tps)
 export const BOMB_TIMER_TICKS = 60; // 3 seconds

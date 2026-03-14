@@ -21,9 +21,20 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ## Key Patterns
 - Server-authoritative game logic; client only renders + sends inputs
 - Grid-based movement: players occupy exactly one tile at a time
+- Movement cooldown system (MOVE_COOLDOWN_BASE ticks, reduced by speed power-ups)
 - JWT (access token in memory) + httpOnly cookie (refresh token) auth
+- Cookie `secure` flag derived from APP_URL (not NODE_ENV) for HTTP/HTTPS compatibility
 - Zod for request validation
 - All game constants in shared/src/constants/
+- Socket.io listeners use one-shot pattern for game:start to prevent leaks across scene transitions
+- Bot players use negative IDs (-(i+1)) to avoid DB conflicts; skipped in DB writes
+- Map dimensions should be odd numbers for proper indestructible wall grid pattern
+
+## Game Architecture
+- 20 tick/sec server game loop (GameLoop.ts -> GameState.ts)
+- GameState.processTick(): bot AI -> inputs -> movement -> bombs -> explosions -> collisions -> power-ups -> zone -> win check
+- BotAI: danger detection, flee to safe tiles, place bombs near destructible walls
+- Camera follows local player with smooth lerp when map exceeds viewport
 
 ## Testing
 ```bash
@@ -34,3 +45,4 @@ npm test
 - Production: `docker compose up --build -d`
 - Only nginx exposes a port (APP_EXTERNAL_PORT, default 8080)
 - Data persists in ./data/ (bind mounts)
+- Nginx serves no-cache headers for index.html to prevent stale frontend after deploys

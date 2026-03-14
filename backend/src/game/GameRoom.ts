@@ -28,14 +28,31 @@ export class GameRoom {
       room.config.mapHeight || modeConfig.defaultMapHeight,
       room.config.mapSeed,
       room.config.gameMode,
-      modeConfig.hasZone || false
+      modeConfig.hasZone || false,
+      room.config.roundTime || modeConfig.roundTimeSeconds,
+      room.config.wallDensity ?? 0.65,
+      room.config.enabledPowerUps,
+      room.config.powerUpDropRate ?? 0.3
     );
 
-    // Add players
-    room.players.forEach((rp: any, index: number) => {
-      const team = modeConfig.teamsCount ? (index % modeConfig.teamsCount) : null;
-      this.gameState.addPlayer(rp.user.id, rp.user.username, rp.user.displayName, team);
+    // Add human players
+    let playerIndex = 0;
+    room.players.forEach((rp: any) => {
+      const team = modeConfig.teamsCount ? (playerIndex % modeConfig.teamsCount) : null;
+      this.gameState.addPlayer(rp.user.id, rp.user.username, rp.user.displayName, team, false);
+      playerIndex++;
     });
+
+    // Add bots
+    const botCount = room.config.botCount || 0;
+    const botNames = ['Bomber Bot', 'Blast Bot', 'Kaboom', 'TNT', 'Dynamite', 'Sparky'];
+    for (let i = 0; i < botCount; i++) {
+      const botId = -(i + 1); // Negative IDs for bots
+      const botName = botNames[i % botNames.length];
+      const team = modeConfig.teamsCount ? (playerIndex % modeConfig.teamsCount) : null;
+      this.gameState.addPlayer(botId, `bot_${i}`, botName, team, true);
+      playerIndex++;
+    }
 
     this.gameLoop = new GameLoop(
       this.gameState,
@@ -61,8 +78,9 @@ export class GameRoom {
       );
       this.matchId = result.insertId;
 
-      // Insert match_players
+      // Insert match_players (skip bots)
       for (const player of this.gameState.players.values()) {
+        if (player.isBot) continue;
         await execute(
           'INSERT INTO match_players (match_id, user_id, team) VALUES (?, ?, ?)',
           [this.matchId, player.id, player.team]
@@ -74,6 +92,20 @@ export class GameRoom {
 
     // Broadcast initial state
     const initialState = this.gameState.toState();
+    logger.info({
+      code: this.code,
+      mode: this.room.config.gameMode,
+      mapSize: `${initialState.map.width}x${initialState.map.height}`,
+      playerCount: initialState.players.length,
+      players: initialState.players.map(p => ({ id: p.id, name: p.displayName, pos: p.position, alive: p.alive })),
+      hasZone: !!initialState.zone,
+      status: initialState.status,
+    }, 'Broadcasting game:start');
+
+    // Check how many sockets are in this room
+    const roomSockets = this.io.sockets.adapter.rooms.get(`room:${this.code}`);
+    logger.info({ code: this.code, socketsInRoom: roomSockets?.size ?? 0 }, 'Room socket count');
+
     this.io.to(`room:${this.code}`).emit('game:start', initialState);
 
     // Start game loop
@@ -102,7 +134,7 @@ export class GameRoom {
     // Build placements
     const placements = Array.from(this.gameState.players.values())
       .sort((a, b) => (a.placement || 999) - (b.placement || 999))
-      .map(p => ({ userId: p.id, placement: p.placement || 0 }));
+      .map(p => ({ userId: p.id, displayName: p.displayName, isBot: p.isBot, placement: p.placement || 0, kills: p.kills }));
 
     this.io.to(`room:${this.code}`).emit('game:over', {
       winnerId: state.winnerId,
@@ -114,21 +146,25 @@ export class GameRoom {
     if (this.matchId) {
       try {
         const duration = Math.floor(state.timeElapsed);
+        // Don't store bot IDs (negative) as winner_id in DB
+        const dbWinnerId = state.winnerId && state.winnerId > 0 ? state.winnerId : null;
         await execute(
           `UPDATE matches SET status = 'finished', finished_at = NOW(), duration = ?, winner_id = ? WHERE id = ?`,
-          [duration, state.winnerId, this.matchId]
+          [duration, dbWinnerId, this.matchId]
         );
 
-        // Update match_players
+        // Update match_players (skip bots)
         for (const player of this.gameState.players.values()) {
+          if (player.isBot) continue;
           await execute(
             `UPDATE match_players SET placement = ?, kills = ?, deaths = ?, bombs_placed = ?, powerups_collected = ?, survived_seconds = ? WHERE match_id = ? AND user_id = ?`,
             [player.placement, player.kills, player.deaths, player.bombsPlaced, player.powerupsCollected, Math.floor(state.timeElapsed), this.matchId, player.id]
           );
         }
 
-        // Update user_stats
+        // Update user_stats (skip bots)
         for (const player of this.gameState.players.values()) {
+          if (player.isBot) continue;
           const isWinner = player.id === state.winnerId;
           await execute(
             `UPDATE user_stats SET

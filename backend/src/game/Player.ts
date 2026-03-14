@@ -1,5 +1,5 @@
 import { PlayerState, Position, Direction, PowerUpType } from '@blast-arena/shared';
-import { DEFAULT_SPEED, DEFAULT_MAX_BOMBS, DEFAULT_FIRE_RANGE, MAX_SPEED, MAX_BOMBS, MAX_FIRE_RANGE, SHIELD_DURATION_TICKS, INVULNERABILITY_TICKS } from '@blast-arena/shared';
+import { DEFAULT_SPEED, DEFAULT_MAX_BOMBS, DEFAULT_FIRE_RANGE, MAX_SPEED, MAX_BOMBS, MAX_FIRE_RANGE, SHIELD_DURATION_TICKS, INVULNERABILITY_TICKS, MOVE_COOLDOWN_BASE } from '@blast-arena/shared';
 
 export class Player {
   public readonly id: number;
@@ -17,6 +17,8 @@ export class Player {
   public team: number | null = null;
   public direction: Direction = 'down';
   public invulnerableTicks: number = INVULNERABILITY_TICKS;
+  public moveCooldown: number = 0;
+  public readonly isBot: boolean;
 
   // Stats tracking
   public kills: number = 0;
@@ -25,12 +27,13 @@ export class Player {
   public powerupsCollected: number = 0;
   public placement: number | null = null;
 
-  constructor(id: number, username: string, displayName: string, spawnPosition: Position, team: number | null = null) {
+  constructor(id: number, username: string, displayName: string, spawnPosition: Position, team: number | null = null, isBot: boolean = false) {
     this.id = id;
     this.username = username;
     this.displayName = displayName;
     this.position = { ...spawnPosition };
     this.team = team;
+    this.isBot = isBot;
   }
 
   applyPowerUp(type: PowerUpType): void {
@@ -55,6 +58,15 @@ export class Player {
     }
   }
 
+  canMove(): boolean {
+    return this.alive && this.moveCooldown <= 0;
+  }
+
+  applyMoveCooldown(): void {
+    // Higher speed = lower cooldown. Speed 1 = 5 ticks, speed 5 = 1 tick
+    this.moveCooldown = Math.max(1, MOVE_COOLDOWN_BASE - (this.speed - 1));
+  }
+
   canPlaceBomb(): boolean {
     return this.alive && this.bombCount < this.maxBombs;
   }
@@ -67,6 +79,9 @@ export class Player {
   tick(): void {
     if (this.invulnerableTicks > 0) {
       this.invulnerableTicks--;
+    }
+    if (this.moveCooldown > 0) {
+      this.moveCooldown--;
     }
     if (this.hasShield) {
       this.shieldTicksRemaining--;
@@ -91,6 +106,7 @@ export class Player {
       hasKick: this.hasKick,
       team: this.team,
       direction: this.direction,
+      isBot: this.isBot,
     };
   }
 }

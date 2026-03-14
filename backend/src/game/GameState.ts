@@ -1,5 +1,6 @@
-import { GameState as GameStateType, TileType, Direction, PlayerInput, Position } from '@blast-arena/shared';
-import { getExplosionCells, getRandomPowerUpType, POWERUP_DROP_CHANCE } from '@blast-arena/shared';
+import { GameState as GameStateType, TileType, Direction, PlayerInput, Position, PowerUpType } from '@blast-arena/shared';
+import { getExplosionCells } from '@blast-arena/shared';
+import { DEFAULT_WALL_DENSITY, DEFAULT_POWERUP_DROP_RATE, TICK_RATE } from '@blast-arena/shared';
 import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { Explosion } from './Explosion';
@@ -8,6 +9,7 @@ import { CollisionSystem } from './CollisionSystem';
 import { BattleRoyaleZone } from './BattleRoyale';
 import { generateMap } from './Map';
 import { InputBuffer } from './InputBuffer';
+import { BotAI } from './BotAI';
 
 // Simple seeded random for power-up drops
 class SeededRandom {
@@ -32,45 +34,71 @@ export class GameStateManager {
   public zone: BattleRoyaleZone | null = null;
   public winnerId: number | null = null;
   public winnerTeam: number | null = null;
+  public roundTime: number;
 
   private rng: SeededRandom;
   private gameMode: string;
   private placementCounter: number = 0;
+  private enabledPowerUps: PowerUpType[];
+  private powerUpDropRate: number;
+  private botAIs: Map<number, BotAI> = new Map();
 
   constructor(
     mapWidth: number,
     mapHeight: number,
     mapSeed?: number,
     gameMode: string = 'ffa',
-    hasZone: boolean = false
+    hasZone: boolean = false,
+    roundTime: number = 180,
+    wallDensity: number = DEFAULT_WALL_DENSITY,
+    enabledPowerUps?: PowerUpType[],
+    powerUpDropRate: number = DEFAULT_POWERUP_DROP_RATE
   ) {
-    this.map = generateMap(mapWidth, mapHeight, mapSeed);
+    this.map = generateMap(mapWidth, mapHeight, mapSeed, wallDensity);
     this.collisionSystem = new CollisionSystem(this.map.tiles, this.map.width, this.map.height);
-    this.rng = new SeededRandom(this.map.seed + 1); // Different seed for power-ups
+    this.rng = new SeededRandom(this.map.seed + 1);
     this.gameMode = gameMode;
+    this.roundTime = roundTime;
+    this.enabledPowerUps = enabledPowerUps ?? ['bomb_up', 'fire_up', 'speed_up', 'shield', 'kick'];
+    this.powerUpDropRate = powerUpDropRate;
 
     if (hasZone) {
       this.zone = new BattleRoyaleZone(mapWidth, mapHeight);
     }
   }
 
-  addPlayer(id: number, username: string, displayName: string, team: number | null = null): Player {
+  addPlayer(id: number, username: string, displayName: string, team: number | null = null, isBot: boolean = false): Player {
     const spawnIndex = this.players.size % this.map.spawnPoints.length;
     const spawnPos = this.map.spawnPoints[spawnIndex];
-    const player = new Player(id, username, displayName, spawnPos, team);
+    const player = new Player(id, username, displayName, spawnPos, team, isBot);
     this.players.set(id, player);
     this.placementCounter++;
+    if (isBot) {
+      this.botAIs.set(id, new BotAI());
+    }
     return player;
   }
 
   removePlayer(id: number): void {
     this.inputBuffer.clear(id);
     this.players.delete(id);
+    this.botAIs.delete(id);
   }
 
   processTick(): void {
     if (this.status !== 'playing') return;
     this.tick++;
+
+    // 0. Generate bot inputs
+    for (const [botId, ai] of this.botAIs) {
+      const botPlayer = this.players.get(botId);
+      if (botPlayer && botPlayer.alive) {
+        const input = ai.generateInput(botPlayer, this);
+        if (input) {
+          this.inputBuffer.addInput(botId, input);
+        }
+      }
+    }
 
     // 1. Process inputs
     for (const [playerId, player] of this.players) {
@@ -160,20 +188,41 @@ export class GameStateManager {
       }
     }
 
-    // 8. Check win condition
+    // 8. Time limit check
+    const timeElapsed = this.tick / TICK_RATE;
+    if (timeElapsed >= this.roundTime && this.status === 'playing') {
+      this.status = 'finished';
+      const alive = this.getAlivePlayers();
+      if (alive.length === 1) {
+        this.winnerId = alive[0].id;
+        alive[0].placement = 1;
+      }
+    }
+
+    // 9. Check win condition
     this.checkWinCondition();
   }
 
   private processPlayerInput(player: Player, input: PlayerInput): void {
-    // Movement
-    if (input.direction) {
+    // Movement (with cooldown)
+    if (input.direction && player.canMove()) {
       player.direction = input.direction;
       const bombPositions = Array.from(this.bombs.values()).map(b => b.position);
+
+      // Collect other player positions for collision
+      const otherPlayerPositions: { x: number; y: number }[] = [];
+      for (const other of this.players.values()) {
+        if (other.id !== player.id && other.alive) {
+          otherPlayerPositions.push(other.position);
+        }
+      }
+
       const newPos = this.collisionSystem.canMoveTo(
-        player.position.x, player.position.y, input.direction, bombPositions
+        player.position.x, player.position.y, input.direction, bombPositions, otherPlayerPositions
       );
       if (newPos) {
         player.position = newPos;
+        player.applyMoveCooldown();
       }
     }
 
@@ -214,9 +263,8 @@ export class GameStateManager {
     // Destroy walls and possibly spawn power-ups
     for (const cell of cells) {
       if (this.collisionSystem.destroyTile(cell.x, cell.y)) {
-        // Wall destroyed - chance to spawn power-up
-        if (this.rng.next() < POWERUP_DROP_CHANCE) {
-          const type = getRandomPowerUpType(() => this.rng.next());
+        if (this.enabledPowerUps.length > 0 && this.rng.next() < this.powerUpDropRate) {
+          const type = this.getRandomEnabledPowerUp();
           const powerUp = new PowerUp(cell, type);
           this.powerUps.set(powerUp.id, powerUp);
         }
@@ -235,11 +283,14 @@ export class GameStateManager {
     }
   }
 
+  private getRandomEnabledPowerUp(): PowerUpType {
+    return this.enabledPowerUps[Math.floor(this.rng.next() * this.enabledPowerUps.length)];
+  }
+
   private checkWinCondition(): void {
     const alivePlayers = this.getAlivePlayers();
 
     if (this.gameMode === 'teams') {
-      // Check if only one team remains
       const aliveTeams = new Set(alivePlayers.map(p => p.team));
       if (aliveTeams.size <= 1 && alivePlayers.length > 0) {
         this.status = 'finished';
@@ -248,7 +299,6 @@ export class GameStateManager {
         this.status = 'finished';
       }
     } else {
-      // FFA / Battle Royale
       if (alivePlayers.length <= 1) {
         this.status = 'finished';
         if (alivePlayers.length === 1) {
@@ -281,7 +331,8 @@ export class GameStateManager {
       status: this.status,
       winnerId: this.winnerId,
       winnerTeam: this.winnerTeam,
-      timeElapsed: this.tick / 20, // Convert ticks to seconds
+      roundTime: this.roundTime,
+      timeElapsed: this.tick / TICK_RATE,
     };
   }
 }

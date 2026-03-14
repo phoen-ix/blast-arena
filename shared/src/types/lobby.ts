@@ -1,4 +1,5 @@
 import { GameMode } from '../constants/modes';
+import { PowerUpType } from '../types/game';
 import { PublicUser } from './auth';
 
 export interface MatchConfig {
@@ -9,6 +10,10 @@ export interface MatchConfig {
   mapSeed?: number;
   roundTime: number;
   teams?: number;
+  wallDensity?: number;
+  enabledPowerUps?: PowerUpType[];
+  powerUpDropRate?: number;
+  botCount?: number;
 }
 
 export interface RoomPlayer {

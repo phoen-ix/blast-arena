@@ -23,7 +23,10 @@ export class GameOverScene extends Phaser.Scene {
       const startY = height / 2;
       data.placements.forEach((p: any, i: number) => {
         const color = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32';
-        this.add.text(width / 2, startY + i * 30, `#${p.placement} - Player ${p.userId}`, {
+        const botTag = p.isBot ? ' [BOT]' : '';
+        const name = p.displayName || `Player ${p.userId}`;
+        const kills = p.kills != null ? ` (${p.kills} kills)` : '';
+        this.add.text(width / 2, startY + i * 30, `#${p.placement} - ${name}${botTag}${kills}`, {
           fontSize: '18px',
           color: i < 3 ? color : '#a0a0b0',
         }).setOrigin(0.5);

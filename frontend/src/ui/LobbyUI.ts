@@ -2,7 +2,7 @@ import { SocketClient } from '../network/SocketClient';
 import { AuthManager } from '../network/AuthManager';
 import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
-import { RoomListItem, Room } from '@blast-arena/shared';
+import { RoomListItem, Room, GAME_MODES, GameMode, PowerUpType, POWERUP_DEFINITIONS } from '@blast-arena/shared';
 
 export class LobbyUI {
   private container: HTMLElement;
@@ -125,32 +125,102 @@ export class LobbyUI {
   }
 
   private showCreateRoomModal(): void {
+    const allPowerUps = Object.values(POWERUP_DEFINITIONS);
+
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-      <div class="modal">
+      <div class="modal" style="width:520px;max-height:90vh;overflow-y:auto;">
         <h2>Create Room</h2>
-        <div class="form-group">
-          <label>Room Name</label>
-          <input type="text" id="room-name" placeholder="My Arena" maxlength="30">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label>Room Name</label>
+            <input type="text" id="room-name" placeholder="My Arena" maxlength="30">
+          </div>
+          <div class="form-group">
+            <label>Game Mode</label>
+            <select id="room-mode">
+              <option value="ffa">Free for All</option>
+              <option value="teams">Teams</option>
+              <option value="battle_royale">Battle Royale</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Max Players</label>
+            <select id="room-max-players">
+              <option value="2">2</option>
+              <option value="4" selected>4</option>
+              <option value="6">6</option>
+              <option value="8">8</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Match Time</label>
+            <select id="room-round-time">
+              <option value="60">1 min</option>
+              <option value="120">2 min</option>
+              <option value="180" selected>3 min</option>
+              <option value="300">5 min</option>
+              <option value="600">10 min</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Wall Density</label>
+            <select id="room-wall-density">
+              <option value="0.3">Low (30%)</option>
+              <option value="0.5">Medium (50%)</option>
+              <option value="0.65" selected>High (65%)</option>
+              <option value="0.8">Very High (80%)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Power-Up Drop Rate</label>
+            <select id="room-powerup-rate">
+              <option value="0">None (0%)</option>
+              <option value="0.15">Low (15%)</option>
+              <option value="0.3" selected>Normal (30%)</option>
+              <option value="0.5">High (50%)</option>
+              <option value="0.8">Very High (80%)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Bots</label>
+            <select id="room-bots">
+              <option value="0" selected>None</option>
+              <option value="1">1 Bot</option>
+              <option value="2">2 Bots</option>
+              <option value="3">3 Bots</option>
+              <option value="4">4 Bots</option>
+              <option value="6">6 Bots</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Map Size</label>
+            <select id="room-map-size">
+              <option value="11">11x11 (Small)</option>
+              <option value="15" selected>15x15 (Normal)</option>
+              <option value="19">19x19 (Large)</option>
+              <option value="25">25x25 (Huge)</option>
+              <option value="31">31x31 (Massive)</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Game Mode</label>
-          <select id="room-mode">
-            <option value="ffa">Free for All</option>
-            <option value="teams">Teams</option>
-            <option value="battle_royale">Battle Royale</option>
-          </select>
+
+        <div class="form-group" style="margin-top:12px;">
+          <label>Power-Ups</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+            ${allPowerUps.map(pu => `
+              <label style="display:flex;align-items:center;gap:6px;padding:6px 10px;
+                background:#1a1a2e;border:1px solid #0f3460;border-radius:6px;cursor:pointer;font-size:13px;">
+                <input type="checkbox" class="powerup-check" value="${pu.type}" checked
+                  style="accent-color:${pu.color};">
+                <span style="color:${pu.color};font-weight:600;">${pu.name}</span>
+              </label>
+            `).join('')}
+          </div>
         </div>
-        <div class="form-group">
-          <label>Max Players</label>
-          <select id="room-max-players">
-            <option value="2">2</option>
-            <option value="4" selected>4</option>
-            <option value="6">6</option>
-            <option value="8">8</option>
-          </select>
-        </div>
+
         <div class="modal-actions">
           <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
           <button class="btn btn-primary" id="modal-create">Create</button>
@@ -163,15 +233,36 @@ export class LobbyUI {
       const name = (modal.querySelector('#room-name') as HTMLInputElement).value.trim();
       const gameMode = (modal.querySelector('#room-mode') as HTMLSelectElement).value as any;
       const maxPlayers = parseInt((modal.querySelector('#room-max-players') as HTMLSelectElement).value);
+      const roundTime = parseInt((modal.querySelector('#room-round-time') as HTMLSelectElement).value);
+      const wallDensity = parseFloat((modal.querySelector('#room-wall-density') as HTMLSelectElement).value);
+      const powerUpDropRate = parseFloat((modal.querySelector('#room-powerup-rate') as HTMLSelectElement).value);
+      const botCount = parseInt((modal.querySelector('#room-bots') as HTMLSelectElement).value);
+
+      const enabledPowerUps: PowerUpType[] = [];
+      modal.querySelectorAll('.powerup-check:checked').forEach((cb: any) => {
+        enabledPowerUps.push(cb.value as PowerUpType);
+      });
 
       if (!name || name.length < 3) {
         this.notifications.error('Room name must be at least 3 characters');
         return;
       }
 
+      const mapSize = parseInt((modal.querySelector('#room-map-size') as HTMLSelectElement).value);
+
       this.socketClient.emit('room:create', {
         name,
-        config: { gameMode, maxPlayers, mapWidth: 15, mapHeight: 13, roundTime: 180 },
+        config: {
+          gameMode,
+          maxPlayers,
+          mapWidth: mapSize,
+          mapHeight: mapSize,
+          roundTime,
+          wallDensity,
+          enabledPowerUps,
+          powerUpDropRate,
+          botCount,
+        },
       }, (response: any) => {
         if (response.success && response.room) {
           modal.remove();

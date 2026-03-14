@@ -105,7 +105,7 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME:-blast-arena}-nginx
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${APP_EXTERNAL_PORT:-8080}:80"
+      - "${APP_EXTERNAL_PORT:-8080}:80"
     depends_on:
       backend:
         condition: service_healthy

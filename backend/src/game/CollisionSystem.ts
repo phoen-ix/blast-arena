@@ -21,7 +21,7 @@ export class CollisionSystem {
     return tile === 'empty' || tile === 'spawn';
   }
 
-  canMoveTo(fromX: number, fromY: number, direction: Direction, bombPositions: Position[]): Position | null {
+  canMoveTo(fromX: number, fromY: number, direction: Direction, bombPositions: Position[], playerPositions: Position[] = []): Position | null {
     let newX = fromX;
     let newY = fromY;
 
@@ -37,6 +37,10 @@ export class CollisionSystem {
     // Check for bombs blocking the path
     const bombBlocking = bombPositions.some(b => b.x === newX && b.y === newY);
     if (bombBlocking) return null;
+
+    // Check for other players blocking the path
+    const playerBlocking = playerPositions.some(p => p.x === newX && p.y === newY);
+    if (playerBlocking) return null;
 
     return { x: newX, y: newY };
   }

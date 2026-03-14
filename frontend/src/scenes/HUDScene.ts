@@ -28,21 +28,29 @@ export class HUDScene extends Phaser.Scene {
   }
 
   private updateHUD(state: GameState): void {
-    // Timer
+    // Countdown timer
     const timerEl = document.getElementById('hud-timer');
     if (timerEl) {
-      const seconds = Math.max(0, Math.floor(state.timeElapsed));
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
+      const remaining = Math.max(0, Math.ceil(state.roundTime - state.timeElapsed));
+      const mins = Math.floor(remaining / 60);
+      const secs = remaining % 60;
       timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+      // Flash red when under 30 seconds
+      if (remaining <= 30) {
+        timerEl.style.color = '#e94560';
+      } else {
+        timerEl.style.color = '#fff';
+      }
     }
 
-    // Player list
+    // Player list (only show alive players)
     const playersEl = document.getElementById('hud-players');
     if (playersEl) {
-      playersEl.innerHTML = state.players.map((p: any) => `
-        <div class="hud-player-item ${p.alive ? '' : 'dead'}">
-          <span>${p.displayName}</span>
+      const alivePlayers = state.players.filter((p: any) => p.alive);
+      playersEl.innerHTML = alivePlayers.map((p: any) => `
+        <div class="hud-player-item">
+          <span>${p.isBot ? '🤖 ' : ''}${p.displayName}</span>
         </div>
       `).join('');
     }
