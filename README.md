@@ -35,12 +35,16 @@ Open `http://localhost:8080` in your browser.
 - **Singleplayer & Multiplayer**: Play solo against bots or with friends; 1 human + bots is enough to start
 - **Configurable rooms**: Map size (square grids from 11x11 to 31x31), match time, wall density, power-up types and drop rates
 - **Friendly fire toggle**: Enable or disable teammate damage in Teams mode
-- **Bot players**: Add 1-6 AI bots to any room (auto-capped to fit max players); bots dodge explosions, seek destructible walls, and place bombs strategically
+- **Bot players**: Add 1-7 AI bots to any room (auto-capped to fit max players) with Easy/Normal/Hard difficulty
+- **Bot AI**: BFS pathfinding, escape planning through danger zones, wall-seeking, enemy hunting, power-up collection
 - **Power-ups**: Bomb Up, Fire Up, Speed Up, Shield, Bomb Kick - each individually toggleable per room
 - **Live HUD**: Countdown timer, alive player list (dead players removed from view)
+- **Spectator mode**: Dead players can freely pan the camera across the map
 - **Camera follow**: Smooth scrolling camera that follows your player on maps larger than the viewport
+- **Scoring**: Kills-based ranking; self-kills subtract from your score
 - **Persistent sessions**: Login survives container rebuilds via httpOnly refresh token cookies
 - **Match history**: Stats tracked per player (kills, deaths, bombs placed, power-ups collected, placements)
+- **Game logging**: Detailed JSONL game logs for analysis and debugging (./data/gamelogs/)
 
 ## Architecture
 
