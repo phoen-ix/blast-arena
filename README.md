@@ -76,7 +76,3 @@ All settings via `.env` (see `.env.example`). Key variables:
 - `DB_PASSWORD` / `DB_ROOT_PASSWORD` - Database credentials
 - `APP_EXTERNAL_PORT` - Nginx port (default 8080)
 - `APP_URL` - Public URL (controls secure cookie flag)
-
-## License
-
-MIT
