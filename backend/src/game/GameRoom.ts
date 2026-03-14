@@ -1,0 +1,173 @@
+import { Server } from 'socket.io';
+import { Room, GameState, PlayerInput } from '@blast-arena/shared';
+import { COUNTDOWN_SECONDS, TICK_RATE } from '@blast-arena/shared';
+import { GAME_MODES } from '@blast-arena/shared';
+import { GameStateManager } from './GameState';
+import { GameLoop } from './GameLoop';
+import { execute } from '../db/connection';
+import { logger } from '../utils/logger';
+import * as lobbyService from '../services/lobby';
+
+export class GameRoom {
+  public readonly code: string;
+  private io: Server;
+  private room: Room;
+  private gameState: GameStateManager;
+  private gameLoop: GameLoop;
+  private matchId: number | null = null;
+
+  constructor(io: Server, room: Room) {
+    this.code = room.code;
+    this.io = io;
+    this.room = room;
+
+    const modeConfig = GAME_MODES[room.config.gameMode];
+
+    this.gameState = new GameStateManager(
+      room.config.mapWidth || modeConfig.defaultMapWidth,
+      room.config.mapHeight || modeConfig.defaultMapHeight,
+      room.config.mapSeed,
+      room.config.gameMode,
+      modeConfig.hasZone || false
+    );
+
+    // Add players
+    room.players.forEach((rp: any, index: number) => {
+      const team = modeConfig.teamsCount ? (index % modeConfig.teamsCount) : null;
+      this.gameState.addPlayer(rp.user.id, rp.user.username, rp.user.displayName, team);
+    });
+
+    this.gameLoop = new GameLoop(
+      this.gameState,
+      (state) => this.broadcastState(state),
+      () => this.onGameOver()
+    );
+  }
+
+  async start(): Promise<void> {
+    // Create match record in DB
+    try {
+      const result = await execute(
+        `INSERT INTO matches (room_code, game_mode, map_seed, map_width, map_height, max_players, status, started_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'playing', NOW())`,
+        [
+          this.code,
+          this.room.config.gameMode,
+          this.gameState.map.seed,
+          this.gameState.map.width,
+          this.gameState.map.height,
+          this.room.config.maxPlayers,
+        ]
+      );
+      this.matchId = result.insertId;
+
+      // Insert match_players
+      for (const player of this.gameState.players.values()) {
+        await execute(
+          'INSERT INTO match_players (match_id, user_id, team) VALUES (?, ?, ?)',
+          [this.matchId, player.id, player.team]
+        );
+      }
+    } catch (err) {
+      logger.error({ err }, 'Failed to create match record');
+    }
+
+    // Broadcast initial state
+    const initialState = this.gameState.toState();
+    this.io.to(`room:${this.code}`).emit('game:start', initialState);
+
+    // Start game loop
+    this.gameLoop.start();
+    await lobbyService.updateRoomStatus(this.code, 'playing');
+  }
+
+  handleInput(playerId: number, input: PlayerInput): void {
+    this.gameState.inputBuffer.addInput(playerId, input);
+  }
+
+  handlePlayerDisconnect(playerId: number): void {
+    const player = this.gameState.players.get(playerId);
+    if (player?.alive) {
+      player.die();
+    }
+  }
+
+  private broadcastState(state: GameState): void {
+    this.io.to(`room:${this.code}`).emit('game:state', state);
+  }
+
+  private async onGameOver(): Promise<void> {
+    const state = this.gameState.toState();
+
+    // Build placements
+    const placements = Array.from(this.gameState.players.values())
+      .sort((a, b) => (a.placement || 999) - (b.placement || 999))
+      .map(p => ({ userId: p.id, placement: p.placement || 0 }));
+
+    this.io.to(`room:${this.code}`).emit('game:over', {
+      winnerId: state.winnerId,
+      winnerTeam: state.winnerTeam,
+      placements,
+    });
+
+    // Save match results
+    if (this.matchId) {
+      try {
+        const duration = Math.floor(state.timeElapsed);
+        await execute(
+          `UPDATE matches SET status = 'finished', finished_at = NOW(), duration = ?, winner_id = ? WHERE id = ?`,
+          [duration, state.winnerId, this.matchId]
+        );
+
+        // Update match_players
+        for (const player of this.gameState.players.values()) {
+          await execute(
+            `UPDATE match_players SET placement = ?, kills = ?, deaths = ?, bombs_placed = ?, powerups_collected = ?, survived_seconds = ? WHERE match_id = ? AND user_id = ?`,
+            [player.placement, player.kills, player.deaths, player.bombsPlaced, player.powerupsCollected, Math.floor(state.timeElapsed), this.matchId, player.id]
+          );
+        }
+
+        // Update user_stats
+        for (const player of this.gameState.players.values()) {
+          const isWinner = player.id === state.winnerId;
+          await execute(
+            `UPDATE user_stats SET
+              total_matches = total_matches + 1,
+              total_wins = total_wins + ?,
+              total_kills = total_kills + ?,
+              total_deaths = total_deaths + ?,
+              total_bombs = total_bombs + ?,
+              total_powerups = total_powerups + ?,
+              total_playtime = total_playtime + ?,
+              win_streak = IF(?, win_streak + 1, 0),
+              best_win_streak = GREATEST(best_win_streak, IF(?, win_streak + 1, 0))
+            WHERE user_id = ?`,
+            [
+              isWinner ? 1 : 0,
+              player.kills,
+              player.deaths,
+              player.bombsPlaced,
+              player.powerupsCollected,
+              Math.floor(state.timeElapsed),
+              isWinner, isWinner,
+              player.id,
+            ]
+          );
+        }
+      } catch (err) {
+        logger.error({ err }, 'Failed to save match results');
+      }
+    }
+
+    await lobbyService.updateRoomStatus(this.code, 'finished');
+    logger.info({ code: this.code, winnerId: state.winnerId }, 'Game over');
+  }
+
+  stop(): void {
+    this.gameLoop.stop();
+  }
+
+  isRunning(): boolean {
+    return this.gameLoop.isRunning();
+  }
+}

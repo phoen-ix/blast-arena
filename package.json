@@ -1,0 +1,13 @@
+{
+  "name": "blast-arena",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["shared", "backend", "frontend"],
+  "scripts": {
+    "dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
+    "prod": "docker compose up --build -d",
+    "down": "docker compose down",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  }
+}

@@ -1,0 +1,47 @@
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { GameStateManager } from '../../../backend/src/game/GameState';
+import { GameLoop } from '../../../backend/src/game/GameLoop';
+
+describe('GameLoop', () => {
+  let gameState: GameStateManager;
+  let onTick: jest.Mock;
+  let onGameOver: jest.Mock;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    gameState = new GameStateManager(15, 13, 12345, 'ffa', false);
+    gameState.addPlayer(1, 'player1', 'Player 1');
+    gameState.addPlayer(2, 'player2', 'Player 2');
+    onTick = jest.fn();
+    onGameOver = jest.fn();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('should start and stop the game loop', () => {
+    const loop = new GameLoop(gameState, onTick, onGameOver);
+    expect(loop.isRunning()).toBe(false);
+
+    loop.start();
+    expect(loop.isRunning()).toBe(true);
+    expect(gameState.status).toBe('playing');
+
+    loop.stop();
+    expect(loop.isRunning()).toBe(false);
+  });
+
+  it('should call onTick at each tick', () => {
+    const loop = new GameLoop(gameState, onTick, onGameOver, 20);
+    loop.start();
+
+    jest.advanceTimersByTime(50); // 1 tick at 20 tps
+    expect(onTick).toHaveBeenCalled();
+
+    jest.advanceTimersByTime(200); // 4 more ticks
+    expect(onTick.mock.calls.length).toBeGreaterThanOrEqual(4);
+
+    loop.stop();
+  });
+});

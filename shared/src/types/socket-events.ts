@@ -1,0 +1,47 @@
+import { GameState, PlayerInput } from './game';
+import { Room, RoomPlayer, CreateRoomRequest, RoomListItem } from './lobby';
+import { PublicUser } from './auth';
+
+// Client -> Server events
+export interface ClientToServerEvents {
+  'room:create': (data: CreateRoomRequest, callback: (response: { success: boolean; room?: Room; error?: string }) => void) => void;
+  'room:join': (data: { code: string }, callback: (response: { success: boolean; room?: Room; error?: string }) => void) => void;
+  'room:leave': () => void;
+  'room:ready': (data: { ready: boolean }) => void;
+  'room:start': () => void;
+  'game:input': (input: PlayerInput) => void;
+  'chat:message': (data: { message: string }) => void;
+}
+
+// Server -> Client events
+export interface ServerToClientEvents {
+  'room:state': (room: Room) => void;
+  'room:playerJoined': (player: RoomPlayer) => void;
+  'room:playerLeft': (userId: number) => void;
+  'room:playerReady': (data: { userId: number; ready: boolean }) => void;
+  'room:countdown': (data: { seconds: number }) => void;
+  'room:list': (rooms: RoomListItem[]) => void;
+  'game:start': (state: GameState) => void;
+  'game:state': (state: GameState) => void;
+  'game:bombPlaced': (data: { id: string; position: { x: number; y: number }; ownerId: number }) => void;
+  'game:explosion': (data: { id: string; cells: { x: number; y: number }[]; ownerId: number }) => void;
+  'game:powerupSpawned': (data: { id: string; position: { x: number; y: number }; type: string }) => void;
+  'game:powerupCollected': (data: { id: string; playerId: number }) => void;
+  'game:playerDied': (data: { playerId: number; killerId: number | null }) => void;
+  'game:zoneUpdate': (data: { currentRadius: number; targetRadius: number; nextShrinkTick: number }) => void;
+  'game:over': (data: { winnerId: number | null; winnerTeam: number | null; placements: { userId: number; placement: number }[] }) => void;
+  'chat:message': (data: { user: PublicUser; message: string; timestamp: number }) => void;
+  'error': (data: { message: string; code?: string }) => void;
+}
+
+// Inter-server events (if scaling later)
+export interface InterServerEvents {
+  ping: () => void;
+}
+
+// Socket data attached to each socket
+export interface SocketData {
+  userId: number;
+  username: string;
+  role: string;
+}

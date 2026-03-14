@@ -1,0 +1,25 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache wget
+
+# Copy workspace config
+COPY package.json package-lock.json* ./
+COPY shared/package.json ./shared/
+COPY backend/package.json ./backend/
+
+# Install all dependencies (including devDependencies)
+RUN npm install --workspace=shared --workspace=backend
+
+# Copy source (will be overridden by volume mounts in dev)
+COPY shared/ ./shared/
+COPY backend/ ./backend/
+
+COPY docker/backend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 3000
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["npx", "tsx", "watch", "backend/src/index.ts"]
