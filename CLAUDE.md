@@ -93,6 +93,9 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - REST endpoints: `GET/POST /admin/simulations`, `GET/DELETE /admin/simulations/:batchId`
 - Bot names pool: AlphaBot through PulseBot (16 distinct names)
 - Cancellation preserves completed game logs; 3s pause between realtime games, 0.5s for fast
+- Delete batch: removes from memory + disk (`SimulationManager.deleteBatch()`); delete button shown for completed/cancelled batches
+- Spectate button hidden for fast-speed batches (only shown for realtime)
+- Results table: paginated (25/page) with sortable columns (click #/Winner/Duration/Kill Leader/Reason)
 - Docker: `./data/simulations:/app/simulations` volume mount in both compose files
 
 ## Account Management
@@ -122,19 +125,25 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - BotAI: difficulty-aware (easy/normal/hard) with configurable awareness, aggression, escape depth, reaction delay, and kick usage
 - BotAI kick decisions gated on canMove() + kickCooldown to prevent kick spam (standing still retrying kicks for multiple ticks)
 - Bot difficulty set per-room via MatchConfig.botDifficulty; defaults to 'normal'; UI dropdown always visible but disabled when bots = 0
-- BotAI escape logic: BFS through danger cells to find nearest safe cell; canEscapeAfterBomb and flee use the same findEscapeDirection BFS so the bot follows the validated escape path
+- BotAI escape logic: BFS through danger cells to find nearest safe cell; canEscapeAfterBomb verifies immediate walkable neighbor AND BFS escape path
+- BotAI bomb safety: requires `player.canMove()` before placing bombs (prevents bombing during movement cooldown); dead-end check (`walkableDirs >= 2`); `hasOwnBombNearby()` prevents sandwich traps within `fireRange+1` tiles of own active bomb
 - BotAI movement decisions only run when player.canMove() to prevent oscillation between hunt/seek_wall
 - BotAI power-up seeking uses BFS pathfinding (not line-of-sight) so bots find power-ups around corners
 - BotAI hunt search depth is configurable per difficulty (easy=10, normal=25, hard=35) to handle large/dense maps
+- BotAI hunt persistence: `huntLockTicks` keeps bot hunting for 15 ticks after finding a path, preventing chain breaks from random huntChance gate
+- BotAI close-range bombing: `bomb_hunt` triggers when hunting within 3 tiles of enemy and enemy is in blast range
+- BotAI late-game aggression (>60% round time): always hunt (no random gate), always roam (no idle threshold), halved bomb cooldown, aggressive hunt mode skips escape/oscillation checks on BFS seed step
+- BotAI wall path-clearing: `bomb_path` (when hunt BFS fails) and `bomb_roam` (while roaming) actively bomb destructible walls toward nearest enemy via `findWallTowardEnemy()` heuristic
 - BotAI roaming: tracks ticksSinceEnemyContact; after idle threshold (normal=5s, hard=3s) bot moves toward nearest enemy via manhattan heuristic
 - BotAI directional wall clearing: prefers breaking walls toward enemies rather than just the nearest wall
 - BotAI danger timer threshold: normal/hard bots ignore bombs with many ticks remaining (>30/40) unless within 2 tiles, reducing unnecessary fleeing from fresh bombs
 - BotAI KOTH hill-seeking: priority 4.5 in decision tree, bots navigate toward the 3x3 center zone using manhattan distance heuristic; once inside they stay put rather than wandering off
-- BotAI anti-oscillation: `orderedDirs()` helper iterates `lastDirection` first in all BFS seed steps, giving deterministic tie-breaking without multi-tick commitment locks; wander has 85% continuation probability
-- BotAI flee stuck-breaker: tracks `lastFleePos`/`fleeStuckTicks` — after 3 ticks stuck at same position while fleeing, tries alternative directions (logged as `flee_unstick`)
+- BotAI anti-oscillation: `orderedDirs()` helper iterates `lastDirection` first in all BFS seed steps; `posHistory` (last 4 positions) with `wouldOscillate()` check filters directions that revisit recent tiles; wander has 85% continuation probability and prefers non-oscillating candidates
+- BotAI flee stuck-breaker: tracks `lastFleePos`/`fleeStuckTicks` — after 3 ticks stuck at same position while fleeing, tries alternative directions (logged as `flee_unstick`); when completely stuck, places `stuck_bomb` as last resort
+- BotAI normal difficulty: huntChance=0.7, bombCooldown=25-45 ticks (data-driven tuning from 5000+ simulation games)
 - Self-kills subtract 1 from kill score (owner.kills decremented, owner.selfKills incremented)
 - Game over placements sorted by kills descending, tiebreak by survival placement
-- Grace period: 30 ticks (1.5s) after win condition before status='finished' to show final explosions
+- Grace period: 30 ticks (1.5s) after win condition before status='finished' to show final explosions; winner is invulnerable during grace period
 - Dead players enter spectator mode with free camera pan (WASD/arrows/D-pad), click-to-follow on HUD player list, number keys 1-9, or LB/RB gamepad bumpers
 - Spectate-follow breaks only on new keydown (not stale keysDown state); blur handler clears keysDown to prevent stuck keys
 - HUD spectate click uses mousedown event delegation on stable container (not click, which is unreliable with innerHTML rebuilds)
