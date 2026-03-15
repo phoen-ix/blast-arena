@@ -29,6 +29,8 @@ Open `http://localhost:8080` in your browser.
 - **Arrow Keys / WASD**: Move
 - **Space**: Place bomb
 - **Walk into a bomb** (with Kick power-up): Kicks the bomb, sending it sliding until it hits a wall, player, or another bomb
+- **1-9** (when dead): Follow the Nth alive player
+- **Click player name** (when dead): Follow that player
 
 ## Features
 
@@ -39,7 +41,7 @@ Open `http://localhost:8080` in your browser.
 - **Bot AI**: BFS pathfinding, escape planning through danger zones, wall-seeking, enemy hunting, power-up collection
 - **Power-ups**: Bomb Up, Fire Up, Speed Up, Shield, Bomb Kick - each individually toggleable per room
 - **Live HUD**: Countdown timer, player list showing alive and dead players
-- **Spectator mode**: Dead players can freely pan the camera or click a player name in the HUD to follow them
+- **Spectator mode**: Dead players can freely pan the camera, click a player name in the HUD, or press 1-9 to follow alive players
 - **Play Again**: Rematch button on the game over screen resets the room so all players can play again
 - **Camera follow**: Smooth scrolling camera that follows your player on maps larger than the viewport
 - **Scoring**: Kills-based ranking; self-kills subtract from your score

@@ -1,16 +1,29 @@
 import Phaser from 'phaser';
-import { GameState, PlayerState } from '@blast-arena/shared';
+import { GameState } from '@blast-arena/shared';
 
 export class HUDScene extends Phaser.Scene {
   private hudContainer!: HTMLElement;
+  private playerListEl!: HTMLElement;
   private localPlayerDead: boolean = false;
   private localPlayerId!: number;
+  private boundClickHandler: ((e: MouseEvent) => void) | null = null;
 
   constructor() {
     super({ key: 'HUDScene' });
   }
 
   create(): void {
+    // Clean up stale DOM from previous game (shutdown() may not have been called)
+    if (this.boundClickHandler) {
+      this.playerListEl?.removeEventListener('mousedown', this.boundClickHandler);
+      this.boundClickHandler = null;
+    }
+    this.hudContainer?.remove();
+    this.playerListEl?.remove();
+
+    // Register shutdown handler (Phaser doesn't auto-call shutdown() methods)
+    this.events.once('shutdown', this.shutdown, this);
+
     const authManager = this.registry.get('authManager');
     this.localPlayerId = authManager.getUser()?.id ?? 0;
     this.localPlayerDead = false;
@@ -21,9 +34,34 @@ export class HUDScene extends Phaser.Scene {
         <div class="hud-timer" id="hud-timer">3:00</div>
         <div class="hud-powerups" id="hud-powerups"></div>
       </div>
-      <div class="hud-players" id="hud-players"></div>
     `;
-    document.getElementById('ui-overlay')?.appendChild(this.hudContainer);
+    // Player list is a separate direct child of ui-overlay so it gets pointer-events: auto
+    // (hud-container has pointer-events: none which blocks clicks)
+    this.playerListEl = document.createElement('div');
+    this.playerListEl.className = 'hud-players';
+    this.playerListEl.id = 'hud-players';
+
+    const overlay = document.getElementById('ui-overlay');
+    overlay?.appendChild(this.hudContainer);
+    overlay?.appendChild(this.playerListEl);
+
+    // Spectate click handler — uses mousedown (not click) with event delegation
+    // on the stable container. click events are unreliable because updateHUD()
+    // rebuilds innerHTML 20x/sec, destroying the mousedown target before mouseup.
+    this.boundClickHandler = (e: MouseEvent) => {
+      if (!this.localPlayerDead) return;
+      const item = (e.target as Element).closest('.hud-player-item[data-player-id]');
+      if (!item || item.classList.contains('dead')) return;
+      const id = parseInt(item.getAttribute('data-player-id')!);
+      if (isNaN(id)) return;
+      e.stopPropagation(); // prevent Phaser from also handling this
+      console.log('[HUD] Spectate click: player', id);
+      this.registry.set('spectateTargetId', id);
+      // Visual feedback: briefly highlight the clicked item
+      (item as HTMLElement).style.background = 'rgba(233, 69, 96, 0.6)';
+      setTimeout(() => { (item as HTMLElement).style.background = ''; }, 300);
+    };
+    this.playerListEl.addEventListener('mousedown', this.boundClickHandler);
 
     // Listen for state updates from GameScene
     const gameScene = this.scene.get('GameScene');
@@ -60,26 +98,22 @@ export class HUDScene extends Phaser.Scene {
     if (playersEl) {
       // Sort: alive first, then dead
       const sorted = [...state.players].sort((a: any, b: any) => (b.alive ? 1 : 0) - (a.alive ? 1 : 0));
-      playersEl.innerHTML = sorted.map((p: any) => `
-        <div class="hud-player-item${p.alive ? '' : ' dead'}${p.alive && this.localPlayerDead ? ' clickable' : ''}" data-player-id="${p.id}">
+      playersEl.innerHTML = sorted.map((p: any) => {
+        const dead = !p.alive;
+        const clickable = p.alive && this.localPlayerDead;
+        return `<div class="hud-player-item${dead ? ' dead' : ''}${clickable ? ' clickable' : ''}" data-player-id="${p.id}">
           <span>${p.isBot ? '🤖 ' : ''}${p.displayName}</span>
-        </div>
-      `).join('');
-
-      // When spectating, allow clicking alive players to follow them
-      if (this.localPlayerDead) {
-        playersEl.querySelectorAll('.hud-player-item.clickable').forEach(el => {
-          el.addEventListener('click', () => {
-            const id = parseInt(el.getAttribute('data-player-id')!);
-            const gameScene = this.scene.get('GameScene');
-            gameScene.events.emit('spectatePlayer', id);
-          });
-        });
-      }
+        </div>`;
+      }).join('');
     }
   }
 
   shutdown(): void {
+    if (this.boundClickHandler) {
+      this.playerListEl?.removeEventListener('mousedown', this.boundClickHandler);
+      this.boundClickHandler = null;
+    }
     this.hudContainer?.remove();
+    this.playerListEl?.remove();
   }
 }

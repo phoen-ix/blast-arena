@@ -29,6 +29,7 @@ export class GameScene extends Phaser.Scene {
   private keysDown: Set<string> = new Set();
   private boundKeyDown: ((e: KeyboardEvent) => void) | null = null;
   private boundKeyUp: ((e: KeyboardEvent) => void) | null = null;
+  private boundBlur: (() => void) | null = null;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -40,12 +41,30 @@ export class GameScene extends Phaser.Scene {
     this.localPlayerId = this.authManager.getUser()?.id ?? 0;
     const initialState: GameState = this.registry.get('initialGameState');
 
+    // Clean up stale state from previous game (shutdown() may not have been called)
+    this.socketClient.off('game:state' as any);
+    this.socketClient.off('game:over' as any);
+    this.removeSpectatorListeners();
+    this.playerSprites.forEach(s => s.destroy());
+    this.playerLabels.forEach(s => s.destroy());
+    this.bombSprites.forEach(s => s.destroy());
+    this.explosionSprites.forEach(sprites => sprites.forEach(s => s.destroy()));
+    this.powerUpSprites.forEach(s => s.destroy());
+    this.playerSprites.clear();
+    this.playerLabels.clear();
+    this.bombSprites.clear();
+    this.explosionSprites.clear();
+    this.powerUpSprites.clear();
+
     // Reset state for scene restarts
     this.localPlayerDead = false;
     this.freeCamX = 0;
     this.freeCamY = 0;
     this.spectateTargetId = null;
-    this.removeSpectatorListeners();
+    this.lastGameState = null;
+
+    // Register shutdown handler (Phaser doesn't auto-call shutdown() methods)
+    this.events.once('shutdown', this.shutdown, this);
 
     // Always install DOM key listeners from the start (for spectator mode later)
     this.installSpectatorListeners();
@@ -95,26 +114,45 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Listen for spectate requests from HUD
-    this.events.on('spectatePlayer', (playerId: number) => {
-      this.spectateTargetId = playerId;
-    });
+    // Clear any stale spectate target from registry
+    this.registry.set('spectateTargetId', null);
+
   }
 
   private installSpectatorListeners(): void {
     this.keysDown.clear();
+    const panKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'];
     this.boundKeyDown = (e: KeyboardEvent) => {
       this.keysDown.add(e.code);
       // Prevent browser scrolling when spectating
       if (this.localPlayerDead && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
         e.preventDefault();
       }
+      // Pan key press breaks out of spectate-follow mode
+      if (this.localPlayerDead && panKeys.includes(e.code)) {
+        this.spectateTargetId = null;
+      }
+      // Number keys 1-9 to spectate the Nth alive player
+      if (this.localPlayerDead && e.code.startsWith('Digit')) {
+        const num = parseInt(e.code.replace('Digit', ''));
+        if (num >= 1 && num <= 9 && this.lastGameState) {
+          const alivePlayers = this.lastGameState.players.filter(p => p.alive && p.id !== this.localPlayerId);
+          if (num <= alivePlayers.length) {
+            this.spectateTargetId = alivePlayers[num - 1].id;
+            console.log('[GameScene] Spectate via key', num, '-> player', this.spectateTargetId);
+          }
+        }
+      }
     };
     this.boundKeyUp = (e: KeyboardEvent) => {
       this.keysDown.delete(e.code);
     };
+    this.boundBlur = () => {
+      this.keysDown.clear();
+    };
     window.addEventListener('keydown', this.boundKeyDown);
     window.addEventListener('keyup', this.boundKeyUp);
+    window.addEventListener('blur', this.boundBlur);
   }
 
   private removeSpectatorListeners(): void {
@@ -125,6 +163,10 @@ export class GameScene extends Phaser.Scene {
     if (this.boundKeyUp) {
       window.removeEventListener('keyup', this.boundKeyUp);
       this.boundKeyUp = null;
+    }
+    if (this.boundBlur) {
+      window.removeEventListener('blur', this.boundBlur);
+      this.boundBlur = null;
     }
     this.keysDown.clear();
   }
@@ -142,6 +184,14 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Check for spectate target set by HUD click
+    const pendingTarget = this.registry.get('spectateTargetId');
+    if (pendingTarget !== null && pendingTarget !== undefined) {
+      console.log('[GameScene] Spectate target from registry:', pendingTarget);
+      this.spectateTargetId = pendingTarget;
+      this.registry.set('spectateTargetId', null);
+    }
+
     this.processInput();
     this.updateCamera();
   }
@@ -156,6 +206,10 @@ export class GameScene extends Phaser.Scene {
       // If spectating a player, follow them with smooth lerp
       if (this.spectateTargetId !== null) {
         const targetPlayer = this.lastGameState?.players.find(p => p.id === this.spectateTargetId && p.alive);
+        if (!targetPlayer) {
+          console.log('[GameScene] Spectate target not found or dead, id:', this.spectateTargetId,
+            'players:', this.lastGameState?.players.map(p => ({ id: p.id, alive: p.alive })));
+        }
         if (targetPlayer) {
           const tx = targetPlayer.position.x * TILE_SIZE + TILE_SIZE / 2;
           const ty = targetPlayer.position.y * TILE_SIZE + TILE_SIZE / 2;
@@ -186,16 +240,6 @@ export class GameScene extends Phaser.Scene {
     // When dead, use DOM key tracking to pan the spectator camera
     if (this.localPlayerDead) {
       const panSpeed = 5;
-      const panning = this.keysDown.has('ArrowUp') || this.keysDown.has('KeyW')
-        || this.keysDown.has('ArrowDown') || this.keysDown.has('KeyS')
-        || this.keysDown.has('ArrowLeft') || this.keysDown.has('KeyA')
-        || this.keysDown.has('ArrowRight') || this.keysDown.has('KeyD');
-
-      // Manual panning breaks out of spectate-follow mode
-      if (panning && this.spectateTargetId !== null) {
-        this.spectateTargetId = null;
-      }
-
       if (this.keysDown.has('ArrowUp') || this.keysDown.has('KeyW')) this.freeCamY -= panSpeed;
       if (this.keysDown.has('ArrowDown') || this.keysDown.has('KeyS')) this.freeCamY += panSpeed;
       if (this.keysDown.has('ArrowLeft') || this.keysDown.has('KeyA')) this.freeCamX -= panSpeed;

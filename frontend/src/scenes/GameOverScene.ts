@@ -52,6 +52,8 @@ export class GameOverScene extends Phaser.Scene {
     playAgainBtn.on('pointerover', () => playAgainBtn.setColor('#88ff88'));
     playAgainBtn.on('pointerout', () => playAgainBtn.setColor('#44ff44'));
     playAgainBtn.on('pointerdown', () => {
+      // Remove room:state listener to prevent double-navigation (callback handles this player)
+      socketClient.off('room:state' as any, roomStateHandler as any);
       socketClient.emit('room:restart', (response: any) => {
         if (response.success && response.room) {
           this.registry.set('currentRoom', response.room);

@@ -45,10 +45,13 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Self-kills subtract 1 from kill score (owner.kills decremented, owner.selfKills incremented)
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished' to show final explosions
-- Dead players enter spectator mode with free camera pan (WASD/arrows) or click-to-follow on HUD player list
+- Dead players enter spectator mode with free camera pan (WASD/arrows), click-to-follow on HUD player list, or number keys 1-9
+- Spectate-follow breaks only on new keydown (not stale keysDown state); blur handler clears keysDown to prevent stuck keys
+- HUD spectate click uses mousedown event delegation on stable container (not click, which is unreliable with innerHTML rebuilds)
 - Camera follows local player with smooth lerp when map exceeds viewport
 - Room name auto-generated if left blank (random adjective + noun)
 - Play Again: room:restart socket event resets room to 'waiting' so all players can rematch; other players auto-navigate via room:state listener
+- Phaser scene lifecycle: shutdown() must be registered via `this.events.once('shutdown', this.shutdown, this)` — Phaser does NOT auto-call shutdown() methods. Scenes also defensively clean up stale state at the top of create() in case shutdown wasn't called.
 
 ## Game Logging
 - JSONL game logs written to ./data/gamelogs/ (bind-mounted from container)
