@@ -3,6 +3,7 @@ export * from './types/game';
 export * from './types/lobby';
 export * from './types/socket-events';
 export * from './types/admin';
+export * from './types/simulation';
 export * from './constants/game';
 export * from './constants/powerups';
 export * from './constants/modes';

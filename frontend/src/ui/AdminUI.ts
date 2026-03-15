@@ -8,6 +8,7 @@ import { MatchesTab } from './admin/MatchesTab';
 import { RoomsTab } from './admin/RoomsTab';
 import { LogsTab } from './admin/LogsTab';
 import { AnnouncementsTab } from './admin/AnnouncementsTab';
+import { SimulationsTab } from './admin/SimulationsTab';
 
 interface Tab {
   id: string;
@@ -30,7 +31,7 @@ export class AdminUI {
     socketClient: SocketClient,
     authManager: AuthManager,
     notifications: NotificationUI,
-    onClose: () => void
+    onClose: () => void,
   ) {
     this.socketClient = socketClient;
     this.authManager = authManager;
@@ -43,17 +44,48 @@ export class AdminUI {
     const isAdmin = role === 'admin';
 
     this.tabs = [
-      { id: 'dashboard', label: 'Dashboard', adminOnly: true, instance: new DashboardTab(notifications) },
-      { id: 'users', label: 'Users', adminOnly: false, instance: new UsersTab(notifications, role) },
-      { id: 'matches', label: 'Matches', adminOnly: false, instance: new MatchesTab(notifications) },
-      { id: 'rooms', label: 'Rooms', adminOnly: false, instance: new RoomsTab(notifications, socketClient, role) },
+      {
+        id: 'dashboard',
+        label: 'Dashboard',
+        adminOnly: true,
+        instance: new DashboardTab(notifications),
+      },
+      {
+        id: 'users',
+        label: 'Users',
+        adminOnly: false,
+        instance: new UsersTab(notifications, role),
+      },
+      {
+        id: 'matches',
+        label: 'Matches',
+        adminOnly: false,
+        instance: new MatchesTab(notifications),
+      },
+      {
+        id: 'rooms',
+        label: 'Rooms',
+        adminOnly: false,
+        instance: new RoomsTab(notifications, socketClient, role),
+      },
       { id: 'logs', label: 'Logs', adminOnly: true, instance: new LogsTab(notifications) },
-      { id: 'announcements', label: 'Announcements', adminOnly: false, instance: new AnnouncementsTab(notifications, role) },
+      {
+        id: 'simulations',
+        label: 'Simulations',
+        adminOnly: true,
+        instance: new SimulationsTab(notifications, socketClient),
+      },
+      {
+        id: 'announcements',
+        label: 'Announcements',
+        adminOnly: false,
+        instance: new AnnouncementsTab(notifications, role),
+      },
     ];
 
     // Filter tabs based on role
     if (!isAdmin) {
-      this.tabs = this.tabs.filter(t => !t.adminOnly);
+      this.tabs = this.tabs.filter((t) => !t.adminOnly);
     }
 
     this.activeTabId = this.tabs[0]?.id || 'users';
@@ -69,7 +101,7 @@ export class AdminUI {
 
   hide(): void {
     // Destroy active tab
-    const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+    const activeTab = this.tabs.find((t) => t.id === this.activeTabId);
     activeTab?.instance.destroy();
     this.container.remove();
   }
@@ -81,9 +113,13 @@ export class AdminUI {
         <button class="btn btn-secondary" id="admin-close">Back to Lobby</button>
       </div>
       <div class="admin-tabs" id="admin-tab-bar">
-        ${this.tabs.map(t => `
+        ${this.tabs
+          .map(
+            (t) => `
           <button class="admin-tab ${t.id === this.activeTabId ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>
-        `).join('')}
+        `,
+          )
+          .join('')}
       </div>
       <div class="admin-tab-content" id="admin-tab-content"></div>
     `;
@@ -106,7 +142,7 @@ export class AdminUI {
 
   private async switchTab(tabId: string): Promise<void> {
     // Destroy current tab
-    const currentTab = this.tabs.find(t => t.id === this.activeTabId);
+    const currentTab = this.tabs.find((t) => t.id === this.activeTabId);
     currentTab?.instance.destroy();
 
     this.activeTabId = tabId;
@@ -114,7 +150,7 @@ export class AdminUI {
     // Update tab bar active state
     const tabBar = this.container.querySelector('#admin-tab-bar');
     if (tabBar) {
-      tabBar.querySelectorAll('.admin-tab').forEach(btn => {
+      tabBar.querySelectorAll('.admin-tab').forEach((btn) => {
         btn.classList.toggle('active', (btn as HTMLElement).dataset.tab === tabId);
       });
     }
@@ -127,7 +163,7 @@ export class AdminUI {
   }
 
   private async renderActiveTab(): Promise<void> {
-    const tab = this.tabs.find(t => t.id === this.activeTabId);
+    const tab = this.tabs.find((t) => t.id === this.activeTabId);
     if (tab && this.contentEl) {
       await tab.instance.render(this.contentEl);
     }

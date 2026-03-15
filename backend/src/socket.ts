@@ -5,7 +5,7 @@ import { getConfig } from './config';
 import { logger } from './utils/logger';
 import * as lobbyService from './services/lobby';
 import { RoomManager } from './game/RoomManager';
-import { setRegistry } from './game/registry';
+import { setRegistry, getSimulationManager } from './game/registry';
 import { createRateLimiters } from './utils/socketRateLimit';
 import {
   ClientToServerEvents,
@@ -383,6 +383,77 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         { admin: socket.data.username, roomCode: data.roomCode },
         'Admin sent room message',
       );
+    });
+
+    // Simulation: start batch
+    socket.on('sim:start', (config, callback) => {
+      if (socket.data.role !== 'admin') {
+        return callback({ success: false, error: 'Admin access required' });
+      }
+
+      const mgr = getSimulationManager();
+      const result = mgr.startBatch(config, socket.data.userId);
+      if ('error' in result) {
+        return callback({ success: false, error: result.error });
+      }
+
+      const runner = mgr.getBatch(result.batchId)!;
+
+      // Forward events to the admin socket
+      runner.on('progress', (status: any) => socket.emit('sim:progress', status));
+      runner.on('gameResult', (gameResult: any) =>
+        socket.emit('sim:gameResult', { batchId: result.batchId, result: gameResult }),
+      );
+      runner.on('completed', (status: any) =>
+        socket.emit('sim:completed', { batchId: result.batchId, status }),
+      );
+
+      logger.info(
+        { admin: socket.data.username, batchId: result.batchId, totalGames: config.totalGames },
+        'Admin started simulation batch',
+      );
+      callback({ success: true, batchId: result.batchId });
+    });
+
+    // Simulation: cancel batch
+    socket.on('sim:cancel', (data, callback) => {
+      if (socket.data.role !== 'admin') {
+        return callback({ success: false, error: 'Admin access required' });
+      }
+
+      const success = getSimulationManager().cancelBatch(data.batchId);
+      callback({ success, error: success ? undefined : 'Batch not found or not running' });
+    });
+
+    // Simulation: spectate
+    socket.on('sim:spectate', (data, callback) => {
+      if (socket.data.role !== 'admin') {
+        return callback({ success: false, error: 'Admin access required' });
+      }
+
+      const runner = getSimulationManager().getBatch(data.batchId);
+      if (!runner || !runner.isActive()) {
+        return callback({ success: false, error: 'Batch not found or not running' });
+      }
+
+      socket.join(`sim:${data.batchId}`);
+
+      // Send current game state immediately so spectator can init the scene
+      const currentState = runner.getCurrentGameState();
+      if (currentState) {
+        socket.emit('sim:state', { batchId: data.batchId, state: currentState });
+      }
+
+      logger.info(
+        { admin: socket.data.username, batchId: data.batchId },
+        'Admin spectating simulation',
+      );
+      callback({ success: true });
+    });
+
+    // Simulation: stop spectating
+    socket.on('sim:unspectate', (data) => {
+      socket.leave(`sim:${data.batchId}`);
     });
 
     // Disconnect

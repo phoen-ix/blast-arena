@@ -121,15 +121,61 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Listen for state updates
-    this.socketClient.on('game:state', ((state: GameState) => {
-      this.updateState(state);
-    }) as any);
+    const simSpectate = this.registry.get('simulationSpectate');
+    if (simSpectate) {
+      // Simulation spectate mode: listen on sim:state, no input sending
+      this.localPlayerDead = true; // Force spectator mode
+      this.socketClient.on(
+        'sim:state' as any,
+        ((data: { batchId: string; state: GameState }) => {
+          this.updateState(data.state);
+        }) as any,
+      );
 
-    this.socketClient.on('game:over', ((data: any) => {
-      this.registry.set('gameOverData', data);
-      this.scene.stop('HUDScene');
-      this.scene.start('GameOverScene');
-    }) as any);
+      // Handle game-to-game transitions within a batch
+      this.socketClient.on(
+        'sim:gameTransition' as any,
+        ((data: { batchId: string; gameIndex: number; totalGames: number; lastResult: any }) => {
+          // Wait for the next game's initial state, then restart the scene
+          const nextStateHandler = (stateData: { batchId: string; state: GameState }) => {
+            if (stateData.batchId !== data.batchId) return;
+            this.socketClient.off('sim:state' as any, nextStateHandler as any);
+
+            // Restart scene with new initial state
+            this.registry.set('initialGameState', stateData.state);
+            this.registry.set('simulationSpectate', { batchId: data.batchId });
+            this.scene.restart();
+          };
+          // Temporarily swap to the transition handler
+          this.socketClient.off('sim:state' as any);
+          this.socketClient.on('sim:state' as any, nextStateHandler as any);
+        }) as any,
+      );
+
+      // When the batch completes, return to lobby
+      this.socketClient.on(
+        'sim:completed' as any,
+        ((_data: { batchId: string }) => {
+          this.socketClient.off('sim:state' as any);
+          this.socketClient.off('sim:gameTransition' as any);
+          this.socketClient.off('sim:completed' as any);
+          this.socketClient.emit('sim:unspectate' as any, { batchId: simSpectate.batchId });
+          this.registry.remove('simulationSpectate');
+          this.scene.stop('HUDScene');
+          this.scene.start('LobbyScene');
+        }) as any,
+      );
+    } else {
+      this.socketClient.on('game:state', ((state: GameState) => {
+        this.updateState(state);
+      }) as any);
+
+      this.socketClient.on('game:over', ((data: any) => {
+        this.registry.set('gameOverData', data);
+        this.scene.stop('HUDScene');
+        this.scene.start('GameOverScene');
+      }) as any);
+    }
 
     // Camera setup
     if (initialState) {
@@ -429,6 +475,9 @@ export class GameScene extends Phaser.Scene {
   shutdown(): void {
     this.socketClient.off('game:state' as any);
     this.socketClient.off('game:over' as any);
+    this.socketClient.off('sim:state' as any);
+    this.socketClient.off('sim:gameTransition' as any);
+    this.socketClient.off('sim:completed' as any);
     this.removeSpectatorListeners();
     this.cleanupRenderers();
   }

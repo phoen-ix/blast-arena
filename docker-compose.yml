@@ -86,6 +86,7 @@ services:
         condition: service_healthy
     volumes:
       - ./data/gamelogs:/app/gamelogs
+      - ./data/simulations:/app/simulations
     networks:
       - internal
     healthcheck:

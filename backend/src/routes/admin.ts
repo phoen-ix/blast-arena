@@ -4,6 +4,8 @@ import { authMiddleware } from '../middleware/auth';
 import { staffMiddleware, adminOnlyMiddleware } from '../middleware/admin';
 import { validate } from '../middleware/validation';
 import * as adminService from '../services/admin';
+import { getSimulationManager } from '../game/registry';
+import { SimulationConfig } from '@blast-arena/shared';
 
 const router = Router();
 
@@ -24,7 +26,11 @@ const bannerSchema = z.object({
 });
 
 const createUserSchema = z.object({
-  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_-]+$/),
+  username: z
+    .string()
+    .min(3)
+    .max(20)
+    .regex(/^[a-zA-Z0-9_-]+$/),
   email: z.string().email().max(255),
   password: z.string().min(6).max(128),
   role: z.enum(['user', 'moderator', 'admin']).optional(),
@@ -45,20 +51,25 @@ router.use(authMiddleware, staffMiddleware);
 
 // --- Users ---
 
-router.post('/admin/users', adminOnlyMiddleware, validate(createUserSchema), async (req, res, next) => {
-  try {
-    const user = await adminService.createUser(
-      req.user!.userId,
-      req.body.username,
-      req.body.email,
-      req.body.password,
-      req.body.role
-    );
-    res.status(201).json(user);
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+  '/admin/users',
+  adminOnlyMiddleware,
+  validate(createUserSchema),
+  async (req, res, next) => {
+    try {
+      const user = await adminService.createUser(
+        req.user!.userId,
+        req.body.username,
+        req.body.email,
+        req.body.password,
+        req.body.role,
+      );
+      res.status(201).json(user);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 router.get('/admin/users', async (req, res, next) => {
   try {
@@ -72,25 +83,35 @@ router.get('/admin/users', async (req, res, next) => {
   }
 });
 
-router.put('/admin/users/:id/role', adminOnlyMiddleware, validate(roleSchema), async (req, res, next) => {
-  try {
-    const userId = parseInt(req.params.id);
-    await adminService.changeUserRole(req.user!.userId, userId, req.body.role);
-    res.json({ message: 'Role updated' });
-  } catch (err) {
-    next(err);
-  }
-});
+router.put(
+  '/admin/users/:id/role',
+  adminOnlyMiddleware,
+  validate(roleSchema),
+  async (req, res, next) => {
+    try {
+      const userId = parseInt(req.params.id);
+      await adminService.changeUserRole(req.user!.userId, userId, req.body.role);
+      res.json({ message: 'Role updated' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
-router.put('/admin/users/:id/deactivate', adminOnlyMiddleware, validate(deactivateSchema), async (req, res, next) => {
-  try {
-    const userId = parseInt(req.params.id);
-    await adminService.deactivateUser(req.user!.userId, userId, req.body.deactivated);
-    res.json({ message: req.body.deactivated ? 'User deactivated' : 'User reactivated' });
-  } catch (err) {
-    next(err);
-  }
-});
+router.put(
+  '/admin/users/:id/deactivate',
+  adminOnlyMiddleware,
+  validate(deactivateSchema),
+  async (req, res, next) => {
+    try {
+      const userId = parseInt(req.params.id);
+      await adminService.deactivateUser(req.user!.userId, userId, req.body.deactivated);
+      res.json({ message: req.body.deactivated ? 'User deactivated' : 'User reactivated' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 router.delete('/admin/users/:id', adminOnlyMiddleware, async (req, res, next) => {
   try {
@@ -172,14 +193,19 @@ router.post('/admin/announcements/toast', validate(toastSchema), async (req, res
   }
 });
 
-router.post('/admin/announcements/banner', adminOnlyMiddleware, validate(bannerSchema), async (req, res, next) => {
-  try {
-    await adminService.setBanner(req.user!.userId, req.body.message);
-    res.json({ message: 'Banner set' });
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+  '/admin/announcements/banner',
+  adminOnlyMiddleware,
+  validate(bannerSchema),
+  async (req, res, next) => {
+    try {
+      await adminService.setBanner(req.user!.userId, req.body.message);
+      res.json({ message: 'Banner set' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 router.delete('/admin/announcements/banner', adminOnlyMiddleware, async (req, res, next) => {
   try {
@@ -188,6 +214,86 @@ router.delete('/admin/announcements/banner', adminOnlyMiddleware, async (req, re
   } catch (err) {
     next(err);
   }
+});
+
+// --- Simulations ---
+
+const simulationConfigSchema = z.object({
+  gameMode: z.enum([
+    'ffa',
+    'teams',
+    'battle_royale',
+    'sudden_death',
+    'deathmatch',
+    'king_of_the_hill',
+  ]),
+  botCount: z.number().int().min(2).max(8),
+  botDifficulty: z.enum(['easy', 'normal', 'hard']),
+  mapWidth: z.number().int().min(11).max(61),
+  mapHeight: z.number().int().min(11).max(61),
+  roundTime: z.number().int().min(30).max(600),
+  wallDensity: z.number().min(0).max(1),
+  enabledPowerUps: z.array(
+    z.enum([
+      'bomb_up',
+      'fire_up',
+      'speed_up',
+      'shield',
+      'kick',
+      'pierce_bomb',
+      'remote_bomb',
+      'line_bomb',
+    ]),
+  ),
+  powerUpDropRate: z.number().min(0).max(1),
+  friendlyFire: z.boolean(),
+  hazardTiles: z.boolean(),
+  reinforcedWalls: z.boolean(),
+  enableMapEvents: z.boolean(),
+  totalGames: z.number().int().min(1).max(1000),
+  speed: z.enum(['fast', 'realtime']),
+  logVerbosity: z.enum(['normal', 'detailed', 'full']),
+  botTeams: z.array(z.number().nullable()).optional(),
+});
+
+router.get('/admin/simulations', adminOnlyMiddleware, (_req, res) => {
+  const mgr = getSimulationManager();
+  res.json(mgr.getHistory());
+});
+
+router.get('/admin/simulations/:batchId', adminOnlyMiddleware, (req, res) => {
+  const mgr = getSimulationManager();
+  const data = mgr.getBatchResults(req.params.batchId);
+  if (!data) {
+    res.status(404).json({ error: 'Batch not found' });
+    return;
+  }
+  res.json(data);
+});
+
+router.post(
+  '/admin/simulations',
+  adminOnlyMiddleware,
+  validate(simulationConfigSchema),
+  (req, res) => {
+    const mgr = getSimulationManager();
+    const result = mgr.startBatch(req.body as SimulationConfig, req.user!.userId);
+    if ('error' in result) {
+      res.status(409).json(result);
+      return;
+    }
+    res.status(201).json(result);
+  },
+);
+
+router.delete('/admin/simulations/:batchId', adminOnlyMiddleware, (req, res) => {
+  const mgr = getSimulationManager();
+  const success = mgr.cancelBatch(req.params.batchId);
+  if (!success) {
+    res.status(404).json({ error: 'Batch not found or not running' });
+    return;
+  }
+  res.json({ message: 'Batch cancelled' });
 });
 
 export default router;

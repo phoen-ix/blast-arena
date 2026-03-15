@@ -24,6 +24,7 @@ services:
       - /app/backend/node_modules
       - /app/shared/node_modules
       - ./data/gamelogs:/app/gamelogs
+      - ./data/simulations:/app/simulations
     healthcheck:
       start_period: 10s
 

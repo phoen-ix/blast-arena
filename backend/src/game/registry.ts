@@ -6,6 +6,7 @@ import {
   SocketData,
 } from '@blast-arena/shared';
 import { RoomManager } from './RoomManager';
+import { SimulationManager } from '../simulation/SimulationManager';
 
 type TypedServer = Server<
   ClientToServerEvents,
@@ -16,6 +17,7 @@ type TypedServer = Server<
 
 let roomManager: RoomManager | null = null;
 let io: TypedServer | null = null;
+let simulationManager: SimulationManager | null = null;
 
 export function setRegistry(rm: RoomManager, ioServer: TypedServer): void {
   roomManager = rm;
@@ -30,4 +32,11 @@ export function getRoomManager(): RoomManager {
 export function getIO(): TypedServer {
   if (!io) throw new Error('Socket.io server not initialized');
   return io;
+}
+
+export function getSimulationManager(): SimulationManager {
+  if (!simulationManager) {
+    simulationManager = new SimulationManager();
+  }
+  return simulationManager;
 }

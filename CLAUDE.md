@@ -63,8 +63,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ## Admin Panel
 - Full-screen panel accessible from lobby header (Admin button visible for admin and moderator roles)
-- **Top-tab navigation**: Dashboard, Users, Matches, Rooms, Logs, Announcements (role-filtered)
-- **Permission matrix**: Admin sees all 6 tabs; Moderator sees Users, Matches, Rooms, Announcements only
+- **Top-tab navigation**: Dashboard, Users, Matches, Rooms, Logs, Simulations, Announcements (role-filtered)
+- **Permission matrix**: Admin sees all 7 tabs (Simulations is admin-only); Moderator sees Users, Matches, Rooms, Announcements only
 - **Dashboard**: 5 stat cards (total users, active 24h, total matches, active rooms, online players) with 30s auto-refresh
 - **Users**: Paginated table with search, role change dropdown, deactivate (soft delete), delete permanently (type-username confirmation), create user modal
 - **Matches**: Paginated table, click row for detail modal with per-player stats
@@ -78,6 +78,22 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Deactivated users blocked from login and token refresh
 - Self-protection: admins cannot deactivate/delete themselves
 - Public endpoint `GET /admin/announcements/banner` for lobby banner display (no auth required)
+
+## Bot Simulation System
+- Admin-only batch simulation runner for bot-only games — no human players, no DB records
+- **SimulationsTab** in admin panel: configure game mode, bot count/difficulty, map size, round time, total games (1-1000), speed, log verbosity, all power-up/map options
+- **Two speed modes**: Fast (ticks as fast as possible via `setImmediate` batching, ~100 ticks/yield) and Real-time (20 tps like normal games)
+- **Live spectating**: Real-time mode auto-launches GameScene in spectator mode; Fast mode streams state at ~20fps via capped interval
+- GameScene handles `sim:state` events for rendering, `sim:gameTransition` for between-game scene restarts, `sim:completed` for returning to lobby
+- **Log directory structure**: `data/simulations/{gameMode}/batch_{timestamp}_{batchId}/` with per-game `sim_NNN.jsonl` files, `batch_config.json`, and `batch_summary.json`
+- **Log verbosity levels**: Normal (5-tick snapshots), Detailed (2-tick + movements + pickups), Full (every tick + explosion detail + bot pathfinding)
+- `GameLogger` enhanced with `shouldLogTick()`, `logMovement()`, `logPowerupPickup()`, `logExplosionDetail()`, `logBotPathfinding()` — all backward-compatible
+- Backend: `SimulationGame.ts` (headless game runner), `SimulationRunner.ts` (batch orchestrator, EventEmitter), `SimulationManager.ts` (singleton, max 1 concurrent batch)
+- Socket events: `sim:start`, `sim:cancel`, `sim:spectate`, `sim:unspectate` (C→S); `sim:progress`, `sim:gameResult`, `sim:state`, `sim:gameTransition`, `sim:completed` (S→C)
+- REST endpoints: `GET/POST /admin/simulations`, `GET/DELETE /admin/simulations/:batchId`
+- Bot names pool: AlphaBot through PulseBot (16 distinct names)
+- Cancellation preserves completed game logs; 3s pause between realtime games, 0.5s for fast
+- Docker: `./data/simulations:/app/simulations` volume mount in both compose files
 
 ## Account Management
 - **Account modal** in lobby header lets users edit their username and email
@@ -114,6 +130,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - BotAI directional wall clearing: prefers breaking walls toward enemies rather than just the nearest wall
 - BotAI danger timer threshold: normal/hard bots ignore bombs with many ticks remaining (>30/40) unless within 2 tiles, reducing unnecessary fleeing from fresh bombs
 - BotAI KOTH hill-seeking: priority 4.5 in decision tree, bots navigate toward the 3x3 center zone using manhattan distance heuristic; once inside they stay put rather than wandering off
+- BotAI anti-oscillation: `orderedDirs()` helper iterates `lastDirection` first in all BFS seed steps, giving deterministic tie-breaking without multi-tick commitment locks; wander has 85% continuation probability
+- BotAI flee stuck-breaker: tracks `lastFleePos`/`fleeStuckTicks` — after 3 ticks stuck at same position while fleeing, tries alternative directions (logged as `flee_unstick`)
 - Self-kills subtract 1 from kill score (owner.kills decremented, owner.selfKills incremented)
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished' to show final explosions
@@ -156,8 +174,10 @@ MatchConfig includes: gameMode, maxPlayers, mapWidth/Height, mapSeed, roundTime,
 
 ## Game Logging
 - JSONL game logs written to ./data/gamelogs/ (bind-mounted from container)
-- Logs every bot decision, kill, bomb placement/detonation, and tick snapshots (every 5 ticks)
+- Logs every bot decision, kill, bomb placement/detonation, and tick snapshots (frequency depends on verbosity)
 - Filename format: `{ISO-timestamp}_{roomCode}_{gameMode}_{playerCount}p.jsonl`
+- `GameLogger` supports 3 verbosity levels: normal (tick every 5), detailed (tick every 2 + movements/pickups), full (every tick + explosion detail + bot pathfinding)
+- Simulation logs written to `./data/simulations/{gameMode}/batch_*/` with separate directory per game mode
 
 ## Code Quality & Tooling
 - ESLint v10 + `@typescript-eslint/recommended` via flat config (`eslint.config.mjs`); `no-explicit-any` as warning, `no-unused-vars` as error

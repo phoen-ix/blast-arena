@@ -44,8 +44,8 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     useKick: false,
     reactionDelay: 3,
     huntSearchDepth: 10,
-    dangerTimerThreshold: 0, // Easy bots treat all bombs as dangerous
-    roamAfterIdleTicks: 0, // Easy bots don't roam
+    dangerTimerThreshold: 0,
+    roamAfterIdleTicks: 0,
   },
   normal: {
     dangerAwareness: 99,
@@ -59,8 +59,8 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     useKick: true,
     reactionDelay: 0,
     huntSearchDepth: 25,
-    dangerTimerThreshold: 30, // Only fear bombs with ≤30 ticks left (1.5s)
-    roamAfterIdleTicks: 100, // Start roaming after 5s without enemy contact
+    dangerTimerThreshold: 30,
+    roamAfterIdleTicks: 100,
   },
   hard: {
     dangerAwareness: 99,
@@ -74,8 +74,8 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     useKick: true,
     reactionDelay: 0,
     huntSearchDepth: 35,
-    dangerTimerThreshold: 40, // Ignore bombs with >40 ticks left
-    roamAfterIdleTicks: 60, // Start roaming after 3s without enemy contact
+    dangerTimerThreshold: 40,
+    roamAfterIdleTicks: 60,
   },
 };
 
@@ -88,6 +88,10 @@ export class BotAI {
   private reactionDelayRemaining: number = 0;
   private ticksSinceEnemyContact: number = 0;
 
+  // Anti-oscillation: flee stuck detection
+  private lastFleePos: string | null = null;
+  private fleeStuckTicks: number = 0;
+
   constructor(difficulty: 'easy' | 'normal' | 'hard' = 'normal') {
     this.config = DIFFICULTY_PRESETS[difficulty];
   }
@@ -95,6 +99,15 @@ export class BotAI {
   private getAwarenessRange(playerFireRange: number): number {
     if (this.config.dangerAwareness === 'fireRange') return playerFireRange;
     return this.config.dangerAwareness;
+  }
+
+  /**
+   * Return DIRECTIONS ordered so lastDirection comes first.
+   * This gives BFS a stable tie-break without any commitment mechanism.
+   */
+  private orderedDirs(): Direction[] {
+    if (!this.lastDirection) return DIRECTIONS;
+    return [this.lastDirection, ...DIRECTIONS.filter((d) => d !== this.lastDirection)];
   }
 
   generateInput(
@@ -140,13 +153,13 @@ export class BotAI {
     ) {
       const kickDir = this.findKickableBomb(pos, state);
       if (kickDir) {
-        this.kickCooldown = 3; // Prevent re-kicking for a few ticks
+        this.kickCooldown = 3;
         logDecision('kick', { dir: kickDir });
         return { seq: this.seq, direction: kickDir, action: null, tick: state.tick };
       }
     }
 
-    // === PRIORITY 2: Flee from danger (always check) ===
+    // === PRIORITY 2: Flee from danger ===
     if (amInDanger) {
       if (this.config.reactionDelay > 0) {
         if (this.reactionDelayRemaining > 0) {
@@ -155,15 +168,43 @@ export class BotAI {
         }
       }
 
-      // BFS escape: navigate THROUGH danger cells to reach nearest safe cell
       const escapeDir = this.findEscapeDirection(pos, state, danger, bombPositions, otherPlayers);
       if (escapeDir) {
+        const posKey = `${pos.x},${pos.y}`;
+        // Detect stuck: same position for 3+ ticks — try alternative direction
+        if (posKey === this.lastFleePos) {
+          this.fleeStuckTicks++;
+          if (this.fleeStuckTicks >= 3) {
+            for (const dir of DIRECTIONS) {
+              if (
+                dir !== escapeDir &&
+                state.collisionSystem.canMoveTo(pos.x, pos.y, dir, bombPositions, otherPlayers)
+              ) {
+                this.lastDirection = dir;
+                this.fleeStuckTicks = 0;
+                this.lastFleePos = null;
+                logDecision('flee_unstick', { dir });
+                return { seq: this.seq, direction: dir, action: null, tick: state.tick };
+              }
+            }
+          }
+        } else {
+          this.lastFleePos = posKey;
+          this.fleeStuckTicks = 0;
+        }
         this.lastDirection = escapeDir;
+        logger?.logBotPathfinding(
+          player.id,
+          player.username,
+          'escape_bfs',
+          this.config.escapeSearchDepth,
+          null,
+        );
         logDecision('flee', { dir: escapeDir });
         return { seq: this.seq, direction: escapeDir, action: null, tick: state.tick };
       }
 
-      // Last resort: any movable direction (even into danger)
+      // Last resort: any movable direction
       for (const dir of DIRECTIONS) {
         if (state.collisionSystem.canMoveTo(pos.x, pos.y, dir, bombPositions, otherPlayers)) {
           this.lastDirection = dir;
@@ -175,6 +216,8 @@ export class BotAI {
       return null;
     } else {
       this.reactionDelayRemaining = this.config.reactionDelay;
+      this.lastFleePos = null;
+      this.fleeStuckTicks = 0;
     }
 
     // === PRIORITY 2.5: Detonate remote bombs if enemy is in their blast zone ===
@@ -183,7 +226,6 @@ export class BotAI {
         (b) => b.ownerId === player.id && b.bombType === 'remote',
       );
       if (ownRemoteBombs.length > 0) {
-        // Check if any enemy is in the blast zone of any of our remote bombs
         let enemyInBlast = false;
         for (const bomb of ownRemoteBombs) {
           for (const { dx, dy } of Object.values(DIR_DELTA)) {
@@ -209,7 +251,6 @@ export class BotAI {
           }
           if (enemyInBlast) break;
         }
-        // Also detonate if we've placed max bombs and need to free up slots
         const shouldDetonate = enemyInBlast || ownRemoteBombs.length >= player.maxBombs;
         if (shouldDetonate) {
           logDecision('detonate_remote', { count: ownRemoteBombs.length });
@@ -218,14 +259,13 @@ export class BotAI {
       }
     }
 
-    // === PRIORITY 3: Bomb placement (check even when can't move) ===
+    // === PRIORITY 3: Bomb placement ===
     if (this.bombCooldown <= 0 && player.canPlaceBomb()) {
       const canEscape =
         !this.config.escapeCheckBeforeBomb ||
         this.canEscapeAfterBomb(pos, state, player, bombPositions, otherPlayers);
 
       if (canEscape) {
-        // Offensive bomb: enemy in direct blast line
         if (this.isEnemyInBlastRange(pos, state, player)) {
           this.bombCooldown =
             this.config.bombCooldownMin +
@@ -234,7 +274,6 @@ export class BotAI {
           return { seq: this.seq, direction: null, action: 'bomb', tick: state.tick };
         }
 
-        // Wall bomb: destructible wall adjacent
         if (this.isNearDestructible(pos, state)) {
           this.bombCooldown =
             this.config.bombCooldownMin +
@@ -245,7 +284,7 @@ export class BotAI {
       }
     }
 
-    // === MOVEMENT DECISIONS: only when player can actually move (prevents oscillation) ===
+    // === MOVEMENT DECISIONS: only when player can actually move ===
     if (!player.canMove()) return null;
 
     // Priority 4: Move toward a power-up (BFS pathfinding)
@@ -278,12 +317,19 @@ export class BotAI {
       );
       if (huntDir) {
         this.lastDirection = huntDir;
+        logger?.logBotPathfinding(
+          player.id,
+          player.username,
+          'hunt_bfs',
+          this.config.huntSearchDepth,
+          null,
+        );
         logDecision('hunt', { dir: huntDir });
         return { seq: this.seq, direction: huntDir, action: null, tick: state.tick };
       }
     }
 
-    // Priority 5.5: Roam toward enemies when idle too long (no nearby walls or hunt failed)
+    // Priority 5.5: Roam toward enemies when idle too long
     if (
       this.config.roamAfterIdleTicks > 0 &&
       this.ticksSinceEnemyContact >= this.config.roamAfterIdleTicks
@@ -303,7 +349,7 @@ export class BotAI {
       }
     }
 
-    // Priority 6: Move toward nearest destructible wall — prefer walls toward enemies
+    // Priority 6: Move toward nearest destructible wall
     const wallDir = this.findDestructibleWallDirection(
       pos,
       state,
@@ -318,7 +364,7 @@ export class BotAI {
       return { seq: this.seq, direction: wallDir, action: null, tick: state.tick };
     }
 
-    // Priority 7: Wander — pick a safe, non-trapping direction
+    // Priority 7: Wander
     const wanderDir = this.pickSafeWander(pos, state, danger, bombPositions, otherPlayers);
     if (wanderDir) {
       this.lastDirection = wanderDir;
@@ -329,9 +375,6 @@ export class BotAI {
     return null;
   }
 
-  /**
-   * Get manhattan distance to the nearest alive enemy.
-   */
   private getNearestEnemyManhattan(
     pos: Position,
     state: GameStateManager,
@@ -347,12 +390,6 @@ export class BotAI {
     return minDist;
   }
 
-  /**
-   * Build a set of cells that are in the blast zone of any bomb,
-   * filtered by the bot's awareness range (manhattan distance from bot position).
-   * Bombs with many ticks remaining are ignored (dangerTimerThreshold) to reduce
-   * unnecessary fleeing from distant or fresh bombs.
-   */
   private getDangerCells(
     state: GameStateManager,
     awarenessRange: number,
@@ -360,22 +397,17 @@ export class BotAI {
   ): Set<string> {
     const danger = new Set<string>();
 
-    // Active explosions — always dangerous
     for (const exp of state.explosions.values()) {
       for (const cell of exp.cells) {
         danger.add(`${cell.x},${cell.y}`);
       }
     }
 
-    // Bombs — trace blast lines respecting walls
     for (const bomb of state.bombs.values()) {
       const manhattanDist =
         Math.abs(bomb.position.x - botPos.x) + Math.abs(bomb.position.y - botPos.y);
       if (manhattanDist > awarenessRange) continue;
 
-      // Skip bombs that still have a lot of time remaining — they're not an
-      // immediate threat and fleeing from them wastes time.
-      // Always respect bombs within 2 tiles (could chain or trap us).
       if (
         this.config.dangerTimerThreshold > 0 &&
         bomb.ticksRemaining > this.config.dangerTimerThreshold &&
@@ -385,7 +417,6 @@ export class BotAI {
       }
 
       danger.add(`${bomb.position.x},${bomb.position.y}`);
-
       for (const { dx, dy } of Object.values(DIR_DELTA)) {
         for (let i = 1; i <= bomb.fireRange; i++) {
           const cx = bomb.position.x + dx * i;
@@ -401,12 +432,6 @@ export class BotAI {
     return danger;
   }
 
-  /**
-   * BFS escape: navigate THROUGH danger cells to find the nearest safe cell.
-   * This ensures the bot follows the same escape path that canEscapeAfterBomb validated.
-   * Unlike the old findSafeDirection which skipped danger cells (causing the bot to
-   * take a different, often dead-end path), this explores danger cells in the BFS.
-   */
   private findEscapeDirection(
     pos: Position,
     state: GameStateManager,
@@ -418,7 +443,6 @@ export class BotAI {
     visited.add(`${pos.x},${pos.y}`);
     let frontier: { pos: Position; firstDir: Direction }[] = [];
 
-    // Seed with immediate neighbors
     for (const dir of DIRECTIONS) {
       const newPos = state.collisionSystem.canMoveTo(
         pos.x,
@@ -431,14 +455,10 @@ export class BotAI {
       const key = `${newPos.x},${newPos.y}`;
       if (visited.has(key)) continue;
       visited.add(key);
-
-      // If this cell is already safe, return immediately
       if (!danger.has(key)) return dir;
-
       frontier.push({ pos: newPos, firstDir: dir });
     }
 
-    // BFS through danger cells to find safety
     for (let depth = 0; depth < this.config.escapeSearchDepth && frontier.length > 0; depth++) {
       const next: { pos: Position; firstDir: Direction }[] = [];
       for (const entry of frontier) {
@@ -454,9 +474,7 @@ export class BotAI {
           const key = `${newPos.x},${newPos.y}`;
           if (visited.has(key)) continue;
           visited.add(key);
-
-          if (!danger.has(key)) return entry.firstDir; // Safe cell found!
-
+          if (!danger.has(key)) return entry.firstDir;
           next.push({ pos: newPos, firstDir: entry.firstDir });
         }
       }
@@ -466,10 +484,6 @@ export class BotAI {
     return null;
   }
 
-  /**
-   * Count how many safe cells are reachable from a position via BFS,
-   * depth limited by config.escapeSearchDepth.
-   */
   private countEscapeRoutes(
     pos: Position,
     state: GameStateManager,
@@ -481,9 +495,8 @@ export class BotAI {
     visited.add(`${pos.x},${pos.y}`);
     let frontier = [pos];
     let safeCount = 0;
-    const maxDepth = this.config.escapeSearchDepth;
 
-    for (let depth = 0; depth < maxDepth && frontier.length > 0; depth++) {
+    for (let depth = 0; depth < this.config.escapeSearchDepth && frontier.length > 0; depth++) {
       const next: Position[] = [];
       for (const p of frontier) {
         for (const dir of DIRECTIONS) {
@@ -510,10 +523,6 @@ export class BotAI {
     return safeCount;
   }
 
-  /**
-   * Check if any enemy player is in direct blast line (line of sight along
-   * cardinal directions, respecting walls). Only checks actual blast range.
-   */
   private isEnemyInBlastRange(pos: Position, state: GameStateManager, player: Player): boolean {
     for (const { dx, dy } of Object.values(DIR_DELTA)) {
       for (let i = 1; i <= player.fireRange + 1; i++) {
@@ -521,7 +530,6 @@ export class BotAI {
         const cy = pos.y + dy * i;
         const tile = state.collisionSystem.getTileAt(cx, cy);
         if (tile === 'wall' || isDestructibleTile(tile)) break;
-
         for (const other of state.players.values()) {
           if (
             other.id !== player.id &&
@@ -539,8 +547,7 @@ export class BotAI {
 
   /**
    * Before placing a bomb, verify the bot can escape its own blast.
-   * Uses findEscapeDirection with simulated future danger to ensure the bot
-   * can actually reach a safe cell via the same BFS it uses to flee.
+   * Just checks that findEscapeDirection returns a direction — simple and reliable.
    */
   private canEscapeAfterBomb(
     pos: Position,
@@ -549,11 +556,9 @@ export class BotAI {
     bombPositions: Position[],
     otherPlayers: Position[],
   ): boolean {
-    // Simulate danger with a new bomb at our position
     const futureBombPositions = [...bombPositions, pos];
     const futureDanger = new Set(this.getDangerCells(state, 999, pos));
 
-    // Add our own would-be bomb blast
     futureDanger.add(`${pos.x},${pos.y}`);
     for (const { dx, dy } of Object.values(DIR_DELTA)) {
       for (let i = 1; i <= player.fireRange; i++) {
@@ -566,15 +571,11 @@ export class BotAI {
       }
     }
 
-    // Use the same BFS escape logic as findEscapeDirection
     return (
       this.findEscapeDirection(pos, state, futureDanger, futureBombPositions, otherPlayers) !== null
     );
   }
 
-  /**
-   * Check if any adjacent tile is a destructible wall.
-   */
   private isNearDestructible(pos: Position, state: GameStateManager): boolean {
     for (const { dx, dy } of Object.values(DIR_DELTA)) {
       if (isDestructibleTile(state.collisionSystem.getTileAt(pos.x + dx, pos.y + dy))) return true;
@@ -583,9 +584,8 @@ export class BotAI {
   }
 
   /**
-   * BFS pathfinding toward the nearest power-up. Navigates around walls and
-   * obstacles rather than only checking straight lines, so power-ups behind
-   * corners are reachable.
+   * BFS pathfinding toward the nearest power-up.
+   * Uses orderedDirs() so lastDirection is explored first, giving stable tie-breaking.
    */
   private findPowerUpDirection(
     pos: Position,
@@ -605,8 +605,7 @@ export class BotAI {
     visited.add(`${pos.x},${pos.y}`);
     let frontier: { pos: Position; firstDir: Direction }[] = [];
 
-    // Seed with immediate neighbors
-    for (const dir of DIRECTIONS) {
+    for (const dir of this.orderedDirs()) {
       const newPos = state.collisionSystem.canMoveTo(
         pos.x,
         pos.y,
@@ -618,13 +617,10 @@ export class BotAI {
       const key = `${newPos.x},${newPos.y}`;
       if (danger.has(key)) continue;
       visited.add(key);
-
       if (powerUpPositions.has(key)) return dir;
-
       frontier.push({ pos: newPos, firstDir: dir });
     }
 
-    // BFS up to powerUpVision steps
     for (let depth = 0; depth < this.config.powerUpVision && frontier.length > 0; depth++) {
       const next: { pos: Position; firstDir: Direction }[] = [];
       for (const entry of frontier) {
@@ -640,9 +636,7 @@ export class BotAI {
           const key = `${newPos.x},${newPos.y}`;
           if (visited.has(key) || danger.has(key)) continue;
           visited.add(key);
-
           if (powerUpPositions.has(key)) return entry.firstDir;
-
           next.push({ pos: newPos, firstDir: entry.firstDir });
         }
       }
@@ -652,11 +646,6 @@ export class BotAI {
     return null;
   }
 
-  /**
-   * Move toward the KOTH hill zone. If already inside, stay put (return null so we don't wander off).
-   * Uses manhattan distance heuristic like roam direction — not full BFS (the zone is always
-   * center-map and reachable, so heuristic is sufficient).
-   */
   private findHillZoneDirection(
     pos: Position,
     state: GameStateManager,
@@ -667,7 +656,6 @@ export class BotAI {
     const hill = state.hillZone;
     if (!hill) return null;
 
-    // Already inside the hill zone — don't move away, let other priorities decide
     if (
       pos.x >= hill.x &&
       pos.x < hill.x + hill.width &&
@@ -677,14 +665,12 @@ export class BotAI {
       return null;
     }
 
-    // Target: center of the hill zone
     const targetX = hill.x + Math.floor(hill.width / 2);
     const targetY = hill.y + Math.floor(hill.height / 2);
     const currentDist = Math.abs(pos.x - targetX) + Math.abs(pos.y - targetY);
 
-    // Evaluate each direction: prefer directions that reduce distance to hill center
     const candidates: { dir: Direction; distReduction: number; escape: number }[] = [];
-    for (const dir of DIRECTIONS) {
+    for (const dir of this.orderedDirs()) {
       const newPos = state.collisionSystem.canMoveTo(
         pos.x,
         pos.y,
@@ -695,7 +681,6 @@ export class BotAI {
       if (!newPos) continue;
       const key = `${newPos.x},${newPos.y}`;
       if (danger.has(key)) continue;
-
       const escapeCount = this.countEscapeRoutes(
         newPos,
         state,
@@ -704,24 +689,18 @@ export class BotAI {
         otherPlayers,
       );
       if (escapeCount < 1) continue;
-
       const newDist = Math.abs(newPos.x - targetX) + Math.abs(newPos.y - targetY);
       candidates.push({ dir, distReduction: currentDist - newDist, escape: escapeCount });
     }
 
     if (candidates.length === 0) return null;
-
-    // Only move if we can actually get closer
     candidates.sort((a, b) => b.distReduction - a.distReduction || b.escape - a.escape);
     if (candidates[0].distReduction <= 0) return null;
-
     return candidates[0].dir;
   }
 
   /**
-   * BFS pathfinding toward nearest enemy. Navigates around walls and obstacles.
-   * Returns the first-step direction to walk toward the closest reachable enemy.
-   * Search depth scales with config.huntSearchDepth for larger maps.
+   * BFS toward nearest enemy. orderedDirs() gives lastDirection priority at seed step.
    */
   private findHuntDirection(
     pos: Position,
@@ -743,8 +722,7 @@ export class BotAI {
     visited.add(`${pos.x},${pos.y}`);
     let frontier: { pos: Position; firstDir: Direction }[] = [];
 
-    // Seed with immediate neighbors (use real collision for first step)
-    for (const dir of DIRECTIONS) {
+    for (const dir of this.orderedDirs()) {
       const newPos = state.collisionSystem.canMoveTo(
         pos.x,
         pos.y,
@@ -755,8 +733,6 @@ export class BotAI {
       if (!newPos) continue;
       const key = `${newPos.x},${newPos.y}`;
       if (danger.has(key)) continue;
-
-      // Avoid walking into traps
       const escapeCount = this.countEscapeRoutes(
         newPos,
         state,
@@ -765,16 +741,11 @@ export class BotAI {
         otherPlayers,
       );
       if (escapeCount < 1) continue;
-
       visited.add(key);
-
-      // Check if this cell IS an enemy position
       if (enemyPositions.has(key)) return dir;
-
       frontier.push({ pos: newPos, firstDir: dir });
     }
 
-    // BFS up to huntSearchDepth steps — relax player blocking (enemies move)
     for (let depth = 0; depth < this.config.huntSearchDepth && frontier.length > 0; depth++) {
       const next: { pos: Position; firstDir: Direction }[] = [];
       for (const entry of frontier) {
@@ -790,9 +761,7 @@ export class BotAI {
           const key = `${newPos.x},${newPos.y}`;
           if (visited.has(key) || danger.has(key)) continue;
           visited.add(key);
-
           if (enemyPositions.has(key)) return entry.firstDir;
-
           next.push({ pos: newPos, firstDir: entry.firstDir });
         }
       }
@@ -803,10 +772,8 @@ export class BotAI {
   }
 
   /**
-   * Roam toward the nearest enemy's general direction using manhattan heuristic.
-   * Used when the bot has been idle too long (no enemy contact) and hunt BFS
-   * can't find a path (walls blocking). Picks the safe direction that reduces
-   * manhattan distance to the nearest enemy.
+   * Roam toward nearest enemy using manhattan heuristic.
+   * Tie-break with lastDirection for stability.
    */
   private findRoamDirection(
     pos: Position,
@@ -816,7 +783,6 @@ export class BotAI {
     bombPositions: Position[],
     otherPlayers: Position[],
   ): Direction | null {
-    // Find nearest enemy position
     let nearestEnemy: Position | null = null;
     let nearestDist = Infinity;
     for (const other of state.players.values()) {
@@ -830,7 +796,6 @@ export class BotAI {
     }
     if (!nearestEnemy) return null;
 
-    // Evaluate each direction: prefer directions that reduce manhattan distance to enemy
     const candidates: { dir: Direction; distReduction: number; escape: number }[] = [];
     for (const dir of DIRECTIONS) {
       const newPos = state.collisionSystem.canMoveTo(
@@ -843,7 +808,6 @@ export class BotAI {
       if (!newPos) continue;
       const key = `${newPos.x},${newPos.y}`;
       if (danger.has(key)) continue;
-
       const escapeCount = this.countEscapeRoutes(
         newPos,
         state,
@@ -852,23 +816,25 @@ export class BotAI {
         otherPlayers,
       );
       if (escapeCount < 1) continue;
-
       const newDist = Math.abs(newPos.x - nearestEnemy.x) + Math.abs(newPos.y - nearestEnemy.y);
       candidates.push({ dir, distReduction: nearestDist - newDist, escape: escapeCount });
     }
 
     if (candidates.length === 0) return null;
 
-    // Prefer directions that move us closer to the enemy
-    candidates.sort((a, b) => b.distReduction - a.distReduction || b.escape - a.escape);
+    const ld = this.lastDirection;
+    candidates.sort((a, b) => {
+      if (a.distReduction !== b.distReduction) return b.distReduction - a.distReduction;
+      if (a.escape !== b.escape) return b.escape - a.escape;
+      return (a.dir === ld ? 0 : 1) - (b.dir === ld ? 0 : 1);
+    });
 
-    // Take the best direction — even if it doesn't reduce distance (at least we move)
     return candidates[0].dir;
   }
 
   /**
-   * BFS to find the direction of the nearest reachable destructible wall.
-   * Prefers walls in the direction of enemies to carve paths toward them.
+   * BFS to find direction of nearest reachable destructible wall.
+   * Prefers walls toward enemies. Tie-break with lastDirection.
    */
   private findDestructibleWallDirection(
     pos: Position,
@@ -878,7 +844,6 @@ export class BotAI {
     bombPositions: Position[],
     otherPlayers: Position[],
   ): Direction | null {
-    // Find nearest enemy for directional preference
     let nearestEnemy: Position | null = null;
     let nearestDist = Infinity;
     for (const other of state.players.values()) {
@@ -894,11 +859,9 @@ export class BotAI {
     const visited = new Set<string>();
     visited.add(`${pos.x},${pos.y}`);
     let frontier: { pos: Position; firstDir: Direction }[] = [];
-
-    // Collect all wall candidates with their distance-to-enemy score
     const wallCandidates: { dir: Direction; depth: number; distToEnemy: number }[] = [];
 
-    for (const dir of DIRECTIONS) {
+    for (const dir of this.orderedDirs()) {
       const newPos = state.collisionSystem.canMoveTo(
         pos.x,
         pos.y,
@@ -910,7 +873,6 @@ export class BotAI {
       const key = `${newPos.x},${newPos.y}`;
       if (danger.has(key)) continue;
       visited.add(key);
-      // Check if this step is already adjacent to a destructible wall
       for (const { dx, dy } of Object.values(DIR_DELTA)) {
         if (isDestructibleTile(state.collisionSystem.getTileAt(newPos.x + dx, newPos.y + dy))) {
           const distToEnemy = nearestEnemy
@@ -923,7 +885,6 @@ export class BotAI {
       frontier.push({ pos: newPos, firstDir: dir });
     }
 
-    // BFS up to 10 steps
     for (let depth = 0; depth < 10 && frontier.length > 0; depth++) {
       const next: { pos: Position; firstDir: Direction }[] = [];
       for (const entry of frontier) {
@@ -957,15 +918,13 @@ export class BotAI {
 
     if (wallCandidates.length === 0) return null;
 
-    // Prefer walls that are close AND toward the enemy.
-    // Score: lower is better. Depth dominates, but among similar depths prefer enemy direction.
+    const ld = this.lastDirection;
     wallCandidates.sort((a, b) => {
-      // Group by depth tier (0-1 = close, 2-4 = medium, 5+ = far)
       const tierA = a.depth <= 1 ? 0 : a.depth <= 4 ? 1 : 2;
       const tierB = b.depth <= 1 ? 0 : b.depth <= 4 ? 1 : 2;
       if (tierA !== tierB) return tierA - tierB;
-      // Within same tier, prefer walls closer to enemy
-      return a.distToEnemy - b.distToEnemy;
+      if (a.distToEnemy !== b.distToEnemy) return a.distToEnemy - b.distToEnemy;
+      return (a.dir === ld ? 0 : 1) - (b.dir === ld ? 0 : 1);
     });
 
     return wallCandidates[0].dir;
@@ -973,6 +932,7 @@ export class BotAI {
 
   /**
    * Wander in a safe, non-trapping direction.
+   * 85% chance to continue lastDirection for stability.
    */
   private pickSafeWander(
     pos: Position,
@@ -993,7 +953,6 @@ export class BotAI {
       );
       if (!newPos) continue;
       if (danger.has(`${newPos.x},${newPos.y}`)) continue;
-
       const escapeCount = this.countEscapeRoutes(
         newPos,
         state,
@@ -1020,19 +979,17 @@ export class BotAI {
       return null;
     }
 
-    // Prefer continuing in the same direction if it's safe (less jittery movement)
+    // Prefer continuing in the same direction (anti-oscillation)
     const currentDirCandidate = candidates.find((c) => c.dir === this.lastDirection);
-    if (currentDirCandidate && Math.random() < 0.6) {
+    if (currentDirCandidate && Math.random() < 0.85) {
       return currentDirCandidate.dir;
     }
 
+    // Pick randomly from candidates
     const shuffled = candidates.sort(() => Math.random() - 0.5);
     return shuffled[0].dir;
   }
 
-  /**
-   * If a bomb is adjacent and we have kick, find the direction to kick it.
-   */
   private findKickableBomb(pos: Position, state: GameStateManager): Direction | null {
     for (const dir of DIRECTIONS) {
       const { dx, dy } = DIR_DELTA[dir];

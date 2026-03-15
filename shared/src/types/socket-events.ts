@@ -1,6 +1,7 @@
 import { GameState, PlayerInput } from './game';
 import { Room, RoomPlayer, CreateRoomRequest, RoomListItem } from './lobby';
 import { PublicUser, UserRole } from './auth';
+import { SimulationConfig, SimulationBatchStatus, SimulationGameResult } from './simulation';
 
 // Client -> Server events
 export interface ClientToServerEvents {
@@ -35,6 +36,19 @@ export interface ClientToServerEvents {
     callback: (response: { success: boolean; error?: string }) => void,
   ) => void;
   'admin:roomMessage': (data: { roomCode: string; message: string }) => void;
+  'sim:start': (
+    config: SimulationConfig,
+    callback: (response: { success: boolean; batchId?: string; error?: string }) => void,
+  ) => void;
+  'sim:cancel': (
+    data: { batchId: string },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'sim:spectate': (
+    data: { batchId: string },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'sim:unspectate': (data: { batchId: string }) => void;
 }
 
 // Server -> Client events
@@ -90,6 +104,16 @@ export interface ServerToClientEvents {
   'admin:banner': (data: { message: string | null }) => void;
   'admin:kicked': (data: { reason: string }) => void;
   'admin:roomMessage': (data: { message: string; from: string }) => void;
+  'sim:progress': (data: SimulationBatchStatus) => void;
+  'sim:gameResult': (data: { batchId: string; result: SimulationGameResult }) => void;
+  'sim:state': (data: { batchId: string; state: GameState }) => void;
+  'sim:gameTransition': (data: {
+    batchId: string;
+    gameIndex: number;
+    totalGames: number;
+    lastResult: SimulationGameResult | null;
+  }) => void;
+  'sim:completed': (data: { batchId: string; status: SimulationBatchStatus }) => void;
 }
 
 // Inter-server events (if scaling later)

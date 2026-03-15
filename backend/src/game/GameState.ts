@@ -187,8 +187,8 @@ export class GameStateManager {
 
     const isFinishing = this.finishTick !== null;
 
-    // Log state every 5 ticks
-    if (this.gameLogger && this.tick % 5 === 0) {
+    // Log state at interval based on verbosity
+    if (this.gameLogger && this.gameLogger.shouldLogTick(this.tick)) {
       this.gameLogger.logTick(
         this.tick,
         Array.from(this.players.values()),
@@ -341,6 +341,12 @@ export class GameStateManager {
             position: { ...powerUp.position },
           });
           player.applyPowerUp(powerUp.type);
+          this.gameLogger?.logPowerupPickup(
+            player.id,
+            player.username,
+            powerUp.type,
+            powerUp.position,
+          );
           this.powerUps.delete(id);
         }
       }
@@ -534,8 +540,10 @@ export class GameStateManager {
         otherPlayerPositions,
       );
       if (newPos) {
+        const from = { x: player.position.x, y: player.position.y };
         player.position = newPos;
         player.applyMoveCooldown();
+        this.gameLogger?.logMovement(player.id, player.username, from, newPos, input.direction);
       } else if (player.hasKick) {
         // Try to kick a bomb in the movement direction
         const dx = input.direction === 'left' ? -1 : input.direction === 'right' ? 1 : 0;
@@ -673,8 +681,10 @@ export class GameStateManager {
     this.tickEvents.explosions.push({ cells: [...cells], ownerId: bomb.ownerId });
 
     // Destroy walls and possibly spawn power-ups
+    let destroyedWalls = 0;
     for (const cell of cells) {
       if (this.collisionSystem.destroyTile(cell.x, cell.y)) {
+        destroyedWalls++;
         if (this.enabledPowerUps.length > 0 && this.rng.next() < this.powerUpDropRate) {
           const type = this.getRandomEnabledPowerUp();
           const powerUp = new PowerUp(cell, type);
@@ -695,6 +705,16 @@ export class GameStateManager {
         chainingBombs.push(otherBomb);
       }
     }
+
+    this.gameLogger?.logExplosionDetail(
+      bomb.ownerId,
+      owner?.username || '?',
+      bomb.position,
+      cells,
+      destroyedWalls,
+      chainingBombs.length,
+    );
+
     for (const chainBomb of chainingBombs) {
       this.detonateBomb(chainBomb, tileSnapshot);
     }
