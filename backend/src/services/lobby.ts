@@ -129,6 +129,11 @@ export async function setPlayerReady(code: string, userId: number, ready: boolea
   return room;
 }
 
+export async function updateRoom(code: string, room: Room): Promise<void> {
+  const redis = getRedis();
+  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', 3600);
+}
+
 export async function updateRoomStatus(code: string, status: Room['status']): Promise<void> {
   const redis = getRedis();
   const room = await getRoom(code);

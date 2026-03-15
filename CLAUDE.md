@@ -36,16 +36,19 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ## Game Architecture
 - 20 tick/sec server game loop (GameLoop.ts -> GameState.ts)
 - GameState.processTick(): bot AI -> inputs -> movement -> bomb slide -> bomb timers -> explosions -> collisions -> power-ups -> zone -> win check
-- Bomb kick: player with hasKick walking into a bomb sets bomb.sliding direction; sliding bombs advance 1 tile/tick until blocked
+- Bomb kick: player with hasKick walking into a bomb sets bomb.sliding direction; sliding bombs advance 1 tile/tick until blocked; kicking applies movement cooldown
 - BotAI: difficulty-aware (easy/normal/hard) with configurable awareness, aggression, escape depth, reaction delay, and kick usage
+- BotAI kick decisions gated on canMove() + kickCooldown to prevent kick spam (standing still retrying kicks for multiple ticks)
 - Bot difficulty set per-room via MatchConfig.botDifficulty; defaults to 'normal'; UI dropdown hidden when bots = 0
 - BotAI escape logic: BFS through danger cells to find nearest safe cell; canEscapeAfterBomb and flee use the same findEscapeDirection BFS so the bot follows the validated escape path
 - BotAI movement decisions only run when player.canMove() to prevent oscillation between hunt/seek_wall
 - Self-kills subtract 1 from kill score (owner.kills decremented, owner.selfKills incremented)
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished' to show final explosions
-- Dead players enter spectator mode with free camera pan (WASD/arrows)
+- Dead players enter spectator mode with free camera pan (WASD/arrows) or click-to-follow on HUD player list
 - Camera follows local player with smooth lerp when map exceeds viewport
+- Room name auto-generated if left blank (random adjective + noun)
+- Play Again: room:restart socket event resets room to 'waiting' so all players can rematch; other players auto-navigate via room:state listener
 
 ## Game Logging
 - JSONL game logs written to ./data/gamelogs/ (bind-mounted from container)

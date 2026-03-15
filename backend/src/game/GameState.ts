@@ -212,7 +212,7 @@ export class GameStateManager {
               this.gameLogger?.logKill(owner.id, owner.displayName, player.id, player.displayName, false);
             } else if (owner && owner.id === player.id) {
               owner.selfKills++;
-              owner.kills = Math.max(0, owner.kills - 1);
+              owner.kills--;
               this.gameLogger?.logKill(owner.id, owner.displayName, player.id, player.displayName, true);
             }
           }
@@ -301,6 +301,7 @@ export class GameStateManager {
         for (const bomb of this.bombs.values()) {
           if (bomb.position.x === targetX && bomb.position.y === targetY && !bomb.sliding) {
             bomb.sliding = input.direction;
+            player.applyMoveCooldown();
             break;
           }
         }

@@ -40,7 +40,15 @@ export class LobbyScene extends Phaser.Scene {
       }
     });
 
-    this.showLobby();
+    // Check if returning from "Play Again" with a room already set
+    const currentRoom = this.registry.get('currentRoom') as Room | undefined;
+    if (currentRoom && currentRoom.status === 'waiting') {
+      this.onJoinRoom(currentRoom);
+      this.registry.remove('currentRoom');
+    } else {
+      this.registry.remove('currentRoom');
+      this.showLobby();
+    }
 
     // Background
     const width = this.cameras.main.width;

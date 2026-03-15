@@ -168,6 +168,39 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
       }, COUNTDOWN_SECONDS * 1000);
     });
 
+    // Restart room (play again)
+    socket.on('room:restart', async (callback) => {
+      const roomCode = await lobbyService.getPlayerRoom(socket.data.userId);
+      if (!roomCode) {
+        callback({ success: false, error: 'Not in a room' });
+        return;
+      }
+
+      const room = await lobbyService.getRoom(roomCode);
+      if (!room) {
+        callback({ success: false, error: 'Room not found' });
+        return;
+      }
+
+      if (room.status !== 'finished') {
+        callback({ success: false, error: 'Game is not finished' });
+        return;
+      }
+
+      // Clean up finished game room
+      roomManager.removeRoom(roomCode);
+
+      // Reset room state
+      room.status = 'waiting';
+      room.players.forEach(p => p.ready = false);
+      await lobbyService.updateRoom(roomCode, room);
+
+      // Notify all players in the room
+      io.to(`room:${roomCode}`).emit('room:state', room);
+
+      callback({ success: true, room });
+    });
+
     // Game input
     socket.on('game:input', async (input) => {
       const roomCode = await lobbyService.getPlayerRoom(socket.data.userId);

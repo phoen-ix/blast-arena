@@ -38,8 +38,9 @@ Open `http://localhost:8080` in your browser.
 - **Bot players**: Add up to 7 AI bots to any room (auto-capped to fit max players) with Easy/Normal/Hard difficulty
 - **Bot AI**: BFS pathfinding, escape planning through danger zones, wall-seeking, enemy hunting, power-up collection
 - **Power-ups**: Bomb Up, Fire Up, Speed Up, Shield, Bomb Kick - each individually toggleable per room
-- **Live HUD**: Countdown timer, alive player list (dead players removed from view)
-- **Spectator mode**: Dead players can freely pan the camera across the map
+- **Live HUD**: Countdown timer, player list showing alive and dead players
+- **Spectator mode**: Dead players can freely pan the camera or click a player name in the HUD to follow them
+- **Play Again**: Rematch button on the game over screen resets the room so all players can play again
 - **Camera follow**: Smooth scrolling camera that follows your player on maps larger than the viewport
 - **Scoring**: Kills-based ranking; self-kills subtract from your score
 - **Persistent sessions**: Login survives container rebuilds via httpOnly refresh token cookies

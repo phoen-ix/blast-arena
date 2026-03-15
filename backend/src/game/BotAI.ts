@@ -68,6 +68,7 @@ export class BotAI {
   private seq: number = 0;
   private lastDirection: Direction = 'down';
   private bombCooldown: number = 0;
+  private kickCooldown: number = 0;
   private config: BotDifficultyConfig;
   private reactionDelayRemaining: number = 0;
 
@@ -85,6 +86,7 @@ export class BotAI {
 
     this.seq++;
     if (this.bombCooldown > 0) this.bombCooldown--;
+    if (this.kickCooldown > 0) this.kickCooldown--;
 
     const pos = player.position;
     const bombPositions = Array.from(state.bombs.values()).map(b => b.position);
@@ -100,10 +102,11 @@ export class BotAI {
       logger?.logBotDecision(player.id, player.displayName, decision, { pos, ...details });
     };
 
-    // === PRIORITY 1: Kick threatening bomb (always check) ===
-    if (amInDanger && player.hasKick && this.config.useKick) {
+    // === PRIORITY 1: Kick threatening bomb (only when able to move) ===
+    if (amInDanger && player.hasKick && this.config.useKick && player.canMove() && this.kickCooldown <= 0) {
       const kickDir = this.findKickableBomb(pos, state);
       if (kickDir) {
+        this.kickCooldown = 3; // Prevent re-kicking for a few ticks
         logDecision('kick', { dir: kickDir });
         return { seq: this.seq, direction: kickDir, action: null, tick: state.tick };
       }

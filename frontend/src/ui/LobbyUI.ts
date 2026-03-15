@@ -280,10 +280,7 @@ export class LobbyUI {
         enabledPowerUps.push(cb.value as PowerUpType);
       });
 
-      if (!name || name.length < 3) {
-        this.notifications.error('Room name must be at least 3 characters');
-        return;
-      }
+      const roomName = name || this.generateRoomName();
 
       // Cap bots so total (1 host + bots) doesn't exceed maxPlayers
       const effectiveBots = Math.min(botCount, maxPlayers - 1);
@@ -295,7 +292,7 @@ export class LobbyUI {
       const friendlyFire = gameMode === 'teams' ? (modal.querySelector('#room-friendly-fire') as HTMLInputElement).checked : true;
 
       this.socketClient.emit('room:create', {
-        name,
+        name: roomName,
         config: {
           gameMode,
           maxPlayers,
@@ -322,6 +319,14 @@ export class LobbyUI {
     });
 
     document.getElementById('ui-overlay')!.appendChild(modal);
+  }
+
+  private generateRoomName(): string {
+    const adjectives = ['Explosive', 'Chaotic', 'Blazing', 'Fiery', 'Reckless', 'Volatile', 'Scorched', 'Molten', 'Infernal', 'Savage'];
+    const nouns = ['Arena', 'Warzone', 'Blitz', 'Showdown', 'Brawl', 'Mayhem', 'Rumble', 'Frenzy', 'Clash', 'Carnage'];
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    return `${adj} ${noun}`;
   }
 
   private escapeHtml(text: string): string {

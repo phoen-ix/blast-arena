@@ -24,6 +24,7 @@ export class GameScene extends Phaser.Scene {
   private localPlayerDead: boolean = false;
   private freeCamX: number = 0;
   private freeCamY: number = 0;
+  private spectateTargetId: number | null = null;
   // DOM-level key tracking for spectator mode (bypasses Phaser input entirely)
   private keysDown: Set<string> = new Set();
   private boundKeyDown: ((e: KeyboardEvent) => void) | null = null;
@@ -43,6 +44,7 @@ export class GameScene extends Phaser.Scene {
     this.localPlayerDead = false;
     this.freeCamX = 0;
     this.freeCamY = 0;
+    this.spectateTargetId = null;
     this.removeSpectatorListeners();
 
     // Always install DOM key listeners from the start (for spectator mode later)
@@ -92,6 +94,11 @@ export class GameScene extends Phaser.Scene {
         cam.centerOn(worldW / 2, worldH / 2);
       }
     }
+
+    // Listen for spectate requests from HUD
+    this.events.on('spectatePlayer', (playerId: number) => {
+      this.spectateTargetId = playerId;
+    });
   }
 
   private installSpectatorListeners(): void {
@@ -145,6 +152,23 @@ export class GameScene extends Phaser.Scene {
     if (this.localPlayerDead) {
       // Force-disable camera bounds every frame to prevent Phaser from clamping scroll
       (cam as any).useBounds = false;
+
+      // If spectating a player, follow them with smooth lerp
+      if (this.spectateTargetId !== null) {
+        const targetPlayer = this.lastGameState?.players.find(p => p.id === this.spectateTargetId && p.alive);
+        if (targetPlayer) {
+          const tx = targetPlayer.position.x * TILE_SIZE + TILE_SIZE / 2;
+          const ty = targetPlayer.position.y * TILE_SIZE + TILE_SIZE / 2;
+          cam.scrollX = Phaser.Math.Linear(cam.scrollX, tx - cam.width / 2, 0.15);
+          cam.scrollY = Phaser.Math.Linear(cam.scrollY, ty - cam.height / 2, 0.15);
+          this.freeCamX = cam.scrollX + cam.width / 2;
+          this.freeCamY = cam.scrollY + cam.height / 2;
+          return;
+        }
+        // Target died, fall back to free cam
+        this.spectateTargetId = null;
+      }
+
       cam.scrollX = this.freeCamX - cam.width / 2;
       cam.scrollY = this.freeCamY - cam.height / 2;
       return;
@@ -162,6 +186,16 @@ export class GameScene extends Phaser.Scene {
     // When dead, use DOM key tracking to pan the spectator camera
     if (this.localPlayerDead) {
       const panSpeed = 5;
+      const panning = this.keysDown.has('ArrowUp') || this.keysDown.has('KeyW')
+        || this.keysDown.has('ArrowDown') || this.keysDown.has('KeyS')
+        || this.keysDown.has('ArrowLeft') || this.keysDown.has('KeyA')
+        || this.keysDown.has('ArrowRight') || this.keysDown.has('KeyD');
+
+      // Manual panning breaks out of spectate-follow mode
+      if (panning && this.spectateTargetId !== null) {
+        this.spectateTargetId = null;
+      }
+
       if (this.keysDown.has('ArrowUp') || this.keysDown.has('KeyW')) this.freeCamY -= panSpeed;
       if (this.keysDown.has('ArrowDown') || this.keysDown.has('KeyS')) this.freeCamY += panSpeed;
       if (this.keysDown.has('ArrowLeft') || this.keysDown.has('KeyA')) this.freeCamX -= panSpeed;
@@ -368,7 +402,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     for (const bomb of bombs) {
-      if (!this.bombSprites.has(bomb.id)) {
+      const existing = this.bombSprites.get(bomb.id);
+      if (existing) {
+        // Update position for sliding/kicked bombs
+        existing.x = bomb.position.x * TILE_SIZE + TILE_SIZE / 2;
+        existing.y = bomb.position.y * TILE_SIZE + TILE_SIZE / 2;
+      } else {
         const sprite = this.add.sprite(
           bomb.position.x * TILE_SIZE + TILE_SIZE / 2,
           bomb.position.y * TILE_SIZE + TILE_SIZE / 2,

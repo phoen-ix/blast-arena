@@ -9,6 +9,7 @@ export interface ClientToServerEvents {
   'room:leave': () => void;
   'room:ready': (data: { ready: boolean }) => void;
   'room:start': () => void;
+  'room:restart': (callback: (response: { success: boolean; room?: Room; error?: string }) => void) => void;
   'game:input': (input: PlayerInput) => void;
   'chat:message': (data: { message: string }) => void;
 }
@@ -29,7 +30,7 @@ export interface ServerToClientEvents {
   'game:powerupCollected': (data: { id: string; playerId: number }) => void;
   'game:playerDied': (data: { playerId: number; killerId: number | null }) => void;
   'game:zoneUpdate': (data: { currentRadius: number; targetRadius: number; nextShrinkTick: number }) => void;
-  'game:over': (data: { winnerId: number | null; winnerTeam: number | null; placements: { userId: number; placement: number }[] }) => void;
+  'game:over': (data: { winnerId: number | null; winnerTeam: number | null; placements: { userId: number; displayName: string; isBot: boolean; placement: number; kills: number; selfKills: number }[] }) => void;
   'chat:message': (data: { user: PublicUser; message: string; timestamp: number }) => void;
   'error': (data: { message: string; code?: string }) => void;
 }

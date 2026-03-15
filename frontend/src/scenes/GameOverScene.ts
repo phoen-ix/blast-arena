@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SocketClient } from '../network/SocketClient';
 
 export class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -17,6 +18,21 @@ export class GameOverScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
     const data = this.registry.get('gameOverData');
+    const socketClient: SocketClient = this.registry.get('socketClient');
+
+    // Listen for room restart (another player clicked Play Again)
+    const roomStateHandler = (room: any) => {
+      if (room.status === 'waiting') {
+        socketClient.off('room:state' as any, roomStateHandler as any);
+        this.registry.set('currentRoom', room);
+        this.scene.start('LobbyScene');
+      }
+    };
+    socketClient.on('room:state' as any, roomStateHandler as any);
+
+    this.events.on('shutdown', () => {
+      socketClient.off('room:state' as any, roomStateHandler as any);
+    });
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
 
@@ -26,8 +42,26 @@ export class GameOverScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    // Back to lobby button at the bottom
-    const backBtn = this.add.text(width / 2, height - 40, '[ Back to Lobby ]', {
+    // Play Again button
+    const playAgainBtn = this.add.text(width / 2 - 100, height - 40, '[ Play Again ]', {
+      fontSize: '20px',
+      color: '#44ff44',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    playAgainBtn.on('pointerover', () => playAgainBtn.setColor('#88ff88'));
+    playAgainBtn.on('pointerout', () => playAgainBtn.setColor('#44ff44'));
+    playAgainBtn.on('pointerdown', () => {
+      socketClient.emit('room:restart', (response: any) => {
+        if (response.success && response.room) {
+          this.registry.set('currentRoom', response.room);
+          this.scene.start('LobbyScene');
+        }
+      });
+    });
+
+    // Back to lobby button
+    const backBtn = this.add.text(width / 2 + 100, height - 40, '[ Back to Lobby ]', {
       fontSize: '20px',
       color: '#e94560',
       fontStyle: 'bold',
@@ -36,6 +70,7 @@ export class GameOverScene extends Phaser.Scene {
     backBtn.on('pointerover', () => backBtn.setColor('#ff6b81'));
     backBtn.on('pointerout', () => backBtn.setColor('#e94560'));
     backBtn.on('pointerdown', () => {
+      socketClient.emit('room:leave' as any);
       this.scene.start('LobbyScene');
     });
 
