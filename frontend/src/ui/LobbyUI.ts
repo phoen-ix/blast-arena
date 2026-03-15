@@ -562,6 +562,7 @@ export class LobbyUI {
     });
 
     modal.querySelector('#modal-close')!.addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
     document.getElementById('ui-overlay')!.appendChild(modal);
   }
@@ -673,6 +674,7 @@ export class LobbyUI {
     `;
 
     modal.querySelector('#modal-close')!.addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
     document.getElementById('ui-overlay')!.appendChild(modal);
   }
