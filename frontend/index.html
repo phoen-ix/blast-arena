@@ -513,6 +513,108 @@
       pointer-events: none;
     }
 
+    /* Help Button & Panel */
+    .hud-help-btn {
+      position: absolute;
+      bottom: 12px;
+      right: 56px;
+      width: 36px;
+      height: 36px;
+      font-size: 20px;
+      font-weight: bold;
+      line-height: 36px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 8px;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: background 0.2s;
+      user-select: none;
+      color: #e0e0e0;
+    }
+
+    .hud-help-btn:hover {
+      background: rgba(233, 69, 96, 0.4);
+    }
+
+    .hud-help-panel {
+      position: absolute;
+      bottom: 56px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 10px;
+      padding: 16px 22px;
+      max-width: 420px;
+      width: 90%;
+      max-height: 70vh;
+      overflow-y: auto;
+      pointer-events: auto;
+      z-index: 200;
+    }
+
+    .help-close {
+      position: absolute;
+      top: 8px;
+      right: 14px;
+      font-size: 22px;
+      cursor: pointer;
+      color: #a0a0b0;
+      line-height: 1;
+    }
+
+    .help-close:hover {
+      color: #e94560;
+    }
+
+    .help-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e94560;
+      margin-bottom: 12px;
+    }
+
+    .help-section {
+      margin-bottom: 14px;
+    }
+
+    .help-heading {
+      font-size: 13px;
+      font-weight: 600;
+      color: #a0a0b0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #0f3460;
+      padding-bottom: 4px;
+    }
+
+    .help-row {
+      font-size: 13px;
+      padding: 3px 0;
+      color: #d0d0d0;
+    }
+
+    .help-key {
+      display: inline-block;
+      background: #0f3460;
+      color: #e0e0e0;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: monospace;
+      margin-right: 4px;
+    }
+
+    .help-icon {
+      display: inline-block;
+      width: 28px;
+      text-align: center;
+      font-size: 14px;
+    }
+
     /* Admin Panel */
     .admin-container {
       position: absolute;

@@ -222,6 +222,8 @@ export class GameStateManager {
       if (!player.alive || player.invulnerableTicks > 0) continue;
 
       for (const explosion of this.explosions.values()) {
+        // Skip damage during fade-out phase (last 3 ticks) — explosion is visually fading
+        if (explosion.ticksRemaining <= 3) continue;
         if (explosion.containsCell(player.position.x, player.position.y)) {
           const owner = this.players.get(explosion.ownerId);
 

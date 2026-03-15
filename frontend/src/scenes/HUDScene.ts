@@ -7,6 +7,7 @@ export class HUDScene extends Phaser.Scene {
   private playerListEl!: HTMLElement;
   private killFeedEl!: HTMLElement;
   private settingsPanel!: HTMLElement;
+  private helpPanel!: HTMLElement;
   private localPlayerDead: boolean = false;
   private localPlayerId!: number;
   private boundClickHandler: ((e: MouseEvent) => void) | null = null;
@@ -28,6 +29,7 @@ export class HUDScene extends Phaser.Scene {
     this.playerListEl?.remove();
     this.killFeedEl?.remove();
     this.settingsPanel?.remove();
+    this.helpPanel?.remove();
 
     this.events.once('shutdown', this.shutdown, this);
 
@@ -60,6 +62,14 @@ export class HUDScene extends Phaser.Scene {
     gearBtn.addEventListener('click', () => this.toggleSettings());
     this.hudContainer.appendChild(gearBtn);
 
+    // Help button
+    const helpBtn = document.createElement('div');
+    helpBtn.className = 'hud-help-btn';
+    helpBtn.innerHTML = '?';
+    helpBtn.title = 'Controls & Items';
+    helpBtn.addEventListener('click', () => this.toggleHelp());
+    this.hudContainer.appendChild(helpBtn);
+
     // Player list
     this.playerListEl = document.createElement('div');
     this.playerListEl.className = 'hud-players';
@@ -77,11 +87,18 @@ export class HUDScene extends Phaser.Scene {
     this.settingsPanel.innerHTML = this.buildSettingsHTML();
     this.settingsPanel.addEventListener('change', (e) => this.onSettingChange(e));
 
+    // Help panel (hidden by default)
+    this.helpPanel = document.createElement('div');
+    this.helpPanel.className = 'hud-help-panel';
+    this.helpPanel.style.display = 'none';
+    this.helpPanel.innerHTML = this.buildHelpHTML();
+
     const overlay = document.getElementById('ui-overlay');
     overlay?.appendChild(this.hudContainer);
     overlay?.appendChild(this.playerListEl);
     overlay?.appendChild(this.killFeedEl);
     overlay?.appendChild(this.settingsPanel);
+    overlay?.appendChild(this.helpPanel);
 
     // Spectate click handler
     this.boundClickHandler = (e: MouseEvent) => {
@@ -148,6 +165,51 @@ export class HUDScene extends Phaser.Scene {
     const settings = getSettings();
     (settings as any)[key] = target.checked;
     saveSettings(settings);
+  }
+
+  private toggleHelp(): void {
+    if (this.helpPanel.style.display === 'none') {
+      this.helpPanel.style.display = 'block';
+      this.settingsPanel.style.display = 'none';
+    } else {
+      this.helpPanel.style.display = 'none';
+    }
+  }
+
+  private buildHelpHTML(): string {
+    return `
+      <div class="help-close" onclick="this.parentElement.style.display='none'">&times;</div>
+      <div class="help-title">Controls & Items</div>
+
+      <div class="help-section">
+        <div class="help-heading">Controls</div>
+        <div class="help-row"><span class="help-key">WASD / Arrows</span> Move</div>
+        <div class="help-row"><span class="help-key">Space</span> Place bomb</div>
+        <div class="help-row"><span class="help-key">E</span> Detonate remote bombs</div>
+        <div class="help-row"><span class="help-key">1-9</span> Spectate Nth player (when dead)</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-heading">Power-Ups</div>
+        <div class="help-row"><span class="help-icon" style="color:#FF4444">💣+</span> <b>Bomb Up</b> — +1 max bombs (up to 8)</div>
+        <div class="help-row"><span class="help-icon" style="color:#FF8800">🔥+</span> <b>Fire Up</b> — +1 explosion range (up to 8)</div>
+        <div class="help-row"><span class="help-icon" style="color:#44AAFF">⚡+</span> <b>Speed Up</b> — faster movement (up to 5)</div>
+        <div class="help-row"><span class="help-icon" style="color:#44FF44">🛡️</span> <b>Shield</b> — absorbs one explosion (10s)</div>
+        <div class="help-row"><span class="help-icon" style="color:#CC44FF">👢</span> <b>Kick</b> — walk into a bomb to slide it</div>
+        <div class="help-row"><span class="help-icon" style="color:#FF2222">➜</span> <b>Pierce Bomb</b> — blasts go through breakable walls</div>
+        <div class="help-row"><span class="help-icon" style="color:#4488FF">📡</span> <b>Remote Bomb</b> — bombs don't auto-explode; press <span class="help-key">E</span> to detonate all at once</div>
+        <div class="help-row"><span class="help-icon" style="color:#FFAA44">●●●</span> <b>Line Bomb</b> — places a line of bombs in your facing direction</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-heading">Tips</div>
+        <div class="help-row">Stand behind a wall before your bomb explodes</div>
+        <div class="help-row">Chain reactions: bombs caught in an explosion detonate instantly</div>
+        <div class="help-row">Self-kills subtract from your score</div>
+        <div class="help-row">You're invulnerable for 2s after spawning</div>
+        <div class="help-row">Kicked bombs slide until they hit a wall, bomb, or player</div>
+      </div>
+    `;
   }
 
   private onPlayerDied(data: { playerId: number; killerId: number | null }): void {
@@ -276,5 +338,6 @@ export class HUDScene extends Phaser.Scene {
     this.playerListEl?.remove();
     this.killFeedEl?.remove();
     this.settingsPanel?.remove();
+    this.helpPanel?.remove();
   }
 }
