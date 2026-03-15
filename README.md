@@ -40,6 +40,7 @@ Open `http://localhost:8080` in your browser.
 
 - **Singleplayer & Multiplayer**: Play solo against bots or with friends; 1 human + bots is enough to start
 - **Configurable rooms**: Map size, match time, wall density, power-up types/rates, hazard tiles, map events, reinforced walls
+- **Team management**: Assign players and bots to Team Red or Team Blue in the lobby; team-colored sprites, name labels, and HUD grouping in-game
 - **Friendly fire toggle**: Enable or disable teammate damage in Teams mode
 - **Bot players**: Add up to 7 AI bots to any room with Easy/Normal/Hard difficulty
 - **Bot AI**: BFS pathfinding, escape planning through danger zones, wall-seeking, enemy hunting, power-up collection
@@ -58,6 +59,7 @@ Open `http://localhost:8080` in your browser.
 - **Persistent sessions**: Login survives container rebuilds via httpOnly refresh token cookies
 - **Match history**: Stats tracked per player (kills, deaths, bombs placed, power-ups collected, placements)
 - **Game logging**: Detailed JSONL game logs for analysis and debugging
+- **Admin panel**: Full-screen admin panel with dashboard stats, user management (ban/unban, role change, deactivate, delete, create), match history browser, active room control (kick/close/spectate/message), admin action audit log, and announcements (toast broadcast + persistent lobby banner). Moderators get limited access.
 
 ## Architecture
 

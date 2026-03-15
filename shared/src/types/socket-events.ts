@@ -11,7 +11,13 @@ export interface ClientToServerEvents {
   'room:start': () => void;
   'room:restart': (callback: (response: { success: boolean; room?: Room; error?: string }) => void) => void;
   'game:input': (input: PlayerInput) => void;
+  'room:setTeam': (data: { userId: number; team: number | null }) => void;
+  'room:setBotTeam': (data: { botIndex: number; team: number }) => void;
   'chat:message': (data: { message: string }) => void;
+  'admin:kick': (data: { roomCode: string; userId: number; reason?: string }, callback: (response: { success: boolean; error?: string }) => void) => void;
+  'admin:closeRoom': (data: { roomCode: string }, callback: (response: { success: boolean; error?: string }) => void) => void;
+  'admin:spectate': (data: { roomCode: string }, callback: (response: { success: boolean; error?: string }) => void) => void;
+  'admin:roomMessage': (data: { roomCode: string; message: string }) => void;
 }
 
 // Server -> Client events
@@ -30,9 +36,13 @@ export interface ServerToClientEvents {
   'game:powerupCollected': (data: { id: string; playerId: number }) => void;
   'game:playerDied': (data: { playerId: number; killerId: number | null }) => void;
   'game:zoneUpdate': (data: { currentRadius: number; targetRadius: number; nextShrinkTick: number }) => void;
-  'game:over': (data: { winnerId: number | null; winnerTeam: number | null; placements: { userId: number; displayName: string; isBot: boolean; placement: number; kills: number; selfKills: number }[] }) => void;
+  'game:over': (data: { winnerId: number | null; winnerTeam: number | null; placements: { userId: number; displayName: string; isBot: boolean; placement: number; kills: number; selfKills: number; team: number | null; alive: boolean }[] }) => void;
   'chat:message': (data: { user: PublicUser; message: string; timestamp: number }) => void;
   'error': (data: { message: string; code?: string }) => void;
+  'admin:toast': (data: { message: string }) => void;
+  'admin:banner': (data: { message: string | null }) => void;
+  'admin:kicked': (data: { reason: string }) => void;
+  'admin:roomMessage': (data: { message: string; from: string }) => void;
 }
 
 // Inter-server events (if scaling later)

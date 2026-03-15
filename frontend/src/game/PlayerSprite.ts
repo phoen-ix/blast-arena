@@ -3,12 +3,19 @@ import { PlayerState, TILE_SIZE } from '@blast-arena/shared';
 import { getSettings } from './Settings';
 import { PLAYER_COLORS } from '../scenes/BootScene';
 
+// Team color indices: team 0 uses red-ish colors, team 1 uses blue-ish colors
+const TEAM_COLOR_INDICES: Record<number, number[]> = {
+  0: [0, 3, 5], // red (#e94560), orange (#ff8800), yellow (#ffff44)
+  1: [1, 7, 4], // blue (#44aaff), cyan (#44ffff), purple (#cc44ff)
+};
+
 export class PlayerSpriteRenderer {
   private scene: Phaser.Scene;
   private localPlayerId: number;
 
   private sprites: Map<number, Phaser.GameObjects.Sprite> = new Map();
   private labels: Map<number, Phaser.GameObjects.Text> = new Map();
+  private teamIndicators: Map<number, Phaser.GameObjects.Graphics> = new Map();
   private shieldGraphics: Map<number, Phaser.GameObjects.Graphics> = new Map();
 
   /** Maps player ID -> color index for consistent color assignment */
@@ -19,6 +26,12 @@ export class PlayerSpriteRenderer {
 
   /** Previous positions per player for detecting movement */
   private prevPositions: Map<number, { x: number; y: number }> = new Map();
+
+  /** Track team assignments per player */
+  private playerTeams: Map<number, number | null> = new Map();
+
+  /** Counter per team for distributing colors within a team */
+  private teamPlayerCount: Record<number, number> = {};
 
   constructor(scene: Phaser.Scene, localPlayerId: number) {
     this.scene = scene;
@@ -103,6 +116,13 @@ export class PlayerSpriteRenderer {
             }
           }
 
+          // Remove team indicator
+          const teamGfx = this.teamIndicators.get(player.id);
+          if (teamGfx) {
+            teamGfx.destroy();
+            this.teamIndicators.delete(player.id);
+          }
+
           // Remove shield graphic
           const shieldGfx = this.shieldGraphics.get(player.id);
           if (shieldGfx) {
@@ -114,6 +134,7 @@ export class PlayerSpriteRenderer {
           this.prevShieldState.delete(player.id);
           this.prevPositions.delete(player.id);
           this.playerColorIndex.delete(player.id);
+          this.playerTeams.delete(player.id);
         }
         return;
       }
@@ -121,12 +142,23 @@ export class PlayerSpriteRenderer {
       // ---- Alive player logic ----
 
       let sprite = this.sprites.get(player.id);
-      const colorIndex = this.playerColorIndex.get(player.id) ?? (index % 8);
+      let colorIndex = this.playerColorIndex.get(player.id);
+
+      if (colorIndex === undefined) {
+        // Assign color based on team membership or individual index
+        if (player.team !== null && player.team !== undefined) {
+          const teamColors = TEAM_COLOR_INDICES[player.team] || TEAM_COLOR_INDICES[0];
+          const teamIdx = this.teamPlayerCount[player.team] || 0;
+          colorIndex = teamColors[teamIdx % teamColors.length];
+          this.teamPlayerCount[player.team] = teamIdx + 1;
+        } else {
+          colorIndex = index % 8;
+        }
+        this.playerColorIndex.set(player.id, colorIndex);
+        this.playerTeams.set(player.id, player.team);
+      }
 
       if (!sprite) {
-        // Store color index for consistent assignment
-        this.playerColorIndex.set(player.id, colorIndex);
-
         const dir = player.direction || 'down';
         const textureKey = `player_${colorIndex}_${dir}`;
         sprite = this.scene.add.sprite(targetX, targetY, textureKey);
@@ -134,14 +166,31 @@ export class PlayerSpriteRenderer {
         sprite.setDisplaySize(TILE_SIZE - 4, TILE_SIZE - 4);
         this.sprites.set(player.id, sprite);
 
-        // Create name label
+        // Create name label with team color tint
+        const isTeamMode = player.team !== null && player.team !== undefined;
+        const teamLabelColors = ['#ff6b7f', '#6bb8ff'];
+        const labelColor = isTeamMode ? teamLabelColors[player.team!] : '#ffffff';
         const label = this.scene.add.text(targetX, targetY - TILE_SIZE / 2 - 2, player.displayName, {
           fontSize: '11px',
-          color: '#ffffff',
+          color: labelColor,
           stroke: '#000000',
           strokeThickness: 2,
         }).setOrigin(0.5, 1).setDepth(11);
         this.labels.set(player.id, label);
+
+        // Team colored underline indicator
+        if (isTeamMode) {
+          const teamGfx = this.scene.add.graphics();
+          teamGfx.setDepth(9);
+          const teamColor = player.team === 0 ? 0xe94560 : 0x44aaff;
+          teamGfx.fillStyle(teamColor, 0.35);
+          teamGfx.fillRoundedRect(
+            targetX - TILE_SIZE / 2 + 1,
+            targetY + TILE_SIZE / 2 - 5,
+            TILE_SIZE - 2, 4, 2
+          );
+          this.teamIndicators.set(player.id, teamGfx);
+        }
 
         // Initialize tracking
         this.prevPositions.set(player.id, { x: targetX, y: targetY });
@@ -250,6 +299,19 @@ export class PlayerSpriteRenderer {
         label.x = sprite.x;
         label.y = sprite.y - TILE_SIZE / 2 - 2;
       }
+
+      // Update team indicator position
+      const teamGfx = this.teamIndicators.get(player.id);
+      if (teamGfx) {
+        const teamColor = player.team === 0 ? 0xe94560 : 0x44aaff;
+        teamGfx.clear();
+        teamGfx.fillStyle(teamColor, 0.35);
+        teamGfx.fillRoundedRect(
+          sprite.x - TILE_SIZE / 2 + 1,
+          sprite.y + TILE_SIZE / 2 - 5,
+          TILE_SIZE - 2, 4, 2
+        );
+      }
     });
   }
 
@@ -263,10 +325,13 @@ export class PlayerSpriteRenderer {
     }
     this.sprites.clear();
     this.labels.clear();
+    this.teamIndicators.clear();
     this.shieldGraphics.clear();
     this.playerColorIndex.clear();
+    this.playerTeams.clear();
     this.prevShieldState.clear();
     this.prevPositions.clear();
+    this.teamPlayerCount = {};
   }
 
   private removePlayer(id: number): void {
@@ -282,6 +347,12 @@ export class PlayerSpriteRenderer {
       this.labels.delete(id);
     }
 
+    const teamGfx = this.teamIndicators.get(id);
+    if (teamGfx) {
+      teamGfx.destroy();
+      this.teamIndicators.delete(id);
+    }
+
     const shieldGfx = this.shieldGraphics.get(id);
     if (shieldGfx) {
       shieldGfx.destroy();
@@ -291,5 +362,6 @@ export class PlayerSpriteRenderer {
     this.prevShieldState.delete(id);
     this.prevPositions.delete(id);
     this.playerColorIndex.delete(id);
+    this.playerTeams.delete(id);
   }
 }

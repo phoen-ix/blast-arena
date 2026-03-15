@@ -43,7 +43,10 @@ export class GameRoom {
     // Add human players
     let playerIndex = 0;
     room.players.forEach((rp: any) => {
-      const team = modeConfig.teamsCount ? (playerIndex % modeConfig.teamsCount) : null;
+      // Use pre-assigned team from lobby if set, otherwise round-robin
+      const team = modeConfig.teamsCount
+        ? (rp.team !== null && rp.team !== undefined ? rp.team : (playerIndex % modeConfig.teamsCount))
+        : null;
       this.gameState.addPlayer(rp.user.id, rp.user.username, rp.user.displayName, team, false);
       playerIndex++;
     });
@@ -51,10 +54,14 @@ export class GameRoom {
     // Add bots (capped so total doesn't exceed maxPlayers)
     const botCount = Math.min(room.config.botCount || 0, room.config.maxPlayers - room.players.length);
     const botNames = ['Bomber Bot', 'Blast Bot', 'Kaboom', 'TNT', 'Dynamite', 'Sparky'];
+    const botTeams = room.config.botTeams || [];
     for (let i = 0; i < botCount; i++) {
       const botId = -(i + 1); // Negative IDs for bots
       const botName = botNames[i % botNames.length];
-      const team = modeConfig.teamsCount ? (playerIndex % modeConfig.teamsCount) : null;
+      // Use pre-assigned bot team if set, otherwise round-robin
+      const team = modeConfig.teamsCount
+        ? (botTeams[i] !== null && botTeams[i] !== undefined ? botTeams[i]! : (playerIndex % modeConfig.teamsCount))
+        : null;
       this.gameState.addPlayer(botId, `bot_${i}`, botName, team, true);
       playerIndex++;
     }
@@ -190,6 +197,8 @@ export class GameRoom {
         placement: p.placement || 0,
         kills: p.kills,
         selfKills: p.selfKills,
+        team: p.team,
+        alive: p.alive,
       }))
       .sort((a, b) => b.kills - a.kills || a.placement - b.placement);
 

@@ -73,7 +73,7 @@ export async function register(
 
 export async function login(username: string, password: string): Promise<{ auth: AuthResponse; refreshToken: string }> {
   const rows = await query(
-    'SELECT id, username, email, password_hash, display_name, role, is_banned, ban_reason, email_verified FROM users WHERE username = ?',
+    'SELECT id, username, email, password_hash, display_name, role, is_banned, ban_reason, is_deactivated, email_verified FROM users WHERE username = ?',
     [username]
   );
 
@@ -85,6 +85,10 @@ export async function login(username: string, password: string): Promise<{ auth:
 
   if (user.is_banned) {
     throw new AppError(`Account banned: ${user.ban_reason || 'No reason provided'}`, 403, 'BANNED');
+  }
+
+  if (user.is_deactivated) {
+    throw new AppError('Account has been deactivated', 403, 'DEACTIVATED');
   }
 
   const valid = await comparePassword(password, user.password_hash);
@@ -118,7 +122,7 @@ export async function refreshAccessToken(refreshTokenValue: string): Promise<{ a
 
   const rows = await query(
     `SELECT rt.id, rt.user_id, rt.expires_at, rt.revoked,
-            u.username, u.display_name, u.role, u.is_banned
+            u.username, u.display_name, u.role, u.is_banned, u.is_deactivated
      FROM refresh_tokens rt
      JOIN users u ON u.id = rt.user_id
      WHERE rt.token_hash = ?`,
@@ -143,6 +147,10 @@ export async function refreshAccessToken(refreshTokenValue: string): Promise<{ a
 
   if (row.is_banned) {
     throw new AppError('Account is banned', 403, 'BANNED');
+  }
+
+  if (row.is_deactivated) {
+    throw new AppError('Account has been deactivated', 403, 'DEACTIVATED');
   }
 
   // Revoke old token

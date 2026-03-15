@@ -617,7 +617,8 @@ export class GameStateManager {
       if (aliveTeams.size <= 1 && alivePlayers.length > 0) {
         this.finishTick = this.tick;
         this.winnerTeam = alivePlayers[0].team;
-        this.finishReason = `Team ${alivePlayers[0].team} wins!`;
+        const teamName = alivePlayers[0].team === 0 ? 'Red' : 'Blue';
+        this.finishReason = `Team ${teamName} wins!`;
       } else if (alivePlayers.length === 0) {
         this.finishTick = this.tick;
         this.finishReason = 'Draw — no survivors!';

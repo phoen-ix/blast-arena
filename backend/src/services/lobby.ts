@@ -129,6 +129,21 @@ export async function setPlayerReady(code: string, userId: number, ready: boolea
   return room;
 }
 
+export async function setPlayerTeam(code: string, targetUserId: number, team: number | null): Promise<Room> {
+  const redis = getRedis();
+  const room = await getRoom(code);
+
+  if (!room) throw new AppError('Room not found', 404, 'NOT_FOUND');
+
+  const player = room.players.find(p => p.user.id === targetUserId);
+  if (!player) throw new AppError('Player not in this room', 400, 'NOT_IN_ROOM');
+
+  player.team = team;
+
+  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', 3600);
+  return room;
+}
+
 export async function updateRoom(code: string, room: Room): Promise<void> {
   const redis = getRedis();
   await redis.set(`room:${code}`, JSON.stringify(room), 'EX', 3600);

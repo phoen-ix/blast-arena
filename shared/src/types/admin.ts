@@ -9,6 +9,8 @@ export interface AdminUserListItem {
   emailVerified: boolean;
   isBanned: boolean;
   banReason: string | null;
+  isDeactivated: boolean;
+  deactivatedAt: Date | null;
   lastLogin: Date | null;
   createdAt: Date;
   totalMatches: number;
@@ -81,4 +83,34 @@ export interface MatchPlayerDetail {
   bombsPlaced: number;
   powerupsCollected: number;
   survivedSeconds: number;
+}
+
+export interface AdminActiveRoom {
+  code: string;
+  name: string;
+  host: string;
+  players: { id: number; username: string; isBot: boolean }[];
+  gameMode: string;
+  status: string;
+  maxPlayers: number;
+  createdAt: string;
+}
+
+export interface DeactivateRequest {
+  deactivated: boolean;
+}
+
+export interface AnnouncementBanner {
+  id: number;
+  message: string;
+  adminUsername: string;
+  createdAt: Date;
+}
+
+export interface ToastRequest {
+  message: string;
+}
+
+export interface BannerRequest {
+  message: string;
 }

@@ -13,6 +13,9 @@ export class LobbyScene extends Phaser.Scene {
   private lobbyUI!: LobbyUI;
   private roomUI: RoomUI | null = null;
   private gameStartHandler: ((state: any) => void) | null = null;
+  private adminToastHandler: ((data: any) => void) | null = null;
+  private adminBannerHandler: ((data: any) => void) | null = null;
+  private adminKickedHandler: ((data: any) => void) | null = null;
 
   constructor() {
     super({ key: 'LobbyScene' });
@@ -49,6 +52,39 @@ export class LobbyScene extends Phaser.Scene {
       this.registry.remove('currentRoom');
       this.showLobby();
     }
+
+    this.events.once('shutdown', this.shutdown, this);
+
+    // Admin socket listeners
+    this.adminToastHandler = (data: any) => {
+      this.notifications.info(data.message);
+    };
+    this.socketClient.on('admin:toast' as any, this.adminToastHandler as any);
+
+    this.adminBannerHandler = (data: any) => {
+      const area = document.getElementById('lobby-banner-area');
+      if (area) {
+        if (data.message) {
+          area.innerHTML = `
+            <div class="admin-banner">
+              <span>${this.escapeHtml(data.message)}</span>
+              <button class="banner-close" onclick="this.parentElement.remove()">&times;</button>
+            </div>
+          `;
+        } else {
+          area.innerHTML = '';
+        }
+      }
+    };
+    this.socketClient.on('admin:banner' as any, this.adminBannerHandler as any);
+
+    this.adminKickedHandler = (data: any) => {
+      this.notifications.error(data.reason || 'You have been kicked');
+      this.roomUI?.hide();
+      this.roomUI = null;
+      this.showLobby();
+    };
+    this.socketClient.on('admin:kicked' as any, this.adminKickedHandler as any);
 
     // Background
     const width = this.cameras.main.width;
@@ -115,11 +151,29 @@ export class LobbyScene extends Phaser.Scene {
     this.socketClient.on('game:start' as any, this.gameStartHandler as any);
   }
 
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   shutdown(): void {
     // Clean up socket listener to prevent leaks across scene transitions
     if (this.gameStartHandler) {
       this.socketClient.off('game:start' as any, this.gameStartHandler as any);
       this.gameStartHandler = null;
+    }
+    if (this.adminToastHandler) {
+      this.socketClient.off('admin:toast' as any, this.adminToastHandler as any);
+      this.adminToastHandler = null;
+    }
+    if (this.adminBannerHandler) {
+      this.socketClient.off('admin:banner' as any, this.adminBannerHandler as any);
+      this.adminBannerHandler = null;
+    }
+    if (this.adminKickedHandler) {
+      this.socketClient.off('admin:kicked' as any, this.adminKickedHandler as any);
+      this.adminKickedHandler = null;
     }
     this.lobbyUI?.hide();
     this.roomUI?.hide();

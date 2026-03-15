@@ -1,16 +1,62 @@
-import { ApiClient } from '../network/ApiClient';
+import { SocketClient } from '../network/SocketClient';
+import { AuthManager } from '../network/AuthManager';
 import { NotificationUI } from './NotificationUI';
+import { UserRole } from '@blast-arena/shared';
+import { DashboardTab } from './admin/DashboardTab';
+import { UsersTab } from './admin/UsersTab';
+import { MatchesTab } from './admin/MatchesTab';
+import { RoomsTab } from './admin/RoomsTab';
+import { LogsTab } from './admin/LogsTab';
+import { AnnouncementsTab } from './admin/AnnouncementsTab';
+
+interface Tab {
+  id: string;
+  label: string;
+  adminOnly: boolean;
+  instance: { render(parent: HTMLElement): Promise<void>; destroy(): void };
+}
 
 export class AdminUI {
   private container: HTMLElement;
   private notifications: NotificationUI;
+  private socketClient: SocketClient;
+  private authManager: AuthManager;
   private onClose: () => void;
+  private tabs: Tab[];
+  private activeTabId: string;
+  private contentEl: HTMLElement | null = null;
 
-  constructor(notifications: NotificationUI, onClose: () => void) {
+  constructor(
+    socketClient: SocketClient,
+    authManager: AuthManager,
+    notifications: NotificationUI,
+    onClose: () => void
+  ) {
+    this.socketClient = socketClient;
+    this.authManager = authManager;
     this.notifications = notifications;
     this.onClose = onClose;
     this.container = document.createElement('div');
     this.container.className = 'admin-container';
+
+    const role = (authManager.getUser()?.role || 'user') as UserRole;
+    const isAdmin = role === 'admin';
+
+    this.tabs = [
+      { id: 'dashboard', label: 'Dashboard', adminOnly: true, instance: new DashboardTab(notifications) },
+      { id: 'users', label: 'Users', adminOnly: false, instance: new UsersTab(notifications, role) },
+      { id: 'matches', label: 'Matches', adminOnly: false, instance: new MatchesTab(notifications) },
+      { id: 'rooms', label: 'Rooms', adminOnly: false, instance: new RoomsTab(notifications, socketClient, role) },
+      { id: 'logs', label: 'Logs', adminOnly: true, instance: new LogsTab(notifications) },
+      { id: 'announcements', label: 'Announcements', adminOnly: false, instance: new AnnouncementsTab(notifications, role) },
+    ];
+
+    // Filter tabs based on role
+    if (!isAdmin) {
+      this.tabs = this.tabs.filter(t => !t.adminOnly);
+    }
+
+    this.activeTabId = this.tabs[0]?.id || 'users';
   }
 
   async show(): Promise<void> {
@@ -22,18 +68,24 @@ export class AdminUI {
   }
 
   hide(): void {
+    // Destroy active tab
+    const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+    activeTab?.instance.destroy();
     this.container.remove();
   }
 
   private async render(): Promise<void> {
     this.container.innerHTML = `
       <div class="admin-header">
-        <h1 style="color:#e94560;">Admin Panel</h1>
-        <button class="btn btn-secondary" id="admin-close">Close</button>
+        <h1 style="color:#e94560;margin:0;">Admin Panel</h1>
+        <button class="btn btn-secondary" id="admin-close">Back to Lobby</button>
       </div>
-      <div class="admin-stats" id="admin-stats">Loading...</div>
-      <h2 style="margin-bottom:12px;">Users</h2>
-      <div id="admin-users">Loading...</div>
+      <div class="admin-tabs" id="admin-tab-bar">
+        ${this.tabs.map(t => `
+          <button class="admin-tab ${t.id === this.activeTabId ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>
+        `).join('')}
+      </div>
+      <div class="admin-tab-content" id="admin-tab-content"></div>
     `;
 
     this.container.querySelector('#admin-close')!.addEventListener('click', () => {
@@ -41,93 +93,43 @@ export class AdminUI {
       this.onClose();
     });
 
-    await this.loadStats();
-    await this.loadUsers();
+    this.container.querySelector('#admin-tab-bar')!.addEventListener('click', (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.dataset.tab && target.dataset.tab !== this.activeTabId) {
+        this.switchTab(target.dataset.tab);
+      }
+    });
+
+    this.contentEl = this.container.querySelector('#admin-tab-content');
+    await this.renderActiveTab();
   }
 
-  private async loadStats(): Promise<void> {
-    try {
-      const stats = await ApiClient.get<any>('/admin/stats');
-      const el = this.container.querySelector('#admin-stats')!;
-      el.innerHTML = `
-        <div class="stat-card">
-          <div class="stat-value">${stats.totalUsers}</div>
-          <div class="stat-label">Total Users</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${stats.activeUsers24h}</div>
-          <div class="stat-label">Active (24h)</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${stats.totalMatches}</div>
-          <div class="stat-label">Total Matches</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${stats.activeRooms}</div>
-          <div class="stat-label">Active Rooms</div>
-        </div>
-      `;
-    } catch (err: any) {
-      this.notifications.error('Failed to load stats');
+  private async switchTab(tabId: string): Promise<void> {
+    // Destroy current tab
+    const currentTab = this.tabs.find(t => t.id === this.activeTabId);
+    currentTab?.instance.destroy();
+
+    this.activeTabId = tabId;
+
+    // Update tab bar active state
+    const tabBar = this.container.querySelector('#admin-tab-bar');
+    if (tabBar) {
+      tabBar.querySelectorAll('.admin-tab').forEach(btn => {
+        btn.classList.toggle('active', (btn as HTMLElement).dataset.tab === tabId);
+      });
     }
-  }
 
-  private async loadUsers(): Promise<void> {
-    try {
-      const result = await ApiClient.get<any>('/admin/users');
-      const el = this.container.querySelector('#admin-users')!;
-
-      el.innerHTML = `
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Matches</th>
-              <th>Joined</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${result.users.map((u: any) => `
-              <tr>
-                <td>${this.escapeHtml(u.username)}</td>
-                <td>${this.escapeHtml(u.email)}</td>
-                <td><span class="badge badge-${u.role}">${u.role}</span></td>
-                <td>${u.is_banned ? '<span class="badge badge-banned">Banned</span>' : 'Active'}</td>
-                <td>${u.total_matches}</td>
-                <td>${new Date(u.created_at).toLocaleDateString()}</td>
-                <td>
-                  <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;"
-                    onclick="window.__adminBan(${u.id}, ${!u.is_banned})">
-                    ${u.is_banned ? 'Unban' : 'Ban'}
-                  </button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-
-      (window as any).__adminBan = async (userId: number, ban: boolean) => {
-        try {
-          await ApiClient.put(`/admin/users/${userId}/ban`, { banned: ban });
-          this.notifications.success(ban ? 'User banned' : 'User unbanned');
-          await this.loadUsers();
-        } catch (err: any) {
-          this.notifications.error(err.message);
-        }
-      };
-    } catch (err: any) {
-      this.notifications.error('Failed to load users');
+    // Clear and render new tab
+    if (this.contentEl) {
+      this.contentEl.innerHTML = '';
     }
+    await this.renderActiveTab();
   }
 
-  private escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+  private async renderActiveTab(): Promise<void> {
+    const tab = this.tabs.find(t => t.id === this.activeTabId);
+    if (tab && this.contentEl) {
+      await tab.instance.render(this.contentEl);
+    }
   }
 }

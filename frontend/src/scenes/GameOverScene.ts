@@ -92,24 +92,43 @@ export class GameOverScene extends Phaser.Scene {
       const endY = height - 70;
       const spacing = Math.min(28, (endY - startY) / Math.max(count, 1));
 
+      // Check if team mode (winnerTeam is set)
+      const isTeamMode = data.winnerTeam !== null && data.winnerTeam !== undefined;
+      const teamColors = ['#e94560', '#44aaff'];
+      const teamNames = ['Red', 'Blue'];
+
       // Column layout
       const colName = width * 0.35;
+      const colTeam = isTeamMode ? width * 0.6 : -1;
       const colScore = width * 0.75;
 
       // Header
       const hs = { fontSize: '13px', color: '#555', fontStyle: 'bold' } as Phaser.Types.GameObjects.Text.TextStyle;
       this.add.text(colName, 115, 'PLAYER', hs).setOrigin(0.5);
+      if (isTeamMode) this.add.text(colTeam, 115, 'TEAM', hs).setOrigin(0.5);
       this.add.text(colScore, 115, 'SCORE', hs).setOrigin(0.5);
 
       list.forEach((p: any, i: number) => {
         const y = startY + i * spacing;
         const medalColor = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#707080';
+        const dead = p.alive === false;
         const botTag = p.isBot ? ' [BOT]' : '';
         const name = (p.displayName || `Player ${p.userId}`) + botTag;
         const kills = p.kills ?? 0;
 
-        this.add.text(colName, y, name, { fontSize: '16px', color: medalColor }).setOrigin(0.5);
-        this.add.text(colScore, y, `${kills}`, { fontSize: '16px', color: '#fff' }).setOrigin(0.5);
+        const nameText = this.add.text(colName, y, name, { fontSize: '16px', color: dead ? '#555' : medalColor }).setOrigin(0.5);
+        if (dead) {
+          const lineY = nameText.y;
+          const lineWidth = nameText.width;
+          const line = this.add.graphics();
+          line.lineStyle(1.5, 0x666666, 0.8);
+          line.lineBetween(nameText.x - lineWidth / 2, lineY, nameText.x + lineWidth / 2, lineY);
+          line.setDepth(1);
+        }
+        if (isTeamMode && p.team !== null && p.team !== undefined) {
+          this.add.text(colTeam, y, teamNames[p.team], { fontSize: '14px', color: teamColors[p.team] }).setOrigin(0.5);
+        }
+        this.add.text(colScore, y, `${kills}`, { fontSize: '16px', color: dead ? '#555' : '#fff' }).setOrigin(0.5);
       });
     }
   }

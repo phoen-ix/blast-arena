@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { authMiddleware } from '../middleware/auth';
-import { adminMiddleware } from '../middleware/admin';
+import { staffMiddleware, adminOnlyMiddleware } from '../middleware/admin';
 import { validate } from '../middleware/validation';
 import * as adminService from '../services/admin';
 
@@ -16,7 +16,56 @@ const roleSchema = z.object({
   role: z.enum(['user', 'moderator', 'admin']),
 });
 
-router.use(authMiddleware, adminMiddleware);
+const deactivateSchema = z.object({
+  deactivated: z.boolean(),
+});
+
+const toastSchema = z.object({
+  message: z.string().min(1).max(500),
+});
+
+const bannerSchema = z.object({
+  message: z.string().min(1).max(1000),
+});
+
+const createUserSchema = z.object({
+  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_-]+$/),
+  email: z.string().email().max(255),
+  password: z.string().min(6).max(128),
+  displayName: z.string().max(30).optional(),
+  role: z.enum(['user', 'moderator', 'admin']).optional(),
+});
+
+// Public: get active banner (no auth required)
+router.get('/admin/announcements/banner', async (_req, res, next) => {
+  try {
+    const banner = await adminService.getActiveBanner();
+    res.json(banner);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// All other admin routes require auth + staff role (admin or moderator)
+router.use(authMiddleware, staffMiddleware);
+
+// --- Users ---
+
+router.post('/admin/users', adminOnlyMiddleware, validate(createUserSchema), async (req, res, next) => {
+  try {
+    const user = await adminService.createUser(
+      req.user!.userId,
+      req.body.username,
+      req.body.email,
+      req.body.password,
+      req.body.displayName,
+      req.body.role
+    );
+    res.status(201).json(user);
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get('/admin/users', async (req, res, next) => {
   try {
@@ -40,7 +89,7 @@ router.put('/admin/users/:id/ban', validate(banSchema), async (req, res, next) =
   }
 });
 
-router.put('/admin/users/:id/role', validate(roleSchema), async (req, res, next) => {
+router.put('/admin/users/:id/role', adminOnlyMiddleware, validate(roleSchema), async (req, res, next) => {
   try {
     const userId = parseInt(req.params.id);
     await adminService.changeUserRole(req.user!.userId, userId, req.body.role);
@@ -50,7 +99,29 @@ router.put('/admin/users/:id/role', validate(roleSchema), async (req, res, next)
   }
 });
 
-router.get('/admin/stats', async (_req, res, next) => {
+router.put('/admin/users/:id/deactivate', adminOnlyMiddleware, validate(deactivateSchema), async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.id);
+    await adminService.deactivateUser(req.user!.userId, userId, req.body.deactivated);
+    res.json({ message: req.body.deactivated ? 'User deactivated' : 'User reactivated' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/admin/users/:id', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.id);
+    await adminService.deleteUser(req.user!.userId, userId);
+    res.json({ message: 'User deleted' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Stats ---
+
+router.get('/admin/stats', adminOnlyMiddleware, async (_req, res, next) => {
   try {
     const stats = await adminService.getServerStats();
     res.json(stats);
@@ -59,12 +130,78 @@ router.get('/admin/stats', async (_req, res, next) => {
   }
 });
 
+// --- Matches ---
+
 router.get('/admin/matches', async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const result = await adminService.getMatchHistory(page, limit);
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/admin/matches/:id', async (req, res, next) => {
+  try {
+    const matchId = parseInt(req.params.id);
+    const result = await adminService.getMatchDetail(matchId);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Active Rooms ---
+
+router.get('/admin/rooms', async (_req, res, next) => {
+  try {
+    const rooms = await adminService.getActiveRooms();
+    res.json(rooms);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Admin Action Log ---
+
+router.get('/admin/actions', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const action = req.query.action as string | undefined;
+    const result = await adminService.getAdminActions(page, limit, action);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Announcements ---
+
+router.post('/admin/announcements/toast', validate(toastSchema), async (req, res, next) => {
+  try {
+    await adminService.sendToast(req.user!.userId, req.body.message);
+    res.json({ message: 'Toast sent' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/admin/announcements/banner', adminOnlyMiddleware, validate(bannerSchema), async (req, res, next) => {
+  try {
+    await adminService.setBanner(req.user!.userId, req.body.message);
+    res.json({ message: 'Banner set' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/admin/announcements/banner', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    await adminService.clearBanner(req.user!.userId);
+    res.json({ message: 'Banner cleared' });
   } catch (err) {
     next(err);
   }

@@ -151,11 +151,14 @@
     .btn-primary {
       background: #e94560;
       color: white;
-      width: 100%;
     }
 
     .btn-primary:hover {
       background: #c73e54;
+    }
+
+    .auth-form .btn-primary {
+      width: 100%;
     }
 
     .btn-secondary {
@@ -711,6 +714,299 @@
     .badge-admin { background: #e94560; color: white; }
     .badge-moderator { background: #0f3460; color: #a0c4ff; }
     .badge-banned { background: #3d1424; color: #ffb3c1; }
+    .badge-user { background: #1a2744; color: #a0c4ff; }
+    .badge-deactivated { background: #2a2a2a; color: #808080; }
+    .badge-active { background: #1b4332; color: #95d5b2; }
+
+    /* Admin Tabs */
+    .admin-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #0f3460;
+    }
+
+    .admin-tab {
+      padding: 10px 20px;
+      background: transparent;
+      border: none;
+      color: #a0a0b0;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .admin-tab:hover {
+      color: #e0e0e0;
+      background: rgba(233, 69, 96, 0.05);
+    }
+
+    .admin-tab.active {
+      color: #e94560;
+      border-bottom-color: #e94560;
+    }
+
+    .admin-tab-content {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Admin Search */
+    .admin-search {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .admin-search input {
+      flex: 1;
+      padding: 10px 14px;
+      background: #1a1a2e;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .admin-search input:focus {
+      border-color: #e94560;
+    }
+
+    /* Pagination */
+    .admin-pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 12px;
+    }
+
+    .admin-pagination button {
+      padding: 6px 12px;
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      color: #e0e0e0;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .admin-pagination button:hover:not(:disabled) {
+      border-color: #e94560;
+    }
+
+    .admin-pagination button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .admin-pagination .page-info {
+      font-size: 13px;
+      color: #a0a0b0;
+    }
+
+    /* Admin action buttons */
+    .btn-danger {
+      background: #3d1424;
+      color: #ffb3c1;
+      border: 1px solid #e94560;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .btn-danger:hover { background: #5a1a30; }
+
+    .btn-warn {
+      background: #3d3014;
+      color: #ffd699;
+      border: 1px solid #ff8800;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .btn-warn:hover { background: #5a4a20; }
+
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    /* Admin select */
+    .admin-select {
+      padding: 4px 8px;
+      background: #1a1a2e;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .admin-select:focus {
+      border-color: #e94560;
+      outline: none;
+    }
+
+    /* Confirm modal input */
+    .confirm-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: #1a1a2e;
+      border: 1px solid #e94560;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 14px;
+      margin-top: 12px;
+      box-sizing: border-box;
+    }
+
+    /* Admin banner in lobby */
+    .admin-banner {
+      background: linear-gradient(90deg, #0f3460, #16213e);
+      border: 1px solid #e94560;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      color: #ffd699;
+    }
+
+    .admin-banner .banner-close {
+      cursor: pointer;
+      color: #a0a0b0;
+      font-size: 18px;
+      background: none;
+      border: none;
+      padding: 0 4px;
+    }
+
+    .admin-banner .banner-close:hover {
+      color: #e0e0e0;
+    }
+
+    /* Admin filters */
+    .admin-filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .admin-filters select {
+      padding: 8px 12px;
+      background: #1a1a2e;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 13px;
+    }
+
+    /* Toast preview */
+    .toast-preview {
+      margin: 12px 0;
+      padding: 12px 20px;
+      border-radius: 8px;
+      background: #1a2744;
+      border: 1px solid #3a5a8a;
+      color: #a0c4ff;
+      font-size: 14px;
+    }
+
+    /* Admin text input */
+    .admin-input {
+      padding: 10px 14px;
+      background: #1a1a2e;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 14px;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    .admin-input:focus {
+      border-color: #e94560;
+    }
+
+    /* Admin textarea */
+    .admin-textarea {
+      padding: 10px 14px;
+      background: #1a1a2e;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 14px;
+      outline: none;
+      width: 100%;
+      box-sizing: border-box;
+      resize: vertical;
+      min-height: 60px;
+      font-family: inherit;
+    }
+
+    .admin-textarea:focus {
+      border-color: #e94560;
+    }
+
+    /* Admin section card */
+    .admin-section {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .admin-section h3 {
+      margin: 0 0 12px 0;
+      color: #e0e0e0;
+      font-size: 16px;
+    }
+
+    /* Match detail modal */
+    .match-detail-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .match-detail-row .label {
+      color: #a0a0b0;
+      min-width: 100px;
+    }
+
+    .match-detail-row .value {
+      color: #e0e0e0;
+    }
+
+    /* Room player chips */
+    .admin-room-players {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .admin-room-player {
+      padding: 2px 8px;
+      background: #1a1a2e;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>

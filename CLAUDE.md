@@ -54,6 +54,33 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Gamepad support**: Xbox/standard gamepad via Phaser gamepad plugin (`input: { gamepad: true }` in config). D-pad/left stick for movement (0.3 deadzone, dominant-axis), A=bomb, B=detonate, LB/RB=cycle spectate. GamepadManager polls each frame; actions latched in `pendingGamepadAction` to survive 50ms tick throttle. Keyboard takes priority when both active.
 - **Real-time lobby**: Room list auto-updates via `room:list` socket broadcast on every room mutation (create/join/leave/start/restart/disconnect) — no manual refresh needed
 
+## Admin Panel
+- Full-screen panel accessible from lobby header (Admin button visible for admin and moderator roles)
+- **Top-tab navigation**: Dashboard, Users, Matches, Rooms, Logs, Announcements (role-filtered)
+- **Permission matrix**: Admin sees all 6 tabs; Moderator sees Users, Matches, Rooms, Announcements only
+- **Dashboard**: 5 stat cards (total users, active 24h, total matches, active rooms, online players) with 30s auto-refresh
+- **Users**: Paginated table with search, ban/unban (with reason), role change dropdown, deactivate (soft delete), delete permanently (type-username confirmation), create user modal
+- **Matches**: Paginated table, click row for detail modal with per-player stats
+- **Rooms**: Active rooms with 5s auto-refresh, kick player, force close (admin only), spectate, send message — all via socket events
+- **Logs**: Admin action audit trail with action type filter, paginated
+- **Announcements**: Toast broadcast (ephemeral notification to all players) + persistent banner (shows at top of lobby until cleared)
+- Backend: `staffMiddleware` (admin+moderator) and `adminOnlyMiddleware` (admin only) for route protection
+- `backend/src/game/registry.ts` — singleton for RoomManager/IO access from admin service
+- Admin socket events: `admin:kick`, `admin:closeRoom`, `admin:spectate`, `admin:roomMessage`, `admin:toast`, `admin:banner`, `admin:kicked`
+- All admin actions logged to `admin_actions` table for audit
+- Deactivated users blocked from login and token refresh
+- Self-protection: admins cannot ban/deactivate/delete themselves
+- Public endpoint `GET /admin/announcements/banner` for lobby banner display (no auth required)
+
+## Teams
+- Team assignment: host can assign players and bots to Team Red (0) or Team Blue (1) via dropdowns in RoomUI waiting room
+- Unassigned players/bots fall back to round-robin at game start
+- Bot team assignments stored in `MatchConfig.botTeams` array; bots rendered as placeholder entries in waiting room player list
+- **In-game visual distinction**: Team-based color palettes (Red team: red/orange/yellow; Blue team: blue/cyan/purple), team-colored name labels, colored underline bar beneath sprites
+- **HUD**: Player list grouped by team with "Team Red"/"Team Blue" headers and colored dots
+- **Game over**: Team column in results, dead players shown with strikethrough and dimmed colors, finish reason uses team names ("Team Red wins!")
+- `room:setTeam` and `room:setBotTeam` socket events for lobby team assignment
+
 ## Game Architecture
 - 20 tick/sec server game loop (GameLoop.ts -> GameState.ts)
 - GameState.processTick(): bot AI -> inputs -> movement -> bomb slide -> bomb timers -> explosions -> collisions -> power-ups -> KOTH scoring -> map events -> zone -> deathmatch respawns -> time check -> win check
@@ -106,7 +133,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Hazard tiles** (optional): Teleporter pairs (A/B, instant transport), conveyor belts (force movement in direction)
 
 ## Room Configuration
-MatchConfig includes: gameMode, maxPlayers, mapWidth/Height, mapSeed, roundTime, wallDensity, enabledPowerUps (all 8), powerUpDropRate, botCount, botDifficulty, friendlyFire, hazardTiles, enableMapEvents, reinforcedWalls
+MatchConfig includes: gameMode, maxPlayers, mapWidth/Height, mapSeed, roundTime, wallDensity, enabledPowerUps (all 8), powerUpDropRate, botCount, botDifficulty, botTeams, friendlyFire, hazardTiles, enableMapEvents, reinforcedWalls
 
 ## Game Logging
 - JSONL game logs written to ./data/gamelogs/ (bind-mounted from container)

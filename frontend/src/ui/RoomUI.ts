@@ -124,6 +124,7 @@ export class RoomUI {
           </div>
           <div style="flex:1;overflow-y:auto;" id="room-player-list">
             ${this.room.players.map((p, i) => this.renderPlayer(p, i)).join('')}
+            ${this.renderBots()}
           </div>
 
           <div style="display:flex;gap:12px;margin-top:16px;">
@@ -218,16 +219,43 @@ export class RoomUI {
         this.socketClient.emit('room:ready' as any, { ready: !isReady });
       });
     }
+
+    // Team assignment dropdowns (host only, teams mode)
+    this.container.querySelectorAll('.team-select').forEach(select => {
+      select.addEventListener('change', (e) => {
+        const el = e.target as HTMLSelectElement;
+        const userId = parseInt(el.dataset.userId!);
+        const team = parseInt(el.value);
+        this.socketClient.emit('room:setTeam' as any, { userId, team });
+      });
+    });
+
+    // Bot team assignment dropdowns (host only, teams mode)
+    this.container.querySelectorAll('.bot-team-select').forEach(select => {
+      select.addEventListener('change', (e) => {
+        const el = e.target as HTMLSelectElement;
+        const botIndex = parseInt(el.dataset.botIndex!);
+        const team = parseInt(el.value);
+        this.socketClient.emit('room:setBotTeam' as any, { botIndex, team });
+      });
+    });
   }
 
   private renderPlayer(player: RoomPlayer, index: number): string {
-    const isHost = player.user.id === this.room.host.id;
-    const colors = ['#e94560', '#44aaff', '#44ff44', '#ff8800', '#cc44ff', '#ffff44', '#ff44ff', '#44ffff'];
-    const color = colors[index % colors.length];
+    const isPlayerHost = player.user.id === this.room.host.id;
+    const isTeamsMode = this.room.config.gameMode === 'teams';
+    const iAmHost = this.isHost();
+
+    // In teams mode, use team color; otherwise individual color
+    const teamColors = ['#e94560', '#44aaff'];
+    const individualColors = ['#e94560', '#44aaff', '#44ff44', '#ff8800', '#cc44ff', '#ffff44', '#ff44ff', '#44ffff'];
+    const playerTeam = player.team ?? (index % 2);
+    const color = isTeamsMode ? teamColors[playerTeam] : individualColors[index % individualColors.length];
+    const teamLabel = isTeamsMode ? (playerTeam === 0 ? 'Team Red' : 'Team Blue') : '';
 
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;
-        background:#16213e;border:1px solid #0f3460;border-radius:8px;margin-bottom:8px;">
+        background:#16213e;border:1px solid ${isTeamsMode ? color + '40' : '#0f3460'};border-radius:8px;margin-bottom:8px;">
         <div style="width:40px;height:40px;border-radius:6px;background:${color};
           display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:18px;
           color:rgba(0,0,0,0.5);">
@@ -236,12 +264,21 @@ export class RoomUI {
         <div style="flex:1;">
           <div style="font-weight:600;color:#fff;">
             ${this.escapeHtml(player.user.displayName)}
-            ${isHost ? '<span style="color:#e94560;font-size:12px;margin-left:6px;">HOST</span>' : ''}
+            ${isPlayerHost ? '<span style="color:#e94560;font-size:12px;margin-left:6px;">HOST</span>' : ''}
           </div>
-          <div style="font-size:12px;color:#a0a0b0;">@${this.escapeHtml(player.user.username)}</div>
+          <div style="font-size:12px;color:#a0a0b0;">
+            @${this.escapeHtml(player.user.username)}
+            ${isTeamsMode ? ` <span style="color:${color};font-weight:600;">${teamLabel}</span>` : ''}
+          </div>
         </div>
+        ${isTeamsMode && iAmHost ? `
+          <select class="team-select" data-user-id="${player.user.id}" style="padding:4px 8px;background:#1a1a2e;border:1px solid #0f3460;border-radius:4px;color:#e0e0e0;font-size:12px;cursor:pointer;">
+            <option value="0" ${playerTeam === 0 ? 'selected' : ''} style="color:#e94560;">Team Red</option>
+            <option value="1" ${playerTeam === 1 ? 'selected' : ''} style="color:#44aaff;">Team Blue</option>
+          </select>
+        ` : ''}
         <div>
-          ${isHost
+          ${isPlayerHost
             ? '<span style="color:#e94560;font-size:13px;font-weight:600;">Host</span>'
             : player.ready
               ? '<span style="color:#44ff44;font-size:13px;font-weight:600;">Ready</span>'
@@ -250,6 +287,56 @@ export class RoomUI {
         </div>
       </div>
     `;
+  }
+
+  private renderBots(): string {
+    const botCount = this.room.config.botCount || 0;
+    if (botCount === 0) return '';
+
+    const isTeamsMode = this.room.config.gameMode === 'teams';
+    const iAmHost = this.isHost();
+    const botNames = ['Bomber Bot', 'Blast Bot', 'Kaboom', 'TNT', 'Dynamite', 'Sparky'];
+    const botTeams = this.room.config.botTeams || [];
+    const humanCount = this.room.players.length;
+
+    let html = '';
+    for (let i = 0; i < botCount; i++) {
+      const botName = botNames[i % botNames.length];
+      const botTeam = botTeams[i] ?? ((humanCount + i) % 2);
+      const teamColors = ['#e94560', '#44aaff'];
+      const color = isTeamsMode ? teamColors[botTeam] : '#666';
+      const teamLabel = isTeamsMode ? (botTeam === 0 ? 'Team Red' : 'Team Blue') : '';
+
+      html += `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;
+          background:#16213e;border:1px solid ${isTeamsMode ? color + '40' : '#0f3460'};border-radius:8px;margin-bottom:8px;opacity:0.75;">
+          <div style="width:40px;height:40px;border-radius:6px;background:${color};
+            display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:16px;
+            color:rgba(0,0,0,0.5);">
+            🤖
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:600;color:#fff;">
+              ${this.escapeHtml(botName)}
+              <span style="color:#666;font-size:12px;margin-left:6px;">BOT</span>
+            </div>
+            <div style="font-size:12px;color:#a0a0b0;">
+              ${isTeamsMode ? `<span style="color:${color};font-weight:600;">${teamLabel}</span>` : 'AI Player'}
+            </div>
+          </div>
+          ${isTeamsMode && iAmHost ? `
+            <select class="bot-team-select" data-bot-index="${i}" style="padding:4px 8px;background:#1a1a2e;border:1px solid #0f3460;border-radius:4px;color:#e0e0e0;font-size:12px;cursor:pointer;">
+              <option value="0" ${botTeam === 0 ? 'selected' : ''} style="color:#e94560;">Team Red</option>
+              <option value="1" ${botTeam === 1 ? 'selected' : ''} style="color:#44aaff;">Team Blue</option>
+            </select>
+          ` : ''}
+          <div>
+            <span style="color:#44ff44;font-size:13px;font-weight:600;">Ready</span>
+          </div>
+        </div>
+      `;
+    }
+    return html;
   }
 
   private escapeHtml(text: string): string {

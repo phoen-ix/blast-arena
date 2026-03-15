@@ -2,6 +2,7 @@ import { SocketClient } from '../network/SocketClient';
 import { AuthManager } from '../network/AuthManager';
 import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
+import { AdminUI } from './AdminUI';
 import { RoomListItem, Room, GAME_MODES, GameMode, PowerUpType, POWERUP_DEFINITIONS } from '@blast-arena/shared';
 import { getSettings, saveSettings, VisualSettings } from '../game/Settings';
 
@@ -34,6 +35,7 @@ export class LobbyUI {
     }
     this.render();
     this.loadRooms();
+    this.loadBanner();
     this.roomListHandler = (rooms: RoomListItem[]) => this.renderRooms(rooms);
     this.socketClient.on('room:list' as any, this.roomListHandler as any);
   }
@@ -53,13 +55,14 @@ export class LobbyUI {
         <h1>BlastArena</h1>
         <div style="display:flex;gap:12px;align-items:center;">
           <span style="color:#a0a0b0;">Welcome, <strong style="color:#fff;">${user?.displayName || user?.username}</strong></span>
-          ${user?.role === 'admin' ? '<button class="btn btn-secondary" id="admin-btn">Admin</button>' : ''}
+          ${user?.role === 'admin' || user?.role === 'moderator' ? '<button class="btn btn-secondary" id="admin-btn">Admin</button>' : ''}
           <button class="btn btn-primary" id="create-room-btn">Create Room</button>
           <button class="btn btn-secondary" id="settings-btn">Settings</button>
           <button class="btn btn-secondary" id="help-btn">Help</button>
           <button class="btn btn-secondary" id="logout-btn">Logout</button>
         </div>
       </div>
+      <div id="lobby-banner-area"></div>
       <div style="margin-bottom:12px;">
         <span style="color:#a0a0b0;">Available Rooms</span>
       </div>
@@ -79,7 +82,11 @@ export class LobbyUI {
     const adminBtn = this.container.querySelector('#admin-btn');
     if (adminBtn) {
       adminBtn.addEventListener('click', () => {
-        this.notifications.info('Admin panel - coming soon');
+        this.hide();
+        const adminUI = new AdminUI(this.socketClient, this.authManager, this.notifications, () => {
+          this.show();
+        });
+        adminUI.show();
       });
     }
   }
@@ -90,6 +97,26 @@ export class LobbyUI {
       this.renderRooms(rooms);
     } catch (err: any) {
       this.notifications.error('Failed to load rooms: ' + err.message);
+    }
+  }
+
+  private async loadBanner(): Promise<void> {
+    try {
+      const banner = await ApiClient.get<any>('/admin/announcements/banner');
+      const area = this.container.querySelector('#lobby-banner-area');
+      if (area && banner && banner.message) {
+        area.innerHTML = `
+          <div class="admin-banner">
+            <span>${this.escapeHtml(banner.message)}</span>
+            <button class="banner-close">&times;</button>
+          </div>
+        `;
+        area.querySelector('.banner-close')?.addEventListener('click', () => {
+          area.innerHTML = '';
+        });
+      }
+    } catch {
+      // No banner or error — ignore
     }
   }
 

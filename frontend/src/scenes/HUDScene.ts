@@ -199,12 +199,28 @@ export class HUDScene extends Phaser.Scene {
     // Player list
     const playersEl = document.getElementById('hud-players');
     if (playersEl) {
-      const sorted = [...state.players].sort((a: any, b: any) => (b.alive ? 1 : 0) - (a.alive ? 1 : 0));
+      const isTeamMode = state.players.some((p: any) => p.team !== null && p.team !== undefined);
+      const sorted = [...state.players].sort((a: any, b: any) => {
+        // In team mode, group by team first, then alive status
+        if (isTeamMode && a.team !== b.team) return (a.team ?? 99) - (b.team ?? 99);
+        return (b.alive ? 1 : 0) - (a.alive ? 1 : 0);
+      });
+
+      const teamColors = ['#e94560', '#44aaff'];
+      let lastTeam = -1;
+
       playersEl.innerHTML = sorted.map((p: any) => {
         const dead = !p.alive;
         const clickable = p.alive && this.localPlayerDead;
-        return `<div class="hud-player-item${dead ? ' dead' : ''}${clickable ? ' clickable' : ''}" data-player-id="${p.id}">
-          <span>${p.isBot ? '🤖 ' : ''}${p.displayName}</span>
+        let teamHeader = '';
+        if (isTeamMode && p.team !== lastTeam) {
+          lastTeam = p.team;
+          const teamName = p.team === 0 ? 'Team Red' : 'Team Blue';
+          teamHeader = `<div style="font-size:11px;font-weight:600;color:${teamColors[p.team]};padding:4px 8px 2px;margin-top:${p.team > 0 ? '6px' : '0'};">${teamName}</div>`;
+        }
+        const teamDot = isTeamMode ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${teamColors[p.team]};margin-right:4px;vertical-align:middle;"></span>` : '';
+        return `${teamHeader}<div class="hud-player-item${dead ? ' dead' : ''}${clickable ? ' clickable' : ''}" data-player-id="${p.id}">
+          <span>${teamDot}${p.isBot ? '🤖 ' : ''}${p.displayName}</span>
         </div>`;
       }).join('');
     }

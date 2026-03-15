@@ -15,6 +15,7 @@ export interface MatchConfig {
   powerUpDropRate?: number;
   botCount?: number;
   botDifficulty?: 'easy' | 'normal' | 'hard';
+  botTeams?: (number | null)[];
   friendlyFire?: boolean;
   hazardTiles?: boolean;
   enableMapEvents?: boolean;
