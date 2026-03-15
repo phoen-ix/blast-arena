@@ -10,6 +10,7 @@ import { PowerUpRenderer } from '../game/PowerUpSprite';
 import { ShrinkingZoneRenderer } from '../game/ShrinkingZone';
 import { EffectSystem } from '../game/EffectSystem';
 import { CountdownOverlay } from '../game/CountdownOverlay';
+import { GamepadManager } from '../game/GamepadManager';
 
 export class GameScene extends Phaser.Scene {
   private socketClient!: SocketClient;
@@ -31,6 +32,8 @@ export class GameScene extends Phaser.Scene {
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private detonateKey!: Phaser.Input.Keyboard.Key;
+  private gamepadManager!: GamepadManager;
+  private pendingGamepadAction: 'bomb' | 'detonate' | null = null;
   private lastInputSeq: number = 0;
   private lastInputTime: number = 0;
 
@@ -73,6 +76,7 @@ export class GameScene extends Phaser.Scene {
     this.lastGameState = null;
     this.hasShownCountdown = false;
     this.previousStatus = '';
+    this.pendingGamepadAction = null;
 
     this.events.once('shutdown', this.shutdown, this);
     this.installSpectatorListeners();
@@ -89,6 +93,8 @@ export class GameScene extends Phaser.Scene {
       this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
       this.detonateKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     }
+
+    this.gamepadManager = new GamepadManager(this);
 
     // Create composed renderers
     this.effectSystem = new EffectSystem(this, this.socketClient, this.localPlayerId);
@@ -228,6 +234,18 @@ export class GameScene extends Phaser.Scene {
       if (this.keysDown.has('ArrowDown') || this.keysDown.has('KeyS')) this.freeCamY += panSpeed;
       if (this.keysDown.has('ArrowLeft') || this.keysDown.has('KeyA')) this.freeCamX -= panSpeed;
       if (this.keysDown.has('ArrowRight') || this.keysDown.has('KeyD')) this.freeCamX += panSpeed;
+
+      // Gamepad spectator input
+      const gpSpec = this.gamepadManager.pollSpectator();
+      if (gpSpec.panX !== 0 || gpSpec.panY !== 0) {
+        this.freeCamX += gpSpec.panX * panSpeed;
+        this.freeCamY += gpSpec.panY * panSpeed;
+        this.spectateTargetId = null;
+      }
+      if (gpSpec.nextPlayer || gpSpec.prevPlayer) {
+        this.cycleSpectateTarget(gpSpec.nextPlayer ? 1 : -1);
+      }
+
       if (this.lastGameState) {
         const worldW = this.lastGameState.map.width * TILE_SIZE;
         const worldH = this.lastGameState.map.height * TILE_SIZE;
@@ -237,7 +255,13 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (!this.cursors) return;
+    // Poll gamepad before throttle to capture just-pressed actions
+    const gpInput = this.gamepadManager.poll();
+    if (gpInput.action) {
+      this.pendingGamepadAction = gpInput.action;
+    }
+
+    if (!this.cursors && !this.gamepadManager.isConnected()) return;
 
     const now = Date.now();
     if (now - this.lastInputTime < TICK_MS) return;
@@ -245,13 +269,23 @@ export class GameScene extends Phaser.Scene {
     let direction: string | null = null;
     let action: string | null = null;
 
-    if (this.cursors.up.isDown || this.wasd?.up.isDown) direction = 'up';
-    else if (this.cursors.down.isDown || this.wasd?.down.isDown) direction = 'down';
-    else if (this.cursors.left.isDown || this.wasd?.left.isDown) direction = 'left';
-    else if (this.cursors.right.isDown || this.wasd?.right.isDown) direction = 'right';
+    // Keyboard input
+    if (this.cursors) {
+      if (this.cursors.up.isDown || this.wasd?.up.isDown) direction = 'up';
+      else if (this.cursors.down.isDown || this.wasd?.down.isDown) direction = 'down';
+      else if (this.cursors.left.isDown || this.wasd?.left.isDown) direction = 'left';
+      else if (this.cursors.right.isDown || this.wasd?.right.isDown) direction = 'right';
 
-    if (this.spaceKey?.isDown) action = 'bomb';
-    if (this.detonateKey?.isDown) action = 'detonate';
+      if (this.spaceKey?.isDown) action = 'bomb';
+      if (this.detonateKey?.isDown) action = 'detonate';
+    }
+
+    // Gamepad input (fills nulls — keyboard takes priority)
+    if (!direction && gpInput.direction) direction = gpInput.direction;
+    if (!action && this.pendingGamepadAction) {
+      action = this.pendingGamepadAction;
+      this.pendingGamepadAction = null;
+    }
 
     if (direction || action) {
       this.lastInputTime = now;
@@ -263,6 +297,23 @@ export class GameScene extends Phaser.Scene {
         tick: this.lastGameState?.tick || 0,
       });
     }
+  }
+
+  private cycleSpectateTarget(delta: number): void {
+    if (!this.lastGameState) return;
+    const alivePlayers = this.lastGameState.players.filter(
+      p => p.alive && p.id !== this.localPlayerId
+    );
+    if (alivePlayers.length === 0) return;
+
+    const currentIdx = alivePlayers.findIndex(p => p.id === this.spectateTargetId);
+    let nextIdx: number;
+    if (currentIdx === -1) {
+      nextIdx = delta > 0 ? 0 : alivePlayers.length - 1;
+    } else {
+      nextIdx = (currentIdx + delta + alivePlayers.length) % alivePlayers.length;
+    }
+    this.spectateTargetId = alivePlayers[nextIdx].id;
   }
 
   private installSpectatorListeners(): void {
@@ -322,6 +373,7 @@ export class GameScene extends Phaser.Scene {
     this.zoneRenderer?.destroy();
     this.effectSystem?.destroy();
     this.countdownOverlay?.destroy();
+    this.gamepadManager?.destroy();
   }
 
   shutdown(): void {

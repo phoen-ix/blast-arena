@@ -46,7 +46,7 @@ export class HUDScene extends Phaser.Scene {
         <div class="hud-timer" id="hud-timer">3:00</div>
       </div>
       <div class="hud-spectator-banner" id="hud-spectator" style="display:none;">
-        SPECTATOR — WASD/Arrows to pan, 1-9 or click player to follow
+        SPECTATOR — WASD/Arrows/D-Pad to pan, 1-9/LB/RB or click to follow
       </div>
     `;
 

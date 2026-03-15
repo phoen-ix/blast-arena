@@ -43,13 +43,16 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
   - `ShrinkingZone.ts` — Battle Royale danger zone overlay using Graphics path with circle hole
   - `EffectSystem.ts` — subscribes to `game:explosion`, `game:playerDied`, `game:powerupCollected` socket events for screen shake, debris particles, and collection popups
   - `CountdownOverlay.ts` — animated "3, 2, 1, GO!" countdown at game start
+  - `GamepadManager.ts` — gamepad/controller input polling with deadzone, D-pad/stick direction, just-pressed action tracking
   - `Settings.ts` — per-user visual settings (animations, screen shake, particles) stored in localStorage
 - **Procedural textures**: All sprites generated in `BootScene.generateTextures()` — no external image assets. Player textures include 4 directional variants with eyes per color.
 - **Particle textures**: `particle_fire`, `particle_smoke`, `particle_spark`, `particle_debris`, `particle_star`, `particle_shield` generated in BootScene
 - **HUD**: DOM-based overlay in HUDScene.ts with timer, player list, kill feed, stats bar (bottom-left), spectator banner
 - Settings and Help are in the lobby header (LobbyUI), not in-game HUD, to avoid overlapping player names
-- Help modal covers: controls, all 8 power-ups (with in-game tile preview + HUD emoji), all 6 game modes, map features (reinforced walls, map events, hazard tiles with visual previews), and core mechanics
+- Help modal covers: controls (keyboard + gamepad), all 8 power-ups (with in-game tile preview + HUD emoji), all 6 game modes, map features (reinforced walls, map events, hazard tiles with visual previews), and core mechanics
 - Countdown is only shown in-game (CountdownOverlay), not in the lobby/room UI
+- **Gamepad support**: Xbox/standard gamepad via Phaser gamepad plugin (`input: { gamepad: true }` in config). D-pad/left stick for movement (0.3 deadzone, dominant-axis), A=bomb, B=detonate, LB/RB=cycle spectate. GamepadManager polls each frame; actions latched in `pendingGamepadAction` to survive 50ms tick throttle. Keyboard takes priority when both active.
+- **Real-time lobby**: Room list auto-updates via `room:list` socket broadcast on every room mutation (create/join/leave/start/restart/disconnect) — no manual refresh needed
 
 ## Game Architecture
 - 20 tick/sec server game loop (GameLoop.ts -> GameState.ts)
@@ -57,7 +60,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Bomb kick: player with hasKick walking into a bomb sets bomb.sliding direction; sliding bombs advance 1 tile/tick until blocked; kicking applies movement cooldown
 - BotAI: difficulty-aware (easy/normal/hard) with configurable awareness, aggression, escape depth, reaction delay, and kick usage
 - BotAI kick decisions gated on canMove() + kickCooldown to prevent kick spam (standing still retrying kicks for multiple ticks)
-- Bot difficulty set per-room via MatchConfig.botDifficulty; defaults to 'normal'; UI dropdown hidden when bots = 0
+- Bot difficulty set per-room via MatchConfig.botDifficulty; defaults to 'normal'; UI dropdown always visible but disabled when bots = 0
 - BotAI escape logic: BFS through danger cells to find nearest safe cell; canEscapeAfterBomb and flee use the same findEscapeDirection BFS so the bot follows the validated escape path
 - BotAI movement decisions only run when player.canMove() to prevent oscillation between hunt/seek_wall
 - BotAI power-up seeking uses BFS pathfinding (not line-of-sight) so bots find power-ups around corners
@@ -68,7 +71,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Self-kills subtract 1 from kill score (owner.kills decremented, owner.selfKills incremented)
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished' to show final explosions
-- Dead players enter spectator mode with free camera pan (WASD/arrows), click-to-follow on HUD player list, or number keys 1-9
+- Dead players enter spectator mode with free camera pan (WASD/arrows/D-pad), click-to-follow on HUD player list, number keys 1-9, or LB/RB gamepad bumpers
 - Spectate-follow breaks only on new keydown (not stale keysDown state); blur handler clears keysDown to prevent stuck keys
 - HUD spectate click uses mousedown event delegation on stable container (not click, which is unreliable with innerHTML rebuilds)
 - Camera follows local player with smooth lerp when map exceeds viewport
@@ -80,6 +83,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Shield has no time limit — lasts until consumed by an explosion. After shield breaks, player gets 10 ticks of invulnerability to escape the explosion area. Extra shield pickups are consumed but don't stack.
 - BotAI detonates remote bombs when an enemy is in their blast zone, or when all bomb slots are full (priority 2.5 in decision tree)
 - Game over screen shows context message (e.g., "Time's up!", "PlayerX is the last survivor!", "Draw — no survivors!")
+- Game start is instant (no server-side countdown delay); room:start guard checks both GameRoom existence and room status to prevent duplicate starts
+- "Back to Lobby" from game over clears currentRoom registry to prevent stale room UI
 
 ## Game Modes
 - **Free for All (FFA)**: 2-8 players, last player standing wins, 3 min

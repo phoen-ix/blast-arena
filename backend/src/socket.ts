@@ -12,7 +12,6 @@ import {
   SocketData,
   AuthPayload,
   PublicUser,
-  COUNTDOWN_SECONDS,
 } from '@blast-arena/shared';
 
 export function createSocketServer(httpServer: HttpServer): Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData> {
@@ -45,6 +44,15 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
     }
   });
 
+  async function broadcastRoomList() {
+    try {
+      const rooms = await lobbyService.listRooms();
+      io.emit('room:list', rooms);
+    } catch (err) {
+      logger.error({ err }, 'Failed to broadcast room list');
+    }
+  }
+
   io.on('connection', (socket) => {
     logger.info({ userId: socket.data.userId, username: socket.data.username }, 'Socket connected');
 
@@ -61,6 +69,7 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
         const room = await lobbyService.createRoom(currentUser, data.name, data.config);
         socket.join(`room:${room.code}`);
         callback({ success: true, room });
+        broadcastRoomList();
       } catch (err: any) {
         callback({ success: false, error: err.message });
       }
@@ -73,6 +82,7 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
         socket.join(`room:${room.code}`);
         socket.to(`room:${room.code}`).emit('room:playerJoined', { user: currentUser, ready: false, team: null });
         callback({ success: true, room });
+        broadcastRoomList();
       } catch (err: any) {
         callback({ success: false, error: err.message });
       }
@@ -95,6 +105,7 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
         io.to(`room:${roomCode}`).emit('room:playerLeft', socket.data.userId);
         io.to(`room:${roomCode}`).emit('room:state', room);
       }
+      broadcastRoomList();
     });
 
     // Ready toggle
@@ -137,35 +148,22 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
         return;
       }
 
-      // Prevent double-start
-      if (roomManager.getRoom(roomCode)) {
+      // Prevent double-start (game already running or countdown in progress)
+      if (roomManager.getRoom(roomCode) || room.status !== 'waiting') {
         socket.emit('error', { message: 'Game already starting' });
         return;
       }
 
-      // Start countdown
-      await lobbyService.updateRoomStatus(roomCode, 'countdown');
-      io.to(`room:${roomCode}`).emit('room:countdown', { seconds: COUNTDOWN_SECONDS });
-      logger.info({ roomCode }, 'Game countdown started');
-
-      // After countdown, create GameRoom and start game loop
-      setTimeout(async () => {
-        try {
-          // Re-fetch room to get latest state
-          const currentRoom = await lobbyService.getRoom(roomCode);
-          if (!currentRoom) {
-            logger.warn({ roomCode }, 'Room disappeared during countdown');
-            return;
-          }
-
-          const gameRoom = await roomManager.createGame(currentRoom);
-          logger.info({ roomCode, players: currentRoom.players.length }, 'Game started');
-        } catch (err) {
-          logger.error({ err, roomCode }, 'Failed to start game');
-          io.to(`room:${roomCode}`).emit('error', { message: 'Failed to start game' });
-          await lobbyService.updateRoomStatus(roomCode, 'waiting');
-        }
-      }, COUNTDOWN_SECONDS * 1000);
+      try {
+        await lobbyService.updateRoomStatus(roomCode, 'countdown');
+        const gameRoom = await roomManager.createGame(room);
+        logger.info({ roomCode, players: room.players.length }, 'Game started');
+        broadcastRoomList();
+      } catch (err) {
+        logger.error({ err, roomCode }, 'Failed to start game');
+        io.to(`room:${roomCode}`).emit('error', { message: 'Failed to start game' });
+        await lobbyService.updateRoomStatus(roomCode, 'waiting');
+      }
     });
 
     // Restart room (play again)
@@ -199,6 +197,7 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
       io.to(`room:${roomCode}`).emit('room:state', room);
 
       callback({ success: true, room });
+      broadcastRoomList();
     });
 
     // Game input
@@ -229,6 +228,7 @@ export function createSocketServer(httpServer: HttpServer): Server<ClientToServe
           io.to(`room:${roomCode}`).emit('room:playerLeft', socket.data.userId);
           io.to(`room:${roomCode}`).emit('room:state', room);
         }
+        broadcastRoomList();
       }
     });
   });

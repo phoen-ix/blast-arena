@@ -11,6 +11,7 @@ export class LobbyUI {
   private authManager: AuthManager;
   private notifications: NotificationUI;
   private onJoinRoom: (room: Room) => void;
+  private roomListHandler: ((rooms: RoomListItem[]) => void) | null = null;
 
   constructor(
     socketClient: SocketClient,
@@ -33,9 +34,15 @@ export class LobbyUI {
     }
     this.render();
     this.loadRooms();
+    this.roomListHandler = (rooms: RoomListItem[]) => this.renderRooms(rooms);
+    this.socketClient.on('room:list' as any, this.roomListHandler as any);
   }
 
   hide(): void {
+    if (this.roomListHandler) {
+      this.socketClient.off('room:list' as any, this.roomListHandler as any);
+      this.roomListHandler = null;
+    }
     this.container.remove();
   }
 
@@ -53,9 +60,8 @@ export class LobbyUI {
           <button class="btn btn-secondary" id="logout-btn">Logout</button>
         </div>
       </div>
-      <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;">
+      <div style="margin-bottom:12px;">
         <span style="color:#a0a0b0;">Available Rooms</span>
-        <button class="btn btn-secondary" id="refresh-btn" style="padding:6px 12px;font-size:12px;">Refresh</button>
       </div>
       <div class="room-list" id="room-list">
         <div style="color:#a0a0b0;text-align:center;padding:40px;">Loading rooms...</div>
@@ -65,7 +71,6 @@ export class LobbyUI {
     this.container.querySelector('#create-room-btn')!.addEventListener('click', () => this.showCreateRoomModal());
     this.container.querySelector('#settings-btn')!.addEventListener('click', () => this.showSettingsModal());
     this.container.querySelector('#help-btn')!.addEventListener('click', () => this.showHelpModal());
-    this.container.querySelector('#refresh-btn')!.addEventListener('click', () => this.loadRooms());
     this.container.querySelector('#logout-btn')!.addEventListener('click', () => {
       this.authManager.logout();
       this.hide();
@@ -205,9 +210,9 @@ export class LobbyUI {
               <option value="7">7 Bots</option>
             </select>
           </div>
-          <div class="form-group" id="bot-difficulty-row" style="display:none;">
+          <div class="form-group" id="bot-difficulty-row">
             <label>Bot Difficulty</label>
-            <select id="room-bot-difficulty">
+            <select id="room-bot-difficulty" disabled>
               <option value="easy">Easy</option>
               <option value="normal" selected>Normal</option>
               <option value="hard">Hard</option>
@@ -281,14 +286,16 @@ export class LobbyUI {
     modeSelect.addEventListener('change', updateFFVisibility);
     updateFFVisibility();
 
-    // Show bot difficulty only when bots > 0
+    // Enable bot difficulty only when bots > 0
     const botsSelect = modal.querySelector('#room-bots') as HTMLSelectElement;
-    const botDiffRow = modal.querySelector('#bot-difficulty-row') as HTMLElement;
-    const updateBotDiffVisibility = () => {
-      botDiffRow.style.display = parseInt(botsSelect.value) > 0 ? 'block' : 'none';
+    const botDiffSelect = modal.querySelector('#room-bot-difficulty') as HTMLSelectElement;
+    const updateBotDiffEnabled = () => {
+      const hasBots = parseInt(botsSelect.value) > 0;
+      botDiffSelect.disabled = !hasBots;
+      botDiffSelect.style.opacity = hasBots ? '1' : '0.4';
     };
-    botsSelect.addEventListener('change', updateBotDiffVisibility);
-    updateBotDiffVisibility();
+    botsSelect.addEventListener('change', updateBotDiffEnabled);
+    updateBotDiffEnabled();
 
     modal.querySelector('#modal-cancel')!.addEventListener('click', () => modal.remove());
     modal.querySelector('#modal-create')!.addEventListener('click', () => {
@@ -405,6 +412,15 @@ export class LobbyUI {
           <div class="help-row"><span class="help-key">Space</span> Place bomb</div>
           <div class="help-row"><span class="help-key">E</span> Detonate remote bombs</div>
           <div class="help-row"><span class="help-key">1-9</span> Spectate Nth player (when dead)</div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-heading">Controller (Xbox / Gamepad)</div>
+          <div class="help-tip">Any standard-mapped controller works. Just plug in and play.</div>
+          <div class="help-row"><span class="help-key">D-Pad / Left Stick</span> Move</div>
+          <div class="help-row"><span class="help-key">A</span> Place bomb</div>
+          <div class="help-row"><span class="help-key">B</span> Detonate remote bombs</div>
+          <div class="help-row"><span class="help-key">LB / RB</span> Cycle spectate target (when dead)</div>
         </div>
 
         <div class="help-section">

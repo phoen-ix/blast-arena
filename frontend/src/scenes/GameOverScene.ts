@@ -81,6 +81,7 @@ export class GameOverScene extends Phaser.Scene {
     backBtn.on('pointerout', () => backBtn.setColor('#e94560'));
     backBtn.on('pointerdown', () => {
       socketClient.emit('room:leave' as any);
+      this.registry.remove('currentRoom');
       this.scene.start('LobbyScene');
     });
 
