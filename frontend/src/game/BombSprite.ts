@@ -65,25 +65,39 @@ export class BombSpriteRenderer {
           }
         }
       } else {
-        // Create new bomb sprite
-        const sprite = this.scene.add.sprite(posX, posY, 'bomb');
+        // Create new bomb sprite — use different texture for remote bombs
+        const isRemote = bomb.bombType === 'remote';
+        const textureKey = isRemote ? 'bomb_remote' : 'bomb';
+        const sprite = this.scene.add.sprite(posX, posY, textureKey);
         sprite.setDepth(5);
         this.sprites.set(bomb.id, sprite);
 
-        // Add pulsing tween
-        const tween = this.scene.tweens.add({
-          targets: sprite,
-          scaleX: 1.15,
-          scaleY: 1.15,
-          duration: 300,
-          yoyo: true,
-          repeat: -1,
-        });
-        this.pulseTweens.set(bomb.id, tween);
+        if (isRemote) {
+          // Remote bombs: slow alpha blink instead of pulsing scale
+          const tween = this.scene.tweens.add({
+            targets: sprite,
+            alpha: 0.4,
+            duration: 600,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+          this.pulseTweens.set(bomb.id, tween);
+        } else {
+          // Normal/pierce bombs: pulsing scale
+          const tween = this.scene.tweens.add({
+            targets: sprite,
+            scaleX: 1.15,
+            scaleY: 1.15,
+            duration: 300,
+            yoyo: true,
+            repeat: -1,
+          });
+          this.pulseTweens.set(bomb.id, tween);
+        }
 
-        // Add fuse spark particles
-        if (settings.particles) {
-          // Fuse tip is at roughly top-right of the bomb texture
+        // Add fuse spark particles (not for remote bombs — they have no fuse)
+        if (settings.particles && !isRemote) {
           const fuseX = posX + 6;
           const fuseY = posY - 17;
           const emitter = this.scene.add.particles(fuseX, fuseY, 'particle_spark', {

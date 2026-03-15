@@ -151,8 +151,8 @@ export class PlayerSpriteRenderer {
       // Interpolate position
       const prevX = sprite.x;
       const prevY = sprite.y;
-      sprite.x = Phaser.Math.Linear(sprite.x, targetX, 0.3);
-      sprite.y = Phaser.Math.Linear(sprite.y, targetY, 0.3);
+      sprite.x = Phaser.Math.Linear(sprite.x, targetX, 0.18);
+      sprite.y = Phaser.Math.Linear(sprite.y, targetY, 0.18);
 
       // Update texture based on direction
       const dirTexture = `player_${colorIndex}_${player.direction}`;

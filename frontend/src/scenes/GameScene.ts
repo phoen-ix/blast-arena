@@ -201,8 +201,8 @@ export class GameScene extends Phaser.Scene {
         if (targetPlayer) {
           const tx = targetPlayer.position.x * TILE_SIZE + TILE_SIZE / 2;
           const ty = targetPlayer.position.y * TILE_SIZE + TILE_SIZE / 2;
-          cam.scrollX = Phaser.Math.Linear(cam.scrollX, tx - cam.width / 2, 0.15);
-          cam.scrollY = Phaser.Math.Linear(cam.scrollY, ty - cam.height / 2, 0.15);
+          cam.scrollX = Phaser.Math.Linear(cam.scrollX, tx - cam.width / 2, 0.06);
+          cam.scrollY = Phaser.Math.Linear(cam.scrollY, ty - cam.height / 2, 0.06);
           this.freeCamX = cam.scrollX + cam.width / 2;
           this.freeCamY = cam.scrollY + cam.height / 2;
           return;
