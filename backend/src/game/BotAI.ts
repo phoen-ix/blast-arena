@@ -12,6 +12,10 @@ const DIR_DELTA: Record<Direction, { dx: number; dy: number }> = {
   right: { dx: 1, dy: 0 },
 };
 
+function isDestructibleTile(tile: TileType): boolean {
+  return tile === 'destructible' || tile === ('destructible_cracked' as TileType);
+}
+
 export interface BotDifficultyConfig {
   dangerAwareness: number | 'fireRange';
   escapeSearchDepth: number;
@@ -235,7 +239,7 @@ export class BotAI {
           const tile = state.collisionSystem.getTileAt(cx, cy);
           if (tile === 'wall') break;
           danger.add(`${cx},${cy}`);
-          if (tile === 'destructible') break;
+          if (isDestructibleTile(tile)) break;
         }
       }
     }
@@ -338,7 +342,7 @@ export class BotAI {
         const cx = pos.x + dx * i;
         const cy = pos.y + dy * i;
         const tile = state.collisionSystem.getTileAt(cx, cy);
-        if (tile === 'wall' || tile === 'destructible') break;
+        if (tile === 'wall' || isDestructibleTile(tile)) break;
 
         for (const other of state.players.values()) {
           if (other.id !== player.id && other.alive &&
@@ -373,7 +377,7 @@ export class BotAI {
         const tile = state.collisionSystem.getTileAt(cx, cy);
         if (tile === 'wall') break;
         futureDanger.add(`${cx},${cy}`);
-        if (tile === 'destructible') break;
+        if (isDestructibleTile(tile)) break;
       }
     }
 
@@ -386,7 +390,7 @@ export class BotAI {
    */
   private isNearDestructible(pos: Position, state: GameStateManager): boolean {
     for (const { dx, dy } of Object.values(DIR_DELTA)) {
-      if (state.collisionSystem.getTileAt(pos.x + dx, pos.y + dy) === 'destructible') return true;
+      if (isDestructibleTile(state.collisionSystem.getTileAt(pos.x + dx, pos.y + dy))) return true;
     }
     return false;
   }
@@ -408,7 +412,7 @@ export class BotAI {
         const cx = pos.x + dx * i;
         const cy = pos.y + dy * i;
         const tile = state.collisionSystem.getTileAt(cx, cy);
-        if (tile === 'wall' || tile === 'destructible') break;
+        if (tile === 'wall' || isDestructibleTile(tile)) break;
 
         for (const pu of state.powerUps.values()) {
           if (pu.position.x === cx && pu.position.y === cy && i < bestDist) {
@@ -506,7 +510,7 @@ export class BotAI {
       visited.add(key);
       // Check if this step is already adjacent to a destructible wall
       for (const { dx, dy } of Object.values(DIR_DELTA)) {
-        if (state.collisionSystem.getTileAt(newPos.x + dx, newPos.y + dy) === 'destructible') {
+        if (isDestructibleTile(state.collisionSystem.getTileAt(newPos.x + dx, newPos.y + dy))) {
           return dir;
         }
       }
@@ -524,7 +528,7 @@ export class BotAI {
           if (visited.has(key) || danger.has(key)) continue;
           visited.add(key);
           for (const { dx, dy } of Object.values(DIR_DELTA)) {
-            if (state.collisionSystem.getTileAt(newPos.x + dx, newPos.y + dy) === 'destructible') {
+            if (isDestructibleTile(state.collisionSystem.getTileAt(newPos.x + dx, newPos.y + dy))) {
               return entry.firstDir;
             }
           }

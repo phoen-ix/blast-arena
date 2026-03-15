@@ -61,6 +61,7 @@ export class CollisionSystem {
     if (tile === 'destructible') {
       if (this.reinforcedWalls) {
         this.tiles[y][x] = 'destructible_cracked' as TileType;
+        return false; // Only cracked, not fully destroyed — no power-up drop
       } else {
         this.tiles[y][x] = 'empty';
       }
