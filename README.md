@@ -95,10 +95,16 @@ When creating a room, the host can configure:
 AI bots fill empty slots and provide singleplayer/practice options. Three difficulty tiers:
 
 - **Easy**: Low awareness, shallow escape planning, slow reactions
-- **Normal**: BFS pathfinding, directional wall breaking toward enemies, roaming after 5s idle
+- **Normal**: BFS pathfinding, directional wall breaking toward enemies, roaming after 5s idle, hunt persistence
 - **Hard**: Deep search depth, aggressive hunting, 3s idle roaming, detonates remote bombs tactically
 
-Bots use BFS for escape routes and power-up seeking, hunt enemies with configurable search depth, and prefer breaking walls toward opponents. In King of the Hill mode, bots actively navigate toward the hill zone and hold position once inside.
+Bots use BFS for escape routes, power-up seeking, and enemy hunting with configurable search depth. They prefer breaking walls toward opponents and actively path-clear in late game. Optimized through data-driven analysis of 5000+ simulation games:
+
+- **Bomb safety**: Dead-end detection, sandwich prevention, movement cooldown awareness, escape path verification
+- **Hunt persistence**: Once a bot starts hunting an enemy, it stays locked on for 15 ticks instead of losing target every tick
+- **Late-game aggression**: After 60% of round time, bots always hunt, roam with no idle threshold, and clear walls faster (halved bomb cooldown)
+- **Anti-oscillation**: Position history tracking prevents bots from bouncing between the same tiles
+- **KOTH awareness**: Bots navigate toward the hill zone and hold position once inside
 
 ## Teams
 
@@ -126,9 +132,22 @@ Accessible from the lobby header for admin and moderator roles.
 | **Matches** | Admin + Mod | Paginated match history, click any row for detailed per-player stats modal |
 | **Rooms** | Admin + Mod | Active rooms with 5s refresh, spectate, send message, kick player, force close (admin only) |
 | **Logs** | Admin | Audit trail of all admin actions with action type filter |
+| **Simulations** | Admin | Batch bot-only game simulations for AI analysis (see below) |
 | **Announcements** | Admin + Mod | Toast broadcast (ephemeral notification to all players) + persistent lobby banner (admin only) |
 
 All admin actions are logged to an audit table.
+
+## Bot Simulation System
+
+Admins can run batch bot-only game simulations to collect AI behavior data for analysis and optimization.
+
+- **Configure**: Game mode, bot count/difficulty, map size, round time, wall density, power-ups, total games (1-1000)
+- **Two speed modes**: Fast (ticks as fast as possible) or Real-time (20 tps with live spectating in-browser)
+- **Log verbosity**: Normal (5-tick snapshots), Detailed (2-tick + movements/pickups), Full (every tick + pathfinding)
+- **Results**: Paginated table with sortable columns, win distribution chart, per-game stats
+- **Management**: Cancel running batches, delete completed batches (removes logs from disk)
+- **Logs**: JSONL files in `data/simulations/{gameMode}/batch_*/` with `batch_config.json` and `batch_summary.json`
+- **Live spectating**: Real-time simulations play in the browser like a normal game in spectator mode, with automatic game-to-game transitions
 
 ## Account Management
 
@@ -205,6 +224,10 @@ blast-arena/
 │       │   ├── Explosion.ts # Blast calculation, chain reactions
 │       │   ├── PowerUp.ts   # Power-up drops and collection
 │       │   └── RoomManager.ts # Room creation, joining, cleanup
+│       ├── simulation/      # Bot simulation system
+│       │   ├── SimulationGame.ts    # Headless single-game runner
+│       │   ├── SimulationRunner.ts  # Batch orchestrator
+│       │   └── SimulationManager.ts # Singleton manager
 │       ├── db/              # MariaDB connection + migrations
 │       ├── services/        # Auth, user, match, admin services
 │       ├── middleware/       # Auth, rate limiting, staff checks
@@ -275,7 +298,7 @@ All settings via `.env` (copy `.env.example` to get started):
 
 - **Production**: `docker compose up --build -d` — only Nginx exposes a port
 - **Development**: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build` — hot reload, DB/Redis ports exposed
-- **Data**: Persists in `./data/` via bind mounts (database, game logs)
+- **Data**: Persists in `./data/` via bind mounts (database, game logs, simulation logs)
 - **Services**: MariaDB 11, Redis 7, Node.js backend, Nginx (static + proxy)
 - Nginx serves `no-cache` headers for `index.html` to prevent stale frontend after deploys
 
@@ -283,9 +306,11 @@ All settings via `.env` (copy `.env.example` to get started):
 
 Detailed JSONL game logs are written to `./data/gamelogs/` for every match:
 
-- Bot decisions, kills, bomb placements/detonations
-- Tick snapshots every 5 ticks with full game state
+- Bot decisions, kills, bomb placements/detonations, movements, power-up pickups
+- Tick snapshots at configurable intervals (verbosity: normal=5 ticks, detailed=2, full=every tick)
+- Explosion detail and bot pathfinding logs at full verbosity
 - Filename: `{ISO-timestamp}_{roomCode}_{gameMode}_{playerCount}p.jsonl`
+- Simulation logs: `./data/simulations/{gameMode}/batch_*/sim_NNN.jsonl`
 
 ## Testing & Linting
 
