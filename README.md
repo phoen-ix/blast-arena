@@ -1,6 +1,6 @@
 # BlastArena
 
-A multiplayer online grid-based explosive arena game. Navigate a grid, place bombs to destroy walls and opponents, collect power-ups, and compete in Free-for-All, Teams, or Battle Royale modes.
+A multiplayer online grid-based explosive arena game. Navigate a grid, place bombs to destroy walls and opponents, collect power-ups, and compete across six game modes with particle effects, screen shake, and animated visuals.
 
 ## Quick Start
 
@@ -20,14 +20,18 @@ Open `http://localhost:8080` in your browser.
 
 ## Game Modes
 
-- **Free-for-All**: Last player standing wins
-- **Teams**: Two teams compete; last team standing wins
-- **Battle Royale**: Shrinking zone forces players together
+- **Free-for-All**: Last player standing wins (2-8 players, 3 min)
+- **Teams**: Two teams compete; last team standing wins (4-8 players, 4 min)
+- **Battle Royale**: Shrinking zone forces players together (4-8 players, 5 min)
+- **Sudden Death**: All players start maxed out, one hit kills (2-8 players, 2 min)
+- **Deathmatch**: Respawn after death, most kills wins (2-8 players, 5 min)
+- **King of the Hill**: Control center zone for points, first to 100 wins (2-8 players, 4 min)
 
 ## Controls
 
 - **Arrow Keys / WASD**: Move
 - **Space**: Place bomb
+- **E**: Detonate remote bombs (requires Remote Bomb power-up)
 - **Walk into a bomb** (with Kick power-up): Kicks the bomb, sending it sliding until it hits a wall, player, or another bomb
 - **1-9** (when dead): Follow the Nth alive player
 - **Click player name** (when dead): Follow that player
@@ -35,19 +39,22 @@ Open `http://localhost:8080` in your browser.
 ## Features
 
 - **Singleplayer & Multiplayer**: Play solo against bots or with friends; 1 human + bots is enough to start
-- **Configurable rooms**: Map size (square grids from 11x11 to 31x31), match time, wall density, power-up types and drop rates
+- **Configurable rooms**: Map size, match time, wall density, power-up types/rates, hazard tiles, map events, reinforced walls
 - **Friendly fire toggle**: Enable or disable teammate damage in Teams mode
-- **Bot players**: Add up to 7 AI bots to any room (auto-capped to fit max players) with Easy/Normal/Hard difficulty
+- **Bot players**: Add up to 7 AI bots to any room with Easy/Normal/Hard difficulty
 - **Bot AI**: BFS pathfinding, escape planning through danger zones, wall-seeking, enemy hunting, power-up collection
-- **Power-ups**: Bomb Up, Fire Up, Speed Up, Shield, Bomb Kick - each individually toggleable per room
-- **Live HUD**: Countdown timer, player list showing alive and dead players
-- **Spectator mode**: Dead players can freely pan the camera, click a player name in the HUD, or press 1-9 to follow alive players
-- **Play Again**: Rematch button on the game over screen resets the room so all players can play again
-- **Camera follow**: Smooth scrolling camera that follows your player on maps larger than the viewport
+- **8 Power-ups**: Bomb Up, Fire Up, Speed Up, Shield, Bomb Kick, Pierce Bomb, Remote Bomb, Line Bomb
+- **Visual effects**: Animated explosions with particles, screen shake, fuse sparks, wall debris, shield aura, death particles, dust trails
+- **Per-user visual settings**: Toggle animations, screen shake, and particles via in-game settings gear
+- **Live HUD**: Countdown timer, player stats bar, kill feed, player list, spectator banner
+- **Spectator mode**: Dead players can freely pan the camera, click a player name, or press 1-9 to follow alive players
+- **Map features**: Reinforced walls (2-hit), dynamic meteor strikes, power-up rain, teleporters, conveyor belts
+- **Play Again**: Rematch button on the game over screen resets the room
+- **Camera follow**: Smooth scrolling camera that follows your player
 - **Scoring**: Kills-based ranking; self-kills subtract from your score
 - **Persistent sessions**: Login survives container rebuilds via httpOnly refresh token cookies
 - **Match history**: Stats tracked per player (kills, deaths, bombs placed, power-ups collected, placements)
-- **Game logging**: Detailed JSONL game logs for analysis and debugging (./data/gamelogs/)
+- **Game logging**: Detailed JSONL game logs for analysis and debugging
 
 ## Architecture
 

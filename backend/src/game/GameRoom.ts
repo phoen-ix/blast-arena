@@ -35,7 +35,9 @@ export class GameRoom {
       room.config.enabledPowerUps,
       room.config.powerUpDropRate ?? 0.3,
       room.config.friendlyFire ?? true,
-      room.config.botDifficulty ?? 'normal'
+      room.config.botDifficulty ?? 'normal',
+      room.config.reinforcedWalls ?? false,
+      room.config.enableMapEvents ?? false
     );
 
     // Add human players
@@ -55,6 +57,16 @@ export class GameRoom {
       const team = modeConfig.teamsCount ? (playerIndex % modeConfig.teamsCount) : null;
       this.gameState.addPlayer(botId, `bot_${i}`, botName, team, true);
       playerIndex++;
+    }
+
+    // Sudden Death: boost all players with max stats
+    if (room.config.gameMode === 'sudden_death') {
+      for (const player of this.gameState.players.values()) {
+        player.maxBombs = 8;
+        player.fireRange = 8;
+        player.speed = 5;
+        player.hasKick = true;
+      }
     }
 
     // Game logger for detailed analysis
@@ -150,7 +162,20 @@ export class GameRoom {
   }
 
   private broadcastState(state: GameState): void {
-    this.io.to(`room:${this.code}`).emit('game:state', state);
+    const room = `room:${this.code}`;
+    this.io.to(room).emit('game:state', state);
+
+    // Emit discrete game events
+    const events = this.gameState.tickEvents;
+    for (const explosion of events.explosions) {
+      this.io.to(room).emit('game:explosion', explosion);
+    }
+    for (const death of events.playerDied) {
+      this.io.to(room).emit('game:playerDied', death);
+    }
+    for (const pickup of events.powerupCollected) {
+      this.io.to(room).emit('game:powerupCollected', pickup);
+    }
   }
 
   private async onGameOver(): Promise<void> {

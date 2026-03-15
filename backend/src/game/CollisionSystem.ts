@@ -4,11 +4,13 @@ export class CollisionSystem {
   private tiles: TileType[][];
   private width: number;
   private height: number;
+  private reinforcedWalls: boolean;
 
-  constructor(tiles: TileType[][], width: number, height: number) {
+  constructor(tiles: TileType[][], width: number, height: number, reinforcedWalls: boolean = false) {
     this.tiles = tiles;
     this.width = width;
     this.height = height;
+    this.reinforcedWalls = reinforcedWalls;
   }
 
   updateTiles(tiles: TileType[][]): void {
@@ -18,7 +20,10 @@ export class CollisionSystem {
   isWalkable(x: number, y: number): boolean {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false;
     const tile = this.tiles[y][x];
-    return tile === 'empty' || tile === 'spawn';
+    return tile === 'empty' || tile === 'spawn'
+      || tile === 'teleporter_a' || tile === 'teleporter_b'
+      || tile === 'conveyor_up' || tile === 'conveyor_down'
+      || tile === 'conveyor_left' || tile === 'conveyor_right';
   }
 
   canMoveTo(fromX: number, fromY: number, direction: Direction, bombPositions: Position[], playerPositions: Position[] = []): Position | null {
@@ -52,7 +57,16 @@ export class CollisionSystem {
 
   destroyTile(x: number, y: number): boolean {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false;
-    if (this.tiles[y][x] === 'destructible') {
+    const tile = this.tiles[y][x];
+    if (tile === 'destructible') {
+      if (this.reinforcedWalls) {
+        this.tiles[y][x] = 'destructible_cracked' as TileType;
+      } else {
+        this.tiles[y][x] = 'empty';
+      }
+      return true;
+    }
+    if ((tile as string) === 'destructible_cracked') {
       this.tiles[y][x] = 'empty';
       return true;
     }

@@ -1,4 +1,4 @@
-export type TileType = 'empty' | 'wall' | 'destructible' | 'spawn';
+export type TileType = 'empty' | 'wall' | 'destructible' | 'spawn' | 'destructible_cracked' | 'teleporter_a' | 'teleporter_b' | 'conveyor_up' | 'conveyor_down' | 'conveyor_left' | 'conveyor_right';
 
 export interface Tile {
   x: number;
@@ -8,7 +8,7 @@ export interface Tile {
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
-export type PowerUpType = 'bomb_up' | 'fire_up' | 'speed_up' | 'shield' | 'kick';
+export type PowerUpType = 'bomb_up' | 'fire_up' | 'speed_up' | 'shield' | 'kick' | 'pierce_bomb' | 'remote_bomb' | 'line_bomb';
 
 export interface Position {
   x: number;
@@ -27,9 +27,14 @@ export interface PlayerState {
   speed: number;
   hasShield: boolean;
   hasKick: boolean;
+  hasPierceBomb: boolean;
+  hasRemoteBomb: boolean;
+  hasLineBomb: boolean;
   team: number | null;
   direction: Direction;
   isBot: boolean;
+  kills: number;
+  deaths: number;
 }
 
 export interface BombState {
@@ -38,6 +43,7 @@ export interface BombState {
   ownerId: number;
   fireRange: number;
   ticksRemaining: number;
+  bombType: 'normal' | 'remote' | 'pierce';
 }
 
 export interface ExplosionState {
@@ -61,6 +67,22 @@ export interface GameMap {
   seed: number;
 }
 
+export interface HillZone {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  controllingPlayer: number | null;
+  controllingTeam: number | null;
+}
+
+export interface MapEvent {
+  type: 'meteor' | 'powerup_rain';
+  position?: Position;
+  tick: number;
+  warningTick?: number;
+}
+
 export interface GameState {
   tick: number;
   players: PlayerState[];
@@ -69,6 +91,9 @@ export interface GameState {
   powerUps: PowerUpState[];
   map: GameMap;
   zone?: ZoneState;
+  hillZone?: HillZone;
+  kothScores?: Record<number, number>;
+  mapEvents?: MapEvent[];
   status: 'countdown' | 'playing' | 'finished';
   winnerId: number | null;
   winnerTeam: number | null;
@@ -89,6 +114,6 @@ export interface ZoneState {
 export interface PlayerInput {
   seq: number;
   direction: Direction | null;
-  action: 'bomb' | null;
+  action: 'bomb' | 'detonate' | null;
   tick: number;
 }

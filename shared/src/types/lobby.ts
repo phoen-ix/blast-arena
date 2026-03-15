@@ -16,6 +16,9 @@ export interface MatchConfig {
   botCount?: number;
   botDifficulty?: 'easy' | 'normal' | 'hard';
   friendlyFire?: boolean;
+  hazardTiles?: boolean;
+  enableMapEvents?: boolean;
+  reinforcedWalls?: boolean;
 }
 
 export interface RoomPlayer {

@@ -1,8 +1,9 @@
-import { GameState as GameStateType, TileType, Direction, PlayerInput, Position, PowerUpType } from '@blast-arena/shared';
+import { GameState as GameStateType, TileType, Direction, PlayerInput, Position, PowerUpType, HillZone, MapEvent } from '@blast-arena/shared';
 import { getExplosionCells } from '@blast-arena/shared';
 import { DEFAULT_WALL_DENSITY, DEFAULT_POWERUP_DROP_RATE, TICK_RATE } from '@blast-arena/shared';
+import { DEATHMATCH_RESPAWN_TICKS, DEATHMATCH_KILL_TARGET, KOTH_ZONE_SIZE, KOTH_SCORE_TARGET, KOTH_POINTS_PER_TICK } from '@blast-arena/shared';
 import { Player } from './Player';
-import { Bomb } from './Bomb';
+import { Bomb, BombType } from './Bomb';
 import { Explosion } from './Explosion';
 import { PowerUp } from './PowerUp';
 import { CollisionSystem } from './CollisionSystem';
@@ -37,6 +38,10 @@ export class GameStateManager {
   public winnerTeam: number | null = null;
   public roundTime: number;
 
+  // KOTH properties
+  public hillZone: { x: number; y: number; width: number; height: number } | null = null;
+  public kothScores: Map<number, number> = new Map();
+
   private rng: SeededRandom;
   private gameMode: string;
   private placementCounter: number = 0;
@@ -47,7 +52,21 @@ export class GameStateManager {
   private botAIs: Map<number, BotAI> = new Map();
   private finishTick: number | null = null;
   public gameLogger: GameLogger | null = null;
+  public reinforcedWalls: boolean;
+  public enableMapEvents: boolean;
   private static readonly FINISH_DELAY_TICKS = 30; // 1.5s grace period to show final explosions
+
+  // Per-tick event buffers for discrete event emission
+  public tickEvents: {
+    explosions: { cells: { x: number; y: number }[]; ownerId: number }[];
+    playerDied: { playerId: number; killerId: number | null }[];
+    powerupCollected: { playerId: number; type: string; position: { x: number; y: number } }[];
+  } = { explosions: [], playerDied: [], powerupCollected: [] };
+
+  // Map events (dynamic)
+  private mapEvents: { type: string; position?: Position; tick: number; warningTick?: number }[] = [];
+  private nextMeteorTick: number = 0;
+  private nextPowerupRainTick: number = 0;
 
   constructor(
     mapWidth: number,
@@ -60,10 +79,12 @@ export class GameStateManager {
     enabledPowerUps?: PowerUpType[],
     powerUpDropRate: number = DEFAULT_POWERUP_DROP_RATE,
     friendlyFire: boolean = true,
-    botDifficulty: 'easy' | 'normal' | 'hard' = 'normal'
+    botDifficulty: 'easy' | 'normal' | 'hard' = 'normal',
+    reinforcedWalls: boolean = false,
+    enableMapEvents: boolean = false
   ) {
     this.map = generateMap(mapWidth, mapHeight, mapSeed, wallDensity);
-    this.collisionSystem = new CollisionSystem(this.map.tiles, this.map.width, this.map.height);
+    this.collisionSystem = new CollisionSystem(this.map.tiles, this.map.width, this.map.height, reinforcedWalls);
     this.rng = new SeededRandom(this.map.seed + 1);
     this.gameMode = gameMode;
     this.roundTime = roundTime;
@@ -71,9 +92,18 @@ export class GameStateManager {
     this.powerUpDropRate = powerUpDropRate;
     this.friendlyFire = friendlyFire;
     this.botDifficulty = botDifficulty;
+    this.reinforcedWalls = reinforcedWalls;
+    this.enableMapEvents = enableMapEvents;
 
     if (hasZone) {
       this.zone = new BattleRoyaleZone(mapWidth, mapHeight);
+    }
+
+    // KOTH: initialize hill zone
+    if (gameMode === 'king_of_the_hill') {
+      const hx = Math.floor(mapWidth / 2) - Math.floor(KOTH_ZONE_SIZE / 2);
+      const hy = Math.floor(mapHeight / 2) - Math.floor(KOTH_ZONE_SIZE / 2);
+      this.hillZone = { x: hx, y: hy, width: KOTH_ZONE_SIZE, height: KOTH_ZONE_SIZE };
     }
   }
 
@@ -98,6 +128,9 @@ export class GameStateManager {
   processTick(): void {
     if (this.status !== 'playing') return;
     this.tick++;
+
+    // Clear per-tick event buffers
+    this.tickEvents = { explosions: [], playerDied: [], powerupCollected: [] };
 
     // Check if grace period has elapsed
     if (this.finishTick !== null) {
@@ -210,10 +243,14 @@ export class GameStateManager {
             if (owner && owner.id !== player.id) {
               owner.kills++;
               this.gameLogger?.logKill(owner.id, owner.displayName, player.id, player.displayName, false);
+              this.tickEvents.playerDied.push({ playerId: player.id, killerId: owner.id });
             } else if (owner && owner.id === player.id) {
               owner.selfKills++;
               owner.kills--;
               this.gameLogger?.logKill(owner.id, owner.displayName, player.id, player.displayName, true);
+              this.tickEvents.playerDied.push({ playerId: player.id, killerId: owner.id });
+            } else {
+              this.tickEvents.playerDied.push({ playerId: player.id, killerId: null });
             }
           }
           break;
@@ -227,10 +264,103 @@ export class GameStateManager {
 
       for (const [id, powerUp] of this.powerUps) {
         if (powerUp.position.x === player.position.x && powerUp.position.y === player.position.y) {
+          this.tickEvents.powerupCollected.push({
+            playerId: player.id,
+            type: powerUp.type,
+            position: { ...powerUp.position },
+          });
           player.applyPowerUp(powerUp.type);
           this.powerUps.delete(id);
         }
       }
+    }
+
+    // 6.5 King of the Hill scoring
+    if (this.hillZone && this.finishTick === null) {
+      const playersInZone = this.getAlivePlayers().filter(p =>
+        p.position.x >= this.hillZone!.x && p.position.x < this.hillZone!.x + this.hillZone!.width &&
+        p.position.y >= this.hillZone!.y && p.position.y < this.hillZone!.y + this.hillZone!.height
+      );
+
+      // Score only if exactly one player (or one team) controls the zone
+      if (playersInZone.length === 1) {
+        const controllerId = playersInZone[0].id;
+        const current = this.kothScores.get(controllerId) || 0;
+        this.kothScores.set(controllerId, current + KOTH_POINTS_PER_TICK);
+
+        if (current + KOTH_POINTS_PER_TICK >= KOTH_SCORE_TARGET) {
+          this.winnerId = controllerId;
+          playersInZone[0].placement = 1;
+          this.finishTick = this.tick;
+        }
+      }
+    }
+
+    // 6.7 Dynamic map events
+    if (this.enableMapEvents && this.finishTick === null) {
+      const currentTime = this.tick / TICK_RATE;
+
+      // Meteor strike every 30-45 seconds
+      if (this.tick >= this.nextMeteorTick) {
+        // Find random empty tile
+        const emptyTiles: Position[] = [];
+        for (let y = 1; y < this.map.height - 1; y++) {
+          for (let x = 1; x < this.map.width - 1; x++) {
+            if (this.map.tiles[y][x] === 'empty' || this.map.tiles[y][x] === 'spawn') {
+              emptyTiles.push({ x, y });
+            }
+          }
+        }
+        if (emptyTiles.length > 0) {
+          const target = emptyTiles[Math.floor(this.rng.next() * emptyTiles.length)];
+          const warningTick = this.tick;
+          const impactTick = this.tick + 40; // 2 second warning
+          this.mapEvents.push({ type: 'meteor', position: target, tick: impactTick, warningTick });
+        }
+        this.nextMeteorTick = this.tick + Math.floor((30 + this.rng.next() * 15) * TICK_RATE);
+      }
+
+      // Power-up rain every 60 seconds
+      if (this.tick >= this.nextPowerupRainTick) {
+        const emptyTiles: Position[] = [];
+        for (let y = 1; y < this.map.height - 1; y++) {
+          for (let x = 1; x < this.map.width - 1; x++) {
+            if (this.map.tiles[y][x] === 'empty' || this.map.tiles[y][x] === 'spawn') {
+              emptyTiles.push({ x, y });
+            }
+          }
+        }
+        // Spawn 3-5 random power-ups
+        const count = 3 + Math.floor(this.rng.next() * 3);
+        for (let i = 0; i < count && emptyTiles.length > 0; i++) {
+          const idx = Math.floor(this.rng.next() * emptyTiles.length);
+          const pos = emptyTiles.splice(idx, 1)[0];
+          const type = this.getRandomEnabledPowerUp();
+          const powerUp = new PowerUp(pos, type);
+          this.powerUps.set(powerUp.id, powerUp);
+        }
+        this.mapEvents.push({ type: 'powerup_rain', tick: this.tick });
+        this.nextPowerupRainTick = this.tick + 60 * TICK_RATE;
+      }
+
+      // Process pending meteor impacts
+      for (let i = this.mapEvents.length - 1; i >= 0; i--) {
+        const event = this.mapEvents[i];
+        if (event.type === 'meteor' && event.position && this.tick >= event.tick) {
+          // Create explosion at meteor position
+          const cells = getExplosionCells(event.position.x, event.position.y, 2, this.map.width, this.map.height, this.map.tiles);
+          const explosion = new Explosion(cells, -999); // System-owned
+          this.explosions.set(explosion.id, explosion);
+          // Destroy walls
+          for (const cell of cells) {
+            this.collisionSystem.destroyTile(cell.x, cell.y);
+          }
+          this.mapEvents.splice(i, 1);
+        }
+      }
+
+      // Clean old events
+      this.mapEvents = this.mapEvents.filter(e => this.tick - e.tick < 200);
     }
 
     // 7. Update Battle Royale zone
@@ -247,7 +377,23 @@ export class GameStateManager {
             player.die();
             this.placementCounter--;
             player.placement = this.getAlivePlayers().length + 1;
+            this.tickEvents.playerDied.push({ playerId: player.id, killerId: null });
           }
+        }
+      }
+    }
+
+    // 7.5 Deathmatch respawns
+    if (this.gameMode === 'deathmatch') {
+      for (const player of this.players.values()) {
+        if (!player.alive && player.respawnTick === null) {
+          player.respawnTick = this.tick + DEATHMATCH_RESPAWN_TICKS;
+        }
+        if (!player.alive && player.respawnTick !== null && this.tick >= player.respawnTick) {
+          // Find a random safe spawn point
+          const spawnPoints = this.map.spawnPoints;
+          const spawnPos = spawnPoints[Math.floor(this.rng.next() * spawnPoints.length)];
+          player.respawn(spawnPos);
         }
       }
     }
@@ -308,18 +454,82 @@ export class GameStateManager {
       }
     }
 
+    // Remote bomb detonation
+    if (input.action === 'detonate') {
+      const remoteBombs: Bomb[] = [];
+      for (const bomb of this.bombs.values()) {
+        if (bomb.ownerId === player.id && bomb.bombType === 'remote') {
+          remoteBombs.push(bomb);
+        }
+      }
+      for (const bomb of remoteBombs) {
+        this.detonateBomb(bomb);
+      }
+    }
+
     // Bomb placement
     if (input.action === 'bomb' && player.canPlaceBomb()) {
-      // Check if there's already a bomb at this position
-      const hasBomb = Array.from(this.bombs.values()).some(
-        b => b.position.x === player.position.x && b.position.y === player.position.y
-      );
-      if (!hasBomb) {
-        const bomb = new Bomb(player.position, player.id, player.fireRange);
-        this.bombs.set(bomb.id, bomb);
-        player.bombCount++;
-        player.bombsPlaced++;
-        this.gameLogger?.logBomb('place', player.id, player.displayName, player.position, player.fireRange);
+      // Determine bomb type
+      const bombType: BombType = player.hasRemoteBomb ? 'remote'
+        : player.hasPierceBomb ? 'pierce'
+        : 'normal';
+
+      if (player.hasLineBomb) {
+        // Line bomb: place bombs in the player's facing direction on consecutive empty tiles
+        const dir = player.direction;
+        const dx = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+        const dy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
+
+        // First, place a bomb at current position if possible
+        const hasBombAtCurrent = Array.from(this.bombs.values()).some(
+          b => b.position.x === player.position.x && b.position.y === player.position.y
+        );
+        if (!hasBombAtCurrent) {
+          const bomb = new Bomb(player.position, player.id, player.fireRange, bombType);
+          this.bombs.set(bomb.id, bomb);
+          player.bombCount++;
+          player.bombsPlaced++;
+          this.gameLogger?.logBomb('place', player.id, player.displayName, player.position, player.fireRange);
+        }
+
+        // Then place bombs in the facing direction
+        let cx = player.position.x + dx;
+        let cy = player.position.y + dy;
+        while (player.canPlaceBomb()) {
+          // Check if the tile is walkable, has no bomb, and has no player
+          if (!this.collisionSystem.isWalkable(cx, cy)) break;
+          const hasBomb = Array.from(this.bombs.values()).some(
+            b => b.position.x === cx && b.position.y === cy
+          );
+          if (hasBomb) break;
+          const hasPlayer = Array.from(this.players.values()).some(
+            p => p.alive && p.position.x === cx && p.position.y === cy
+          );
+          if (hasPlayer) break;
+
+          const pos: Position = { x: cx, y: cy };
+          const bomb = new Bomb(pos, player.id, player.fireRange, bombType);
+          this.bombs.set(bomb.id, bomb);
+          player.bombCount++;
+          player.bombsPlaced++;
+          this.gameLogger?.logBomb('place', player.id, player.displayName, pos, player.fireRange);
+
+          cx += dx;
+          cy += dy;
+        }
+      } else {
+        // Normal single bomb placement
+        // Check if there's already a bomb at this position
+        const hasBomb = Array.from(this.bombs.values()).some(
+          b => b.position.x === player.position.x && b.position.y === player.position.y
+        );
+        if (!hasBomb) {
+          const bomb = new Bomb(player.position, player.id, player.fireRange, bombType);
+          this.bombs.set(bomb.id, bomb);
+          player.bombCount++;
+          player.bombsPlaced++;
+          this.gameLogger?.logBomb('place', player.id, player.displayName, player.position, player.fireRange);
+        }
       }
     }
   }
@@ -334,15 +544,17 @@ export class GameStateManager {
     }
     this.gameLogger?.logBomb('detonate', bomb.ownerId, owner?.displayName || '?', bomb.position, bomb.fireRange);
 
-    // Calculate explosion cells
+    // Calculate explosion cells (pass pierce flag)
     const cells = getExplosionCells(
       bomb.position.x, bomb.position.y, bomb.fireRange,
-      this.map.width, this.map.height, this.map.tiles
+      this.map.width, this.map.height, this.map.tiles,
+      bomb.isPierce
     );
 
     // Create explosion
     const explosion = new Explosion(cells, bomb.ownerId);
     this.explosions.set(explosion.id, explosion);
+    this.tickEvents.explosions.push({ cells: [...cells], ownerId: bomb.ownerId });
 
     // Destroy walls and possibly spawn power-ups
     for (const cell of cells) {
@@ -373,6 +585,20 @@ export class GameStateManager {
 
   private checkWinCondition(): void {
     const alivePlayers = this.getAlivePlayers();
+
+    // Deathmatch: check kill target
+    if (this.gameMode === 'deathmatch') {
+      for (const player of this.players.values()) {
+        if (player.kills >= DEATHMATCH_KILL_TARGET) {
+          this.winnerId = player.id;
+          player.placement = 1;
+          this.finishTick = this.tick;
+          return;
+        }
+      }
+      // Deathmatch never ends on last-alive condition, only on time or kill target
+      return;
+    }
 
     if (this.gameMode === 'teams') {
       const aliveTeams = new Set(alivePlayers.map(p => p.team));
@@ -412,6 +638,24 @@ export class GameStateManager {
         seed: this.map.seed,
       },
       zone: this.zone?.toState(),
+      hillZone: this.hillZone ? {
+        ...this.hillZone,
+        controllingPlayer: (() => {
+          const playersInZone = this.getAlivePlayers().filter(p =>
+            p.position.x >= this.hillZone!.x && p.position.x < this.hillZone!.x + this.hillZone!.width &&
+            p.position.y >= this.hillZone!.y && p.position.y < this.hillZone!.y + this.hillZone!.height
+          );
+          return playersInZone.length === 1 ? playersInZone[0].id : null;
+        })(),
+        controllingTeam: null,
+      } : undefined,
+      kothScores: this.hillZone ? Object.fromEntries(this.kothScores) : undefined,
+      mapEvents: this.mapEvents.length > 0 ? this.mapEvents.map(e => ({
+        type: e.type as 'meteor' | 'powerup_rain',
+        position: e.position,
+        tick: e.tick,
+        warningTick: e.warningTick,
+      })) : undefined,
       status: this.status,
       winnerId: this.winnerId,
       winnerTeam: this.winnerTeam,

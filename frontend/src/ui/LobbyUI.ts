@@ -144,6 +144,9 @@ export class LobbyUI {
               <option value="ffa">Free for All</option>
               <option value="teams">Teams</option>
               <option value="battle_royale">Battle Royale</option>
+              <option value="sudden_death">Sudden Death</option>
+              <option value="deathmatch">Deathmatch</option>
+              <option value="king_of_the_hill">King of the Hill</option>
             </select>
           </div>
           <div class="form-group">
@@ -225,6 +228,24 @@ export class LobbyUI {
           </label>
         </div>
 
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+          <label style="display:flex;align-items:center;gap:6px;padding:6px 10px;
+            background:#1a1a2e;border:1px solid #0f3460;border-radius:6px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="room-reinforced-walls" style="accent-color:#886633;">
+            <span style="color:#886633;font-weight:600;">Reinforced Walls</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;padding:6px 10px;
+            background:#1a1a2e;border:1px solid #0f3460;border-radius:6px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="room-map-events" style="accent-color:#ff8800;">
+            <span style="color:#ff8800;font-weight:600;">Map Events</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;padding:6px 10px;
+            background:#1a1a2e;border:1px solid #0f3460;border-radius:6px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="room-hazard-tiles" style="accent-color:#44aaff;">
+            <span style="color:#44aaff;font-weight:600;">Hazard Tiles</span>
+          </label>
+        </div>
+
         <div class="form-group" style="margin-top:12px;">
           <label>Power-Ups</label>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
@@ -290,6 +311,9 @@ export class LobbyUI {
 
       const mapSize = parseInt((modal.querySelector('#room-map-size') as HTMLSelectElement).value);
       const friendlyFire = gameMode === 'teams' ? (modal.querySelector('#room-friendly-fire') as HTMLInputElement).checked : true;
+      const reinforcedWalls = (modal.querySelector('#room-reinforced-walls') as HTMLInputElement).checked;
+      const enableMapEvents = (modal.querySelector('#room-map-events') as HTMLInputElement).checked;
+      const hazardTiles = (modal.querySelector('#room-hazard-tiles') as HTMLInputElement).checked;
 
       this.socketClient.emit('room:create', {
         name: roomName,
@@ -305,6 +329,9 @@ export class LobbyUI {
           botCount: effectiveBots,
           botDifficulty: effectiveBots > 0 ? botDifficulty : undefined,
           friendlyFire,
+          reinforcedWalls,
+          enableMapEvents,
+          hazardTiles,
         },
       }, (response: any) => {
         if (response.success && response.room) {

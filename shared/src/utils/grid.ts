@@ -28,7 +28,8 @@ export function getExplosionCells(
   range: number,
   mapWidth: number,
   mapHeight: number,
-  tiles: TileType[][]
+  tiles: TileType[][],
+  pierce: boolean = false
 ): Position[] {
   const cells: Position[] = [{ x: originX, y: originY }];
   const directions = [
@@ -50,7 +51,9 @@ export function getExplosionCells(
 
       cells.push({ x: nx, y: ny });
 
-      if (tile === 'destructible') break; // Explosion stops after destroying a wall
+      // Pierce bombs pass through destructible walls; normal bombs stop after one
+      if (tile === 'destructible' && !pierce) break;
+      if (tile === 'destructible_cracked' && !pierce) break;
     }
   }
 
