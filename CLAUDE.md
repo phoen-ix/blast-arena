@@ -37,7 +37,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Composed rendering**: GameScene.ts is a thin orchestrator that delegates to dedicated renderer classes in `frontend/src/game/`:
   - `TileMap.ts` — tile grid rendering with floor variants, destruction animation, and support for new tile types (teleporters, conveyors, cracked walls)
   - `PlayerSprite.ts` — player sprites with directional eyes, shield aura, squash/stretch movement, dust particles, and death effects
-  - `BombSprite.ts` — bomb sprites with pulsing tween, fuse spark particles, and last-second urgency flashing
+  - `BombSprite.ts` — bomb sprites with pulsing tween (normal) or alpha blink (remote, blue texture), fuse spark particles, and last-second urgency flashing
   - `ExplosionSprite.ts` — animated explosions with expansion wave, sustain pulse, fade phase, and fire/smoke particles
   - `PowerUpSprite.ts` — power-up sprites with floating animation and distinctive icons per type
   - `ShrinkingZone.ts` — Battle Royale danger zone overlay using Graphics path with circle hole
@@ -70,7 +70,9 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Phaser scene lifecycle: shutdown() must be registered via `this.events.once('shutdown', this.shutdown, this)` — Phaser does NOT auto-call shutdown() methods. Scenes also defensively clean up stale state at the top of create() in case shutdown wasn't called.
 - `tickEvents` buffer on GameStateManager accumulates per-tick events (explosions, deaths, power-up pickups) for fine-grained socket emission in GameRoom
 - Chain reaction tile snapshot: before processing detonations, tiles are snapshotted so chained bombs calculate blast cells against original wall layout (prevents blasts going through walls destroyed by earlier bombs in the same tick)
-- Shield has no time limit — lasts until consumed by an explosion. Extra shield pickups are consumed but don't stack.
+- Shield has no time limit — lasts until consumed by an explosion. After shield breaks, player gets 10 ticks of invulnerability to escape the explosion area. Extra shield pickups are consumed but don't stack.
+- BotAI detonates remote bombs when an enemy is in their blast zone, or when all bomb slots are full (priority 2.5 in decision tree)
+- Game over screen shows context message (e.g., "Time's up!", "PlayerX is the last survivor!", "Draw — no survivors!")
 
 ## Game Modes
 - **Free for All (FFA)**: 2-8 players, last player standing wins, 3 min
@@ -103,6 +105,12 @@ MatchConfig includes: gameMode, maxPlayers, mapWidth/Height, mapSeed, roundTime,
 ```bash
 npm test
 ```
+
+## Connection Resilience
+- Socket.io reconnects indefinitely (1-5s backoff) with a "Reconnecting..." overlay when disconnected
+- On reconnect, client fetches `/api/health` and compares `buildId` (server start timestamp). If different, the page auto-refreshes to load new frontend.
+- Nginx serves a custom 502 page (`docker/nginx/502.html`) during container rebuilds that auto-polls and refreshes when the app is back
+- The 502 page detects the real app by checking for `game-container` in the response body
 
 ## Docker
 - Production: `docker compose up --build -d`

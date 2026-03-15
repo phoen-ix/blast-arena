@@ -45,12 +45,15 @@ Open `http://localhost:8080` in your browser.
 - **Bot AI**: BFS pathfinding, escape planning through danger zones, wall-seeking, enemy hunting, power-up collection
 - **8 Power-ups**: Bomb Up, Fire Up, Speed Up, Shield, Bomb Kick, Pierce Bomb, Remote Bomb, Line Bomb
 - **Visual effects**: Animated explosions with particles, screen shake, fuse sparks, wall debris, shield aura, death particles, dust trails
-- **Per-user visual settings**: Toggle animations, screen shake, and particles via in-game settings gear
+- **Per-user visual settings**: Toggle animations, screen shake, and particles via lobby Settings button
 - **Live HUD**: Countdown timer, player stats bar, kill feed, player list, spectator banner
+- **In-game help**: Controls and power-up guide accessible from the lobby Help button
 - **Spectator mode**: Dead players can freely pan the camera, click a player name, or press 1-9 to follow alive players
 - **Map features**: Reinforced walls (2-hit), dynamic meteor strikes, power-up rain, teleporters, conveyor belts
+- **Game over context**: Shows what ended the game (last survivor, time's up, kill target, etc.)
 - **Play Again**: Rematch button on the game over screen resets the room
 - **Camera follow**: Smooth scrolling camera that follows your player
+- **Connection resilience**: Auto-reconnects on connection drops; auto-refreshes on new server builds; custom 502 page during container rebuilds
 - **Scoring**: Kills-based ranking; self-kills subtract from your score
 - **Persistent sessions**: Login survives container rebuilds via httpOnly refresh token cookies
 - **Match history**: Stats tracked per player (kills, deaths, bombs placed, power-ups collected, placements)
