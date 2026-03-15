@@ -4,6 +4,9 @@ import { getRedis } from '../db/redis';
 
 const router = Router();
 
+// Stable identifier for this server process — changes on every restart/rebuild
+export const BUILD_ID = Date.now().toString(36);
+
 router.get('/health', async (_req, res) => {
   try {
     // Check DB
@@ -14,7 +17,7 @@ router.get('/health', async (_req, res) => {
     const redis = getRedis();
     await redis.ping();
 
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ status: 'ok', buildId: BUILD_ID, timestamp: new Date().toISOString() });
   } catch (err) {
     res.status(503).json({ status: 'error', message: 'Service unavailable' });
   }
