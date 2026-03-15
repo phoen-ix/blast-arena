@@ -10,9 +10,6 @@ export class RoomUI {
   private notifications: NotificationUI;
   private room: Room;
   private onLeave: () => void;
-  private countdownOverlay: HTMLElement | null = null;
-  private countdownInterval: ReturnType<typeof setInterval> | null = null;
-
   constructor(
     socketClient: SocketClient,
     authManager: AuthManager,
@@ -41,18 +38,6 @@ export class RoomUI {
   hide(): void {
     this.container.remove();
     this.removeListeners();
-    this.cleanupCountdown();
-  }
-
-  private cleanupCountdown(): void {
-    if (this.countdownInterval) {
-      clearInterval(this.countdownInterval);
-      this.countdownInterval = null;
-    }
-    if (this.countdownOverlay) {
-      this.countdownOverlay.remove();
-      this.countdownOverlay = null;
-    }
   }
 
   private setupListeners(): void {
@@ -84,9 +69,6 @@ export class RoomUI {
       this.render();
     }) as any);
 
-    this.socketClient.on('room:countdown', ((data: { seconds: number }) => {
-      this.showCountdown(data.seconds);
-    }) as any);
   }
 
   private removeListeners(): void {
@@ -94,7 +76,6 @@ export class RoomUI {
     this.socketClient.off('room:playerJoined');
     this.socketClient.off('room:playerLeft');
     this.socketClient.off('room:playerReady');
-    this.socketClient.off('room:countdown');
   }
 
   private isHost(): boolean {
@@ -269,32 +250,6 @@ export class RoomUI {
         </div>
       </div>
     `;
-  }
-
-  private showCountdown(seconds: number): void {
-    this.cleanupCountdown();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.style.background = 'rgba(0,0,0,0.85)';
-    overlay.innerHTML = `
-      <div style="text-align:center;">
-        <div style="font-size:24px;color:#a0a0b0;margin-bottom:16px;">Game Starting</div>
-        <div id="countdown-number" style="font-size:96px;font-weight:bold;color:#e94560;">${seconds}</div>
-      </div>
-    `;
-    document.getElementById('ui-overlay')!.appendChild(overlay);
-    this.countdownOverlay = overlay;
-
-    let remaining = seconds;
-    this.countdownInterval = setInterval(() => {
-      remaining--;
-      const el = document.getElementById('countdown-number');
-      if (el) el.textContent = String(remaining);
-      if (remaining <= 0) {
-        this.cleanupCountdown();
-      }
-    }, 1000);
   }
 
   private escapeHtml(text: string): string {

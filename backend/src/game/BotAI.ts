@@ -27,6 +27,9 @@ export interface BotDifficultyConfig {
   optimalMoveChance: number;
   useKick: boolean;
   reactionDelay: number;
+  huntSearchDepth: number;
+  dangerTimerThreshold: number;
+  roamAfterIdleTicks: number;
 }
 
 const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig> = {
@@ -41,6 +44,9 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     optimalMoveChance: 0.4,
     useKick: false,
     reactionDelay: 3,
+    huntSearchDepth: 10,
+    dangerTimerThreshold: 0,    // Easy bots treat all bombs as dangerous
+    roamAfterIdleTicks: 0,      // Easy bots don't roam
   },
   normal: {
     dangerAwareness: 99,
@@ -49,10 +55,13 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     bombCooldownMax: 30,
     escapeCheckBeforeBomb: true,
     huntChance: 0.5,
-    powerUpVision: 5,
+    powerUpVision: 8,
     optimalMoveChance: 0.7,
     useKick: true,
     reactionDelay: 0,
+    huntSearchDepth: 25,
+    dangerTimerThreshold: 30,   // Only fear bombs with ≤30 ticks left (1.5s)
+    roamAfterIdleTicks: 100,    // Start roaming after 5s without enemy contact
   },
   hard: {
     dangerAwareness: 99,
@@ -61,10 +70,13 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     bombCooldownMax: 18,
     escapeCheckBeforeBomb: true,
     huntChance: 0.8,
-    powerUpVision: 8,
+    powerUpVision: 12,
     optimalMoveChance: 0.95,
     useKick: true,
     reactionDelay: 0,
+    huntSearchDepth: 35,
+    dangerTimerThreshold: 40,   // Ignore bombs with >40 ticks left
+    roamAfterIdleTicks: 60,     // Start roaming after 3s without enemy contact
   },
 };
 
@@ -75,6 +87,7 @@ export class BotAI {
   private kickCooldown: number = 0;
   private config: BotDifficultyConfig;
   private reactionDelayRemaining: number = 0;
+  private ticksSinceEnemyContact: number = 0;
 
   constructor(difficulty: 'easy' | 'normal' | 'hard' = 'normal') {
     this.config = DIFFICULTY_PRESETS[difficulty];
@@ -97,6 +110,14 @@ export class BotAI {
     const otherPlayers = Array.from(state.players.values())
       .filter(p => p.id !== player.id && p.alive)
       .map(p => p.position);
+
+    // Track enemy proximity for roaming behavior
+    const nearestEnemyDist = this.getNearestEnemyManhattan(pos, state, player);
+    if (nearestEnemyDist !== null && nearestEnemyDist <= 8) {
+      this.ticksSinceEnemyContact = 0;
+    } else {
+      this.ticksSinceEnemyContact++;
+    }
 
     const awarenessRange = this.getAwarenessRange(player.fireRange);
     const danger = this.getDangerCells(state, awarenessRange, pos);
@@ -210,7 +231,7 @@ export class BotAI {
     // === MOVEMENT DECISIONS: only when player can actually move (prevents oscillation) ===
     if (!player.canMove()) return null;
 
-    // Priority 4: Move toward a visible power-up
+    // Priority 4: Move toward a power-up (BFS pathfinding)
     const powerUpDir = this.findPowerUpDirection(pos, state, danger, bombPositions, otherPlayers);
     if (powerUpDir) {
       this.lastDirection = powerUpDir;
@@ -228,8 +249,18 @@ export class BotAI {
       }
     }
 
-    // Priority 6: Move toward nearest destructible wall to open the map
-    const wallDir = this.findDestructibleWallDirection(pos, state, danger, bombPositions, otherPlayers);
+    // Priority 5.5: Roam toward enemies when idle too long (no nearby walls or hunt failed)
+    if (this.config.roamAfterIdleTicks > 0 && this.ticksSinceEnemyContact >= this.config.roamAfterIdleTicks) {
+      const roamDir = this.findRoamDirection(pos, state, player, danger, bombPositions, otherPlayers);
+      if (roamDir) {
+        this.lastDirection = roamDir;
+        logDecision('roam', { dir: roamDir, idleTicks: this.ticksSinceEnemyContact });
+        return { seq: this.seq, direction: roamDir, action: null, tick: state.tick };
+      }
+    }
+
+    // Priority 6: Move toward nearest destructible wall — prefer walls toward enemies
+    const wallDir = this.findDestructibleWallDirection(pos, state, player, danger, bombPositions, otherPlayers);
     if (wallDir) {
       this.lastDirection = wallDir;
       logDecision('seek_wall', { dir: wallDir });
@@ -248,13 +279,29 @@ export class BotAI {
   }
 
   /**
+   * Get manhattan distance to the nearest alive enemy.
+   */
+  private getNearestEnemyManhattan(pos: Position, state: GameStateManager, player: Player): number | null {
+    let minDist: number | null = null;
+    for (const other of state.players.values()) {
+      if (other.id !== player.id && other.alive) {
+        const dist = Math.abs(other.position.x - pos.x) + Math.abs(other.position.y - pos.y);
+        if (minDist === null || dist < minDist) minDist = dist;
+      }
+    }
+    return minDist;
+  }
+
+  /**
    * Build a set of cells that are in the blast zone of any bomb,
    * filtered by the bot's awareness range (manhattan distance from bot position).
+   * Bombs with many ticks remaining are ignored (dangerTimerThreshold) to reduce
+   * unnecessary fleeing from distant or fresh bombs.
    */
   private getDangerCells(state: GameStateManager, awarenessRange: number, botPos: Position): Set<string> {
     const danger = new Set<string>();
 
-    // Active explosions
+    // Active explosions — always dangerous
     for (const exp of state.explosions.values()) {
       for (const cell of exp.cells) {
         danger.add(`${cell.x},${cell.y}`);
@@ -265,6 +312,15 @@ export class BotAI {
     for (const bomb of state.bombs.values()) {
       const manhattanDist = Math.abs(bomb.position.x - botPos.x) + Math.abs(bomb.position.y - botPos.y);
       if (manhattanDist > awarenessRange) continue;
+
+      // Skip bombs that still have a lot of time remaining — they're not an
+      // immediate threat and fleeing from them wastes time.
+      // Always respect bombs within 2 tiles (could chain or trap us).
+      if (this.config.dangerTimerThreshold > 0 &&
+          bomb.ticksRemaining > this.config.dangerTimerThreshold &&
+          manhattanDist > 2) {
+        continue;
+      }
 
       danger.add(`${bomb.position.x},${bomb.position.y}`);
 
@@ -432,42 +488,64 @@ export class BotAI {
   }
 
   /**
-   * Look in cardinal directions for a visible power-up (not blocked by walls)
-   * and return the direction to move toward it.
+   * BFS pathfinding toward the nearest power-up. Navigates around walls and
+   * obstacles rather than only checking straight lines, so power-ups behind
+   * corners are reachable.
    */
   private findPowerUpDirection(
     pos: Position, state: GameStateManager, danger: Set<string>,
     bombPositions: Position[], otherPlayers: Position[]
   ): Direction | null {
-    let bestDir: Direction | null = null;
-    let bestDist = Infinity;
+    if (state.powerUps.size === 0) return null;
 
-    for (const dir of DIRECTIONS) {
-      const { dx, dy } = DIR_DELTA[dir];
-      for (let i = 1; i <= this.config.powerUpVision; i++) {
-        const cx = pos.x + dx * i;
-        const cy = pos.y + dy * i;
-        const tile = state.collisionSystem.getTileAt(cx, cy);
-        if (tile === 'wall' || isDestructibleTile(tile)) break;
-
-        for (const pu of state.powerUps.values()) {
-          if (pu.position.x === cx && pu.position.y === cy && i < bestDist) {
-            const newPos = state.collisionSystem.canMoveTo(pos.x, pos.y, dir, bombPositions, otherPlayers);
-            if (newPos && !danger.has(`${newPos.x},${newPos.y}`)) {
-              bestDist = i;
-              bestDir = dir;
-            }
-          }
-        }
-      }
+    const powerUpPositions = new Set<string>();
+    for (const pu of state.powerUps.values()) {
+      powerUpPositions.add(`${pu.position.x},${pu.position.y}`);
     }
 
-    return bestDir;
+    const visited = new Set<string>();
+    visited.add(`${pos.x},${pos.y}`);
+    let frontier: { pos: Position; firstDir: Direction }[] = [];
+
+    // Seed with immediate neighbors
+    for (const dir of DIRECTIONS) {
+      const newPos = state.collisionSystem.canMoveTo(pos.x, pos.y, dir, bombPositions, otherPlayers);
+      if (!newPos) continue;
+      const key = `${newPos.x},${newPos.y}`;
+      if (danger.has(key)) continue;
+      visited.add(key);
+
+      if (powerUpPositions.has(key)) return dir;
+
+      frontier.push({ pos: newPos, firstDir: dir });
+    }
+
+    // BFS up to powerUpVision steps
+    for (let depth = 0; depth < this.config.powerUpVision && frontier.length > 0; depth++) {
+      const next: { pos: Position; firstDir: Direction }[] = [];
+      for (const entry of frontier) {
+        for (const dir of DIRECTIONS) {
+          const newPos = state.collisionSystem.canMoveTo(entry.pos.x, entry.pos.y, dir, bombPositions, []);
+          if (!newPos) continue;
+          const key = `${newPos.x},${newPos.y}`;
+          if (visited.has(key) || danger.has(key)) continue;
+          visited.add(key);
+
+          if (powerUpPositions.has(key)) return entry.firstDir;
+
+          next.push({ pos: newPos, firstDir: entry.firstDir });
+        }
+      }
+      frontier = next;
+    }
+
+    return null;
   }
 
   /**
    * BFS pathfinding toward nearest enemy. Navigates around walls and obstacles.
    * Returns the first-step direction to walk toward the closest reachable enemy.
+   * Search depth scales with config.huntSearchDepth for larger maps.
    */
   private findHuntDirection(
     pos: Position, state: GameStateManager, player: Player, danger: Set<string>,
@@ -504,8 +582,8 @@ export class BotAI {
       frontier.push({ pos: newPos, firstDir: dir });
     }
 
-    // BFS up to 15 steps — relax player blocking (enemies move)
-    for (let depth = 0; depth < 15 && frontier.length > 0; depth++) {
+    // BFS up to huntSearchDepth steps — relax player blocking (enemies move)
+    for (let depth = 0; depth < this.config.huntSearchDepth && frontier.length > 0; depth++) {
       const next: { pos: Position; firstDir: Direction }[] = [];
       for (const entry of frontier) {
         for (const dir of DIRECTIONS) {
@@ -527,16 +605,80 @@ export class BotAI {
   }
 
   /**
-   * BFS to find the direction of the nearest reachable destructible wall.
-   * Returns the first-step direction to walk toward it.
+   * Roam toward the nearest enemy's general direction using manhattan heuristic.
+   * Used when the bot has been idle too long (no enemy contact) and hunt BFS
+   * can't find a path (walls blocking). Picks the safe direction that reduces
+   * manhattan distance to the nearest enemy.
    */
-  private findDestructibleWallDirection(
-    pos: Position, state: GameStateManager, danger: Set<string>,
+  private findRoamDirection(
+    pos: Position, state: GameStateManager, player: Player, danger: Set<string>,
     bombPositions: Position[], otherPlayers: Position[]
   ): Direction | null {
+    // Find nearest enemy position
+    let nearestEnemy: Position | null = null;
+    let nearestDist = Infinity;
+    for (const other of state.players.values()) {
+      if (other.id !== player.id && other.alive) {
+        const dist = Math.abs(other.position.x - pos.x) + Math.abs(other.position.y - pos.y);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestEnemy = other.position;
+        }
+      }
+    }
+    if (!nearestEnemy) return null;
+
+    // Evaluate each direction: prefer directions that reduce manhattan distance to enemy
+    const candidates: { dir: Direction; distReduction: number; escape: number }[] = [];
+    for (const dir of DIRECTIONS) {
+      const newPos = state.collisionSystem.canMoveTo(pos.x, pos.y, dir, bombPositions, otherPlayers);
+      if (!newPos) continue;
+      const key = `${newPos.x},${newPos.y}`;
+      if (danger.has(key)) continue;
+
+      const escapeCount = this.countEscapeRoutes(newPos, state, danger, bombPositions, otherPlayers);
+      if (escapeCount < 1) continue;
+
+      const newDist = Math.abs(newPos.x - nearestEnemy.x) + Math.abs(newPos.y - nearestEnemy.y);
+      candidates.push({ dir, distReduction: nearestDist - newDist, escape: escapeCount });
+    }
+
+    if (candidates.length === 0) return null;
+
+    // Prefer directions that move us closer to the enemy
+    candidates.sort((a, b) => b.distReduction - a.distReduction || b.escape - a.escape);
+
+    // Take the best direction — even if it doesn't reduce distance (at least we move)
+    return candidates[0].dir;
+  }
+
+  /**
+   * BFS to find the direction of the nearest reachable destructible wall.
+   * Prefers walls in the direction of enemies to carve paths toward them.
+   */
+  private findDestructibleWallDirection(
+    pos: Position, state: GameStateManager, player: Player, danger: Set<string>,
+    bombPositions: Position[], otherPlayers: Position[]
+  ): Direction | null {
+    // Find nearest enemy for directional preference
+    let nearestEnemy: Position | null = null;
+    let nearestDist = Infinity;
+    for (const other of state.players.values()) {
+      if (other.id !== player.id && other.alive) {
+        const dist = Math.abs(other.position.x - pos.x) + Math.abs(other.position.y - pos.y);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestEnemy = other.position;
+        }
+      }
+    }
+
     const visited = new Set<string>();
     visited.add(`${pos.x},${pos.y}`);
     let frontier: { pos: Position; firstDir: Direction }[] = [];
+
+    // Collect all wall candidates with their distance-to-enemy score
+    const wallCandidates: { dir: Direction; depth: number; distToEnemy: number }[] = [];
 
     for (const dir of DIRECTIONS) {
       const newPos = state.collisionSystem.canMoveTo(pos.x, pos.y, dir, bombPositions, otherPlayers);
@@ -547,7 +689,11 @@ export class BotAI {
       // Check if this step is already adjacent to a destructible wall
       for (const { dx, dy } of Object.values(DIR_DELTA)) {
         if (isDestructibleTile(state.collisionSystem.getTileAt(newPos.x + dx, newPos.y + dy))) {
-          return dir;
+          const distToEnemy = nearestEnemy
+            ? Math.abs(newPos.x + dx - nearestEnemy.x) + Math.abs(newPos.y + dy - nearestEnemy.y)
+            : 0;
+          wallCandidates.push({ dir, depth: 0, distToEnemy });
+          break;
         }
       }
       frontier.push({ pos: newPos, firstDir: dir });
@@ -565,7 +711,11 @@ export class BotAI {
           visited.add(key);
           for (const { dx, dy } of Object.values(DIR_DELTA)) {
             if (isDestructibleTile(state.collisionSystem.getTileAt(newPos.x + dx, newPos.y + dy))) {
-              return entry.firstDir;
+              const distToEnemy = nearestEnemy
+                ? Math.abs(newPos.x + dx - nearestEnemy.x) + Math.abs(newPos.y + dy - nearestEnemy.y)
+                : 0;
+              wallCandidates.push({ dir: entry.firstDir, depth: depth + 1, distToEnemy });
+              break;
             }
           }
           next.push({ pos: newPos, firstDir: entry.firstDir });
@@ -574,7 +724,20 @@ export class BotAI {
       frontier = next;
     }
 
-    return null;
+    if (wallCandidates.length === 0) return null;
+
+    // Prefer walls that are close AND toward the enemy.
+    // Score: lower is better. Depth dominates, but among similar depths prefer enemy direction.
+    wallCandidates.sort((a, b) => {
+      // Group by depth tier (0-1 = close, 2-4 = medium, 5+ = far)
+      const tierA = a.depth <= 1 ? 0 : a.depth <= 4 ? 1 : 2;
+      const tierB = b.depth <= 1 ? 0 : b.depth <= 4 ? 1 : 2;
+      if (tierA !== tierB) return tierA - tierB;
+      // Within same tier, prefer walls closer to enemy
+      return a.distToEnemy - b.distToEnemy;
+    });
+
+    return wallCandidates[0].dir;
   }
 
   /**

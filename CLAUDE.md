@@ -48,6 +48,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Particle textures**: `particle_fire`, `particle_smoke`, `particle_spark`, `particle_debris`, `particle_star`, `particle_shield` generated in BootScene
 - **HUD**: DOM-based overlay in HUDScene.ts with timer, player list, kill feed, stats bar (bottom-left), spectator banner
 - Settings and Help are in the lobby header (LobbyUI), not in-game HUD, to avoid overlapping player names
+- Help modal covers: controls, all 8 power-ups (with in-game tile preview + HUD emoji), all 6 game modes, map features (reinforced walls, map events, hazard tiles with visual previews), and core mechanics
+- Countdown is only shown in-game (CountdownOverlay), not in the lobby/room UI
 
 ## Game Architecture
 - 20 tick/sec server game loop (GameLoop.ts -> GameState.ts)
@@ -58,6 +60,11 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Bot difficulty set per-room via MatchConfig.botDifficulty; defaults to 'normal'; UI dropdown hidden when bots = 0
 - BotAI escape logic: BFS through danger cells to find nearest safe cell; canEscapeAfterBomb and flee use the same findEscapeDirection BFS so the bot follows the validated escape path
 - BotAI movement decisions only run when player.canMove() to prevent oscillation between hunt/seek_wall
+- BotAI power-up seeking uses BFS pathfinding (not line-of-sight) so bots find power-ups around corners
+- BotAI hunt search depth is configurable per difficulty (easy=10, normal=25, hard=35) to handle large/dense maps
+- BotAI roaming: tracks ticksSinceEnemyContact; after idle threshold (normal=5s, hard=3s) bot moves toward nearest enemy via manhattan heuristic
+- BotAI directional wall clearing: prefers breaking walls toward enemies rather than just the nearest wall
+- BotAI danger timer threshold: normal/hard bots ignore bombs with many ticks remaining (>30/40) unless within 2 tiles, reducing unnecessary fleeing from fresh bombs
 - Self-kills subtract 1 from kill score (owner.kills decremented, owner.selfKills incremented)
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished' to show final explosions
