@@ -46,7 +46,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
   - `CountdownOverlay.ts` — animated "3, 2, 1, GO!" countdown at game start
   - `GamepadManager.ts` — gamepad/controller input polling with deadzone, D-pad/stick direction, just-pressed action tracking
   - `Settings.ts` — per-user visual settings (animations, screen shake, particles) stored in localStorage
-- **Procedural textures**: All sprites generated in `BootScene.generateTextures()` — no external image assets. Player textures include 4 directional variants with eyes per color.
+- **Procedural textures**: All sprites generated in `BootScene.generateTextures()` — no external image assets. Player textures include 4 directional variants with eyes per color. Power-up textures use Canvas2D with emoji icons (💣🔥⚡🛡️👢💥📡🧨) on colored rounded-rect backgrounds instead of abstract geometric shapes, matching the HUD stats display for visual consistency.
 - **Particle textures**: `particle_fire`, `particle_smoke`, `particle_spark`, `particle_debris`, `particle_star`, `particle_shield` generated in BootScene
 - **HUD**: DOM-based overlay in HUDScene.ts with timer, player list, kill feed, stats bar (bottom-left), spectator banner
 - Settings and Help are in the lobby header (LobbyUI), not in-game HUD, to avoid overlapping player names

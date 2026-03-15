@@ -343,114 +343,66 @@ export class BootScene extends Phaser.Scene {
   }
 
   private generatePowerUpTextures(): void {
-    const powerUpDefs: Record<string, { color: number; draw: (gfx: Phaser.GameObjects.Graphics) => void }> = {
-      bomb_up: {
-        color: 0xff4444,
-        draw: (gfx) => {
-          // Small bomb icon
-          gfx.fillStyle(0xffffff, 0.9);
-          gfx.fillCircle(22, 26, 6);
-          // Plus sign
-          gfx.fillStyle(0xffffff, 0.9);
-          gfx.fillRect(32, 18, 8, 2);
-          gfx.fillRect(35, 15, 2, 8);
-        },
-      },
-      fire_up: {
-        color: 0xff8800,
-        draw: (gfx) => {
-          // Flame shape
-          gfx.fillStyle(0xffffff, 0.9);
-          gfx.fillTriangle(24, 12, 18, 34, 30, 34);
-          gfx.fillStyle(0xff8800, 0.8);
-          gfx.fillTriangle(24, 20, 21, 34, 27, 34);
-        },
-      },
-      speed_up: {
-        color: 0x44aaff,
-        draw: (gfx) => {
-          // Lightning bolt
-          gfx.fillStyle(0xffffff, 0.9);
-          gfx.fillTriangle(28, 10, 18, 26, 26, 26);
-          gfx.fillTriangle(22, 22, 32, 22, 20, 38);
-        },
-      },
-      shield: {
-        color: 0x44ff44,
-        draw: (gfx) => {
-          // Shield hexagon
-          gfx.lineStyle(2, 0xffffff, 0.9);
-          gfx.beginPath();
-          gfx.moveTo(24, 12);
-          gfx.lineTo(34, 18);
-          gfx.lineTo(34, 30);
-          gfx.lineTo(24, 36);
-          gfx.lineTo(14, 30);
-          gfx.lineTo(14, 18);
-          gfx.closePath();
-          gfx.strokePath();
-        },
-      },
-      kick: {
-        color: 0xcc44ff,
-        draw: (gfx) => {
-          // Boot / arrow shape
-          gfx.fillStyle(0xffffff, 0.9);
-          gfx.fillTriangle(32, 24, 18, 16, 18, 32);
-          gfx.fillRect(14, 20, 10, 8);
-        },
-      },
-      pierce_bomb: {
-        color: 0xff2222,
-        draw: (gfx) => {
-          // Arrow through wall
-          gfx.lineStyle(3, 0xffffff, 0.9);
-          gfx.lineBetween(14, 24, 34, 24);
-          gfx.fillStyle(0xffffff, 0.9);
-          gfx.fillTriangle(34, 24, 26, 18, 26, 30);
-        },
-      },
-      remote_bomb: {
-        color: 0x4488ff,
-        draw: (gfx) => {
-          // Remote/antenna icon
-          gfx.fillStyle(0xffffff, 0.9);
-          gfx.fillCircle(24, 28, 6);
-          gfx.fillRect(22, 14, 4, 14);
-          gfx.fillCircle(24, 13, 3);
-          // Signal waves
-          gfx.lineStyle(1, 0xffffff, 0.5);
-          gfx.strokeCircle(24, 13, 6);
-          gfx.strokeCircle(24, 13, 9);
-        },
-      },
-      line_bomb: {
-        color: 0xffaa44,
-        draw: (gfx) => {
-          // Three dots in a line
-          gfx.fillStyle(0xffffff, 0.9);
-          gfx.fillCircle(14, 24, 4);
-          gfx.fillCircle(24, 24, 4);
-          gfx.fillCircle(34, 24, 4);
-        },
-      },
+    const defs: Record<string, { color: string; emoji: string }> = {
+      bomb_up:     { color: '#ff4444', emoji: '💣' },
+      fire_up:     { color: '#ff8800', emoji: '🔥' },
+      speed_up:    { color: '#44aaff', emoji: '⚡' },
+      shield:      { color: '#44ff44', emoji: '🛡️' },
+      kick:        { color: '#cc44ff', emoji: '👢' },
+      pierce_bomb: { color: '#ff2222', emoji: '💥' },
+      remote_bomb: { color: '#4488ff', emoji: '📡' },
+      line_bomb:   { color: '#ffaa44', emoji: '🧨' },
     };
 
-    for (const [type, def] of Object.entries(powerUpDefs)) {
-      const gfx = this.make.graphics({ x: 0, y: 0 });
+    for (const [type, def] of Object.entries(defs)) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 48;
+      canvas.height = 48;
+      const ctx = canvas.getContext('2d')!;
+
       // Glow behind
-      gfx.fillStyle(def.color, 0.1);
-      gfx.fillCircle(24, 24, 22);
-      // Background
-      gfx.fillStyle(def.color, 0.8);
-      gfx.fillRoundedRect(4, 4, 40, 40, 8);
-      gfx.lineStyle(2, 0xffffff, 0.5);
-      gfx.strokeRoundedRect(4, 4, 40, 40, 8);
-      // Icon
-      def.draw(gfx);
-      gfx.generateTexture(`powerup_${type}`, 48, 48);
-      gfx.destroy();
+      ctx.globalAlpha = 0.1;
+      ctx.fillStyle = def.color;
+      ctx.beginPath();
+      ctx.arc(24, 24, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Background rounded rect
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = def.color;
+      this.canvasRoundRect(ctx, 4, 4, 40, 40, 8);
+      ctx.fill();
+
+      // Border
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      this.canvasRoundRect(ctx, 4, 4, 40, 40, 8);
+      ctx.stroke();
+
+      // Emoji icon
+      ctx.globalAlpha = 1;
+      ctx.font = '22px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(def.emoji, 24, 25);
+
+      this.textures.addCanvas(`powerup_${type}`, canvas);
     }
+  }
+
+  private canvasRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
   }
 
   private generateParticleTextures(): void {

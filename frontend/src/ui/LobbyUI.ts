@@ -594,43 +594,35 @@ export class LobbyUI {
           <div class="help-heading">Power-Ups</div>
           <div class="help-tip">Dropped when breakable walls are destroyed. Walk over floating tiles to collect. Your HUD (bottom-left) shows your current stats.</div>
           <div class="help-row">
-            <span class="help-pu" style="background:#FF4444;">●+</span>
-            <span class="help-hud">💣</span>
+            <span class="help-pu" style="background:#FF4444;">💣</span>
             <b>Bomb Up</b> — +1 max bombs (up to 8)
           </div>
           <div class="help-row">
-            <span class="help-pu" style="background:#FF8800;">▲</span>
-            <span class="help-hud">🔥</span>
+            <span class="help-pu" style="background:#FF8800;">🔥</span>
             <b>Fire Up</b> — +1 explosion range (up to 8)
           </div>
           <div class="help-row">
             <span class="help-pu" style="background:#44AAFF;">⚡</span>
-            <span class="help-hud">⚡</span>
             <b>Speed Up</b> — faster movement (up to 5)
           </div>
           <div class="help-row">
-            <span class="help-pu" style="background:#44FF44;">⬡</span>
-            <span class="help-hud">🛡️</span>
+            <span class="help-pu" style="background:#44FF44;">🛡️</span>
             <b>Shield</b> — absorbs one hit, then breaks. Doesn't stack, no time limit
           </div>
           <div class="help-row">
-            <span class="help-pu" style="background:#CC44FF;">▶</span>
-            <span class="help-hud">👢</span>
+            <span class="help-pu" style="background:#CC44FF;">👢</span>
             <b>Kick</b> — walk into a bomb to slide it across the map
           </div>
           <div class="help-row">
-            <span class="help-pu" style="background:#FF2222;">→</span>
-            <span class="help-hud" style="opacity:0.3">—</span>
+            <span class="help-pu" style="background:#FF2222;">💥</span>
             <b>Pierce Bomb</b> — explosions pass through breakable walls (still destroys them)
           </div>
           <div class="help-row">
-            <span class="help-pu" style="background:#4488FF;">⦿</span>
-            <span class="help-hud" style="opacity:0.3">—</span>
+            <span class="help-pu" style="background:#4488FF;">📡</span>
             <b>Remote Bomb</b> — bombs don't auto-explode; press <span class="help-key">E</span> to detonate all. Auto-detonates after 10s
           </div>
           <div class="help-row">
-            <span class="help-pu" style="background:#FFAA44;">●●●</span>
-            <span class="help-hud" style="opacity:0.3">—</span>
+            <span class="help-pu" style="background:#FFAA44;">🧨</span>
             <b>Line Bomb</b> — places a line of bombs in your facing direction (uses remaining bomb capacity)
           </div>
         </div>
