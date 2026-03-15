@@ -89,6 +89,13 @@ export class AuthManager {
     this.notify();
   }
 
+  updateUser(updates: Partial<PublicUser>): void {
+    if (this.currentUser) {
+      this.currentUser = { ...this.currentUser, ...updates };
+      this.notify();
+    }
+  }
+
   async tryAutoLogin(): Promise<boolean> {
     return this.refresh();
   }

@@ -72,6 +72,16 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Self-protection: admins cannot ban/deactivate/delete themselves
 - Public endpoint `GET /admin/announcements/banner` for lobby banner display (no auth required)
 
+## Account Management
+- **Account modal** in lobby header lets users edit their username, display name, and email
+- Username change: server validates format (3-20 chars, alphanumeric + underscore/hyphen) and checks uniqueness; returns 409 CONFLICT if taken
+- Display name change: immediate update, reflected in lobby header
+- Email change: two-step confirmation flow — user submits new email, server sends a confirmation link to the new address (24h expiry), email only swaps when the link is clicked
+- Pending email changes visible in Account modal with a cancel option
+- Email change confirmation endpoint: `GET /api/user/confirm-email/:token`
+- Migration `003_user_profile.sql` adds `pending_email`, `email_change_token`, `email_change_expires` columns to users table
+- `AuthManager.updateUser()` patches in-memory user state after profile edits so the lobby header updates without a page refresh
+
 ## Teams
 - Team assignment: host can assign players and bots to Team Red (0) or Team Blue (1) via dropdowns in RoomUI waiting room
 - Unassigned players/bots fall back to round-robin at game start

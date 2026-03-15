@@ -62,6 +62,19 @@ export async function sendVerificationEmail(email: string, token: string): Promi
   `);
 }
 
+export async function sendEmailChangeEmail(newEmail: string, token: string): Promise<void> {
+  const config = getConfig();
+  const url = `${config.APP_URL}/api/user/confirm-email/${token}`;
+  await sendEmail(newEmail, 'Confirm your new email address — BlastArena', `
+    <h1>Email Change Request</h1>
+    <p>You requested to change your BlastArena email to this address.</p>
+    <p>Click the link below to confirm:</p>
+    <p><a href="${url}">${url}</a></p>
+    <p>This link expires in 24 hours.</p>
+    <p>If you didn't request this change, you can ignore this email.</p>
+  `);
+}
+
 export async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
   const config = getConfig();
   const url = `${config.APP_URL}/reset-password?token=${token}`;
