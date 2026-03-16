@@ -41,7 +41,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Design System ("INFERNO")**: All CSS in `frontend/index.html` using CSS custom properties (`:root` vars). Colors: `--primary` (#ff6b35 hot orange), `--accent` (#00d4aa teal), `--danger` (#ff3355), `--success` (#00e676), `--warning` (#ffaa22), `--info` (#448aff). Backgrounds: `--bg-deep` (#080810) through `--bg-hover` (#24243e). Typography: Chakra Petch (display/headings) + DM Sans (body) via Google Fonts. Team colors: `--team-red` (#ff4466), `--team-blue` (#448aff). Always use CSS variables in inline styles (e.g. `var(--primary)` not hardcoded hex) for consistency.
 - **Composed rendering**: GameScene.ts is a thin orchestrator that delegates to dedicated renderer classes in `frontend/src/game/`:
   - `TileMap.ts` — tile grid rendering with floor variants, destruction animation, and support for new tile types (teleporters, conveyors, cracked walls)
-  - `PlayerSprite.ts` — player sprites with directional eyes, shield aura, squash/stretch movement, dust particles, and death effects
+  - `PlayerSprite.ts` — player sprites with directional eyes, shield aura, squash/stretch movement (guarded by `activeMoveAnim` Set to prevent tween stacking), dust particles, and death effects
   - `BombSprite.ts` — bomb sprites with pulsing tween (normal) or alpha blink (remote, blue texture), fuse spark particles, and last-second urgency flashing
   - `ExplosionSprite.ts` — animated explosions with expansion wave, sustain pulse, fade phase, and fire/smoke particles
   - `PowerUpSprite.ts` — power-up sprites with floating animation and distinctive icons per type

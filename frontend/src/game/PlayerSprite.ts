@@ -27,6 +27,9 @@ export class PlayerSpriteRenderer {
   /** Previous positions per player for detecting movement */
   private prevPositions: Map<number, { x: number; y: number }> = new Map();
 
+  /** Players currently in a squash/stretch tween (prevents stacking) */
+  private activeMoveAnim: Set<number> = new Set();
+
   /** Track team assignments per player */
   private playerTeams: Map<number, number | null> = new Map();
 
@@ -135,6 +138,7 @@ export class PlayerSpriteRenderer {
           this.prevPositions.delete(player.id);
           this.playerColorIndex.delete(player.id);
           this.playerTeams.delete(player.id);
+          this.activeMoveAnim.delete(player.id);
         }
         return;
       }
@@ -219,8 +223,8 @@ export class PlayerSpriteRenderer {
 
       if (moved) {
         // Squash/stretch on movement
-        if (settings.animations && sprite.scaleX === sprite.displayWidth / sprite.width) {
-          // Only add tween if not already tweening scale
+        if (settings.animations && !this.activeMoveAnim.has(player.id)) {
+          this.activeMoveAnim.add(player.id);
           this.scene.tweens.add({
             targets: sprite,
             scaleX: sprite.scaleX * 1.15,
@@ -228,6 +232,7 @@ export class PlayerSpriteRenderer {
             duration: 50,
             yoyo: true,
             ease: 'Sine.easeOut',
+            onComplete: () => this.activeMoveAnim.delete(player.id),
           });
         }
 
@@ -337,6 +342,7 @@ export class PlayerSpriteRenderer {
     this.playerTeams.clear();
     this.prevShieldState.clear();
     this.prevPositions.clear();
+    this.activeMoveAnim.clear();
     this.teamPlayerCount = {};
   }
 
@@ -369,5 +375,6 @@ export class PlayerSpriteRenderer {
     this.prevPositions.delete(id);
     this.playerColorIndex.delete(id);
     this.playerTeams.delete(id);
+    this.activeMoveAnim.delete(id);
   }
 }
