@@ -264,7 +264,7 @@ The UI uses the **INFERNO** design system — a high-energy arcade-industrial ae
 - Fuse spark particles on bombs with last-second urgency flashing
 - Wall debris particles on destruction
 - Shield aura glow on protected players + break particles
-- Squash/stretch animation on player movement + dust trails
+- Squash/stretch animation on player movement (deduplicated via active tween tracking) + dust trails
 - Screen shake on nearby explosions (configurable)
 - "3, 2, 1, GO!" countdown overlay synced between server and client
 - Power-up float animation + collection popup particles
