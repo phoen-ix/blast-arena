@@ -502,6 +502,40 @@ export class BotAI {
           }
         }
 
+        // Compute blast cells from own remote bombs to check if they block movement
+        const ownRemoteBlastCells = new Set<string>();
+        for (const bomb of ownRemoteBombs) {
+          ownRemoteBlastCells.add(`${bomb.position.x},${bomb.position.y}`);
+          for (const { dx, dy } of Object.values(DIR_DELTA)) {
+            for (let i = 1; i <= bomb.fireRange; i++) {
+              const cx = bomb.position.x + dx * i;
+              const cy = bomb.position.y + dy * i;
+              const tile = state.collisionSystem.getTileAt(cx, cy);
+              if (tile === 'wall') break;
+              ownRemoteBlastCells.add(`${cx},${cy}`);
+              if (isDestructibleTile(tile) && !bomb.isPierce) break;
+            }
+          }
+        }
+
+        // Check if any walkable direction is blocked by own remote bomb blast
+        let movementBlockedByOwnBomb = false;
+        for (const dir of DIRECTIONS) {
+          const dest = state.collisionSystem.canMoveTo(
+            pos.x,
+            pos.y,
+            dir,
+            bombPositions,
+            otherPlayers,
+          );
+          if (!dest) continue;
+          const destKey = `${dest.x},${dest.y}`;
+          if (ownRemoteBlastCells.has(destKey) && danger.has(destKey)) {
+            movementBlockedByOwnBomb = true;
+            break;
+          }
+        }
+
         // Track hold time when at max bombs (Fix B)
         if (ownRemoteBombs.length >= player.maxBombs) {
           this.remoteBombHoldTicks++;
@@ -517,6 +551,7 @@ export class BotAI {
           (enemyInBlast && !selfInBlast) ||
           shieldSacrifice ||
           enemyNearBomb ||
+          (movementBlockedByOwnBomb && !selfInBlast) ||
           (ownRemoteBombs.length >= player.maxBombs &&
             !selfInBlast &&
             (this.remoteBombHoldTicks >= this.config.remoteHoldThreshold ||
@@ -529,6 +564,7 @@ export class BotAI {
             enemyInBlast,
             enemyNearBomb,
             shieldSacrifice,
+            selfBlocked: movementBlockedByOwnBomb,
           });
           return { seq: this.seq, direction: null, action: 'detonate', tick: state.tick };
         }
