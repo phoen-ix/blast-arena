@@ -109,7 +109,10 @@ Bots use BFS for escape routes, power-up seeking, and enemy hunting with configu
 - **Proximity aggression**: Bomb cooldown reduced to 75% when within 5 tiles of enemy, even in early game
 - **Dynamic danger assessment**: Safe distance calculated from moves-available-before-detonation (not fixed distance), reducing unnecessary fleeing from far-away fresh bombs
 - **Anti-oscillation**: Position history tracking prevents bots from bouncing between the same tiles
+- **Hunt oscillation detector**: Detects bots stuck oscillating during hunt mode (≤3 unique positions in 10-entry history or prolonged hunting without kills) — forces wall-bombing toward enemy to break through
 - **Smart flee recovery**: Flee stuck-breaker only triggers during movable ticks, prefers non-danger directions
+- **Shield stalemate breaker**: Detects mutual shielded bombing loops (no kills, both shielded, late game) — escalates aggression by bypassing safety checks to break the deadlock
+- **Strategic remote detonation**: Bots hold remote bombs instead of wasteful immediate detonation; proximity trigger (enemy within 2 tiles of bomb); shield-aware sacrifice (detonates when bot is shielded but enemy isn't)
 - **KOTH awareness**: Bots navigate toward the hill zone and hold position once inside
 
 ## Teams

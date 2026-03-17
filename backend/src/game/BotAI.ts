@@ -36,6 +36,11 @@ export interface BotDifficultyConfig {
   shieldAggression: boolean;
   lateGameBombCooldownMin: number;
   lateGameBombCooldownMax: number;
+  huntStuckThreshold: number;
+  huntStuckMaxTicks: number;
+  stalemateBreaker: boolean;
+  stalemateThresholdTicks: number;
+  remoteHoldThreshold: number;
 }
 
 const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig> = {
@@ -59,6 +64,11 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     shieldAggression: false,
     lateGameBombCooldownMin: 0,
     lateGameBombCooldownMax: 0,
+    huntStuckThreshold: 0,
+    huntStuckMaxTicks: 0,
+    stalemateBreaker: false,
+    stalemateThresholdTicks: 0,
+    remoteHoldThreshold: 20,
   },
   normal: {
     dangerAwareness: 99,
@@ -80,6 +90,11 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     shieldAggression: false,
     lateGameBombCooldownMin: 0,
     lateGameBombCooldownMax: 0,
+    huntStuckThreshold: 3,
+    huntStuckMaxTicks: 60,
+    stalemateBreaker: true,
+    stalemateThresholdTicks: 100,
+    remoteHoldThreshold: 40,
   },
   hard: {
     dangerAwareness: 99,
@@ -101,6 +116,11 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     shieldAggression: true,
     lateGameBombCooldownMin: 3,
     lateGameBombCooldownMax: 6,
+    huntStuckThreshold: 3,
+    huntStuckMaxTicks: 40,
+    stalemateBreaker: true,
+    stalemateThresholdTicks: 60,
+    remoteHoldThreshold: 60,
   },
 };
 
@@ -127,6 +147,21 @@ export class BotAI {
 
   // Track max fire range seen on map for dynamic escape depth
   private maxFireRangeOnMap: number = 0;
+
+  // Hunt oscillation detection (Fix C)
+  private huntPosHistory: string[] = [];
+  private huntWithoutProgressTicks: number = 0;
+  private huntStuck: boolean = false;
+  private lastHuntKills: number = 0;
+  private huntStuckCooldown: number = 0;
+
+  // Shield stalemate breaker (Fix A)
+  private stalemateTicks: number = 0;
+  private lastStalemateKills: number = 0;
+  private stalemateActive: boolean = false;
+
+  // Strategic remote bomb detonation (Fix B)
+  private remoteBombHoldTicks: number = 0;
 
   constructor(difficulty: 'easy' | 'normal' | 'hard' = 'normal') {
     this.config = DIFFICULTY_PRESETS[difficulty];
@@ -207,6 +242,48 @@ export class BotAI {
     const timeRatio = timeElapsed / (state.roundTime || 180);
     const midGame = timeRatio >= 0.35;
     const lateGame = timeRatio >= 0.6;
+
+    // === Stalemate detection (Fix A) ===
+    if (this.config.stalemateBreaker) {
+      let shieldedEnemyNearby = false;
+      const alivePlayers = Array.from(state.players.values()).filter(
+        (p) => p.id !== player.id && p.alive,
+      );
+      if (player.hasShield) {
+        for (const other of alivePlayers) {
+          if (
+            other.hasShield &&
+            Math.abs(other.position.x - pos.x) + Math.abs(other.position.y - pos.y) <= 8
+          ) {
+            shieldedEnemyNearby = true;
+            break;
+          }
+        }
+      }
+      const fewPlayersLeft = alivePlayers.length <= 2;
+      if (
+        shieldedEnemyNearby &&
+        player.kills === this.lastStalemateKills &&
+        (lateGame || fewPlayersLeft)
+      ) {
+        this.stalemateTicks++;
+        if (this.stalemateTicks >= this.config.stalemateThresholdTicks) {
+          this.stalemateActive = true;
+        }
+      } else {
+        this.stalemateTicks = 0;
+        this.lastStalemateKills = player.kills;
+        this.stalemateActive = false;
+      }
+    }
+
+    // === Hunt oscillation cooldown tick (Fix C) ===
+    if (this.huntStuckCooldown > 0) this.huntStuckCooldown--;
+    if (this.huntStuckCooldown <= 0 && this.huntStuck) {
+      this.huntStuck = false;
+      this.huntPosHistory = [];
+      this.huntWithoutProgressTicks = 0;
+    }
 
     const logDecision = (decision: string, details?: any) => {
       logger?.logBotDecision(player.id, player.username, decision, { pos, ...details });
@@ -351,6 +428,7 @@ export class BotAI {
       );
       if (ownRemoteBombs.length > 0) {
         let enemyInBlast = false;
+        let enemyInBlastShielded = false;
         for (const bomb of ownRemoteBombs) {
           for (const { dx, dy } of Object.values(DIR_DELTA)) {
             for (let i = 0; i <= bomb.fireRange; i++) {
@@ -366,7 +444,9 @@ export class BotAI {
                   other.position.x === cx &&
                   other.position.y === cy
                 ) {
+                  if (other.invulnerableTicks > 0) continue;
                   enemyInBlast = true;
+                  if (other.hasShield) enemyInBlastShielded = true;
                 }
               }
               if (enemyInBlast) break;
@@ -375,6 +455,26 @@ export class BotAI {
           }
           if (enemyInBlast) break;
         }
+
+        // Proximity check: enemy within manhattan distance 2 of any remote bomb
+        let enemyNearBomb = false;
+        if (!enemyInBlast) {
+          for (const bomb of ownRemoteBombs) {
+            for (const other of state.players.values()) {
+              if (other.id !== player.id && other.alive && other.invulnerableTicks <= 0) {
+                const dist =
+                  Math.abs(other.position.x - bomb.position.x) +
+                  Math.abs(other.position.y - bomb.position.y);
+                if (dist <= 2) {
+                  enemyNearBomb = true;
+                  break;
+                }
+              }
+            }
+            if (enemyNearBomb) break;
+          }
+        }
+
         // Self-damage check: don't detonate if the bot is in its own blast zone
         let selfInBlast = false;
         if (!player.hasShield) {
@@ -402,11 +502,34 @@ export class BotAI {
           }
         }
 
+        // Track hold time when at max bombs (Fix B)
+        if (ownRemoteBombs.length >= player.maxBombs) {
+          this.remoteBombHoldTicks++;
+        } else {
+          this.remoteBombHoldTicks = 0;
+        }
+
+        // Shield-aware sacrifice: detonate even when selfInBlast if bot has shield and enemy doesn't
+        const shieldSacrifice =
+          enemyInBlast && selfInBlast && player.hasShield && !enemyInBlastShielded;
+
         const shouldDetonate =
           (enemyInBlast && !selfInBlast) ||
-          (ownRemoteBombs.length >= player.maxBombs && !selfInBlast);
+          shieldSacrifice ||
+          enemyNearBomb ||
+          (ownRemoteBombs.length >= player.maxBombs &&
+            !selfInBlast &&
+            (this.remoteBombHoldTicks >= this.config.remoteHoldThreshold ||
+              this.stalemateActive));
+
         if (shouldDetonate) {
-          logDecision('detonate_remote', { count: ownRemoteBombs.length, enemyInBlast });
+          this.remoteBombHoldTicks = 0;
+          logDecision('detonate_remote', {
+            count: ownRemoteBombs.length,
+            enemyInBlast,
+            enemyNearBomb,
+            shieldSacrifice,
+          });
           return { seq: this.seq, direction: null, action: 'detonate', tick: state.tick };
         }
       }
@@ -434,9 +557,10 @@ export class BotAI {
           walkableDirs++;
         }
       }
-      const minWalkableDirs = player.fireRange >= 5 ? 3 : 2;
+      const minWalkableDirs = this.stalemateActive ? 1 : player.fireRange >= 5 ? 3 : 2;
 
       const canEscape =
+        this.stalemateActive ||
         (this.config.shieldAggression && player.hasShield) ||
         (walkableDirs >= minWalkableDirs &&
           !this.hasOwnBombNearby(pos, state, player) &&
@@ -472,9 +596,35 @@ export class BotAI {
         }
 
         if (this.isEnemyInBlastRange(pos, state, player)) {
-          this.bombCooldown = cdMin + Math.floor(Math.random() * (cdMax - cdMin));
-          logDecision('bomb_offensive', { cooldown: this.bombCooldown });
-          return { seq: this.seq, direction: null, action: 'bomb', tick: state.tick };
+          // During stalemate, skip bombing invulnerable enemies (post-shield-break)
+          let hasVulnerableTarget = true;
+          if (this.stalemateActive) {
+            hasVulnerableTarget = false;
+            for (const { dx, dy } of Object.values(DIR_DELTA)) {
+              for (let i = 1; i <= player.fireRange + 1; i++) {
+                const cx = pos.x + dx * i;
+                const cy = pos.y + dy * i;
+                const tile = state.collisionSystem.getTileAt(cx, cy);
+                if (tile === 'wall' || (isDestructibleTile(tile) && !player.hasPierceBomb)) break;
+                for (const other of state.players.values()) {
+                  if (
+                    other.id !== player.id &&
+                    other.alive &&
+                    other.position.x === cx &&
+                    other.position.y === cy &&
+                    other.invulnerableTicks <= 0
+                  ) {
+                    hasVulnerableTarget = true;
+                  }
+                }
+              }
+            }
+          }
+          if (hasVulnerableTarget) {
+            this.bombCooldown = cdMin + Math.floor(Math.random() * (cdMax - cdMin));
+            logDecision('bomb_offensive', { cooldown: this.bombCooldown });
+            return { seq: this.seq, direction: null, action: 'bomb', tick: state.tick };
+          }
         }
 
         if (this.isNearDestructible(pos, state)) {
@@ -532,94 +682,196 @@ export class BotAI {
       this.huntLockTicks > 0 || lateGame || Math.random() < effectiveHuntChance;
 
     if (shouldHunt) {
-      // When close to an enemy (≤3 tiles), try bombing BEFORE moving
-      if (nearestEnemyDist !== null && nearestEnemyDist <= 3) {
-        if (
-          this.bombCooldown <= 0 &&
-          player.canPlaceBomb() &&
-          !this.hasOwnBombNearby(pos, state, player) &&
-          this.isEnemyInBlastRange(pos, state, player)
-        ) {
-          const canEscapeBomb =
-            !this.config.escapeCheckBeforeBomb ||
-            this.canEscapeAfterBomb(pos, state, player, bombPositions, otherPlayers, explosionCells);
-          if (canEscapeBomb) {
-            this.bombCooldown =
-              this.config.bombCooldownMin +
-              Math.floor(
-                Math.random() * (this.config.bombCooldownMax - this.config.bombCooldownMin),
-              );
-            logDecision('bomb_hunt', { cooldown: this.bombCooldown, enemyDist: nearestEnemyDist });
-            return { seq: this.seq, direction: null, action: 'bomb', tick: state.tick };
+      // Hunt oscillation detection (Fix C): detect stuck hunting patterns
+      if (this.config.huntStuckMaxTicks > 0 && !this.huntStuck) {
+        // Reset on kill progress
+        if (player.kills > this.lastHuntKills) {
+          this.huntWithoutProgressTicks = 0;
+          this.huntPosHistory = [];
+          this.lastHuntKills = player.kills;
+        }
+        // Detect oscillation by checking unique positions in hunt history
+        if (this.huntPosHistory.length >= 8) {
+          const uniquePositions = new Set(this.huntPosHistory).size;
+          if (uniquePositions <= this.config.huntStuckThreshold) {
+            this.huntStuck = true;
+            this.huntStuckCooldown = 30;
+            this.huntLockTicks = 0;
+            logDecision('hunt_stuck', { uniquePositions, ticks: this.huntWithoutProgressTicks });
           }
+        }
+        // Detect prolonged hunting without kills
+        if (!this.huntStuck && this.huntWithoutProgressTicks >= this.config.huntStuckMaxTicks) {
+          this.huntStuck = true;
+          this.huntStuckCooldown = 30;
+          this.huntLockTicks = 0;
+          logDecision('hunt_stuck_timeout', { ticks: this.huntWithoutProgressTicks });
         }
       }
 
-      const huntDir = this.findHuntDirection(
-        pos,
-        state,
-        player,
-        danger,
-        bombPositions,
-        otherPlayers,
-        lateGame || this.huntLockTicks > 0,
-        explosionCells,
-      );
-      if (huntDir) {
-        this.lastDirection = huntDir;
-        this.wasHunting = true;
-        // Lock into hunt mode for 15 ticks so we don't lose target
-        this.huntLockTicks = 15;
-        logger?.logBotPathfinding(
-          player.id,
-          player.username,
-          'hunt_bfs',
-          this.config.huntSearchDepth,
-          null,
-        );
-        logDecision('hunt', { dir: huntDir, locked: this.huntLockTicks, lateGame });
-        return { seq: this.seq, direction: huntDir, action: null, tick: state.tick };
-      }
-      // Hunt BFS found no path — try continuing in last direction briefly
-      this.huntLockTicks = 0;
-      if (this.wasHunting && !lateGame) {
-        const continuePos = state.collisionSystem.canMoveTo(
-          pos.x,
-          pos.y,
-          this.lastDirection,
-          bombPositions,
-          otherPlayers,
-        );
-        if (continuePos && !danger.has(`${continuePos.x},${continuePos.y}`)) {
-          logDecision('hunt_persist', { dir: this.lastDirection });
-          this.wasHunting = false;
-          return { seq: this.seq, direction: this.lastDirection, action: null, tick: state.tick };
+      if (this.huntStuck) {
+        // When hunt-stuck, force wall-bombing / seek_wall toward enemy
+        if (
+          this.bombCooldown <= 0 &&
+          player.canPlaceBomb() &&
+          player.canMove() &&
+          this.isNearDestructible(pos, state)
+        ) {
+          const wallDir = this.findWallTowardEnemy(pos, state, player, bombPositions, otherPlayers);
+          if (wallDir) {
+            const canEscapeWall =
+              !this.config.escapeCheckBeforeBomb ||
+              this.canEscapeAfterBomb(
+                pos,
+                state,
+                player,
+                bombPositions,
+                otherPlayers,
+                explosionCells,
+              );
+            if (canEscapeWall) {
+              this.bombCooldown = this.config.bombCooldownMin;
+              logDecision('bomb_wall_hunt_stuck', { dir: wallDir });
+              return { seq: this.seq, direction: null, action: 'bomb', tick: state.tick };
+            }
+          }
         }
-      }
-      this.wasHunting = false;
-      if (
-        lateGame &&
-        nearestEnemyDist !== null &&
-        this.bombCooldown <= 0 &&
-        player.canPlaceBomb() &&
-        player.canMove() &&
-        !this.hasOwnBombNearby(pos, state, player)
-      ) {
-        const bombPathDir = this.findWallTowardEnemy(
+        // Try seek_wall toward enemy
+        const stuckWallDir = this.findDestructibleWallDirection(
           pos,
           state,
           player,
+          danger,
           bombPositions,
           otherPlayers,
         );
-        if (bombPathDir) {
-          const canEscapePath =
-            !this.config.escapeCheckBeforeBomb ||
-            this.canEscapeAfterBomb(pos, state, player, bombPositions, otherPlayers, explosionCells);
-          if (canEscapePath) {
-            this.bombCooldown = this.config.bombCooldownMin;
-            logDecision('bomb_path', { dir: bombPathDir });
-            return { seq: this.seq, direction: null, action: 'bomb', tick: state.tick };
+        if (stuckWallDir) {
+          this.lastDirection = stuckWallDir;
+          logDecision('seek_wall_hunt_stuck', { dir: stuckWallDir });
+          return { seq: this.seq, direction: stuckWallDir, action: null, tick: state.tick };
+        }
+        // No destructible walls between bots — fall through to roam/wander
+        logDecision('hunt_stuck_no_walls');
+      } else {
+        // Normal hunt logic
+        // When close to an enemy, try bombing BEFORE moving
+        const huntBombDist = this.stalemateActive ? 5 : 3;
+        if (nearestEnemyDist !== null && nearestEnemyDist <= huntBombDist) {
+          if (
+            this.bombCooldown <= 0 &&
+            player.canPlaceBomb() &&
+            (this.stalemateActive || !this.hasOwnBombNearby(pos, state, player)) &&
+            this.isEnemyInBlastRange(pos, state, player)
+          ) {
+            const canEscapeBomb =
+              this.stalemateActive ||
+              !this.config.escapeCheckBeforeBomb ||
+              this.canEscapeAfterBomb(
+                pos,
+                state,
+                player,
+                bombPositions,
+                otherPlayers,
+                explosionCells,
+              );
+            if (canEscapeBomb) {
+              this.bombCooldown =
+                this.config.bombCooldownMin +
+                Math.floor(
+                  Math.random() * (this.config.bombCooldownMax - this.config.bombCooldownMin),
+                );
+              logDecision('bomb_hunt', {
+                cooldown: this.bombCooldown,
+                enemyDist: nearestEnemyDist,
+              });
+              return { seq: this.seq, direction: null, action: 'bomb', tick: state.tick };
+            }
+          }
+        }
+
+        const huntDir = this.findHuntDirection(
+          pos,
+          state,
+          player,
+          danger,
+          bombPositions,
+          otherPlayers,
+          lateGame || this.huntLockTicks > 0,
+          explosionCells,
+        );
+        if (huntDir) {
+          // Track hunt position for oscillation detection (Fix C)
+          this.huntPosHistory.push(posKey);
+          if (this.huntPosHistory.length > 10) this.huntPosHistory.shift();
+          this.huntWithoutProgressTicks++;
+
+          this.lastDirection = huntDir;
+          this.wasHunting = true;
+          // Lock into hunt mode for 15 ticks so we don't lose target
+          this.huntLockTicks = 15;
+          logger?.logBotPathfinding(
+            player.id,
+            player.username,
+            'hunt_bfs',
+            this.config.huntSearchDepth,
+            null,
+          );
+          logDecision('hunt', { dir: huntDir, locked: this.huntLockTicks, lateGame });
+          return { seq: this.seq, direction: huntDir, action: null, tick: state.tick };
+        }
+        // Hunt BFS found no path — try continuing in last direction briefly
+        this.huntLockTicks = 0;
+        if (this.wasHunting && !lateGame) {
+          const continuePos = state.collisionSystem.canMoveTo(
+            pos.x,
+            pos.y,
+            this.lastDirection,
+            bombPositions,
+            otherPlayers,
+          );
+          if (continuePos && !danger.has(`${continuePos.x},${continuePos.y}`)) {
+            logDecision('hunt_persist', { dir: this.lastDirection });
+            this.wasHunting = false;
+            return {
+              seq: this.seq,
+              direction: this.lastDirection,
+              action: null,
+              tick: state.tick,
+            };
+          }
+        }
+        this.wasHunting = false;
+        if (
+          lateGame &&
+          nearestEnemyDist !== null &&
+          this.bombCooldown <= 0 &&
+          player.canPlaceBomb() &&
+          player.canMove() &&
+          !this.hasOwnBombNearby(pos, state, player)
+        ) {
+          const bombPathDir = this.findWallTowardEnemy(
+            pos,
+            state,
+            player,
+            bombPositions,
+            otherPlayers,
+          );
+          if (bombPathDir) {
+            const canEscapePath =
+              !this.config.escapeCheckBeforeBomb ||
+              this.canEscapeAfterBomb(
+                pos,
+                state,
+                player,
+                bombPositions,
+                otherPlayers,
+                explosionCells,
+              );
+            if (canEscapePath) {
+              this.bombCooldown = this.config.bombCooldownMin;
+              logDecision('bomb_path', { dir: bombPathDir });
+              return { seq: this.seq, direction: null, action: 'bomb', tick: state.tick };
+            }
           }
         }
       }
@@ -1251,8 +1503,8 @@ export class BotAI {
       }
       visited.add(key);
       if (enemyPositions.has(key)) return dir;
-      // In aggressive mode, skip oscillation filter
-      if (aggressive || !this.wouldOscillate(newPos)) {
+      // In aggressive mode, skip oscillation filter (but not when hunt-stuck)
+      if ((aggressive && !this.huntStuck) || !this.wouldOscillate(newPos)) {
         frontier.push({ pos: newPos, firstDir: dir });
       }
     }

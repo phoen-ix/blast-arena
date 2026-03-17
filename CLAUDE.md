@@ -155,8 +155,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - BotAI easy difficulty mistakes: `wrongMoveChance` (25%) flees in wrong direction; `randomBombChance` (12%) places unsafe bombs bypassing all safety checks
 - BotAI trapped behavior: when completely stuck in danger with no movement options, bots accept their fate instead of placing bombs to blow open walls (removed `stuck_bomb` — unfair escape from player traps)
 - BotAI easy difficulty: huntChance=0.15, bombCooldown=45-80, escapeSearchDepth=2, reactionDelay=5, wrongMoveChance=0.25, randomBombChance=0.12
-- BotAI normal difficulty: huntChance=0.85, bombCooldown=20-35, escapeSearchDepth=8, dangerTimerThreshold=40, roamAfterIdleTicks=60 (data-driven tuning from 5000+ simulation games)
-- BotAI hard difficulty: huntChance=0.95, bombCooldown=5-12, escapeSearchDepth=15, chainReactionAwareness=true, shieldAggression=true, lateGameBombCooldown=3-6, huntSearchDepth=40
+- BotAI normal difficulty: huntChance=0.85, bombCooldown=20-35, escapeSearchDepth=8, dangerTimerThreshold=40, roamAfterIdleTicks=60, huntStuckThreshold=3, huntStuckMaxTicks=60, stalemateThresholdTicks=100, remoteHoldThreshold=40
+- BotAI hard difficulty: huntChance=0.95, bombCooldown=5-12, escapeSearchDepth=15, chainReactionAwareness=true, shieldAggression=true, lateGameBombCooldown=3-6, huntSearchDepth=40, huntStuckMaxTicks=40, stalemateThresholdTicks=60, remoteHoldThreshold=60
 - Self-kills subtract 1 from kill score (owner.kills decremented, owner.selfKills incremented)
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished' to show final explosions; winner is invulnerable during grace period
@@ -170,7 +170,10 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - `tickEvents` buffer on GameStateManager accumulates per-tick events (explosions, deaths, power-up pickups) for fine-grained socket emission in GameRoom
 - Chain reaction tile snapshot: before processing detonations, tiles are snapshotted so chained bombs calculate blast cells against original wall layout (prevents blasts going through walls destroyed by earlier bombs in the same tick)
 - Shield has no time limit — lasts until consumed by an explosion. After shield breaks, player gets 10 ticks of invulnerability to escape the explosion area. Extra shield pickups are consumed but don't stack.
-- BotAI detonates remote bombs when an enemy is in their blast zone, or when all bomb slots are full (priority 2.5 in decision tree); self-damage safety check prevents detonation when bot is in its own bombs' blast zone (skipped if bot has shield)
+- BotAI detonates remote bombs when enemy is in blast zone, near a bomb (manhattan ≤2), or after hold threshold at max bombs (priority 2.5); shield-aware sacrifice detonates even when selfInBlast if bot has shield and enemy doesn't; self-damage check skipped if bot has shield; invulnerable enemies (post-shield-break) are ignored
+- BotAI strategic remote hold (Fix B): instead of immediate detonation when bomb slots full, bots hold for `remoteHoldThreshold` ticks (easy=20, normal=40, hard=60) before detonating — prevents wasteful fire-and-forget; `stalemateActive` overrides the hold
+- BotAI shield stalemate breaker (Fix A): detects mutual shielded bombing loops (both players shielded, within 8 tiles, no kills, late game or ≤2 alive); after threshold ticks (normal=100, hard=60) activates `stalemateActive` — bypasses `canEscapeAfterBomb`, reduces `minWalkableDirs` to 1, increases `bomb_hunt` distance to 5, skips `hasOwnBombNearby`; skips bombing invulnerable enemies
+- BotAI hunt oscillation detector (Fix C): tracks `huntPosHistory` (last 10 hunt positions) and `huntWithoutProgressTicks`; triggers `huntStuck` when ≤`huntStuckThreshold` unique positions in 8+ entries OR `huntWithoutProgressTicks ≥ huntStuckMaxTicks` (normal=60, hard=40); when stuck, forces `bomb_wall`/`seek_wall` toward enemy for 30-tick cooldown then retries hunt; fixes aggressive mode oscillation bypass (`findHuntDirection` respects `huntStuck` flag)
 - Game over screen shows context message (e.g., "Time's up!", "PlayerX is the last survivor!", "Draw — no survivors!")
 - Game start transitions instantly to game scene; room:start guard checks both GameRoom existence and room status to prevent duplicate starts
 - "Back to Lobby" from game over clears currentRoom registry to prevent stale room UI
