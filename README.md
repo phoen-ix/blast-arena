@@ -125,10 +125,12 @@ Bots use BFS for escape routes, power-up seeking, and enemy hunting with configu
 ## Spectator Mode
 
 When eliminated, players can:
-- Pan the camera freely with WASD / Arrow Keys / D-Pad
+- Pan the camera freely with WASD / Arrow Keys / D-Pad / mouse drag
 - Click a player name in the HUD player list to follow them
 - Press `1`-`9` to follow the Nth alive player
 - Use LB/RB gamepad bumpers to cycle between alive players
+
+Spectator controls also work when watching simulations or replays, including click-to-follow and mouse drag panning.
 
 ## Admin Panel
 
@@ -295,7 +297,7 @@ The UI uses the **INFERNO** design system — a high-energy arcade-industrial ae
 Every completed game is automatically recorded for admin review:
 
 - **Full recording**: Every tick's game state saved as gzipped JSON in `./data/replays/`
-- **Video player controls**: Play/pause (click canvas or Space), seek slider, speed (0.5x / 1x / 2x / 4x), skip forward/back (arrow keys). Playback synced to Phaser's render loop for accurate timing
+- **Video player controls**: Play/pause (click canvas or Space), seek slider, speed (0.5x / 1x / 2x / 4x), skip forward/back (arrow keys), mouse drag to pan camera. Arrow keys are reserved for timeline control in replay mode; use WASD or mouse drag to pan
 - **Live game log panel**: Collapsible side panel showing kills, bombs, bot decisions, power-ups in sync with replay playback. Filter by event type, click any entry to seek to that moment
 - **Admin access**: Matches tab → click match → "Watch Replay" button. Shows all players including bots
 - **Space efficient**: Tile diffs instead of full map per frame, gzip compression (~400-700KB per game)

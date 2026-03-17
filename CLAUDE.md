@@ -85,7 +85,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Admin-only batch simulation runner for bot-only games — no human players, no DB records
 - **SimulationsTab** in admin panel: configure game mode, bot count/difficulty, map size, round time, total games (1-1000), speed, log verbosity, all power-up/map options
 - **Two speed modes**: Fast (ticks as fast as possible via `setImmediate` batching, ~100 ticks/yield) and Real-time (20 tps like normal games)
-- **Live spectating**: Real-time mode auto-launches GameScene in spectator mode; Fast mode streams state at ~20fps via capped interval
+- **Live spectating**: Real-time mode auto-launches GameScene in spectator mode with click-to-follow and mouse drag panning; Fast mode streams state at ~20fps via capped interval
 - GameScene handles `sim:state` events for rendering, `sim:gameTransition` for between-game scene restarts, `sim:completed` for returning to lobby
 - **Log directory structure**: `data/simulations/{gameMode}/batch_{timestamp}_{batchId}/` with per-game `sim_NNN.jsonl` files, `batch_config.json`, and `batch_summary.json`
 - **Log verbosity levels**: Normal (5-tick snapshots), Detailed (2-tick + movements + pickups), Full (every tick + explosion detail + bot pathfinding)
@@ -160,9 +160,11 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Self-kills subtract 1 from kill score (owner.kills decremented, owner.selfKills incremented)
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished' to show final explosions; winner is invulnerable during grace period
-- Dead players enter spectator mode with free camera pan (WASD/arrows/D-pad), click-to-follow on HUD player list, number keys 1-9, or LB/RB gamepad bumpers
-- Spectate-follow breaks only on new keydown (not stale keysDown state); blur handler clears keysDown to prevent stuck keys
+- Dead players enter spectator mode with free camera pan (WASD/arrows/D-pad/mouse drag), click-to-follow on HUD player list, number keys 1-9, or LB/RB gamepad bumpers
+- Mouse drag panning: pointerdown records start, pointermove after 4px threshold pans freeCam and clears spectateTargetId; pointerup without drag triggers replay play/pause toggle
+- Spectate-follow breaks only on new keydown or mouse drag (not stale keysDown state); blur handler clears keysDown to prevent stuck keys
 - HUD spectate click uses mousedown event delegation on stable container (not click, which is unreliable with innerHTML rebuilds)
+- HUDScene forces `localPlayerDead = true` when `simulationSpectate` or `replayMode` registry flags are set, enabling click-to-follow from the first frame
 - Camera follows local player with smooth lerp when map exceeds viewport
 - Room name auto-generated if left blank (random adjective + noun)
 - Play Again: room:restart socket event resets room to 'waiting' so all players can rematch; other players auto-navigate via room:state listener
@@ -215,7 +217,7 @@ MatchConfig includes: gameMode, maxPlayers, mapWidth/Height, mapSeed, roundTime,
 - Admin API: `GET /admin/replays` (list), `GET /admin/replays/:matchId` (fetch), `DELETE /admin/replays/:matchId` (delete)
 - Match detail modal shows "Watch Replay" button when `hasReplay: true`
 - `ReplayPlayer` (frontend) manages playback: play/pause, speed (0.5x/1x/2x/4x), seek to any frame. Uses Phaser-synced time accumulator (`tick(deltaMs)`) instead of `setInterval` to prevent drift/fast-forward; frame bounds-checked before access
-- `ReplayControls` — video-player-like bottom bar with slider, time display, speed selector, keyboard shortcuts (Space=play/pause, arrows=skip)
+- `ReplayControls` — video-player-like bottom bar with slider, time display, speed selector, keyboard shortcuts (Space=play/pause, arrows=skip). Arrow keys reserved for timeline in replay mode (GameScene skips them); WASD/mouse drag used for camera pan
 - `ReplayLogPanel` — collapsible right-side panel showing game events synced to replay time, with filters by event type (kills, bombs, bot AI, powerups, movement), clickable timestamps for seeking
 - GameScene detects `registry.get('replayMode')` and uses ReplayPlayer instead of socket events; clicking the game canvas toggles play/pause
 - EffectSystem has `triggerExplosion()`/`triggerPlayerDied()` public methods for replay mode (bypasses socket listeners)

@@ -61,6 +61,9 @@ export class GameScene extends Phaser.Scene {
   private boundKeyDown: ((e: KeyboardEvent) => void) | null = null;
   private boundKeyUp: ((e: KeyboardEvent) => void) | null = null;
   private boundBlur: (() => void) | null = null;
+  private isDragging: boolean = false;
+  private dragStartX: number = 0;
+  private dragStartY: number = 0;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -85,6 +88,7 @@ export class GameScene extends Phaser.Scene {
     this.freeCamX = 0;
     this.freeCamY = 0;
     this.spectateTargetId = null;
+    this.isDragging = false;
     this.lastGameState = null;
     this.hasShownCountdown = false;
 
@@ -92,6 +96,7 @@ export class GameScene extends Phaser.Scene {
 
     this.events.once('shutdown', this.shutdown, this);
     this.installSpectatorListeners();
+    this.installMouseDragPan();
 
     // Setup Phaser input
     if (this.input.keyboard) {
@@ -167,12 +172,6 @@ export class GameScene extends Phaser.Scene {
         this.replayControls?.update();
       });
       this.replayLogPanel.mount();
-
-      // Click on game canvas to toggle play/pause
-      this.input.on('pointerdown', () => {
-        this.replayPlayer?.togglePlayPause();
-        this.replayControls?.update();
-      });
 
       // Emit first frame
       this.replayPlayer.seekTo(0);
@@ -495,11 +494,13 @@ export class GameScene extends Phaser.Scene {
       'KeyD',
     ];
     this.boundKeyDown = (e: KeyboardEvent) => {
+      const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code);
+
+      // In replay mode, arrow keys are reserved for timeline seek (ReplayControls)
+      if (this.replayPlayer && isArrow) return;
+
       this.keysDown.add(e.code);
-      if (
-        this.localPlayerDead &&
-        ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)
-      ) {
+      if (this.localPlayerDead && isArrow) {
         e.preventDefault();
       }
       if (this.localPlayerDead && panKeys.includes(e.code)) {
@@ -542,6 +543,46 @@ export class GameScene extends Phaser.Scene {
       this.boundBlur = null;
     }
     this.keysDown.clear();
+  }
+
+  private static readonly DRAG_THRESHOLD = 4;
+
+  private installMouseDragPan(): void {
+    this.isDragging = false;
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.localPlayerDead) return;
+      this.dragStartX = pointer.x;
+      this.dragStartY = pointer.y;
+      this.isDragging = false;
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!this.localPlayerDead || !pointer.isDown) return;
+
+      const dx = pointer.x - this.dragStartX;
+      const dy = pointer.y - this.dragStartY;
+
+      if (!this.isDragging) {
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < GameScene.DRAG_THRESHOLD) return;
+        this.isDragging = true;
+        this.spectateTargetId = null;
+      }
+
+      this.freeCamX -= pointer.x - pointer.prevPosition.x;
+      this.freeCamY -= pointer.y - pointer.prevPosition.y;
+    });
+
+    this.input.on('pointerup', () => {
+      if (!this.localPlayerDead) return;
+      // In replay mode, a click (no drag) toggles play/pause
+      if (!this.isDragging && this.replayPlayer) {
+        this.replayPlayer.togglePlayPause();
+        this.replayControls?.update();
+      }
+      this.isDragging = false;
+    });
   }
 
   private cleanupRenderers(): void {

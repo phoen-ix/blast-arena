@@ -43,6 +43,14 @@ export class HUDScene extends Phaser.Scene {
     const authManager = this.registry.get('authManager');
     this.localPlayerId = authManager.getUser()?.id ?? 0;
     this.localPlayerDead = false;
+
+    // Force spectator mode for simulation/replay viewers
+    const simSpectate = this.registry.get('simulationSpectate');
+    const replayMode = this.registry.get('replayMode');
+    if (simSpectate || replayMode) {
+      this.localPlayerDead = true;
+    }
+
     this.killFeedEntries = [];
     this.previousStats = null;
 
