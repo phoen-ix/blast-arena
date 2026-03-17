@@ -127,7 +127,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - BotAI: difficulty-aware (easy/normal/hard) with configurable awareness, aggression, escape depth, reaction delay, and kick usage
 - BotAI kick decisions gated on canMove() + kickCooldown to prevent kick spam (standing still retrying kicks for multiple ticks)
 - Bot difficulty set per-room via MatchConfig.botDifficulty; defaults to 'normal'; UI dropdown always visible but disabled when bots = 0
-- BotAI escape logic: BFS through danger cells to find nearest safe cell; canEscapeAfterBomb verifies immediate walkable neighbor AND BFS escape path
+- BotAI escape logic: BFS through danger cells to find nearest safe cell; active explosion cells (ticksRemaining > 3) are treated as impassable — never pathed through; canEscapeAfterBomb verifies immediate walkable+non-explosion neighbor AND BFS escape path with full danger awareness (ignoreDangerThreshold=true)
+- BotAI escape depth: dynamic `max(config.escapeSearchDepth, maxFireRangeOnMap + 2)` so high-range scenarios (Sudden Death) get adequate search depth
 - BotAI bomb safety: requires `player.canMove()` before placing bombs (prevents bombing during movement cooldown); dead-end check (`walkableDirs >= 2`); `hasOwnBombNearby()` prevents sandwich traps within `fireRange+1` tiles of own active bomb
 - BotAI movement decisions only run when player.canMove() to prevent oscillation between hunt/seek_wall
 - BotAI power-up seeking uses BFS pathfinding (not line-of-sight) so bots find power-ups around corners
@@ -135,15 +136,17 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - BotAI hunt persistence: `huntLockTicks` keeps bot hunting for 15 ticks after finding a path, preventing chain breaks from random huntChance gate
 - BotAI close-range bombing: `bomb_hunt` triggers when hunting within 3 tiles of enemy and enemy is in blast range
 - BotAI late-game aggression (>60% round time): always hunt (no random gate), always roam (no idle threshold), halved bomb cooldown, aggressive hunt mode skips escape/oscillation checks on BFS seed step
-- BotAI wall path-clearing: `bomb_path` (when hunt BFS fails) and `bomb_roam` (while roaming) actively bomb destructible walls toward nearest enemy via `findWallTowardEnemy()` heuristic
+- BotAI wall path-clearing: `bomb_path` (when hunt BFS fails) and `bomb_roam` (while roaming) actively bomb destructible walls toward nearest enemy via `findWallTowardEnemy()` heuristic; `bomb_roam` suppressed when oscillating (≤2 unique positions in last 4 moves)
 - BotAI roaming: tracks ticksSinceEnemyContact; after idle threshold (normal=5s, hard=3s) bot moves toward nearest enemy via manhattan heuristic
 - BotAI directional wall clearing: prefers breaking walls toward enemies rather than just the nearest wall
 - BotAI danger timer threshold: normal/hard bots ignore bombs with many ticks remaining (>30/40) unless within 2 tiles, reducing unnecessary fleeing from fresh bombs
 - BotAI KOTH hill-seeking: priority 4.5 in decision tree, bots navigate toward the 3x3 center zone using manhattan distance heuristic; once inside they stay put rather than wandering off
 - BotAI anti-oscillation: `orderedDirs()` helper iterates `lastDirection` first in all BFS seed steps; `posHistory` (last 4 positions) with `wouldOscillate()` check filters directions that revisit recent tiles; wander has 85% continuation probability and prefers non-oscillating candidates. `seek_wall` skips entirely when already adjacent to a destructible wall (prevents seek_wall↔wander ping-pong). `findDestructibleWallDirection` skips dead-end destinations (walkableDirs < 2) so bots aren't sent to positions where bomb_wall's safety check blocks them.
-- BotAI flee stuck-breaker: tracks `lastFleePos`/`fleeStuckTicks` — after 3 ticks stuck at same position while fleeing, tries alternative directions (logged as `flee_unstick`)
+- BotAI pierce-aware danger zones: `getDangerCells()`, `canEscapeAfterBomb()`, `isEnemyInBlastRange()`, and remote bomb detonation check all respect `bomb.isPierce`/`player.hasPierceBomb` — pierce bombs blast through destructible walls, matching `calculateExplosionCells()` in shared/
+- BotAI line bomb escape: `canEscapeAfterBomb()` simulates full line of bombs in facing direction (using available bomb capacity) instead of single bomb — danger zones computed for ALL future bomb positions
+- BotAI flee stuck-breaker: tracks `lastFleePos`/`fleeStuckTicks` — after 5 movable ticks (gated on `canMove()`) stuck at same position while fleeing, tries alternative directions with two-pass selection: prefer non-danger walkable directions, fall back to any walkable non-explosion direction (logged as `flee_unstick`)
 - BotAI trapped behavior: when completely stuck in danger with no movement options, bots accept their fate instead of placing bombs to blow open walls (removed `stuck_bomb` — unfair escape from player traps)
-- BotAI normal difficulty: huntChance=0.7, bombCooldown=25-45 ticks (data-driven tuning from 5000+ simulation games)
+- BotAI normal difficulty: huntChance=0.7, bombCooldown=25-45 ticks, escapeSearchDepth=8 (data-driven tuning from 5000+ simulation games)
 - Self-kills subtract 1 from kill score (owner.kills decremented, owner.selfKills incremented)
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished' to show final explosions; winner is invulnerable during grace period

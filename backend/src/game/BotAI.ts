@@ -49,7 +49,7 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
   },
   normal: {
     dangerAwareness: 99,
-    escapeSearchDepth: 5,
+    escapeSearchDepth: 8,
     bombCooldownMin: 25,
     bombCooldownMax: 45,
     escapeCheckBeforeBomb: true,
@@ -64,7 +64,7 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
   },
   hard: {
     dangerAwareness: 99,
-    escapeSearchDepth: 8,
+    escapeSearchDepth: 12,
     bombCooldownMin: 8,
     bombCooldownMax: 18,
     escapeCheckBeforeBomb: true,
@@ -98,6 +98,9 @@ export class BotAI {
   // Hunt persistence: once hunting, stay in hunt mode for several ticks
   private huntLockTicks: number = 0;
   private huntTargetId: number | null = null;
+
+  // Track max fire range seen on map for dynamic escape depth
+  private maxFireRangeOnMap: number = 0;
 
   constructor(difficulty: 'easy' | 'normal' | 'hard' = 'normal') {
     this.config = DIFFICULTY_PRESETS[difficulty];
@@ -154,6 +157,16 @@ export class BotAI {
       .filter((p) => p.id !== player.id && p.alive)
       .map((p) => p.position);
 
+    // Track max fire range on map for dynamic escape depth scaling
+    if (player.fireRange > this.maxFireRangeOnMap) {
+      this.maxFireRangeOnMap = player.fireRange;
+    }
+    for (const bomb of state.bombs.values()) {
+      if (bomb.fireRange > this.maxFireRangeOnMap) {
+        this.maxFireRangeOnMap = bomb.fireRange;
+      }
+    }
+
     // Track enemy proximity for roaming behavior
     const nearestEnemyDist = this.getNearestEnemyManhattan(pos, state, player);
     if (nearestEnemyDist !== null && nearestEnemyDist <= 8) {
@@ -202,24 +215,43 @@ export class BotAI {
       const escapeDir = this.findEscapeDirection(pos, state, danger, bombPositions, otherPlayers);
       if (escapeDir) {
         const posKey = `${pos.x},${pos.y}`;
-        // Detect stuck: same position for 3+ ticks — try alternative direction
-        if (posKey === this.lastFleePos) {
+        // Detect stuck: same position for 5+ movable ticks — try alternative direction
+        // Only count ticks where the bot can actually move (not during movement cooldown)
+        if (player.canMove() && this.lastFleePos && posKey === this.lastFleePos) {
           this.fleeStuckTicks++;
-          if (this.fleeStuckTicks >= 3) {
+          if (this.fleeStuckTicks >= 5) {
+            const unstickExplosions = this.getActiveExplosionCells(state);
+            // Two-pass: first try non-danger walkable directions, then any walkable
+            const safeDirs: Direction[] = [];
+            const anyDirs: Direction[] = [];
             for (const dir of DIRECTIONS) {
-              if (
-                dir !== escapeDir &&
-                state.collisionSystem.canMoveTo(pos.x, pos.y, dir, bombPositions, otherPlayers)
-              ) {
-                this.lastDirection = dir;
-                this.fleeStuckTicks = 0;
-                this.lastFleePos = null;
-                logDecision('flee_unstick', { dir });
-                return { seq: this.seq, direction: dir, action: null, tick: state.tick };
+              if (dir === escapeDir) continue;
+              const unstickPos = state.collisionSystem.canMoveTo(
+                pos.x,
+                pos.y,
+                dir,
+                bombPositions,
+                otherPlayers,
+              );
+              if (!unstickPos) continue;
+              const unstickKey = `${unstickPos.x},${unstickPos.y}`;
+              if (unstickExplosions.has(unstickKey)) continue;
+              anyDirs.push(dir);
+              if (!danger.has(unstickKey)) {
+                safeDirs.push(dir);
               }
             }
+            const candidates = safeDirs.length > 0 ? safeDirs : anyDirs;
+            if (candidates.length > 0) {
+              const dir = candidates[Math.floor(Math.random() * candidates.length)];
+              this.lastDirection = dir;
+              this.fleeStuckTicks = 0;
+              this.lastFleePos = null;
+              logDecision('flee_unstick', { dir });
+              return { seq: this.seq, direction: dir, action: null, tick: state.tick };
+            }
           }
-        } else {
+        } else if (!this.lastFleePos || posKey !== this.lastFleePos) {
           this.lastFleePos = posKey;
           this.fleeStuckTicks = 0;
         }
@@ -235,13 +267,29 @@ export class BotAI {
         return { seq: this.seq, direction: escapeDir, action: null, tick: state.tick };
       }
 
-      // Last resort: any movable direction (even into danger)
+      // Last resort: any movable direction, but prefer non-explosion cells
+      const explosionCells = this.getActiveExplosionCells(state);
+      let desperateDir: Direction | null = null;
       for (const dir of DIRECTIONS) {
-        if (state.collisionSystem.canMoveTo(pos.x, pos.y, dir, bombPositions, otherPlayers)) {
+        const newPos = state.collisionSystem.canMoveTo(
+          pos.x,
+          pos.y,
+          dir,
+          bombPositions,
+          otherPlayers,
+        );
+        if (!newPos) continue;
+        if (!explosionCells.has(`${newPos.x},${newPos.y}`)) {
           this.lastDirection = dir;
           logDecision('flee_desperate', { dir });
           return { seq: this.seq, direction: dir, action: null, tick: state.tick };
         }
+        if (!desperateDir) desperateDir = dir;
+      }
+      if (desperateDir) {
+        this.lastDirection = desperateDir;
+        logDecision('flee_desperate', { dir: desperateDir, intoExplosion: true });
+        return { seq: this.seq, direction: desperateDir, action: null, tick: state.tick };
       }
 
       // Completely stuck: accept fate (don't bomb out of traps — feels unfair to human players)
@@ -267,7 +315,7 @@ export class BotAI {
               const cy = bomb.position.y + dy * i;
               const tile = state.collisionSystem.getTileAt(cx, cy);
               if (tile === 'wall') break;
-              if (isDestructibleTile(tile) && i > 0) break;
+              if (isDestructibleTile(tile) && !bomb.isPierce && i > 0) break;
               for (const other of state.players.values()) {
                 if (
                   other.id !== player.id &&
@@ -442,7 +490,11 @@ export class BotAI {
         this.ticksSinceEnemyContact >= this.config.roamAfterIdleTicks)
     ) {
       // While roaming, bomb walls that block the path toward enemy
+      // Skip if oscillating (bouncing between ≤2 tiles) — bombing our own path is suicidal
+      const isOscillating =
+        this.posHistory.length >= 4 && new Set(this.posHistory).size <= 2;
       if (
+        !isOscillating &&
         this.bombCooldown <= 0 &&
         player.canPlaceBomb() &&
         player.canMove() &&
@@ -528,10 +580,28 @@ export class BotAI {
     return minDist;
   }
 
+  /**
+   * Get cells with active, damaging explosions. These kill on contact
+   * and must be treated as impassable in escape/movement BFS.
+   */
+  private getActiveExplosionCells(state: GameStateManager): Set<string> {
+    const cells = new Set<string>();
+    for (const exp of state.explosions.values()) {
+      // Match the damage check in GameState: ticksRemaining > 3 means still lethal
+      if (exp.ticksRemaining > 3) {
+        for (const cell of exp.cells) {
+          cells.add(`${cell.x},${cell.y}`);
+        }
+      }
+    }
+    return cells;
+  }
+
   private getDangerCells(
     state: GameStateManager,
     awarenessRange: number,
     botPos: Position,
+    ignoreDangerThreshold: boolean = false,
   ): Set<string> {
     const danger = new Set<string>();
 
@@ -547,6 +617,7 @@ export class BotAI {
       if (manhattanDist > awarenessRange) continue;
 
       if (
+        !ignoreDangerThreshold &&
         this.config.dangerTimerThreshold > 0 &&
         bomb.ticksRemaining > this.config.dangerTimerThreshold &&
         manhattanDist > 2
@@ -562,7 +633,7 @@ export class BotAI {
           const tile = state.collisionSystem.getTileAt(cx, cy);
           if (tile === 'wall') break;
           danger.add(`${cx},${cy}`);
-          if (isDestructibleTile(tile)) break;
+          if (isDestructibleTile(tile) && !bomb.isPierce) break;
         }
       }
     }
@@ -576,7 +647,10 @@ export class BotAI {
     danger: Set<string>,
     bombPositions: Position[],
     otherPlayers: Position[],
+    explosionCells?: Set<string>,
   ): Direction | null {
+    // Active explosion cells kill on contact — never path through them
+    const lethal = explosionCells ?? this.getActiveExplosionCells(state);
     const visited = new Set<string>();
     visited.add(`${pos.x},${pos.y}`);
     let frontier: { pos: Position; firstDir: Direction }[] = [];
@@ -593,11 +667,15 @@ export class BotAI {
       const key = `${newPos.x},${newPos.y}`;
       if (visited.has(key)) continue;
       visited.add(key);
+      if (lethal.has(key)) continue; // Never enter active explosions
       if (!danger.has(key)) return dir;
       frontier.push({ pos: newPos, firstDir: dir });
     }
 
-    for (let depth = 0; depth < this.config.escapeSearchDepth && frontier.length > 0; depth++) {
+    // Scale escape depth with fire range — high range needs deeper search
+    const escapeDepth = Math.max(this.config.escapeSearchDepth, this.maxFireRangeOnMap + 2);
+
+    for (let depth = 0; depth < escapeDepth && frontier.length > 0; depth++) {
       const next: { pos: Position; firstDir: Direction }[] = [];
       for (const entry of frontier) {
         for (const dir of DIRECTIONS) {
@@ -612,6 +690,7 @@ export class BotAI {
           const key = `${newPos.x},${newPos.y}`;
           if (visited.has(key)) continue;
           visited.add(key);
+          if (lethal.has(key)) continue; // Never enter active explosions
           if (!danger.has(key)) return entry.firstDir;
           next.push({ pos: newPos, firstDir: entry.firstDir });
         }
@@ -629,6 +708,7 @@ export class BotAI {
     bombPositions: Position[],
     otherPlayers: Position[],
   ): number {
+    const explosionCells = this.getActiveExplosionCells(state);
     const visited = new Set<string>();
     visited.add(`${pos.x},${pos.y}`);
     let frontier = [pos];
@@ -647,7 +727,7 @@ export class BotAI {
           );
           if (!newPos) continue;
           const key = `${newPos.x},${newPos.y}`;
-          if (visited.has(key)) continue;
+          if (visited.has(key) || explosionCells.has(key)) continue;
           visited.add(key);
           if (!danger.has(key)) {
             safeCount++;
@@ -667,7 +747,7 @@ export class BotAI {
         const cx = pos.x + dx * i;
         const cy = pos.y + dy * i;
         const tile = state.collisionSystem.getTileAt(cx, cy);
-        if (tile === 'wall' || isDestructibleTile(tile)) break;
+        if (tile === 'wall' || (isDestructibleTile(tile) && !player.hasPierceBomb)) break;
         for (const other of state.players.values()) {
           if (
             other.id !== player.id &&
@@ -696,25 +776,71 @@ export class BotAI {
     bombPositions: Position[],
     otherPlayers: Position[],
   ): boolean {
-    const futureBombPositions = [...bombPositions, pos];
-    const futureDanger = new Set(this.getDangerCells(state, 999, pos));
+    // Build future bomb positions — line bombs place multiple bombs in facing direction
+    const futureBombPositions = [...bombPositions];
+    if (player.hasLineBomb) {
+      const dir = player.direction || 'down';
+      const ddx = dir === 'right' ? 1 : dir === 'left' ? -1 : 0;
+      const ddy = dir === 'down' ? 1 : dir === 'up' ? -1 : 0;
+      const availableBombs = player.maxBombs - player.bombCount;
+      let placed = 0;
+      for (let i = 0; i < availableBombs; i++) {
+        const nx = pos.x + ddx * i;
+        const ny = pos.y + ddy * i;
+        const tile = state.collisionSystem.getTileAt(nx, ny);
+        if (!tile || tile === 'wall' || isDestructibleTile(tile)) break;
+        let hasBomb = false;
+        for (const b of state.bombs.values()) {
+          if (b.position.x === nx && b.position.y === ny) {
+            hasBomb = true;
+            break;
+          }
+        }
+        if (hasBomb || futureBombPositions.some((p) => p.x === nx && p.y === ny))
+          break;
+        futureBombPositions.push({ x: nx, y: ny });
+        placed++;
+      }
+      if (placed === 0) {
+        futureBombPositions.push(pos);
+      }
+    } else {
+      futureBombPositions.push(pos);
+    }
 
-    futureDanger.add(`${pos.x},${pos.y}`);
-    for (const { dx, dy } of Object.values(DIR_DELTA)) {
-      for (let i = 1; i <= player.fireRange; i++) {
-        const cx = pos.x + dx * i;
-        const cy = pos.y + dy * i;
-        const tile = state.collisionSystem.getTileAt(cx, cy);
-        if (tile === 'wall') break;
-        futureDanger.add(`${cx},${cy}`);
-        if (isDestructibleTile(tile)) break;
+    // ignoreDangerThreshold=true: escape check must see ALL bombs, not just nearby/imminent ones
+    const futureDanger = new Set(this.getDangerCells(state, 999, pos, true));
+
+    // Add danger cells for ALL future bomb positions (not just the player's position)
+    for (const bombPos of futureBombPositions) {
+      if (bombPositions.some((p) => p.x === bombPos.x && p.y === bombPos.y)) continue;
+      futureDanger.add(`${bombPos.x},${bombPos.y}`);
+      for (const { dx, dy } of Object.values(DIR_DELTA)) {
+        for (let i = 1; i <= player.fireRange; i++) {
+          const cx = bombPos.x + dx * i;
+          const cy = bombPos.y + dy * i;
+          const tile = state.collisionSystem.getTileAt(cx, cy);
+          if (tile === 'wall') break;
+          futureDanger.add(`${cx},${cy}`);
+          if (isDestructibleTile(tile) && !player.hasPierceBomb) break;
+        }
       }
     }
 
-    // Must have at least one immediate walkable neighbor (so we can step away next tick)
+    // Active explosions are lethal on contact — can't step into them
+    const explosionCells = this.getActiveExplosionCells(state);
+
+    // Must have at least one immediate neighbor that is walkable AND not an active explosion
     let canStepAway = false;
     for (const dir of DIRECTIONS) {
-      if (state.collisionSystem.canMoveTo(pos.x, pos.y, dir, futureBombPositions, otherPlayers)) {
+      const newPos = state.collisionSystem.canMoveTo(
+        pos.x,
+        pos.y,
+        dir,
+        futureBombPositions,
+        otherPlayers,
+      );
+      if (newPos && !explosionCells.has(`${newPos.x},${newPos.y}`)) {
         canStepAway = true;
         break;
       }
@@ -722,7 +848,14 @@ export class BotAI {
     if (!canStepAway) return false;
 
     return (
-      this.findEscapeDirection(pos, state, futureDanger, futureBombPositions, otherPlayers) !== null
+      this.findEscapeDirection(
+        pos,
+        state,
+        futureDanger,
+        futureBombPositions,
+        otherPlayers,
+        explosionCells,
+      ) !== null
     );
   }
 

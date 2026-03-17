@@ -101,9 +101,12 @@ AI bots fill empty slots and provide singleplayer/practice options. Three diffic
 Bots use BFS for escape routes, power-up seeking, and enemy hunting with configurable search depth. They prefer breaking walls toward opponents and actively path-clear in late game. Optimized through data-driven analysis of 5000+ simulation games:
 
 - **Bomb safety**: Dead-end detection, sandwich prevention, movement cooldown awareness, escape path verification
+- **Pierce bomb awareness**: Danger zone calculations correctly extend through destructible walls for pierce bombs — bots don't hide behind breakable walls thinking they're safe
+- **Line bomb awareness**: Escape validation simulates the full line of bombs (not just one) before placing, preventing self-traps from multi-bomb placement
 - **Hunt persistence**: Once a bot starts hunting an enemy, it stays locked on for 15 ticks instead of losing target every tick
 - **Late-game aggression**: After 60% of round time, bots always hunt, roam with no idle threshold, and clear walls faster (halved bomb cooldown)
 - **Anti-oscillation**: Position history tracking prevents bots from bouncing between the same tiles
+- **Smart flee recovery**: Flee stuck-breaker only triggers during movable ticks (ignores cooldown), prefers non-danger directions over random walkable ones
 - **KOTH awareness**: Bots navigate toward the hill zone and hold position once inside
 
 ## Teams
