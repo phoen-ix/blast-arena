@@ -1,4 +1,5 @@
 import { PlayerInput, Direction, Position, TileType } from '@blast-arena/shared';
+import { MOVE_COOLDOWN_BASE, BOMB_TIMER_TICKS } from '@blast-arena/shared';
 import { Player } from './Player';
 import { GameStateManager } from './GameState';
 import { GameLogger } from '../utils/gameLogger';
@@ -29,53 +30,77 @@ export interface BotDifficultyConfig {
   huntSearchDepth: number;
   dangerTimerThreshold: number;
   roamAfterIdleTicks: number;
+  wrongMoveChance: number;
+  randomBombChance: number;
+  chainReactionAwareness: boolean;
+  shieldAggression: boolean;
+  lateGameBombCooldownMin: number;
+  lateGameBombCooldownMax: number;
 }
 
 const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig> = {
   easy: {
     dangerAwareness: 'fireRange',
-    escapeSearchDepth: 3,
-    bombCooldownMin: 40,
-    bombCooldownMax: 70,
+    escapeSearchDepth: 2,
+    bombCooldownMin: 45,
+    bombCooldownMax: 80,
     escapeCheckBeforeBomb: false,
-    huntChance: 0.2,
-    powerUpVision: 2,
-    optimalMoveChance: 0.4,
+    huntChance: 0.15,
+    powerUpVision: 1,
+    optimalMoveChance: 0.35,
     useKick: false,
-    reactionDelay: 3,
-    huntSearchDepth: 10,
+    reactionDelay: 5,
+    huntSearchDepth: 6,
     dangerTimerThreshold: 0,
     roamAfterIdleTicks: 0,
+    wrongMoveChance: 0.25,
+    randomBombChance: 0.12,
+    chainReactionAwareness: false,
+    shieldAggression: false,
+    lateGameBombCooldownMin: 0,
+    lateGameBombCooldownMax: 0,
   },
   normal: {
     dangerAwareness: 99,
     escapeSearchDepth: 8,
-    bombCooldownMin: 25,
-    bombCooldownMax: 45,
+    bombCooldownMin: 20,
+    bombCooldownMax: 35,
     escapeCheckBeforeBomb: true,
-    huntChance: 0.7,
+    huntChance: 0.85,
     powerUpVision: 8,
     optimalMoveChance: 0.7,
     useKick: true,
     reactionDelay: 0,
     huntSearchDepth: 25,
-    dangerTimerThreshold: 30,
-    roamAfterIdleTicks: 100,
+    dangerTimerThreshold: 40,
+    roamAfterIdleTicks: 60,
+    wrongMoveChance: 0,
+    randomBombChance: 0,
+    chainReactionAwareness: false,
+    shieldAggression: false,
+    lateGameBombCooldownMin: 0,
+    lateGameBombCooldownMax: 0,
   },
   hard: {
     dangerAwareness: 99,
-    escapeSearchDepth: 12,
-    bombCooldownMin: 8,
-    bombCooldownMax: 18,
+    escapeSearchDepth: 15,
+    bombCooldownMin: 5,
+    bombCooldownMax: 12,
     escapeCheckBeforeBomb: true,
-    huntChance: 0.8,
-    powerUpVision: 12,
-    optimalMoveChance: 0.95,
+    huntChance: 0.95,
+    powerUpVision: 15,
+    optimalMoveChance: 0.98,
     useKick: true,
     reactionDelay: 0,
-    huntSearchDepth: 35,
-    dangerTimerThreshold: 40,
-    roamAfterIdleTicks: 60,
+    huntSearchDepth: 40,
+    dangerTimerThreshold: 50,
+    roamAfterIdleTicks: 40,
+    wrongMoveChance: 0,
+    randomBombChance: 0,
+    chainReactionAwareness: true,
+    shieldAggression: true,
+    lateGameBombCooldownMin: 3,
+    lateGameBombCooldownMax: 6,
   },
 };
 
@@ -98,6 +123,7 @@ export class BotAI {
   // Hunt persistence: once hunting, stay in hunt mode for several ticks
   private huntLockTicks: number = 0;
   private huntTargetId: number | null = null;
+  private wasHunting: boolean = false;
 
   // Track max fire range seen on map for dynamic escape depth
   private maxFireRangeOnMap: number = 0;
@@ -161,11 +187,6 @@ export class BotAI {
     if (player.fireRange > this.maxFireRangeOnMap) {
       this.maxFireRangeOnMap = player.fireRange;
     }
-    for (const bomb of state.bombs.values()) {
-      if (bomb.fireRange > this.maxFireRangeOnMap) {
-        this.maxFireRangeOnMap = bomb.fireRange;
-      }
-    }
 
     // Track enemy proximity for roaming behavior
     const nearestEnemyDist = this.getNearestEnemyManhattan(pos, state, player);
@@ -178,10 +199,14 @@ export class BotAI {
     const awarenessRange = this.getAwarenessRange(player.fireRange);
     const danger = this.getDangerCells(state, awarenessRange, pos);
     const amInDanger = danger.has(`${pos.x},${pos.y}`);
+    // Cache explosion cells once per tick — reused in escape, flee, and bomb placement logic
+    const explosionCells = this.getActiveExplosionCells(state);
 
-    // Late-game flag: after 60% of round time, bots become more aggressive
+    // Game phase system: mid-game (35%+) and late-game (60%+) for progressive aggression
     const timeElapsed = state.tick / 20; // TICK_RATE = 20
-    const lateGame = timeElapsed > (state.roundTime || 180) * 0.6;
+    const timeRatio = timeElapsed / (state.roundTime || 180);
+    const midGame = timeRatio >= 0.35;
+    const lateGame = timeRatio >= 0.6;
 
     const logDecision = (decision: string, details?: any) => {
       logger?.logBotDecision(player.id, player.username, decision, { pos, ...details });
@@ -197,7 +222,7 @@ export class BotAI {
     ) {
       const kickDir = this.findKickableBomb(pos, state, player);
       if (kickDir) {
-        this.kickCooldown = 3;
+        this.kickCooldown = 2;
         logDecision('kick', { dir: kickDir });
         return { seq: this.seq, direction: kickDir, action: null, tick: state.tick };
       }
@@ -212,15 +237,34 @@ export class BotAI {
         }
       }
 
-      const escapeDir = this.findEscapeDirection(pos, state, danger, bombPositions, otherPlayers);
-      if (escapeDir) {
+      const escapeResult = this.findEscapeDirection(
+        pos,
+        state,
+        danger,
+        bombPositions,
+        otherPlayers,
+        explosionCells,
+      );
+      if (escapeResult) {
+        let escapeDir = escapeResult.dir;
+
+        // Easy bots sometimes flee in wrong direction
+        if (this.config.wrongMoveChance > 0 && Math.random() < this.config.wrongMoveChance) {
+          const altDirs = DIRECTIONS.filter((d) => d !== escapeDir);
+          for (const d of altDirs.sort(() => Math.random() - 0.5)) {
+            if (state.collisionSystem.canMoveTo(pos.x, pos.y, d, bombPositions, otherPlayers)) {
+              escapeDir = d;
+              break;
+            }
+          }
+        }
+
         const posKey = `${pos.x},${pos.y}`;
         // Detect stuck: same position for 5+ movable ticks — try alternative direction
         // Only count ticks where the bot can actually move (not during movement cooldown)
         if (player.canMove() && this.lastFleePos && posKey === this.lastFleePos) {
           this.fleeStuckTicks++;
           if (this.fleeStuckTicks >= 5) {
-            const unstickExplosions = this.getActiveExplosionCells(state);
             // Two-pass: first try non-danger walkable directions, then any walkable
             const safeDirs: Direction[] = [];
             const anyDirs: Direction[] = [];
@@ -235,7 +279,7 @@ export class BotAI {
               );
               if (!unstickPos) continue;
               const unstickKey = `${unstickPos.x},${unstickPos.y}`;
-              if (unstickExplosions.has(unstickKey)) continue;
+              if (explosionCells.has(unstickKey)) continue;
               anyDirs.push(dir);
               if (!danger.has(unstickKey)) {
                 safeDirs.push(dir);
@@ -268,7 +312,6 @@ export class BotAI {
       }
 
       // Last resort: any movable direction, but prefer non-explosion cells
-      const explosionCells = this.getActiveExplosionCells(state);
       let desperateDir: Direction | null = null;
       for (const dir of DIRECTIONS) {
         const newPos = state.collisionSystem.canMoveTo(
@@ -370,30 +413,63 @@ export class BotAI {
     }
 
     // === PRIORITY 3: Bomb placement ===
+    // Random bomb placement for easy bots (before safety checks)
+    if (
+      this.config.randomBombChance > 0 &&
+      Math.random() < this.config.randomBombChance &&
+      this.bombCooldown <= 0 &&
+      player.canPlaceBomb()
+    ) {
+      this.bombCooldown = this.config.bombCooldownMax;
+      logDecision('bomb_random');
+      return { seq: this.seq, direction: null, action: 'bomb', tick: state.tick };
+    }
+
     // Don't place bombs if we can't move yet (cooldown) — we need to flee immediately after
     if (this.bombCooldown <= 0 && player.canPlaceBomb() && player.canMove()) {
-      // Dead-end check: don't bomb if only 0-1 walkable directions (trapped)
+      // Dead-end check: require more walkable dirs at high fire range
       let walkableDirs = 0;
       for (const dir of DIRECTIONS) {
         if (state.collisionSystem.canMoveTo(pos.x, pos.y, dir, bombPositions, otherPlayers)) {
           walkableDirs++;
         }
       }
+      const minWalkableDirs = player.fireRange >= 5 ? 3 : 2;
 
       const canEscape =
-        walkableDirs >= 2 &&
-        !this.hasOwnBombNearby(pos, state, player) &&
-        (!this.config.escapeCheckBeforeBomb ||
-          this.canEscapeAfterBomb(pos, state, player, bombPositions, otherPlayers));
+        (this.config.shieldAggression && player.hasShield) ||
+        (walkableDirs >= minWalkableDirs &&
+          !this.hasOwnBombNearby(pos, state, player) &&
+          (!this.config.escapeCheckBeforeBomb ||
+            this.canEscapeAfterBomb(
+              pos,
+              state,
+              player,
+              bombPositions,
+              otherPlayers,
+              explosionCells,
+            )));
 
       if (canEscape) {
-        // Late-game: halve bomb cooldown to clear walls faster
-        const cdMin = lateGame
-          ? Math.floor(this.config.bombCooldownMin / 2)
-          : this.config.bombCooldownMin;
-        const cdMax = lateGame
-          ? Math.floor(this.config.bombCooldownMax / 2)
-          : this.config.bombCooldownMax;
+        // Dynamic bomb cooldown based on game phase and proximity
+        const nearEnemy = nearestEnemyDist !== null && nearestEnemyDist <= 5;
+        let cdMin: number, cdMax: number;
+        if (lateGame) {
+          cdMin =
+            this.config.lateGameBombCooldownMin > 0
+              ? this.config.lateGameBombCooldownMin
+              : Math.floor(this.config.bombCooldownMin / 2);
+          cdMax =
+            this.config.lateGameBombCooldownMax > 0
+              ? this.config.lateGameBombCooldownMax
+              : Math.floor(this.config.bombCooldownMax / 2);
+        } else if (nearEnemy || midGame) {
+          cdMin = Math.floor(this.config.bombCooldownMin * 0.75);
+          cdMax = Math.floor(this.config.bombCooldownMax * 0.75);
+        } else {
+          cdMin = this.config.bombCooldownMin;
+          cdMax = this.config.bombCooldownMax;
+        }
 
         if (this.isEnemyInBlastRange(pos, state, player)) {
           this.bombCooldown = cdMin + Math.floor(Math.random() * (cdMax - cdMin));
@@ -412,6 +488,22 @@ export class BotAI {
     // === MOVEMENT DECISIONS: only when player can actually move ===
     if (!player.canMove()) return null;
 
+    // Priority 3.5: Offensive kick — push bombs toward enemies
+    if (
+      !amInDanger &&
+      player.hasKick &&
+      this.config.useKick &&
+      player.canMove() &&
+      this.kickCooldown <= 0
+    ) {
+      const offKick = this.findOffensiveKick(pos, state, player);
+      if (offKick) {
+        this.kickCooldown = 2;
+        logDecision('kick_offensive', { dir: offKick });
+        return { seq: this.seq, direction: offKick, action: null, tick: state.tick };
+      }
+    }
+
     // Priority 4: Move toward a power-up (BFS pathfinding)
     const powerUpDir = this.findPowerUpDirection(pos, state, danger, bombPositions, otherPlayers);
     if (powerUpDir) {
@@ -422,7 +514,7 @@ export class BotAI {
 
     // Priority 4.5: Move toward hill zone in KOTH mode
     if (state.hillZone) {
-      const hillDir = this.findHillZoneDirection(pos, state, danger, bombPositions, otherPlayers);
+      const hillDir = this.findHillZoneDirection(pos, state, danger, bombPositions, otherPlayers, explosionCells);
       if (hillDir) {
         this.lastDirection = hillDir;
         logDecision('seek_hill', { dir: hillDir });
@@ -433,7 +525,11 @@ export class BotAI {
     // Priority 5: Move toward nearest enemy (BFS pathfinding)
     // Hunt persistence: once hunting, keep hunting for 15 ticks before re-rolling
     if (this.huntLockTicks > 0) this.huntLockTicks--;
-    const shouldHunt = this.huntLockTicks > 0 || lateGame || Math.random() < this.config.huntChance;
+    const effectiveHuntChance = midGame
+      ? Math.min(this.config.huntChance + 0.1, 1)
+      : this.config.huntChance;
+    const shouldHunt =
+      this.huntLockTicks > 0 || lateGame || Math.random() < effectiveHuntChance;
 
     if (shouldHunt) {
       // When close to an enemy (≤3 tiles), try bombing BEFORE moving
@@ -446,7 +542,7 @@ export class BotAI {
         ) {
           const canEscapeBomb =
             !this.config.escapeCheckBeforeBomb ||
-            this.canEscapeAfterBomb(pos, state, player, bombPositions, otherPlayers);
+            this.canEscapeAfterBomb(pos, state, player, bombPositions, otherPlayers, explosionCells);
           if (canEscapeBomb) {
             this.bombCooldown =
               this.config.bombCooldownMin +
@@ -467,9 +563,11 @@ export class BotAI {
         bombPositions,
         otherPlayers,
         lateGame || this.huntLockTicks > 0,
+        explosionCells,
       );
       if (huntDir) {
         this.lastDirection = huntDir;
+        this.wasHunting = true;
         // Lock into hunt mode for 15 ticks so we don't lose target
         this.huntLockTicks = 15;
         logger?.logBotPathfinding(
@@ -482,8 +580,23 @@ export class BotAI {
         logDecision('hunt', { dir: huntDir, locked: this.huntLockTicks, lateGame });
         return { seq: this.seq, direction: huntDir, action: null, tick: state.tick };
       }
-      // Hunt BFS found no path — try bombing walls toward enemy to create a path
+      // Hunt BFS found no path — try continuing in last direction briefly
       this.huntLockTicks = 0;
+      if (this.wasHunting && !lateGame) {
+        const continuePos = state.collisionSystem.canMoveTo(
+          pos.x,
+          pos.y,
+          this.lastDirection,
+          bombPositions,
+          otherPlayers,
+        );
+        if (continuePos && !danger.has(`${continuePos.x},${continuePos.y}`)) {
+          logDecision('hunt_persist', { dir: this.lastDirection });
+          this.wasHunting = false;
+          return { seq: this.seq, direction: this.lastDirection, action: null, tick: state.tick };
+        }
+      }
+      this.wasHunting = false;
       if (
         lateGame &&
         nearestEnemyDist !== null &&
@@ -502,7 +615,7 @@ export class BotAI {
         if (bombPathDir) {
           const canEscapePath =
             !this.config.escapeCheckBeforeBomb ||
-            this.canEscapeAfterBomb(pos, state, player, bombPositions, otherPlayers);
+            this.canEscapeAfterBomb(pos, state, player, bombPositions, otherPlayers, explosionCells);
           if (canEscapePath) {
             this.bombCooldown = this.config.bombCooldownMin;
             logDecision('bomb_path', { dir: bombPathDir });
@@ -513,10 +626,12 @@ export class BotAI {
     }
 
     // Priority 5.5: Roam toward enemies when idle too long (or late game with no hunt path)
+    const effectiveIdleTicks = midGame
+      ? Math.floor(this.config.roamAfterIdleTicks / 2)
+      : this.config.roamAfterIdleTicks;
     if (
       lateGame ||
-      (this.config.roamAfterIdleTicks > 0 &&
-        this.ticksSinceEnemyContact >= this.config.roamAfterIdleTicks)
+      (effectiveIdleTicks > 0 && this.ticksSinceEnemyContact >= effectiveIdleTicks)
     ) {
       // While roaming, bomb walls that block the path toward enemy
       // Skip if oscillating (bouncing between ≤2 tiles) — bombing our own path is suicidal
@@ -540,7 +655,7 @@ export class BotAI {
         if (wallToward) {
           const canEscapeRoam =
             !this.config.escapeCheckBeforeBomb ||
-            this.canEscapeAfterBomb(pos, state, player, bombPositions, otherPlayers);
+            this.canEscapeAfterBomb(pos, state, player, bombPositions, otherPlayers, explosionCells);
           if (canEscapeRoam) {
             this.bombCooldown = this.config.bombCooldownMin;
             logDecision('bomb_roam', { dir: wallToward });
@@ -556,6 +671,7 @@ export class BotAI {
         danger,
         bombPositions,
         otherPlayers,
+        explosionCells,
       );
       if (roamDir) {
         this.lastDirection = roamDir;
@@ -567,6 +683,7 @@ export class BotAI {
     // Priority 6: Move toward nearest destructible wall
     // Skip if already adjacent to a destructible wall — stay put and wait for bomb cooldown
     // (moving away causes seek_wall <-> wander oscillation)
+    this.wasHunting = false;
     if (!this.isNearDestructible(pos, state)) {
       const wallDir = this.findDestructibleWallDirection(
         pos,
@@ -584,7 +701,7 @@ export class BotAI {
     }
 
     // Priority 7: Wander
-    const wanderDir = this.pickSafeWander(pos, state, danger, bombPositions, otherPlayers);
+    const wanderDir = this.pickSafeWander(pos, state, danger, bombPositions, otherPlayers, explosionCells);
     if (wanderDir) {
       this.lastDirection = wanderDir;
       logDecision('wander', { dir: wanderDir });
@@ -641,6 +758,10 @@ export class BotAI {
     }
 
     for (const bomb of state.bombs.values()) {
+      // Track max fire range while iterating bombs (avoids a separate pass)
+      if (bomb.fireRange > this.maxFireRangeOnMap) {
+        this.maxFireRangeOnMap = bomb.fireRange;
+      }
       const manhattanDist =
         Math.abs(bomb.position.x - botPos.x) + Math.abs(bomb.position.y - botPos.y);
       if (manhattanDist > awarenessRange) continue;
@@ -648,10 +769,12 @@ export class BotAI {
       if (
         !ignoreDangerThreshold &&
         this.config.dangerTimerThreshold > 0 &&
-        bomb.ticksRemaining > this.config.dangerTimerThreshold &&
-        manhattanDist > 2
+        bomb.ticksRemaining > this.config.dangerTimerThreshold
       ) {
-        continue;
+        // Dynamic safe distance: how far can bot move before detonation?
+        const movesAvailable = Math.floor(bomb.ticksRemaining / MOVE_COOLDOWN_BASE);
+        const safeDistance = Math.min(movesAvailable, bomb.fireRange + 2);
+        if (manhattanDist > safeDistance) continue;
       }
 
       danger.add(`${bomb.position.x},${bomb.position.y}`);
@@ -667,6 +790,25 @@ export class BotAI {
       }
     }
 
+    // Chain reaction awareness (hard difficulty): bombs in danger zones will chain-detonate
+    if (this.config.chainReactionAwareness) {
+      for (const bomb of state.bombs.values()) {
+        const bombKey = `${bomb.position.x},${bomb.position.y}`;
+        if (!danger.has(bombKey)) continue;
+        // Add blast cells for chain-reacting bombs
+        for (const { dx, dy } of Object.values(DIR_DELTA)) {
+          for (let i = 1; i <= bomb.fireRange; i++) {
+            const cx = bomb.position.x + dx * i;
+            const cy = bomb.position.y + dy * i;
+            const tile = state.collisionSystem.getTileAt(cx, cy);
+            if (tile === 'wall') break;
+            danger.add(`${cx},${cy}`);
+            if (isDestructibleTile(tile) && !bomb.isPierce) break;
+          }
+        }
+      }
+    }
+
     return danger;
   }
 
@@ -677,7 +819,7 @@ export class BotAI {
     bombPositions: Position[],
     otherPlayers: Position[],
     explosionCells?: Set<string>,
-  ): Direction | null {
+  ): { dir: Direction; depth: number } | null {
     // Active explosion cells kill on contact — never path through them
     const lethal = explosionCells ?? this.getActiveExplosionCells(state);
     const visited = new Set<string>();
@@ -697,12 +839,15 @@ export class BotAI {
       if (visited.has(key)) continue;
       visited.add(key);
       if (lethal.has(key)) continue; // Never enter active explosions
-      if (!danger.has(key)) return dir;
+      if (!danger.has(key)) return { dir, depth: 1 };
       frontier.push({ pos: newPos, firstDir: dir });
     }
 
     // Scale escape depth with fire range — high range needs deeper search
-    const escapeDepth = Math.max(this.config.escapeSearchDepth, this.maxFireRangeOnMap + 2);
+    const escapeDepth = Math.max(
+      this.config.escapeSearchDepth,
+      Math.ceil(this.maxFireRangeOnMap * 1.5) + 2,
+    );
 
     for (let depth = 0; depth < escapeDepth && frontier.length > 0; depth++) {
       const next: { pos: Position; firstDir: Direction }[] = [];
@@ -720,7 +865,7 @@ export class BotAI {
           if (visited.has(key)) continue;
           visited.add(key);
           if (lethal.has(key)) continue; // Never enter active explosions
-          if (!danger.has(key)) return entry.firstDir;
+          if (!danger.has(key)) return { dir: entry.firstDir, depth: depth + 2 };
           next.push({ pos: newPos, firstDir: entry.firstDir });
         }
       }
@@ -736,8 +881,9 @@ export class BotAI {
     danger: Set<string>,
     bombPositions: Position[],
     otherPlayers: Position[],
+    cachedExplosionCells?: Set<string>,
   ): number {
-    const explosionCells = this.getActiveExplosionCells(state);
+    const explosionCells = cachedExplosionCells ?? this.getActiveExplosionCells(state);
     const visited = new Set<string>();
     visited.add(`${pos.x},${pos.y}`);
     let frontier = [pos];
@@ -804,6 +950,7 @@ export class BotAI {
     player: Player,
     bombPositions: Position[],
     otherPlayers: Position[],
+    cachedExplosionCells?: Set<string>,
   ): boolean {
     // Build future bomb positions — line bombs place multiple bombs in facing direction
     const futureBombPositions = [...bombPositions];
@@ -856,8 +1003,24 @@ export class BotAI {
       }
     }
 
+    // Chain reaction danger: bombs caught in our blast will chain-detonate
+    for (const bomb of state.bombs.values()) {
+      const bombKey = `${bomb.position.x},${bomb.position.y}`;
+      if (!futureDanger.has(bombKey)) continue;
+      for (const { dx, dy } of Object.values(DIR_DELTA)) {
+        for (let i = 1; i <= bomb.fireRange; i++) {
+          const cx = bomb.position.x + dx * i;
+          const cy = bomb.position.y + dy * i;
+          const tile = state.collisionSystem.getTileAt(cx, cy);
+          if (tile === 'wall') break;
+          futureDanger.add(`${cx},${cy}`);
+          if (isDestructibleTile(tile) && !bomb.isPierce) break;
+        }
+      }
+    }
+
     // Active explosions are lethal on contact — can't step into them
-    const explosionCells = this.getActiveExplosionCells(state);
+    const explosionCells = cachedExplosionCells ?? this.getActiveExplosionCells(state);
 
     // Must have at least one immediate neighbor that is walkable AND not an active explosion
     let canStepAway = false;
@@ -876,16 +1039,24 @@ export class BotAI {
     }
     if (!canStepAway) return false;
 
-    return (
-      this.findEscapeDirection(
-        pos,
-        state,
-        futureDanger,
-        futureBombPositions,
-        otherPlayers,
-        explosionCells,
-      ) !== null
+    const escapeResult = this.findEscapeDirection(
+      pos,
+      state,
+      futureDanger,
+      futureBombPositions,
+      otherPlayers,
+      explosionCells,
     );
+    if (!escapeResult) return false;
+
+    // Time-to-safety check: can we reach the safe cell before the bomb goes off?
+    if (player.fireRange >= 4) {
+      const moveCooldown = Math.max(1, MOVE_COOLDOWN_BASE - (player.speed - 1));
+      const ticksToReach = escapeResult.depth * moveCooldown;
+      const bombTimer = BOMB_TIMER_TICKS;
+      if (ticksToReach >= bombTimer - 10) return false;
+    }
+    return true;
   }
 
   /**
@@ -980,6 +1151,7 @@ export class BotAI {
     danger: Set<string>,
     bombPositions: Position[],
     otherPlayers: Position[],
+    explosionCells?: Set<string>,
   ): Direction | null {
     const hill = state.hillZone;
     if (!hill) return null;
@@ -1015,6 +1187,7 @@ export class BotAI {
         danger,
         bombPositions,
         otherPlayers,
+        explosionCells,
       );
       if (escapeCount < 1) continue;
       const newDist = Math.abs(newPos.x - targetX) + Math.abs(newPos.y - targetY);
@@ -1040,6 +1213,7 @@ export class BotAI {
     bombPositions: Position[],
     otherPlayers: Position[],
     aggressive: boolean = false,
+    explosionCells?: Set<string>,
   ): Direction | null {
     const enemyPositions = new Set<string>();
     for (const other of state.players.values()) {
@@ -1119,6 +1293,7 @@ export class BotAI {
     danger: Set<string>,
     bombPositions: Position[],
     otherPlayers: Position[],
+    explosionCells?: Set<string>,
   ): Direction | null {
     let nearestEnemy: Position | null = null;
     let nearestDist = Infinity;
@@ -1152,6 +1327,7 @@ export class BotAI {
         danger,
         bombPositions,
         otherPlayers,
+        explosionCells,
       );
       if (escapeCount < 1) continue;
       const newDist = Math.abs(newPos.x - nearestEnemy.x) + Math.abs(newPos.y - nearestEnemy.y);
@@ -1350,6 +1526,7 @@ export class BotAI {
     danger: Set<string>,
     bombPositions: Position[],
     otherPlayers: Position[],
+    explosionCells?: Set<string>,
   ): Direction | null {
     const candidates: { dir: Direction; escape: number; osc: boolean }[] = [];
 
@@ -1369,6 +1546,7 @@ export class BotAI {
         danger,
         bombPositions,
         otherPlayers,
+        explosionCells,
       );
       if (escapeCount >= 1) {
         candidates.push({ dir, escape: escapeCount, osc: this.wouldOscillate(newPos) });
@@ -1413,8 +1591,8 @@ export class BotAI {
       const adjY = pos.y + dy;
 
       for (const bomb of state.bombs.values()) {
-        // Skip own bombs — kicking them away defeats the bot's own bomb placement strategy
-        if (bomb.ownerId === player.id) continue;
+        // Skip own bombs UNLESS they're about to explode (self-defense)
+        if (bomb.ownerId === player.id && bomb.ticksRemaining > 15) continue;
         if (bomb.position.x === adjX && bomb.position.y === adjY && !bomb.sliding) {
           const behindX = adjX + dx;
           const behindY = adjY + dy;
@@ -1427,6 +1605,58 @@ export class BotAI {
                 (p) => p.alive && p.position.x === behindX && p.position.y === behindY,
               );
             if (!blocked) {
+              return dir;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  private findOffensiveKick(
+    pos: Position,
+    state: GameStateManager,
+    player: Player,
+  ): Direction | null {
+    for (const dir of DIRECTIONS) {
+      const { dx, dy } = DIR_DELTA[dir];
+      const adjX = pos.x + dx;
+      const adjY = pos.y + dy;
+
+      for (const bomb of state.bombs.values()) {
+        if (bomb.position.x !== adjX || bomb.position.y !== adjY || bomb.sliding) continue;
+        // Check if bomb can slide in this direction
+        const behindX = adjX + dx;
+        const behindY = adjY + dy;
+        if (!state.collisionSystem.isWalkable(behindX, behindY)) continue;
+        if (
+          Array.from(state.bombs.values()).some(
+            (b) => b.id !== bomb.id && b.position.x === behindX && b.position.y === behindY,
+          )
+        )
+          continue;
+        if (
+          Array.from(state.players.values()).some(
+            (p) => p.alive && p.position.x === behindX && p.position.y === behindY,
+          )
+        )
+          continue;
+
+        // Check if any enemy is in the kick direction's line
+        for (let i = 2; i <= bomb.fireRange + 3; i++) {
+          const cx = pos.x + dx * i;
+          const cy = pos.y + dy * i;
+          const tile = state.collisionSystem.getTileAt(cx, cy);
+          if (tile === 'wall') break;
+          if (isDestructibleTile(tile)) break;
+          for (const other of state.players.values()) {
+            if (
+              other.id !== player.id &&
+              other.alive &&
+              other.position.x === cx &&
+              other.position.y === cy
+            ) {
               return dir;
             }
           }

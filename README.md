@@ -92,21 +92,24 @@ When creating a room, the host can configure:
 
 ## Bot AI
 
-AI bots fill empty slots and provide singleplayer/practice options. Three difficulty tiers:
+AI bots fill empty slots and provide singleplayer/practice options. Three strongly differentiated difficulty tiers:
 
-- **Easy**: Low awareness, shallow escape planning, slow reactions
-- **Normal**: BFS pathfinding, directional wall breaking toward enemies, roaming after 5s idle, hunt persistence
-- **Hard**: Deep search depth, aggressive hunting, 3s idle roaming, detonates remote bombs tactically
+- **Easy**: Low awareness, shallow escape (depth 2), slow reactions (5-tick delay), 25% chance to flee in wrong direction, 12% random unsafe bomb placement — clearly weaker than human players
+- **Normal**: BFS pathfinding, directional wall breaking, 85% hunt chance, dynamic danger assessment, roaming after 3s idle — competitive opponent
+- **Hard**: Deep escape search (depth 15), near-always hunts (95%), chain reaction awareness, shield-based aggression (ignores escape checks when shielded), near-zero late-game bomb cooldown (3-6 ticks) — dominant and oppressive
 
-Bots use BFS for escape routes, power-up seeking, and enemy hunting with configurable search depth. They prefer breaking walls toward opponents and actively path-clear in late game. Optimized through data-driven analysis of 5000+ simulation games:
+Bots use BFS for escape routes, power-up seeking, and enemy hunting with configurable search depth. Optimized through data-driven analysis of 5000+ simulation games:
 
-- **Bomb safety**: Dead-end detection, sandwich prevention, movement cooldown awareness, escape path verification, remote bomb self-damage check (won't detonate when in own blast zone)
-- **Pierce bomb awareness**: Danger zone calculations correctly extend through destructible walls for pierce bombs — bots don't hide behind breakable walls thinking they're safe
-- **Line bomb awareness**: Escape validation simulates the full line of bombs (not just one) before placing, preventing self-traps from multi-bomb placement
-- **Hunt persistence**: Once a bot starts hunting an enemy, it stays locked on for 15 ticks instead of losing target every tick
-- **Late-game aggression**: After 60% of round time, bots always hunt, roam with no idle threshold, and clear walls faster (halved bomb cooldown)
+- **Bomb safety**: Dead-end detection (3+ walkable dirs required at high fire range), sandwich prevention, time-to-safety check (verifies bot can physically reach safe cell before bomb detonates), chain reaction danger in escape planning, remote bomb self-damage check
+- **Offensive kick**: Priority 3.5 — bots kick bombs toward enemies in line-of-sight; defensive kick allows kicking own bombs when about to explode (<=15 ticks)
+- **Pierce bomb awareness**: Danger zone calculations correctly extend through destructible walls for pierce bombs
+- **Line bomb awareness**: Escape validation simulates the full line of bombs (not just one) before placing
+- **Hunt persistence**: Locks on for 15 ticks after finding a path; continues in last direction when BFS loses the path
+- **Game phase system**: Three phases — early (<35%), mid-game (35-60%, +10% hunt chance, 75% bomb cooldown, halved roam threshold), late-game (>60%, always hunt/roam, custom cooldowns)
+- **Proximity aggression**: Bomb cooldown reduced to 75% when within 5 tiles of enemy, even in early game
+- **Dynamic danger assessment**: Safe distance calculated from moves-available-before-detonation (not fixed distance), reducing unnecessary fleeing from far-away fresh bombs
 - **Anti-oscillation**: Position history tracking prevents bots from bouncing between the same tiles
-- **Smart flee recovery**: Flee stuck-breaker only triggers during movable ticks (ignores cooldown), prefers non-danger directions over random walkable ones
+- **Smart flee recovery**: Flee stuck-breaker only triggers during movable ticks, prefers non-danger directions
 - **KOTH awareness**: Bots navigate toward the hill zone and hold position once inside
 
 ## Teams
