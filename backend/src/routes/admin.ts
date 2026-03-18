@@ -313,6 +313,25 @@ router.get('/admin/simulations/:batchId', adminOnlyMiddleware, (req, res) => {
   res.json(data);
 });
 
+router.get('/admin/simulations/:batchId/replay/:gameIndex', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const mgr = getSimulationManager();
+    const gameIndex = parseInt(req.params.gameIndex);
+    if (isNaN(gameIndex) || gameIndex < 0) {
+      res.status(400).json({ error: 'Invalid game index' });
+      return;
+    }
+    const replay = await mgr.getSimulationReplay(req.params.batchId, gameIndex);
+    if (!replay) {
+      res.status(404).json({ error: 'Replay not found' });
+      return;
+    }
+    res.json(replay);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post(
   '/admin/simulations',
   adminOnlyMiddleware,

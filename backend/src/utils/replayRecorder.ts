@@ -120,13 +120,18 @@ export class ReplayRecorder {
     });
   }
 
-  finalize(gameOverData: {
-    winnerId: number | null;
-    winnerTeam: number | null;
-    reason: string;
-    placements: any[];
-  }): void {
-    if (this.matchId === 0) {
+  finalize(
+    gameOverData: {
+      winnerId: number | null;
+      winnerTeam: number | null;
+      reason: string;
+      placements: any[];
+    },
+    options?: { saveDir?: string },
+  ): void {
+    const saveDir = options?.saveDir;
+
+    if (!saveDir && this.matchId === 0) {
       logger.warn({ roomCode: this.roomCode }, 'ReplayRecorder: matchId not set, skipping save');
       return;
     }
@@ -151,12 +156,13 @@ export class ReplayRecorder {
 
     // Write to disk asynchronously
     try {
-      if (!fs.existsSync(REPLAY_DIR)) {
-        fs.mkdirSync(REPLAY_DIR, { recursive: true });
+      const dir = saveDir || REPLAY_DIR;
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
       }
 
       const filename = `${this.matchId}_${this.roomCode}_${this.gameMode}.replay.json.gz`;
-      const filePath = path.join(REPLAY_DIR, filename);
+      const filePath = path.join(dir, filename);
       const frameCount = this.frames.length;
       const json = JSON.stringify(replayData);
 

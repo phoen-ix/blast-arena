@@ -155,10 +155,11 @@ Admins can run batch bot-only game simulations to collect AI behavior data for a
 - **Configure**: Game mode, bot count/difficulty, map size, round time, wall density, power-ups, total games (1-1000)
 - **Two speed modes**: Fast (ticks as fast as possible) or Real-time (20 tps with live spectating in-browser)
 - **Log verbosity**: Normal (5-tick snapshots), Detailed (2-tick + movements/pickups), Full (every tick + pathfinding)
-- **Results**: Paginated table with sortable columns, win distribution chart, per-game stats
+- **Results**: Paginated table with sortable columns, win distribution chart, per-game stats with replay button
 - **Queue system**: Start a new simulation while one is running — it queues (up to 10) and auto-starts when the current batch finishes. Queue position shown in the UI with a "Remove" option
 - **Management**: Cancel running batches (queue auto-advances), delete completed batches (removes logs from disk)
 - **Logs**: JSONL files in `data/simulations/{gameMode}/batch_*/` with `batch_config.json` and `batch_summary.json`
+- **Replays**: Every sim game is recorded as a gzipped replay in the batch directory — watchable with the same replay viewer (controls, log panel, seeking, speed). Cleaned up automatically when the batch is deleted
 - **Live spectating**: Real-time simulations play in the browser like a normal game in spectator mode, with automatic game-to-game transitions
 
 ## Account Management
@@ -294,14 +295,14 @@ The UI uses the **INFERNO** design system — a high-energy arcade-industrial ae
 
 ## Game Replay System
 
-Every completed game is automatically recorded for admin review:
+Every completed game (including simulation games) is automatically recorded for admin review:
 
 - **Full recording**: Every tick's game state saved as gzipped JSON in `./data/replays/`
 - **Video player controls**: Play/pause (click canvas or Space), seek slider, speed (0.5x / 1x / 2x / 4x), skip forward/back (arrow keys), mouse drag to pan camera. Arrow keys are reserved for timeline control in replay mode; use WASD or mouse drag to pan
 - **Live game log panel**: Collapsible side panel showing kills, bombs, bot decisions, power-ups in sync with replay playback. Filter by event type, click any entry to seek to that moment
-- **Admin access**: Matches tab → click match → "Watch Replay" button. Shows all players including bots
+- **Admin access**: Matches tab → click match → "Watch Replay" button. Simulations tab → batch detail → per-game "Replay" button. Shows all players including bots
 - **Space efficient**: Tile diffs instead of full map per frame, gzip compression (~400-700KB per game)
-- **Replay API**: `GET /admin/replays` (list), `GET /admin/replays/:matchId` (fetch), `DELETE /admin/replays/:matchId` (delete)
+- **Replay API**: `GET /admin/replays` (list), `GET /admin/replays/:matchId` (fetch), `DELETE /admin/replays/:matchId` (delete), `GET /admin/simulations/:batchId/replay/:gameIndex` (sim replay)
 
 ## Connection Resilience
 
@@ -347,6 +348,7 @@ Detailed JSONL game logs are written to `./data/gamelogs/` for every match:
 - Explosion detail and bot pathfinding logs at full verbosity
 - Filename: `{ISO-timestamp}_{roomCode}_{gameMode}_{playerCount}p.jsonl`
 - Simulation logs: `./data/simulations/{gameMode}/batch_*/sim_NNN.jsonl`
+- Simulation replays: `./data/simulations/{gameMode}/batch_*/{gameIndex}_sim_NNN_{gameMode}.replay.json.gz`
 
 ## Testing & Linting
 

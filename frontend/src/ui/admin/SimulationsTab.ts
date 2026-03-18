@@ -6,6 +6,7 @@ import {
   SimulationGameResult,
   SimulationConfig,
   GameState,
+  ReplayData,
   POWERUP_DEFINITIONS,
   GAME_MODES,
 } from '@blast-arena/shared';
@@ -294,6 +295,63 @@ export class SimulationsTab {
     }
   }
 
+  private async launchSimulationReplay(batchId: string, gameIndex: number): Promise<void> {
+    try {
+      this.notifications.info('Loading replay...');
+      const replayData = await ApiClient.get<ReplayData>(
+        `/admin/simulations/${batchId}/replay/${gameIndex}`,
+      );
+
+      if (!replayData || !replayData.frames || replayData.frames.length === 0) {
+        this.notifications.error('Replay data is empty or corrupted');
+        return;
+      }
+
+      // Reconstruct initial GameState from first frame + stored map
+      const firstFrame = replayData.frames[0];
+      const initialState: GameState = {
+        tick: firstFrame.tick,
+        players: firstFrame.players,
+        bombs: firstFrame.bombs,
+        explosions: firstFrame.explosions,
+        powerUps: firstFrame.powerUps,
+        map: replayData.map,
+        status: firstFrame.status,
+        winnerId: firstFrame.winnerId,
+        winnerTeam: firstFrame.winnerTeam,
+        roundTime: firstFrame.roundTime,
+        timeElapsed: firstFrame.timeElapsed,
+      };
+      if (firstFrame.zone) initialState.zone = firstFrame.zone;
+      if (firstFrame.hillZone) initialState.hillZone = firstFrame.hillZone;
+      if (firstFrame.kothScores) initialState.kothScores = firstFrame.kothScores;
+
+      // Clear all DOM overlays (admin panel, lobby, etc.)
+      const uiOverlay = document.getElementById('ui-overlay');
+      if (uiOverlay) {
+        while (uiOverlay.firstChild) {
+          uiOverlay.removeChild(uiOverlay.firstChild);
+        }
+      }
+
+      // Set registry values for GameScene
+      const registry = game.registry;
+      registry.set('initialGameState', initialState);
+      registry.set('replayMode', true);
+      registry.set('replayData', replayData);
+
+      // Start GameScene and HUDScene
+      const activeScene =
+        game.scene.getScene('LobbyScene') || game.scene.getScene('MenuScene');
+      if (activeScene) {
+        activeScene.scene.start('GameScene');
+        activeScene.scene.launch('HUDScene');
+      }
+    } catch {
+      this.notifications.error('Failed to load replay');
+    }
+  }
+
   private async showBatchDetail(batchId: string): Promise<void> {
     if (!this.container) return;
     this.viewMode = 'detail';
@@ -481,6 +539,7 @@ export class SimulationsTab {
             <th style="${thStyle}" data-sort="duration">Duration${sortIcon('duration')}</th>
             <th style="${thStyle}" data-sort="kills">Kill Leader${sortIcon('kills')}</th>
             <th style="${thStyle}" data-sort="reason">Reason${sortIcon('reason')}</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -496,11 +555,12 @@ export class SimulationsTab {
                 <td>${mins}:${String(secs).padStart(2, '0')}</td>
                 <td>${killLeader ? `${escapeHtml(killLeader.name)} (${killLeader.kills})` : '-'}</td>
                 <td style="color:var(--text-dim);font-size:12px;">${escapeHtml(r.finishReason)}</td>
+                <td>${r.hasReplay ? `<button class="btn btn-secondary btn-sm" data-action="watch-replay" data-game-index="${r.gameIndex}">Replay</button>` : ''}</td>
               </tr>
             `;
             })
             .join('')}
-          ${sorted.length === 0 ? '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);">No results yet</td></tr>' : ''}
+          ${sorted.length === 0 ? '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);">No results yet</td></tr>' : ''}
         </tbody>
       </table>
       ${
@@ -519,6 +579,16 @@ export class SimulationsTab {
 
   private attachResultsTableListeners(): void {
     if (!this.container) return;
+
+    // Watch replay buttons
+    this.container.querySelectorAll('[data-action="watch-replay"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const gameIndex = parseInt((btn as HTMLElement).dataset.gameIndex!);
+        if (this.detailBatchId != null && !isNaN(gameIndex)) {
+          this.launchSimulationReplay(this.detailBatchId, gameIndex);
+        }
+      });
+    });
 
     // Sort headers
     this.container.querySelectorAll('#sim-results-table th[data-sort]').forEach((th) => {

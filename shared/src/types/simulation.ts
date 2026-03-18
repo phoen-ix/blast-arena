@@ -46,6 +46,7 @@ export interface SimulationGameResult {
   durationTicks: number;
   durationSeconds: number;
   mapSeed: number;
+  hasReplay?: boolean;
   placements: Array<{
     id: number;
     name: string;

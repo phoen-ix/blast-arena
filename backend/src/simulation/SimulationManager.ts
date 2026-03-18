@@ -1,9 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { SimulationConfig, SimulationBatchStatus } from '@blast-arena/shared';
+import * as zlib from 'zlib';
+import { promisify } from 'util';
+import { SimulationConfig, SimulationBatchStatus, ReplayData } from '@blast-arena/shared';
 import { SimulationRunner } from './SimulationRunner';
 import { getIO } from '../game/registry';
 import { logger } from '../utils/logger';
+
+const gunzip = promisify(zlib.gunzip);
 
 const SIM_LOG_DIR = process.env.SIMULATION_LOG_DIR || '/app/simulations';
 const MAX_QUEUE_SIZE = 10;
@@ -242,6 +246,49 @@ export class SimulationManager {
       }
     } catch {
       // Not found
+    }
+
+    return null;
+  }
+
+  async getSimulationReplay(batchId: string, gameIndex: number): Promise<ReplayData | null> {
+    // Find the batch directory on disk
+    try {
+      if (!fs.existsSync(SIM_LOG_DIR)) return null;
+
+      const gameModes = fs.readdirSync(SIM_LOG_DIR, { withFileTypes: true });
+      for (const modeDir of gameModes) {
+        if (!modeDir.isDirectory()) continue;
+        const modePath = path.join(SIM_LOG_DIR, modeDir.name);
+        const batchDirs = fs.readdirSync(modePath, { withFileTypes: true });
+
+        for (const batchDir of batchDirs) {
+          if (!batchDir.isDirectory()) continue;
+          const configPath = path.join(modePath, batchDir.name, 'batch_config.json');
+          if (!fs.existsSync(configPath)) continue;
+
+          try {
+            const configData = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+            if (configData.batchId !== batchId) continue;
+
+            // Found the batch dir — look for replay file starting with gameIndex_
+            const batchPath = path.join(modePath, batchDir.name);
+            const files = fs.readdirSync(batchPath);
+            const replayFile = files.find(
+              (f) => f.startsWith(`${gameIndex}_`) && f.endsWith('.replay.json.gz'),
+            );
+            if (!replayFile) return null;
+
+            const compressed = fs.readFileSync(path.join(batchPath, replayFile));
+            const decompressed = await gunzip(compressed);
+            return JSON.parse(decompressed.toString()) as ReplayData;
+          } catch {
+            // Skip malformed
+          }
+        }
+      }
+    } catch (err) {
+      logger.error({ err, batchId, gameIndex }, 'Failed to load simulation replay');
     }
 
     return null;

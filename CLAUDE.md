@@ -87,18 +87,19 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Two speed modes**: Fast (ticks as fast as possible via `setImmediate` batching, ~100 ticks/yield) and Real-time (20 tps like normal games)
 - **Live spectating**: Real-time mode auto-launches GameScene in spectator mode with click-to-follow and mouse drag panning; Fast mode streams state at ~20fps via capped interval
 - GameScene handles `sim:state` events for rendering, `sim:gameTransition` for between-game scene restarts, `sim:completed` for returning to lobby
-- **Log directory structure**: `data/simulations/{gameMode}/batch_{timestamp}_{batchId}/` with per-game `sim_NNN.jsonl` files, `batch_config.json`, and `batch_summary.json`
+- **Log directory structure**: `data/simulations/{gameMode}/batch_{timestamp}_{batchId}/` with per-game `sim_NNN.jsonl` files, replay files, `batch_config.json`, and `batch_summary.json`
 - **Log verbosity levels**: Normal (5-tick snapshots), Detailed (2-tick + movements + pickups), Full (every tick + explosion detail + bot pathfinding)
 - `GameLogger` enhanced with `shouldLogTick()`, `logMovement()`, `logPowerupPickup()`, `logExplosionDetail()`, `logBotPathfinding()` — all backward-compatible
 - Backend: `SimulationGame.ts` (headless game runner), `SimulationRunner.ts` (batch orchestrator, EventEmitter), `SimulationManager.ts` (singleton, 1 concurrent + queue up to 10)
 - **Simulation queue**: when a batch is already running, new batches are queued (max 10) and auto-start when the current one finishes. Cancelling the running batch advances the queue. Queued entries show position in UI with a "Remove" button. Admin sockets auto-join `sim:admin` room for queue-started batch broadcasts.
 - Socket events: `sim:start`, `sim:cancel`, `sim:spectate`, `sim:unspectate` (C→S); `sim:progress`, `sim:gameResult`, `sim:state`, `sim:gameTransition`, `sim:completed`, `sim:queueUpdate` (S→C)
-- REST endpoints: `GET/POST /admin/simulations`, `GET/DELETE /admin/simulations/:batchId`
+- REST endpoints: `GET/POST /admin/simulations`, `GET/DELETE /admin/simulations/:batchId`, `GET /admin/simulations/:batchId/replay/:gameIndex`
 - Bot names pool: AlphaBot through PulseBot (16 distinct names)
 - Cancellation preserves completed game logs; 3s pause between realtime games, 0.5s for fast
-- Delete batch: removes from memory + disk (`SimulationManager.deleteBatch()`); delete button shown for completed/cancelled batches
+- **Simulation replays**: Each sim game records a full replay via `ReplayRecorder`, saved as `{gameIndex}_{roomCode}_{gameMode}.replay.json.gz` in the batch directory. `SimulationGame` calls `recordTick()` after every `processTick()` (both fast and realtime). `ReplayRecorder.finalize()` accepts optional `{ saveDir }` to write replays to batch dir instead of `/app/replays/`. Results table has a "Replay" button per game; `SimulationsTab.launchSimulationReplay()` mirrors `MatchesTab.launchReplay()` pattern
+- Delete batch: removes from memory + disk (`SimulationManager.deleteBatch()`) including replay files; delete button shown for completed/cancelled batches
 - Spectate button hidden for fast-speed batches (only shown for realtime)
-- Results table: paginated (25/page) with sortable columns (click #/Winner/Duration/Kill Leader/Reason)
+- Results table: paginated (25/page) with sortable columns (click #/Winner/Duration/Kill Leader/Reason) and per-game Replay button
 - Docker: `./data/simulations:/app/simulations` volume mount in both compose files
 
 ## Account Management
@@ -211,7 +212,7 @@ MatchConfig includes: gameMode, maxPlayers, mapWidth/Height, mapSeed, roundTime,
 - Simulation logs written to `./data/simulations/{gameMode}/batch_*/` with separate directory per game mode
 
 ## Game Replay System
-- Every completed game is recorded as a gzipped JSON replay file in `./data/replays/`
+- Every completed game (and simulation game) is recorded as a gzipped JSON replay file. Regular game replays in `./data/replays/`, simulation replays in their batch directory under `./data/simulations/`
 - `ReplayRecorder` (backend) captures full GameState every tick, with tile diffs (not full map per frame) for space efficiency
 - `GameLogger` forwards log events (kills, bombs, bot decisions, movements, powerups) to ReplayRecorder with tick numbers for synchronized display
 - Replay files: `{matchId}_{roomCode}_{gameMode}.replay.json.gz` (~400-700KB per game)
@@ -220,7 +221,8 @@ MatchConfig includes: gameMode, maxPlayers, mapWidth/Height, mapSeed, roundTime,
 - `ReplayPlayer` (frontend) manages playback: play/pause, speed (0.5x/1x/2x/4x), seek to any frame. Uses Phaser-synced time accumulator (`tick(deltaMs)`) instead of `setInterval` to prevent drift/fast-forward; frame bounds-checked before access
 - `ReplayControls` — video-player-like bottom bar with slider, time display, speed selector, keyboard shortcuts (Space=play/pause, arrows=skip). Arrow keys reserved for timeline in replay mode (GameScene skips them); WASD/mouse drag used for camera pan
 - `ReplayLogPanel` — collapsible right-side panel showing game events synced to replay time, with filters by event type (kills, bombs, bot AI, powerups, movement), clickable timestamps for seeking
-- GameScene detects `registry.get('replayMode')` and uses ReplayPlayer instead of socket events; clicking the game canvas toggles play/pause
+- `ReplayRecorder.finalize()` accepts optional `{ saveDir }` to write to a custom directory (used by simulations to store replays in batch dir)
+- GameScene detects `registry.get('replayMode')` and uses ReplayPlayer instead of socket events; replay auto-plays on open; clicking the game canvas toggles play/pause
 - EffectSystem has `triggerExplosion()`/`triggerPlayerDied()` public methods for replay mode (bypasses socket listeners)
 - `ReplayRecorder` deep-copies `initialState.map.tiles` in constructor (game engine mutates tiles in-place as walls are destroyed)
 - Tile state reconstruction: initial tiles stored once, diffs applied forward; seeking backward rebuilds from initial

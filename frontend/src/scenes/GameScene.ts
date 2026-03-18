@@ -173,8 +173,9 @@ export class GameScene extends Phaser.Scene {
       });
       this.replayLogPanel.mount();
 
-      // Emit first frame
+      // Start playback from the beginning
       this.replayPlayer.seekTo(0);
+      this.replayPlayer.play();
     } else if (simSpectate) {
       // Simulation spectate mode: listen on sim:state, no input sending
       this.localPlayerDead = true; // Force spectator mode
