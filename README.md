@@ -169,6 +169,7 @@ Users can manage their account from the lobby Account modal:
 
 - **Username**: Change anytime. Validated (3-20 chars, alphanumeric + underscore/hyphen), uniqueness-checked (409 if taken)
 - **Email**: Two-step flow — submit new address, click confirmation link sent to the new email (24h expiry). Admins skip verification
+- **Password**: Change from the Account modal. Requires current password verification before updating. Minimum 8 characters, confirmation field must match
 
 ## Architecture
 

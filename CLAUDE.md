@@ -107,7 +107,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Docker: `./data/simulations:/app/simulations` volume mount in both compose files
 
 ## Account Management
-- **Account modal** in lobby header lets users edit their username and email
+- **Account modal** in lobby header lets users edit their username, email, and password
 - Username is the single player name shown everywhere (no separate display name)
 - Username change: server validates format (3-20 chars, alphanumeric + underscore/hyphen) and checks uniqueness; returns 409 CONFLICT if taken
 - Email change: two-step confirmation flow — user submits new email, server sends a confirmation link to the new address (24h expiry), email only swaps when the link is clicked
@@ -115,6 +115,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Pending email changes visible in Account modal with a cancel option
 - Email change confirmation endpoint: `GET /api/user/confirm-email/:token`
 - Migration `003_user_profile.sql` adds `pending_email`, `email_change_token`, `email_change_expires` columns to users table
+- Password change: `POST /api/user/password` with `currentPassword` and `newPassword`; server verifies current password via bcrypt compare before hashing and updating; Zod validation enforces min/max length; client-side confirms new password match
 - `AuthManager.updateUser()` patches in-memory user state after profile edits so the lobby header updates without a page refresh
 
 ## Teams
