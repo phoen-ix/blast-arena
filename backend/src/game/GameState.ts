@@ -106,6 +106,9 @@ export class GameStateManager {
     powerupCollected: { playerId: number; type: string; position: { x: number; y: number } }[];
   } = { explosions: [], playerDied: [], powerupCollected: [] };
 
+  // Shuffled spawn indices for fair spawn assignment
+  private shuffledSpawnIndices: number[] = [];
+
   // Map events (dynamic)
   private mapEvents: { type: string; position?: Position; tick: number; warningTick?: number }[] =
     [];
@@ -146,6 +149,16 @@ export class GameStateManager {
     this.reinforcedWalls = reinforcedWalls;
     this.enableMapEvents = enableMapEvents;
 
+    // Shuffle spawn point indices using Fisher-Yates for fair spawn assignment (deterministic per seed)
+    this.shuffledSpawnIndices = this.map.spawnPoints.map((_, i) => i);
+    for (let i = this.shuffledSpawnIndices.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rng.next() * (i + 1));
+      [this.shuffledSpawnIndices[i], this.shuffledSpawnIndices[j]] = [
+        this.shuffledSpawnIndices[j],
+        this.shuffledSpawnIndices[i],
+      ];
+    }
+
     if (hasZone) {
       this.zone = new BattleRoyaleZone(mapWidth, mapHeight);
     }
@@ -164,13 +177,14 @@ export class GameStateManager {
     team: number | null = null,
     isBot: boolean = false,
   ): Player {
-    const spawnIndex = this.players.size % this.map.spawnPoints.length;
+    const spawnIndex =
+      this.shuffledSpawnIndices[this.players.size % this.shuffledSpawnIndices.length];
     const spawnPos = this.map.spawnPoints[spawnIndex];
     const player = new Player(id, username, spawnPos, team, isBot);
     this.players.set(id, player);
     this.placementCounter++;
     if (isBot) {
-      this.botAIs.set(id, new BotAI(this.botDifficulty));
+      this.botAIs.set(id, new BotAI(this.botDifficulty, { width: this.map.width, height: this.map.height }));
     }
     return player;
   }

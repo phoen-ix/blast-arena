@@ -43,6 +43,8 @@ export interface BotDifficultyConfig {
   stalemateBreaker: boolean;
   stalemateThresholdTicks: number;
   remoteHoldThreshold: number;
+  enableReachabilityFilter: boolean;
+  duelStalemateThresholdTicks: number;
 }
 
 const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig> = {
@@ -71,16 +73,18 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     stalemateBreaker: false,
     stalemateThresholdTicks: 0,
     remoteHoldThreshold: 20,
+    enableReachabilityFilter: false,
+    duelStalemateThresholdTicks: 0,
   },
   normal: {
     dangerAwareness: 99,
     escapeSearchDepth: 8,
-    bombCooldownMin: 20,
-    bombCooldownMax: 35,
+    bombCooldownMin: 15,
+    bombCooldownMax: 25,
     escapeCheckBeforeBomb: true,
-    huntChance: 0.85,
+    huntChance: 0.90,
     powerUpVision: 8,
-    optimalMoveChance: 0.7,
+    optimalMoveChance: 0.8,
     useKick: true,
     reactionDelay: 0,
     huntSearchDepth: 25,
@@ -97,6 +101,8 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     stalemateBreaker: true,
     stalemateThresholdTicks: 100,
     remoteHoldThreshold: 40,
+    enableReachabilityFilter: true,
+    duelStalemateThresholdTicks: 200,
   },
   hard: {
     dangerAwareness: 99,
@@ -123,6 +129,8 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
     stalemateBreaker: true,
     stalemateThresholdTicks: 60,
     remoteHoldThreshold: 60,
+    enableReachabilityFilter: true,
+    duelStalemateThresholdTicks: 120,
   },
 };
 
@@ -165,8 +173,40 @@ export class BotAI {
   // Strategic remote bomb detonation (Fix B)
   private remoteBombHoldTicks: number = 0;
 
-  constructor(difficulty: 'easy' | 'normal' | 'hard' = 'normal') {
-    this.config = DIFFICULTY_PRESETS[difficulty];
+  // Delayed remote self-unblock (Change 5B)
+  private remoteBlockedTicks: number = 0;
+
+  // Duel stalemate breaker (Change 3)
+  private duelStalemateTicks: number = 0;
+  private lastDuelKills: number = 0;
+
+  constructor(
+    difficulty: 'easy' | 'normal' | 'hard' = 'normal',
+    mapSize?: { width: number; height: number },
+  ) {
+    this.config = { ...DIFFICULTY_PRESETS[difficulty] };
+
+    // Scale parameters based on map size relative to default 15×13 (Change 4)
+    if (mapSize) {
+      const referenceArea = 15 * 13;
+      const scale = Math.max(1, Math.sqrt((mapSize.width * mapSize.height) / referenceArea));
+      this.config.huntSearchDepth = Math.min(
+        80,
+        Math.round(this.config.huntSearchDepth * scale),
+      );
+      this.config.escapeSearchDepth = Math.min(
+        25,
+        Math.round(this.config.escapeSearchDepth * scale),
+      );
+      this.config.roamAfterIdleTicks = Math.max(
+        5,
+        Math.round(this.config.roamAfterIdleTicks / scale),
+      );
+      this.config.powerUpVision = Math.min(
+        40,
+        Math.round(this.config.powerUpVision * scale),
+      );
+    }
   }
 
   private getAwarenessRange(playerFireRange: number): number {
@@ -280,6 +320,23 @@ export class BotAI {
         this.stalemateTicks = 0;
         this.lastStalemateKills = player.kills;
         this.stalemateActive = false;
+      }
+    }
+
+    // === Duel stalemate detection (Change 3) ===
+    if (
+      !this.stalemateActive &&
+      this.config.duelStalemateThresholdTicks > 0 &&
+      aliveEnemies.length <= 1
+    ) {
+      if (player.kills === this.lastDuelKills) {
+        this.duelStalemateTicks++;
+        if (this.duelStalemateTicks >= this.config.duelStalemateThresholdTicks) {
+          this.stalemateActive = true;
+        }
+      } else {
+        this.duelStalemateTicks = 0;
+        this.lastDuelKills = player.kills;
       }
     }
 
@@ -553,11 +610,23 @@ export class BotAI {
         const shieldSacrifice =
           enemyInBlast && selfInBlast && player.hasShield && !enemyInBlastShielded;
 
+        // Delayed self-unblock: increment counter instead of immediate detonation (Change 5B)
+        const nearbyEnemy = nearestEnemyDist !== null && nearestEnemyDist <= 5;
+        if (movementBlockedByOwnBomb && !selfInBlast) {
+          this.remoteBlockedTicks++;
+        } else {
+          this.remoteBlockedTicks = 0;
+        }
+        const delayedSelfUnblock =
+          movementBlockedByOwnBomb &&
+          !selfInBlast &&
+          (this.remoteBlockedTicks > 10 || nearbyEnemy);
+
         const shouldDetonate =
           (enemyInBlast && !selfInBlast) ||
           shieldSacrifice ||
           enemyNearBomb ||
-          (movementBlockedByOwnBomb && !selfInBlast) ||
+          delayedSelfUnblock ||
           (ownRemoteBombs.length >= player.maxBombs &&
             !selfInBlast &&
             (this.remoteBombHoldTicks >= this.config.remoteHoldThreshold ||
@@ -592,6 +661,15 @@ export class BotAI {
 
     // Don't place bombs if we can't move yet (cooldown) — we need to flee immediately after
     if (this.bombCooldown <= 0 && player.canPlaceBomb() && player.canMove()) {
+      // Remote bomb self-block guard (Change 5A): skip placement if it would trap us
+      if (
+        player.hasRemoteBomb &&
+        !this.isEnemyInBlastRange(pos, state, player) &&
+        this.wouldRemoteBombSelfBlock(pos, state, player, bombPositions, otherPlayers)
+      ) {
+        // Skip bomb placement — let hunt/roam reposition first
+      } else {
+
       // Dead-end check: require more walkable dirs at high fire range
       let walkableDirs = 0;
       for (const dir of DIRECTIONS) {
@@ -675,6 +753,7 @@ export class BotAI {
           return { seq: this.seq, direction: null, action: 'bomb', tick: state.tick };
         }
       }
+      } // end remote bomb self-block guard else
     }
 
     // === MOVEMENT DECISIONS: only when player can actually move ===
@@ -1071,16 +1150,34 @@ export class BotAI {
         if (manhattanDist > safeDistance) continue;
       }
 
-      danger.add(`${bomb.position.x},${bomb.position.y}`);
+      // Collect blast cells for this bomb
+      const blastCells: string[] = [`${bomb.position.x},${bomb.position.y}`];
       for (const { dx, dy } of DIR_DELTA_ARRAY) {
         for (let i = 1; i <= bomb.fireRange; i++) {
           const cx = bomb.position.x + dx * i;
           const cy = bomb.position.y + dy * i;
           const tile = state.collisionSystem.getTileAt(cx, cy);
           if (tile === 'wall') break;
-          danger.add(`${cx},${cy}`);
+          blastCells.push(`${cx},${cy}`);
           if (isDestructibleTile(tile) && !bomb.isPierce) break;
         }
+      }
+
+      // Reachability filter: skip bombs whose blast can't reach us before detonation
+      if (!ignoreDangerThreshold && this.config.enableReachabilityFilter) {
+        const movesBeforeDetonation = Math.floor(bomb.ticksRemaining / MOVE_COOLDOWN_BASE);
+        let minDist = Infinity;
+        for (const cellKey of blastCells) {
+          const [cx, cy] = cellKey.split(',');
+          const dist =
+            Math.abs(Number(cx) - botPos.x) + Math.abs(Number(cy) - botPos.y);
+          if (dist < minDist) minDist = dist;
+        }
+        if (minDist > movesBeforeDetonation + 1) continue;
+      }
+
+      for (const cellKey of blastCells) {
+        danger.add(cellKey);
       }
     }
 
@@ -1365,6 +1462,44 @@ export class BotAI {
       }
     }
     return false;
+  }
+
+  /**
+   * Check if placing a remote bomb at pos would block ALL walkable neighbor directions
+   * with its blast zone, effectively trapping the bot (Change 5A).
+   */
+  private wouldRemoteBombSelfBlock(
+    pos: Position,
+    state: GameStateManager,
+    player: Player,
+    bombPositions: Position[],
+    otherPlayers: Position[],
+  ): boolean {
+    // Compute hypothetical blast cells for a bomb at pos
+    const blastCells = new Set<string>();
+    blastCells.add(`${pos.x},${pos.y}`);
+    for (const { dx, dy } of DIR_DELTA_ARRAY) {
+      for (let i = 1; i <= player.fireRange; i++) {
+        const cx = pos.x + dx * i;
+        const cy = pos.y + dy * i;
+        const tile = state.collisionSystem.getTileAt(cx, cy);
+        if (tile === 'wall') break;
+        blastCells.add(`${cx},${cy}`);
+        if (isDestructibleTile(tile) && !player.hasPierceBomb) break;
+      }
+    }
+
+    // Check each walkable neighbor — if ALL are in the blast zone, placement would trap us
+    let safeDirections = 0;
+    const futureBombs = [...bombPositions, pos];
+    for (const dir of DIRECTIONS) {
+      const dest = state.collisionSystem.canMoveTo(pos.x, pos.y, dir, futureBombs, otherPlayers);
+      if (!dest) continue;
+      if (!blastCells.has(`${dest.x},${dest.y}`)) {
+        safeDirections++;
+      }
+    }
+    return safeDirections === 0;
   }
 
   private isNearDestructible(pos: Position, state: GameStateManager): boolean {

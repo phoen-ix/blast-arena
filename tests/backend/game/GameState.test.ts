@@ -160,9 +160,11 @@ describe('GameStateManager', () => {
       expect(gs.players.size).toBe(2);
       expect(p1.alive).toBe(true);
       expect(p2.alive).toBe(true);
-      // First two players spawn at first two spawn points
-      expect(p1.position).toEqual(gs.map.spawnPoints[0]);
-      expect(p2.position).toEqual(gs.map.spawnPoints[1]);
+      // Players spawn at valid spawn points (order is shuffled for fairness)
+      expect(gs.map.spawnPoints).toContainEqual(p1.position);
+      expect(gs.map.spawnPoints).toContainEqual(p2.position);
+      // Each player gets a different spawn point
+      expect(p1.position).not.toEqual(p2.position);
     });
 
     it('should add bot players with isBot flag', () => {

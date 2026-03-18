@@ -96,7 +96,7 @@ When creating a room, the host can configure:
 AI bots fill empty slots and provide singleplayer/practice options. Three strongly differentiated difficulty tiers:
 
 - **Easy**: Low awareness, shallow escape (depth 2), slow reactions (5-tick delay), 25% chance to flee in wrong direction, 12% random unsafe bomb placement — clearly weaker than human players
-- **Normal**: BFS pathfinding, directional wall breaking, 85% hunt chance, dynamic danger assessment, roaming after 3s idle — competitive opponent
+- **Normal**: BFS pathfinding, directional wall breaking, 90% hunt chance, dynamic danger assessment, roaming after 3s idle — competitive opponent
 - **Hard**: Deep escape search (depth 15), near-always hunts (95%), chain reaction awareness, shield-based aggression (ignores escape checks when shielded), near-zero late-game bomb cooldown (3-6 ticks) — dominant and oppressive
 
 Bots use BFS for escape routes, power-up seeking, and enemy hunting with configurable search depth. Optimized through data-driven analysis of 5000+ simulation games:
@@ -109,11 +109,15 @@ Bots use BFS for escape routes, power-up seeking, and enemy hunting with configu
 - **Game phase system**: Three phases — early (<35%), mid-game (35-60%, +10% hunt chance, 75% bomb cooldown, halved roam threshold), late-game (>60%, always hunt/roam, custom cooldowns)
 - **Proximity aggression**: Bomb cooldown reduced to 75% when within 5 tiles of enemy, even in early game
 - **Dynamic danger assessment**: Safe distance calculated from moves-available-before-detonation (not fixed distance), reducing unnecessary fleeing from far-away fresh bombs
+- **Reachability filter**: Bombs whose blast can't physically reach the bot before detonation are excluded from danger calculations, dramatically reducing unnecessary flee decisions
+- **Map-size scaling**: Hunt depth, escape depth, roam thresholds, and power-up vision auto-scale with map area — bots on large maps (e.g. 61×61) search proportionally deeper
+- **Spawn randomization**: Spawn point assignment is shuffled per game seed via Fisher-Yates, eliminating positional win-rate bias across repeated games
 - **Anti-oscillation**: Position history tracking prevents bots from bouncing between the same tiles
 - **Hunt oscillation detector**: Detects bots stuck oscillating during hunt mode (≤3 unique positions in 10-entry history or prolonged hunting without kills) — forces wall-bombing toward enemy to break through
 - **Smart flee recovery**: Flee stuck-breaker only triggers during movable ticks, prefers non-danger directions
 - **Shield stalemate breaker**: Detects mutual shielded bombing loops (no kills, both shielded, late game) — escalates aggression by bypassing safety checks to break the deadlock
-- **Strategic remote detonation**: Bots hold remote bombs instead of wasteful immediate detonation; proximity trigger (enemy within 2 tiles of bomb); shield-aware sacrifice (detonates when bot is shielded but enemy isn't); self-unblock (detonates own remote bombs when they block movement paths)
+- **Duel stalemate breaker**: Detects 1v1 endgame situations with no kill progress (10s normal, 6s hard) — activates aggressive mode to prevent timeout draws
+- **Strategic remote detonation**: Bots hold remote bombs instead of wasteful immediate detonation; proximity trigger (enemy within 2 tiles of bomb); shield-aware sacrifice (detonates when bot is shielded but enemy isn't); delayed self-unblock (waits 0.5s or enemy nearby before detonating remote bombs that block movement); pre-placement guard prevents placing remote bombs that would self-trap
 - **KOTH awareness**: Bots navigate toward the hill zone and hold position once inside
 
 ## Teams
