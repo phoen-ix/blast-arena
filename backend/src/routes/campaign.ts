@@ -86,6 +86,7 @@ const levelSchema = z.object({
   winConditionConfig: z.any().optional(),
   lives: z.number().int().min(1).max(99).optional(),
   timeLimit: z.number().int().min(0).max(3600).optional(),
+  parTime: z.number().int().min(0).max(3600).optional(),
   carryOverPowerups: z.boolean().optional(),
   startingPowerups: z.any().optional(),
   availablePowerupTypes: z.array(z.string()).optional(),

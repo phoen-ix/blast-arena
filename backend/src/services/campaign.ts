@@ -40,6 +40,7 @@ function levelRowToEntry(row: CampaignLevelRow): CampaignLevel {
       : null,
     lives: row.lives,
     timeLimit: row.time_limit,
+    parTime: row.par_time ?? 0,
     carryOverPowerups: !!row.carry_over_powerups,
     startingPowerups: row.starting_powerups
       ? (typeof row.starting_powerups === 'string' ? JSON.parse(row.starting_powerups) : row.starting_powerups)
@@ -70,6 +71,7 @@ function levelRowToSummary(row: CampaignLevelRow): CampaignLevelSummary {
     winCondition: row.win_condition as CampaignLevelSummary['winCondition'],
     lives: row.lives,
     timeLimit: row.time_limit,
+    parTime: row.par_time ?? 0,
     enemyCount: Array.isArray(placements) ? placements.length : 0,
     isPublished: !!row.is_published,
   };
@@ -224,9 +226,9 @@ export async function createLevel(
     `INSERT INTO campaign_levels
      (world_id, name, description, sort_order, map_width, map_height, tiles, fill_mode, wall_density,
       player_spawns, enemy_placements, powerup_placements, win_condition, win_condition_config,
-      lives, time_limit, carry_over_powerups, starting_powerups, available_powerup_types,
+      lives, time_limit, par_time, carry_over_powerups, starting_powerups, available_powerup_types,
       powerup_drop_rate, reinforced_walls, hazard_tiles, is_published, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       worldId,
       data.name ?? 'Untitled Level',
@@ -244,6 +246,7 @@ export async function createLevel(
       data.winConditionConfig ? JSON.stringify(data.winConditionConfig) : null,
       data.lives ?? 3,
       data.timeLimit ?? 0,
+      data.parTime ?? 0,
       data.carryOverPowerups ?? false,
       data.startingPowerups ? JSON.stringify(data.startingPowerups) : null,
       data.availablePowerupTypes ? JSON.stringify(data.availablePowerupTypes) : null,
@@ -271,6 +274,7 @@ export async function updateLevel(id: number, data: Partial<CampaignLevel>): Pro
     winCondition: 'win_condition',
     lives: 'lives',
     timeLimit: 'time_limit',
+    parTime: 'par_time',
     carryOverPowerups: 'carry_over_powerups',
     powerupDropRate: 'powerup_drop_rate',
     reinforcedWalls: 'reinforced_walls',

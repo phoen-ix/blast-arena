@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { SocketClient } from '../network/SocketClient';
+import { ApiClient } from '../network/ApiClient';
 
 const DEADZONE = 0.3;
 
@@ -253,9 +254,7 @@ export class GameOverScene extends Phaser.Scene {
         nextBtn.on('pointerover', () => nextBtn.setColor('#44ff88'));
         nextBtn.on('pointerout', () => nextBtn.setColor('#00e676'));
         nextBtn.on('pointerdown', () => {
-          this.registry.set('campaignNextLevelId', data.nextLevelId);
-          this.registry.remove('campaignMode');
-          this.scene.start('LobbyScene');
+          this.startCampaignLevel(data.nextLevelId, socketClient);
         });
         this.buttons.push(nextBtn);
         this.baseColors.push('#00e676');
@@ -287,9 +286,11 @@ export class GameOverScene extends Phaser.Scene {
     retryBtn.on('pointerover', () => retryBtn.setColor('#cccccc'));
     retryBtn.on('pointerout', () => retryBtn.setColor('#ffffff'));
     retryBtn.on('pointerdown', () => {
-      this.registry.set('campaignRetryLevelId', data.levelId);
-      this.registry.remove('campaignMode');
-      this.scene.start('LobbyScene');
+      if (data?.campaignResult) {
+        this.startCampaignLevel(data.levelId, socketClient);
+      } else {
+        this.scene.start('LobbyScene');
+      }
     });
 
     // Back to Campaign button
@@ -367,6 +368,35 @@ export class GameOverScene extends Phaser.Scene {
       }
     }
     this.prevA = aDown;
+  }
+
+  private startCampaignLevel(levelId: number, socketClient: SocketClient): void {
+    // Fetch enemy types, then emit campaign:start and transition directly to GameScene
+    ApiClient.get<any>('/campaign/enemy-types').then((enemyTypesResp) => {
+      const gameStartHandler = (data: any) => {
+        socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
+
+        const registry = this.registry;
+        registry.set('campaignMode', true);
+        registry.set('initialGameState', data.state.gameState);
+        registry.set('campaignEnemyTypes', enemyTypesResp.enemyTypes || []);
+
+        this.scene.start('GameScene');
+        this.scene.launch('HUDScene');
+      };
+      socketClient.on('campaign:gameStart' as any, gameStartHandler as any);
+
+      socketClient.emit('campaign:start' as any, { levelId }, (response: any) => {
+        if (response && response.error) {
+          socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
+          this.registry.remove('campaignMode');
+          this.scene.start('LobbyScene');
+        }
+      });
+    }).catch(() => {
+      this.registry.remove('campaignMode');
+      this.scene.start('LobbyScene');
+    });
   }
 
   private updateButtonHighlight(): void {

@@ -176,6 +176,7 @@ export interface CampaignLevelRow extends RowDataPacket {
   win_condition_config: string | null; // JSON string
   lives: number;
   time_limit: number;
+  par_time: number;
   carry_over_powerups: boolean;
   starting_powerups: string | null; // JSON string
   available_powerup_types: string | null; // JSON string

@@ -235,14 +235,19 @@ export class HUDScene extends Phaser.Scene {
       specBanner.style.display = this.localPlayerDead ? 'block' : 'none';
     }
 
-    // Timer
+    // Timer (hide for campaign with no time limit)
     const timerEl = document.getElementById('hud-timer');
     if (timerEl) {
-      const remaining = Math.max(0, Math.ceil(state.roundTime - state.timeElapsed));
-      const mins = Math.floor(remaining / 60);
-      const secs = remaining % 60;
-      timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-      timerEl.style.color = remaining <= 30 ? '#ff3355' : '#fff';
+      if (this.campaignMode && state.roundTime >= 99999) {
+        timerEl.style.display = 'none';
+      } else {
+        timerEl.style.display = '';
+        const remaining = Math.max(0, Math.ceil(state.roundTime - state.timeElapsed));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        timerEl.style.color = remaining <= 30 ? '#ff3355' : '#fff';
+      }
     }
 
     // Player stats bar (element reuse — only update text/class when values change)

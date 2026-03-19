@@ -51,6 +51,14 @@ export class LevelEditorScene extends Phaser.Scene {
   private selectedEnemyTypeId: number = 0;
   private selectedPowerUpType: string = 'bomb_up';
 
+  // Level settings
+  private levelName = 'Untitled Level';
+  private levelLives = 3;
+  private levelTimeLimit = 0;
+  private levelParTime = 0;
+  private levelWinCondition: string = 'kill_all';
+  private levelIsPublished = false;
+
   // History for undo/redo
   private undoStack: string[] = [];
   private redoStack: string[] = [];
@@ -108,6 +116,12 @@ export class LevelEditorScene extends Phaser.Scene {
         if (this.level) {
           this.mapWidth = this.level.mapWidth;
           this.mapHeight = this.level.mapHeight;
+          this.levelName = this.level.name;
+          this.levelLives = this.level.lives;
+          this.levelTimeLimit = this.level.timeLimit;
+          this.levelParTime = this.level.parTime ?? 0;
+          this.levelWinCondition = this.level.winCondition;
+          this.levelIsPublished = this.level.isPublished;
           this.tiles = this.level.tiles.map((row) => [...row]);
 
           // Restore enemy placements
@@ -540,6 +554,9 @@ export class LevelEditorScene extends Phaser.Scene {
     }
     this.editorContainer.appendChild(puSection);
 
+    // Level settings section
+    this.addSettingsSection();
+
     // Action buttons
     const actionSection = document.createElement('div');
     actionSection.style.cssText = 'margin-top:16px;display:flex;flex-direction:column;gap:6px;';
@@ -590,6 +607,116 @@ export class LevelEditorScene extends Phaser.Scene {
     this.editorContainer!.appendChild(section);
   }
 
+  private addSettingsSection(): void {
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-top:12px;border-top:1px solid var(--bg-hover);padding-top:8px;';
+
+    const label = document.createElement('div');
+    label.textContent = 'Level Settings';
+    label.style.cssText = 'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:6px;';
+    section.appendChild(label);
+
+    const inputStyle = 'width:100%;padding:3px 5px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);font-size:11px;border-radius:3px;box-sizing:border-box;';
+    const labelStyle = 'font-size:10px;color:var(--text-dim);margin:4px 0 2px 0;';
+
+    // Name
+    const nameLabel = document.createElement('div');
+    nameLabel.textContent = 'Name';
+    nameLabel.style.cssText = labelStyle;
+    section.appendChild(nameLabel);
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = this.levelName;
+    nameInput.style.cssText = inputStyle;
+    nameInput.addEventListener('change', () => { this.levelName = nameInput.value; });
+    section.appendChild(nameInput);
+
+    // Lives
+    const livesLabel = document.createElement('div');
+    livesLabel.textContent = 'Lives';
+    livesLabel.style.cssText = labelStyle;
+    section.appendChild(livesLabel);
+    const livesInput = document.createElement('input');
+    livesInput.type = 'number';
+    livesInput.min = '1';
+    livesInput.max = '99';
+    livesInput.value = String(this.levelLives);
+    livesInput.style.cssText = inputStyle;
+    livesInput.addEventListener('change', () => { this.levelLives = parseInt(livesInput.value, 10) || 3; });
+    section.appendChild(livesInput);
+
+    // Time Limit
+    const timeLabel = document.createElement('div');
+    timeLabel.textContent = 'Time Limit (seconds, 0=none)';
+    timeLabel.style.cssText = labelStyle;
+    section.appendChild(timeLabel);
+    const timeInput = document.createElement('input');
+    timeInput.type = 'number';
+    timeInput.min = '0';
+    timeInput.max = '3600';
+    timeInput.value = String(this.levelTimeLimit);
+    timeInput.style.cssText = inputStyle;
+    timeInput.addEventListener('change', () => { this.levelTimeLimit = parseInt(timeInput.value, 10) || 0; });
+    section.appendChild(timeInput);
+
+    // Par Time
+    const parLabel = document.createElement('div');
+    parLabel.textContent = 'Par Time (seconds, 0=none)';
+    parLabel.style.cssText = labelStyle;
+    section.appendChild(parLabel);
+    const parInput = document.createElement('input');
+    parInput.type = 'number';
+    parInput.min = '0';
+    parInput.max = '3600';
+    parInput.value = String(this.levelParTime);
+    parInput.style.cssText = inputStyle;
+    parInput.addEventListener('change', () => { this.levelParTime = parseInt(parInput.value, 10) || 0; });
+    section.appendChild(parInput);
+    const parHint = document.createElement('div');
+    parHint.textContent = '2 stars if completed under par time';
+    parHint.style.cssText = 'font-size:9px;color:var(--text-dim);margin-top:1px;';
+    section.appendChild(parHint);
+
+    // Win Condition
+    const winLabel = document.createElement('div');
+    winLabel.textContent = 'Win Condition';
+    winLabel.style.cssText = labelStyle;
+    section.appendChild(winLabel);
+    const winSelect = document.createElement('select');
+    winSelect.style.cssText = inputStyle;
+    const conditions = [
+      { value: 'kill_all', label: 'Kill All Enemies' },
+      { value: 'find_exit', label: 'Find Exit' },
+      { value: 'reach_goal', label: 'Reach Goal' },
+      { value: 'survive_time', label: 'Survive Time' },
+    ];
+    for (const c of conditions) {
+      const opt = document.createElement('option');
+      opt.value = c.value;
+      opt.textContent = c.label;
+      if (c.value === this.levelWinCondition) opt.selected = true;
+      winSelect.appendChild(opt);
+    }
+    winSelect.addEventListener('change', () => { this.levelWinCondition = winSelect.value; });
+    section.appendChild(winSelect);
+
+    // Published toggle
+    const pubRow = document.createElement('div');
+    pubRow.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:6px;';
+    const pubCheck = document.createElement('input');
+    pubCheck.type = 'checkbox';
+    pubCheck.checked = this.levelIsPublished;
+    pubCheck.addEventListener('change', () => { this.levelIsPublished = pubCheck.checked; });
+    pubRow.appendChild(pubCheck);
+    const pubLabel = document.createElement('span');
+    pubLabel.textContent = 'Published';
+    pubLabel.style.cssText = 'font-size:11px;';
+    pubRow.appendChild(pubLabel);
+    section.appendChild(pubRow);
+
+    this.editorContainer!.appendChild(section);
+  }
+
   private highlightActiveTool(activeBtn: HTMLElement): void {
     // Reset all tool buttons
     const buttons = this.editorContainer?.querySelectorAll('button:not(.btn)');
@@ -615,6 +742,7 @@ export class LevelEditorScene extends Phaser.Scene {
     }
 
     const levelData = {
+      name: this.levelName,
       mapWidth: this.mapWidth,
       mapHeight: this.mapHeight,
       tiles: this.tiles,
@@ -630,6 +758,11 @@ export class LevelEditorScene extends Phaser.Scene {
         y: p.y,
         hidden: p.hidden,
       })),
+      lives: this.levelLives,
+      timeLimit: this.levelTimeLimit,
+      parTime: this.levelParTime,
+      winCondition: this.levelWinCondition,
+      isPublished: this.levelIsPublished,
     };
 
     try {

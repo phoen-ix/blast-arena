@@ -607,6 +607,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
                 level.id,
                 timeSeconds,
                 deaths,
+                level.parTime,
               );
               socket.emit('campaign:levelComplete', {
                 levelId: level.id,
@@ -640,6 +641,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
           winCondition: level.winCondition,
           lives: level.lives,
           timeLimit: level.timeLimit,
+          parTime: level.parTime,
           enemyCount: level.enemyPlacements.length,
           isPublished: level.isPublished,
         };

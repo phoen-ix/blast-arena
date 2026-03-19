@@ -580,8 +580,8 @@ export class GameStateManager {
       }
     }
 
-    // 8. Time limit check
-    if (this.finishTick === null) {
+    // 8. Time limit check (campaign handles its own timer via CampaignGame)
+    if (this.finishTick === null && this.gameMode !== 'campaign') {
       const timeElapsed = this.tick / TICK_RATE;
       if (timeElapsed >= this.roundTime && this.status === 'playing') {
         const alive = this.getAlivePlayers();
@@ -837,6 +837,9 @@ export class GameStateManager {
   }
 
   private checkWinCondition(): void {
+    // Campaign mode handles its own win conditions in CampaignGame
+    if (this.gameMode === 'campaign') return;
+
     const alivePlayers = this.getAlivePlayers();
 
     // Deathmatch: check kill target

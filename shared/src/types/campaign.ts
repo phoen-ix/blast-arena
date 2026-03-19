@@ -117,6 +117,7 @@ export interface CampaignLevel {
   winConditionConfig: WinConditionConfig | null;
   lives: number;
   timeLimit: number;
+  parTime: number; // seconds, 0 = no par time; star calc: 3=zero deaths, 2=under par, 1=completed
   carryOverPowerups: boolean;
   startingPowerups: StartingPowerUps | null;
   availablePowerupTypes: PowerUpType[] | null;
@@ -150,6 +151,7 @@ export interface CampaignLevelSummary {
   winCondition: CampaignWinCondition;
   lives: number;
   timeLimit: number;
+  parTime: number;
   enemyCount: number;
   isPublished: boolean;
   progress?: LevelProgress;

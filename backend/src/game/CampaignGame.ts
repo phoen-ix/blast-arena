@@ -138,12 +138,13 @@ export class CampaignGame {
       }
     }
 
-    // Create game loop
+    // Create game loop (skip countdown — campaign starts immediately)
     this.gameLoop = new GameLoop(
       this.gameState,
       (state) => this.onTick(state),
       () => this.onTimeUp(),
       TICK_RATE,
+      true, // skipCountdown
     );
   }
 
@@ -201,6 +202,7 @@ export class CampaignGame {
 
   private onTick(_tickState: unknown): void {
     if (this.finished) return;
+    if (this.gameState.status !== 'playing') return;
 
     this.campaignTick();
 

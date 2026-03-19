@@ -15,23 +15,29 @@ export class GameLoop {
   private tickRate: number;
   private running: boolean = false;
   private countdownTicksRemaining: number = COUNTDOWN_TICKS;
+  private skipCountdown: boolean = false;
 
   constructor(
     gameState: GameStateManager,
     onTick: (state: ReturnType<GameStateManager['toState']>) => void,
     onGameOver: () => void,
     tickRate: number = TICK_RATE,
+    skipCountdown: boolean = false,
   ) {
     this.gameState = gameState;
     this.onTick = onTick;
     this.onGameOver = onGameOver;
     this.tickRate = tickRate;
+    this.skipCountdown = skipCountdown;
   }
 
   start(): void {
     if (this.running) return;
     this.running = true;
-    this.countdownTicksRemaining = COUNTDOWN_TICKS;
+    this.countdownTicksRemaining = this.skipCountdown ? 0 : COUNTDOWN_TICKS;
+    if (this.skipCountdown) {
+      this.gameState.status = 'playing';
+    }
 
     const tickMs = 1000 / this.tickRate;
 

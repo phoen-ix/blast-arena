@@ -118,17 +118,17 @@ Admins can create and edit levels with a visual drag-and-drop editor (Admin Pane
 
 - Paint tiles (walls, destructible, spawn, exit, goal) on a grid
 - Place enemies from the type catalog and power-ups (visible or hidden under walls)
-- Configure win condition, lives, timer, map dimensions, power-up settings
+- Configure win condition, lives, timer, par time (for star thresholds), map dimensions, power-up settings
 - Undo/redo (Ctrl+Z/Y), zoom (scroll), pan (right-click drag)
 - Test play directly from the editor
 
 ### Training Grounds (Built-in World)
 
-| # | Level | Size | Lives | Timer | Enemies | Win Condition |
-|---|-------|------|-------|-------|---------|---------------|
-| 1 | First Steps | 15×13 | 3 | — | 3 blobs | Kill all |
-| 2 | Ghost Town | 19×15 | 3 | 120s | 2 blobs + 2 ghosts | Find exit (kill 3) |
-| 3 | Bomber's Lair | 21×17 | 5 | 180s | 3 blobs + 2 ghosts + 1 bomber | Kill all |
+| # | Level | Size | Lives | Timer | Par | Enemies | Win Condition |
+|---|-------|------|-------|-------|-----|---------|---------------|
+| 1 | First Steps | 15×13 | 3 | — | 60s | 3 blobs | Kill all |
+| 2 | Ghost Town | 19×15 | 3 | 120s | 90s | 2 blobs + 2 ghosts | Find exit (kill 3) |
+| 3 | Bomber's Lair | 21×17 | 5 | 180s | 120s | 3 blobs + 2 ghosts + 1 bomber | Kill all |
 
 ## Room Configuration
 

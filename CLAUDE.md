@@ -76,25 +76,28 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Boss support**: `isBoss` flag on enemy types with `bossPhases` (HP threshold triggers: speed changes, new movement patterns, minion spawns, bomb activation). Visual: `sizeMultiplier` for larger sprites, dedicated HP bar in HUD
 - **Hidden power-ups**: Power-ups marked `hidden: true` are placed under destructible walls; revealed when the wall is destroyed
 - **Procedural enemy textures**: `EnemyTextureGenerator.ts` renders 6 body shapes (blob, spiky, ghost, robot, bug, skull) × 4 eye styles (round, angry, sleepy, crazy) × 4 directions. Features: teeth, horns. Canvas2D preview for admin editor
-- **Campaign game session**: `CampaignGame.ts` wraps `GameStateManager` with `customMap` (bypasses `generateMap()`). Extended tick: enemy AI → movement → enemy-explosion collision → player-enemy contact → hidden powerup reveals → boss phases → win condition check
+- **Campaign game session**: `CampaignGame.ts` wraps `GameStateManager` with `customMap` (bypasses `generateMap()`). Extended tick: enemy AI → movement → enemy-explosion collision → player-enemy contact → hidden powerup reveals → boss phases → win condition check. `GameStateManager.checkWinCondition()` and time limit check skip `campaign` mode — CampaignGame handles its own
+- **Skip countdown**: Campaign uses `GameLoop` with `skipCountdown: true` — game starts immediately (no 3-2-1 countdown). Status set to `'playing'` at start
+- **Campaign respawn**: On death, player respawns after 40 ticks. Frontend detects `me.alive` flipping back to `true` in campaign mode and exits spectator mode, restoring normal controls
 - **Session management**: `CampaignGameManager` singleton — one active session per user. Starting a new level ends existing session
-- **Progress tracking**: `campaign_progress` table per user per level. Stars: 1=completed, 2=reasonable time, 3=zero deaths. Best time tracked. `campaign_user_state` for current position and carried powerups
+- **Par time & star ratings**: Each level has a configurable `parTime` (seconds, 0=none). Stars: 3=zero deaths, 2=completed under par time, 1=completed. Stars only improve, never regress. Level editor exposes par time in settings panel
+- **Progress tracking**: `campaign_progress` table per user per level. Best time tracked. `campaign_user_state` for current position and carried powerups
 - **Frontend**: Campaign button in lobby → `CampaignUI` full-screen overlay with world cards, level selection, progress display, star ratings. Clicking "Start" fetches level + enemy types, sets `campaignMode` registry flag, emits `campaign:start`
 - **GameScene integration**: Detects `campaignMode` → creates `EnemySpriteRenderer`, listens on `campaign:state` instead of `game:state`, sends `campaign:input`
-- **HUD campaign variant**: Lives hearts (top-left), enemy count remaining, boss HP bar (300px, centered). Hides player list and kill feed
-- **Game over campaign variant**: "LEVEL COMPLETE!" (green) or "LEVEL FAILED" (red), stars display, time taken, Next Level / Retry / Campaign buttons
+- **HUD campaign variant**: Lives hearts (top-left), enemy count remaining, boss HP bar (300px, centered). Hides player list and kill feed. Timer hidden when no time limit (`roundTime >= 99999`)
+- **Game over campaign variant**: "LEVEL COMPLETE!" (green) or "LEVEL FAILED" (red), stars display, time taken, Next Level / Retry / Campaign buttons. Retry and Next Level directly emit `campaign:start` and transition to GameScene (no lobby round-trip)
 - **Tile types**: `exit` (trapdoor texture, conditionally walkable) and `goal` (gold star texture, always walkable) added to `TileType` union, `CollisionSystem.isWalkable()`, `TileMap.getTileTexture()`, `BootScene.generateTextures()`
-- **Level editor**: `LevelEditorScene.ts` — full Phaser scene with DOM overlay. Tool palette (tiles, enemies, power-ups), click-to-place, paint mode (drag), zoom (scroll), pan (right-click drag), undo/redo (Ctrl+Z/Y, 50-state stack), save/load via API. Admin-only, launched from CampaignTab
+- **Level editor**: `LevelEditorScene.ts` — full Phaser scene with DOM overlay. Tool palette (tiles, enemies, power-ups), click-to-place, paint mode (drag), zoom (scroll), pan (right-click drag), undo/redo (Ctrl+Z/Y, 50-state stack), save/load via API. Level settings panel: name, lives, time limit, par time, win condition, published toggle. Admin-only, launched from CampaignTab
 - **Admin CampaignTab**: Two views — "Worlds & Levels" (CRUD, reorder, publish/unpublish, edit launches editor) and "Enemy Types" (CRUD with live Canvas2D sprite preview, all config fields)
-- **Database**: Migration `008_campaign.sql` — 5 tables: `campaign_enemy_types`, `campaign_worlds`, `campaign_levels`, `campaign_progress`, `campaign_user_state`. Seed migration `009_campaign_seed.sql` — 3 enemy types + "Training Grounds" world with 3 levels
+- **Database**: Migration `008_campaign.sql` — 5 tables: `campaign_enemy_types`, `campaign_worlds`, `campaign_levels`, `campaign_progress`, `campaign_user_state`. Seed migration `009_campaign_seed.sql` — 3 enemy types + "Training Grounds" world with 3 levels. Migration `010_campaign_par_time.sql` — adds `par_time` column to `campaign_levels`. Migration `011_fix_campaign_tile_types.sql` — fixes seed tile types (`'indestructible'` → `'wall'`)
 - **API endpoints**: Player (auth): `GET /campaign/worlds`, `GET /campaign/worlds/:id/levels`, `GET /campaign/levels/:id`, `GET /campaign/progress`, `GET /campaign/enemy-types`. Admin: full CRUD for worlds, levels, enemy types at `/admin/campaign/*`
 - **Socket events (C→S)**: `campaign:start` (levelId, callback), `campaign:input` (PlayerInput), `campaign:quit`, `campaign:buddyInput` (stub)
 - **Socket events (S→C)**: `campaign:gameStart`, `campaign:state`, `campaign:playerDied`, `campaign:enemyDied`, `campaign:exitOpened`, `campaign:levelComplete`, `campaign:gameOver`
 - **Buddy mode stubs**: `BuddyEntity.ts` (backend, position/direction/active), `BuddySprite.ts` (frontend, empty renderer), `campaign:buddyInput` (no-op handler). Foundation for future second-player mini-character
 - **Seed data — Training Grounds** (3 levels):
-  - Level 1 "First Steps": 15×13, 3 lives, no timer, kill_all, 3 blob enemies, 2 hidden powerups
-  - Level 2 "Ghost Town": 19×15, 3 lives, 120s, find_exit (kill 3 to unlock), 2 blobs + 2 ghosts, 3 powerups
-  - Level 3 "Bomber's Lair": 21×17, 5 lives, 180s, kill_all, 3 blobs + 2 ghosts + 1 robot bomber (stationary, proximity bombs, 2 HP), 5 powerups
+  - Level 1 "First Steps": 15×13, 3 lives, no timer, par 60s, kill_all, 3 blob enemies, 2 hidden powerups
+  - Level 2 "Ghost Town": 19×15, 3 lives, 120s, par 90s, find_exit (kill 3 to unlock), 2 blobs + 2 ghosts, 3 powerups
+  - Level 3 "Bomber's Lair": 21×17, 5 lives, 180s, par 120s, kill_all, 3 blobs + 2 ghosts + 1 robot bomber (stationary, proximity bombs, 2 HP), 5 powerups
 
 ## Admin Panel
 - Full-screen panel accessible from lobby header (Admin button visible for admin and moderator roles)

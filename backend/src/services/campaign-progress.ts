@@ -74,13 +74,13 @@ export async function recordCompletion(
   levelId: number,
   timeSeconds: number,
   deaths: number,
+  parTime: number = 0,
 ): Promise<number> {
-  // Calculate stars: 1 = completed, 2 = under par time (level time limit / 2), 3 = zero deaths
+  // Stars: 1 = completed, 2 = under par time, 3 = zero deaths
   let stars = 1;
   if (deaths === 0) {
     stars = 3;
-  } else {
-    // Star 2: completed in reasonable time (we just give 2 stars if any time is recorded for now)
+  } else if (parTime > 0 && timeSeconds <= parTime) {
     stars = 2;
   }
 

@@ -360,14 +360,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    // Detect local player death
-    if (!this.localPlayerDead && this.lastGameState) {
+    // Detect local player death / campaign respawn
+    if (this.lastGameState) {
       const me = this.lastGameState.players.find((p) => p.id === this.localPlayerId);
-      if (me && !me.alive) {
+      if (!this.localPlayerDead && me && !me.alive) {
         this.localPlayerDead = true;
         const cam = this.cameras.main;
         this.freeCamX = cam.scrollX + cam.width / 2;
         this.freeCamY = cam.scrollY + cam.height / 2;
+      } else if (this.localPlayerDead && me && me.alive && this.campaignMode) {
+        // Player respawned in campaign — exit spectator mode
+        this.localPlayerDead = false;
       }
     }
 
