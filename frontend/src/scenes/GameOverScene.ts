@@ -56,14 +56,25 @@ export class GameOverScene extends Phaser.Scene {
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
 
-    this.add
-      .text(width / 2, 45, 'GAME OVER', {
+    const gameText = this.add
+      .text(0, 45, 'GAME ', {
+        fontSize: '42px',
+        color: '#ffffff',
+        fontFamily: 'Chakra Petch, sans-serif',
+        fontStyle: 'bold',
+      })
+      .setOrigin(1, 0.5);
+    const overText = this.add
+      .text(0, 45, 'OVER', {
         fontSize: '42px',
         color: '#ff6b35',
         fontFamily: 'Chakra Petch, sans-serif',
         fontStyle: 'bold',
       })
-      .setOrigin(0.5);
+      .setOrigin(0, 0.5);
+    const totalWidth = gameText.width + overText.width;
+    gameText.setX(width / 2 - totalWidth / 2 + gameText.width);
+    overText.setX(width / 2 - totalWidth / 2 + gameText.width);
 
     // Show reason text beneath game over
     if (data?.reason) {
@@ -80,15 +91,15 @@ export class GameOverScene extends Phaser.Scene {
     const playAgainBtn = this.add
       .text(width / 2 - 100, height - 40, '[ Play Again ]', {
         fontSize: '20px',
-        color: '#00e676',
+        color: '#ffffff',
         fontFamily: 'Chakra Petch, sans-serif',
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
-    playAgainBtn.on('pointerover', () => playAgainBtn.setColor('#66ffaa'));
-    playAgainBtn.on('pointerout', () => playAgainBtn.setColor('#00e676'));
+    playAgainBtn.on('pointerover', () => playAgainBtn.setColor('#cccccc'));
+    playAgainBtn.on('pointerout', () => playAgainBtn.setColor('#ffffff'));
     playAgainBtn.on('pointerdown', () => {
       socketClient.off('room:state' as any, roomStateHandler as any);
       socketClient.emit('room:restart', (response: any) => {
@@ -119,8 +130,8 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     this.buttons = [playAgainBtn, backBtn];
-    this.baseColors = ['#00e676', '#ff6b35'];
-    this.highlightColors = ['#66ffaa', '#ff8555'];
+    this.baseColors = ['#ffffff', '#ff6b35'];
+    this.highlightColors = ['#cccccc', '#ff8555'];
 
     // Underline graphic for gamepad selection
     this.underline = this.add.graphics();

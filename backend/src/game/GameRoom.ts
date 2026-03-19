@@ -241,6 +241,7 @@ export class GameRoom {
   /** Called each tick from broadcastState to expire disconnect grace periods */
   private checkDisconnectGracePeriods(): void {
     const currentTick = this.gameState.tick;
+    let killedByGrace = false;
     for (const [playerId, disconnectTick] of this.disconnectedPlayers) {
       if (currentTick - disconnectTick >= DISCONNECT_GRACE_TICKS) {
         this.gameState.killPlayer(playerId, null);
@@ -249,11 +250,12 @@ export class GameRoom {
           'Player killed after disconnect grace period expired',
         );
         this.disconnectedPlayers.delete(playerId);
+        killedByGrace = true;
       }
     }
 
-    // End game if no human players remain alive (all disconnected/killed)
-    if (this.disconnectedPlayers.size === 0) {
+    // End game if all humans were killed by disconnect grace expiry (not normal gameplay deaths)
+    if (killedByGrace && this.disconnectedPlayers.size === 0) {
       const hasAliveHuman = Array.from(this.gameState.players.values()).some(
         (p) => p.alive && !p.isBot,
       );
