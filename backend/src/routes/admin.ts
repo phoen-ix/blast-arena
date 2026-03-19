@@ -369,7 +369,7 @@ router.delete('/admin/matches', adminOnlyMiddleware, async (req, res, next) => {
     await execute('DELETE FROM matches');
     await execute(
       'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
-      [req.user!.userId, 'delete_all_matches', 'match', null, JSON.stringify({ count: matches.total, replaysCleaned })],
+      [req.user!.userId, 'delete_all_matches', 'match', 0, JSON.stringify({ count: matches.total, replaysCleaned })],
     );
     res.json({ message: 'All matches deleted', count: matches.total, replaysCleaned });
   } catch (err) {
