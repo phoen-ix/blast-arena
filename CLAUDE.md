@@ -44,7 +44,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Composed rendering**: GameScene.ts is a thin orchestrator that delegates to dedicated renderer classes in `frontend/src/game/`:
   - `TileMap.ts` — tile grid rendering with floor variants, destruction animation, and support for new tile types (teleporters, conveyors, cracked walls)
   - `PlayerSprite.ts` — player sprites with directional eyes, shield aura, squash/stretch movement (guarded by `activeMoveAnim` Set to prevent tween stacking), dust particles, and death effects
-  - `BombSprite.ts` — bomb sprites with pulsing tween (normal) or alpha blink (remote, blue texture), fuse spark particles, and last-second urgency flashing
+  - `BombSprite.ts` — bomb sprites with pulsing scale tween; remote bombs (blue texture) combine scale pulse with slow alpha blink for visual distinction; fuse spark particles, and last-second urgency flashing
   - `ExplosionSprite.ts` — animated explosions with expansion wave, sustain pulse, fade phase, and fire/smoke particles
   - `PowerUpSprite.ts` — power-up sprites with floating animation and distinctive icons per type
   - `ShrinkingZone.ts` — Battle Royale danger zone overlay using Graphics path with circle hole

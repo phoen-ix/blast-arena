@@ -73,10 +73,12 @@ export class BombSpriteRenderer {
         this.sprites.set(bomb.id, sprite);
 
         if (isRemote) {
-          // Remote bombs: slow alpha blink instead of pulsing scale
+          // Remote bombs: pulsing scale + slow alpha blink (blue texture distinguishes them)
           const tween = this.scene.tweens.add({
             targets: sprite,
-            alpha: 0.4,
+            scaleX: 1.15,
+            scaleY: 1.15,
+            alpha: 0.5,
             duration: 600,
             yoyo: true,
             repeat: -1,
