@@ -11,6 +11,7 @@ import {
   PowerUpType,
   POWERUP_DEFINITIONS,
   GAME_MODES,
+  BotAIEntry,
 } from '@blast-arena/shared';
 import { escapeHtml } from '../../utils/html';
 import game from '../../main';
@@ -650,9 +651,14 @@ export class SimulationsTab {
 
   private async showConfigModal(): Promise<void> {
     let simDefaults: SimulationDefaults = {};
+    let activeAIs: BotAIEntry[] = [];
     try {
-      const resp = await ApiClient.get<{ defaults: SimulationDefaults }>('/admin/settings/simulation_defaults');
-      simDefaults = resp.defaults ?? {};
+      const [defResp, aiResp] = await Promise.all([
+        ApiClient.get<{ defaults: SimulationDefaults }>('/admin/settings/simulation_defaults'),
+        ApiClient.get<{ ais: BotAIEntry[] }>('/admin/ai/active'),
+      ]);
+      simDefaults = defResp.defaults ?? {};
+      activeAIs = aiResp.ais ?? [];
     } catch {
       // Use hardcoded defaults on failure
     }
@@ -697,6 +703,14 @@ export class SimulationsTab {
               <option value="hard">Hard</option>
             </select>
           </div>
+          ${activeAIs.length > 1 ? `
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Bot AI</label>
+            <select id="sim-bot-ai">
+              ${activeAIs.map((ai) => `<option value="${ai.id}"${ai.isBuiltin ? ' selected' : ''}>${escapeHtml(ai.name)}</option>`).join('')}
+            </select>
+          </div>
+          ` : ''}
           <div class="form-group" style="margin-bottom:0;">
             <label>Map Size</label>
             <select id="sim-map-size">
@@ -858,6 +872,7 @@ export class SimulationsTab {
         speed,
         logVerbosity: (modal.querySelector('#sim-verbosity') as HTMLSelectElement).value as any,
         recordReplays: (modal.querySelector('#sim-record-replays') as HTMLInputElement).checked,
+        botAiId: (modal.querySelector('#sim-bot-ai') as HTMLSelectElement | null)?.value || undefined,
       };
 
       // Validate bot count for Teams mode (minimum 4)
@@ -931,6 +946,7 @@ export class SimulationsTab {
     setCheckbox('#sim-hazard-tiles', defaults.hazardTiles);
     setCheckbox('#sim-friendly-fire', defaults.friendlyFire);
     setCheckbox('#sim-record-replays', defaults.recordReplays);
+    setSelect('#sim-bot-ai', defaults.botAiId);
 
     if (defaults.enabledPowerUps) {
       const enabled = new Set(defaults.enabledPowerUps);

@@ -9,6 +9,7 @@ import { RoomsTab } from './admin/RoomsTab';
 import { LogsTab } from './admin/LogsTab';
 import { AnnouncementsTab } from './admin/AnnouncementsTab';
 import { SimulationsTab } from './admin/SimulationsTab';
+import { AITab } from './admin/AITab';
 
 interface Tab {
   id: string;
@@ -74,6 +75,12 @@ export class AdminUI {
         label: 'Simulations',
         adminOnly: true,
         instance: new SimulationsTab(notifications, socketClient),
+      },
+      {
+        id: 'ai',
+        label: 'AI',
+        adminOnly: true,
+        instance: new AITab(notifications),
       },
       {
         id: 'announcements',

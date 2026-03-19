@@ -65,8 +65,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ## Admin Panel
 - Full-screen panel accessible from lobby header (Admin button visible for admin and moderator roles)
-- **Top-tab navigation**: Dashboard, Users, Matches, Rooms, Logs, Simulations, Announcements (role-filtered)
-- **Permission matrix**: Admin sees all 7 tabs (Simulations is admin-only); Moderator sees Users, Matches, Rooms, Announcements only
+- **Top-tab navigation**: Dashboard, Users, Matches, Rooms, Logs, Simulations, AI, Announcements (role-filtered)
+- **Permission matrix**: Admin sees all 8 tabs (Simulations and AI are admin-only); Moderator sees Users, Matches, Rooms, Announcements only
 - **Dashboard**: 5 stat cards (total users, active 24h, total matches, active rooms, online players) with 30s auto-refresh; "Server Settings" card with match recordings toggle (admin-only), collapsible "Game Creation Defaults" and "Simulation Defaults" editors
 - **Users**: Paginated table with search, role change dropdown, deactivate (soft delete), delete permanently (type-username confirmation), create user modal, admin password reset (sets new password, revokes tokens)
 - **Matches**: Paginated table, click row for detail modal with per-player stats
@@ -84,6 +84,22 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Admin-only `PUT /admin/settings/recordings_enabled` with `{ enabled: boolean }` — updates DB, logs to audit, broadcasts `admin:settingsChanged` socket event
 - `server_settings` table: key-value store for server-wide settings; `backend/src/services/settings.ts` provides `getSetting()`, `setSetting()`, `isRecordingEnabled()`, `getGameDefaults()`, `setGameDefaults()`, `getSimulationDefaults()`, `setSimulationDefaults()`
 - **Admin-configurable defaults**: `game_defaults` and `simulation_defaults` stored as JSON blobs in `server_settings`. Public `GET /admin/settings/game_defaults` endpoint; staff `GET /admin/settings/simulation_defaults`; admin-only PUT for both. Zod-validated with all fields optional — empty `{}` means "use hardcoded defaults". CreateRoomModal and SimulationsTab config modal fetch defaults on open and pre-fill form elements. `GameDefaults` and `SimulationDefaults` types in `shared/src/types/settings.ts`
+
+## Bot AI Management
+- Admin-only system for managing multiple bot AI implementations
+- **AI Tab** in admin panel: list all AIs, upload new ones, activate/deactivate, download source, re-upload, delete (with type-name confirmation)
+- **Built-in AI**: The default BotAI is listed as a non-deletable entry (id `'builtin'`); can be deactivated but not deleted or re-uploaded
+- **Upload pipeline**: Admin uploads `.ts` file → esbuild transpiles to `.js` → structure validation (must export class with `generateInput` method) → dangerous import scan (blocks `fs`, `child_process`, `net`, etc.) → stored in `data/ai/{uuid}/source.ts` + `compiled.js`
+- **IBotAI interface**: `backend/src/game/BotAI.ts` exports `IBotAI` with `generateInput(player, state, logger?): PlayerInput | null`. Custom AIs must implement this interface with same constructor signature: `(difficulty: 'easy' | 'normal' | 'hard', mapSize?: { width, height })`
+- **BotAIRegistry** (`backend/src/services/botai-registry.ts`): singleton managing loaded AI constructors; `createInstance(aiId, difficulty, mapSize)` factory with built-in fallback; initialized at server startup after DB ready
+- **BotAI Compiler** (`backend/src/services/botai-compiler.ts`): esbuild transpilation + validation pipeline; checks file size (500KB max), dangerous imports, compilation, structure, and instantiation
+- **CRUD Service** (`backend/src/services/botai.ts`): `listAllAIs()`, `listActiveAIs()`, `uploadAI()`, `updateAI()`, `reuploadAI()`, `deleteAI()`, `downloadSource()`
+- **Runtime safety**: `GameStateManager.processTick()` wraps `generateInput()` in try/catch; on crash, replaces bot's AI with built-in fallback
+- **Per-room selection**: `botAiId` field in `MatchConfig`, `SimulationConfig`, `GameDefaults`, `SimulationDefaults`. When multiple AIs are active, a "Bot AI" dropdown appears in CreateRoomModal and SimulationsTab config modal
+- **File storage**: `./data/ai/{uuid}/source.ts` + `compiled.js`; Docker volume mount `./data/ai:/app/ai`
+- **Database**: `bot_ais` table (migration `007_bot_ais.sql`) with FK to `users` for uploader; `BotAIEntry` type in `shared/src/types/botai.ts`
+- **API endpoints**: Public `GET /admin/ai/active`; admin-only `GET /admin/ai`, `POST /admin/ai` (multipart), `PUT /admin/ai/:id`, `PUT /admin/ai/:id/upload` (multipart), `GET /admin/ai/:id/download`, `DELETE /admin/ai/:id`
+- **Dependencies**: `esbuild` (production, TypeScript transpiler), `multer` (file upload handling)
 
 ## Bot Simulation System
 - Admin-only batch simulation runner for bot-only games — no human players, no DB records

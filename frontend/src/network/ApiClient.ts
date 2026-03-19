@@ -80,6 +80,89 @@ class ApiClientClass {
     });
   }
 
+  async postForm<T>(path: string, formData: FormData): Promise<T> {
+    const headers: Record<string, string> = {};
+    // Do NOT set Content-Type — browser auto-sets it with multipart boundary
+    if (this.authManager?.getAccessToken()) {
+      headers['Authorization'] = `Bearer ${this.authManager.getAccessToken()}`;
+    }
+
+    const response = await fetch(`${API_URL}${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (response.status === 401 && this.authManager) {
+      const refreshed = await this.authManager.refresh();
+      if (refreshed) {
+        headers['Authorization'] = `Bearer ${this.authManager.getAccessToken()}`;
+        const retryResponse = await fetch(`${API_URL}${path}`, {
+          method: 'POST',
+          headers,
+          body: formData,
+          credentials: 'include',
+        });
+        if (!retryResponse.ok) {
+          const error = await retryResponse.json().catch(() => ({ error: 'Upload failed' }));
+          throw new Error(error.error || 'Upload failed');
+        }
+        return retryResponse.json();
+      }
+      this.authManager.logout();
+      throw new Error('Session expired');
+    }
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async putForm<T>(path: string, formData: FormData): Promise<T> {
+    const headers: Record<string, string> = {};
+    if (this.authManager?.getAccessToken()) {
+      headers['Authorization'] = `Bearer ${this.authManager.getAccessToken()}`;
+    }
+
+    const response = await fetch(`${API_URL}${path}`, {
+      method: 'PUT',
+      headers,
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (response.status === 401 && this.authManager) {
+      const refreshed = await this.authManager.refresh();
+      if (refreshed) {
+        headers['Authorization'] = `Bearer ${this.authManager.getAccessToken()}`;
+        const retryResponse = await fetch(`${API_URL}${path}`, {
+          method: 'PUT',
+          headers,
+          body: formData,
+          credentials: 'include',
+        });
+        if (!retryResponse.ok) {
+          const error = await retryResponse.json().catch(() => ({ error: 'Upload failed' }));
+          throw new Error(error.error || 'Upload failed');
+        }
+        return retryResponse.json();
+      }
+      this.authManager.logout();
+      throw new Error('Session expired');
+    }
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  }
+
   async delete<T>(path: string): Promise<T> {
     return this.request<T>(path, { method: 'DELETE' });
   }

@@ -16,6 +16,7 @@ export interface GameDefaults {
   hazardTiles?: boolean;
   friendlyFire?: boolean;
   enabledPowerUps?: PowerUpType[];
+  botAiId?: string;
 }
 
 export interface SimulationDefaults extends GameDefaults {

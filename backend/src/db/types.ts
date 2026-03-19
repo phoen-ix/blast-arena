@@ -110,6 +110,21 @@ export interface AdminActionRow extends RowDataPacket {
   created_at: Date;
 }
 
+/** Bot AI row */
+export interface BotAIRow extends RowDataPacket {
+  id: string;
+  name: string;
+  description: string;
+  filename: string;
+  is_builtin: boolean;
+  is_active: boolean;
+  uploaded_by: number | null;
+  uploaded_at: Date;
+  version: number;
+  file_size: number;
+  uploader_username?: string;
+}
+
 /** Server settings row */
 export interface SettingRow extends RowDataPacket {
   setting_value: string;

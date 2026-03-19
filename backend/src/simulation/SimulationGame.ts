@@ -59,6 +59,7 @@ export class SimulationGame {
       botDifficulty: config.botDifficulty,
       reinforcedWalls: config.reinforcedWalls,
       enableMapEvents: config.enableMapEvents,
+      botAiId: config.botAiId,
     });
 
     // Add bots

@@ -6,6 +6,7 @@ export * from './types/admin';
 export * from './types/simulation';
 export * from './types/replay';
 export * from './types/settings';
+export * from './types/botai';
 export * from './constants/game';
 export * from './constants/powerups';
 export * from './constants/modes';

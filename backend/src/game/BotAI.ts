@@ -18,6 +18,14 @@ function isDestructibleTile(tile: TileType): boolean {
   return tile === 'destructible' || tile === ('destructible_cracked' as TileType);
 }
 
+export interface IBotAI {
+  generateInput(
+    player: Player,
+    state: GameStateManager,
+    logger?: GameLogger | null,
+  ): PlayerInput | null;
+}
+
 export interface BotDifficultyConfig {
   dangerAwareness: number | 'fireRange';
   escapeSearchDepth: number;
@@ -134,7 +142,7 @@ const DIFFICULTY_PRESETS: Record<'easy' | 'normal' | 'hard', BotDifficultyConfig
   },
 };
 
-export class BotAI {
+export class BotAI implements IBotAI {
   private seq: number = 0;
   private lastDirection: Direction = 'down';
   private bombCooldown: number = 0;

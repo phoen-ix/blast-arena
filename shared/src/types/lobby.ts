@@ -21,6 +21,7 @@ export interface MatchConfig {
   enableMapEvents?: boolean;
   reinforcedWalls?: boolean;
   recordGame?: boolean;
+  botAiId?: string;
 }
 
 export interface RoomPlayer {

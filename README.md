@@ -149,9 +149,21 @@ Accessible from the lobby header for admin and moderator roles.
 | **Rooms** | Admin + Mod | Active rooms with 5s refresh, spectate, send message, kick player, force close (admin only) |
 | **Logs** | Admin | Audit trail of all admin actions with action type filter |
 | **Simulations** | Admin | Batch bot-only game simulations for AI analysis (see below) |
+| **AI** | Admin | Upload, manage, and switch between custom bot AI implementations (see below) |
 | **Announcements** | Admin + Mod | Toast broadcast (ephemeral notification to all players) + persistent lobby banner (admin only) |
 
 All admin actions are logged to an audit table.
+
+## Bot AI Management
+
+Admins can upload custom bot AI implementations as TypeScript files, which are compiled and validated server-side.
+
+- **Upload**: Upload a `.ts` file that exports a class with `generateInput(player, state, logger?): PlayerInput | null`. Server validates syntax, dangerous imports, structure, and instantiation
+- **Built-in AI**: The default BotAI is always listed and cannot be deleted — serves as a downloadable reference implementation and fallback
+- **Activate/Deactivate**: Multiple AIs can be active simultaneously. When more than one is active, a "Bot AI" dropdown appears in room creation and simulation config
+- **Per-room selection**: Each room or simulation batch can use a different AI via the `botAiId` config field
+- **Runtime safety**: If a custom AI crashes during gameplay, the bot silently falls back to the built-in default
+- **Storage**: Source and compiled files in `data/ai/{uuid}/`, metadata in `bot_ais` database table
 
 ## Bot Simulation System
 

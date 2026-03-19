@@ -1,6 +1,6 @@
 import { SocketClient } from '../../network/SocketClient';
 import { NotificationUI } from '../NotificationUI';
-import { PowerUpType, POWERUP_DEFINITIONS, Room, GameDefaults } from '@blast-arena/shared';
+import { PowerUpType, POWERUP_DEFINITIONS, Room, GameDefaults, BotAIEntry } from '@blast-arena/shared';
 import { UIGamepadNavigator } from '../../game/UIGamepadNavigator';
 
 export interface CreateRoomModalDeps {
@@ -10,6 +10,7 @@ export interface CreateRoomModalDeps {
   generateRoomName: () => string;
   recordingsEnabled?: boolean;
   gameDefaults?: GameDefaults;
+  activeAIs?: BotAIEntry[];
 }
 
 export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
@@ -107,6 +108,14 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <option value="hard">Hard</option>
           </select>
         </div>
+        ${(deps.activeAIs && deps.activeAIs.length > 1) ? `
+        <div class="form-group" style="margin-bottom:0;" id="bot-ai-row">
+          <label>Bot AI</label>
+          <select id="room-bot-ai" disabled>
+            ${deps.activeAIs.map((ai) => `<option value="${ai.id}"${ai.isBuiltin ? ' selected' : ''}>${ai.name}</option>`).join('')}
+          </select>
+        </div>
+        ` : ''}
       </div>
 
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center;">
@@ -184,10 +193,15 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
   // Enable bot difficulty only when bots > 0
   const botsSelect = modal.querySelector('#room-bots') as HTMLSelectElement;
   const botDiffSelect = modal.querySelector('#room-bot-difficulty') as HTMLSelectElement;
+  const botAiSelect = modal.querySelector('#room-bot-ai') as HTMLSelectElement | null;
   const updateBotDiffEnabled = () => {
     const hasBots = parseInt(botsSelect.value) > 0;
     botDiffSelect.disabled = !hasBots;
     botDiffSelect.style.opacity = hasBots ? '1' : '0.4';
+    if (botAiSelect) {
+      botAiSelect.disabled = !hasBots;
+      botAiSelect.style.opacity = hasBots ? '1' : '0.4';
+    }
   };
   botsSelect.addEventListener('change', updateBotDiffEnabled);
   updateBotDiffEnabled();
@@ -263,6 +277,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           enableMapEvents,
           hazardTiles,
           recordGame,
+          botAiId: effectiveBots > 0 && botAiSelect ? botAiSelect.value : undefined,
         },
       },
       (response: any) => {
@@ -319,6 +334,7 @@ function applyGameDefaults(modal: HTMLElement, defaults: GameDefaults): void {
   setCheckbox('#room-map-events', defaults.enableMapEvents);
   setCheckbox('#room-hazard-tiles', defaults.hazardTiles);
   setCheckbox('#room-friendly-fire', defaults.friendlyFire);
+  setSelect('#room-bot-ai', defaults.botAiId);
 
   if (defaults.enabledPowerUps) {
     const enabled = new Set(defaults.enabledPowerUps);

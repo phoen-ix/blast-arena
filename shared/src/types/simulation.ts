@@ -23,6 +23,7 @@ export interface SimulationConfig {
   logVerbosity: LogVerbosity;
   botTeams?: (number | null)[];
   recordReplays?: boolean;
+  botAiId?: string;
 }
 
 export interface SimulationBatchStatus {

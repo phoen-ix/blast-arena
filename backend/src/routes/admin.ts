@@ -6,9 +6,11 @@ import { validate } from '../middleware/validation';
 import * as adminService from '../services/admin';
 import * as replayService from '../services/replay';
 import * as settingsService from '../services/settings';
+import * as botaiService from '../services/botai';
 import { getSimulationManager, getIO } from '../game/registry';
 import { execute } from '../db/connection';
 import { SimulationConfig, GameDefaults, SimulationDefaults } from '@blast-arena/shared';
+import multer from 'multer';
 
 const router = Router();
 
@@ -58,6 +60,16 @@ router.get('/admin/settings/game_defaults', async (_req, res, next) => {
   try {
     const defaults = await settingsService.getGameDefaults();
     res.json({ defaults });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Public: get active AIs (no auth required, needed by room creation dropdown)
+router.get('/admin/ai/active', async (_req, res, next) => {
+  try {
+    const ais = await botaiService.listActiveAIs();
+    res.json({ ais });
   } catch (err) {
     next(err);
   }
@@ -125,6 +137,7 @@ const gameDefaultsSchema = z.object({
     enabledPowerUps: z.array(z.enum([
       'bomb_up', 'fire_up', 'speed_up', 'shield', 'kick', 'pierce_bomb', 'remote_bomb', 'line_bomb',
     ])).optional(),
+    botAiId: z.string().max(36).optional(),
   }),
 });
 
@@ -149,6 +162,7 @@ const simulationDefaultsSchema = z.object({
     speed: z.enum(['fast', 'realtime']).optional(),
     logVerbosity: z.enum(['normal', 'detailed', 'full']).optional(),
     recordReplays: z.boolean().optional(),
+    botAiId: z.string().max(36).optional(),
   }),
 });
 
@@ -465,6 +479,7 @@ const simulationConfigSchema = z.object({
   logVerbosity: z.enum(['normal', 'detailed', 'full']),
   botTeams: z.array(z.number().nullable()).optional(),
   recordReplays: z.boolean().optional(),
+  botAiId: z.string().max(36).optional(),
 });
 
 router.get('/admin/simulations', adminOnlyMiddleware, (_req, res) => {
@@ -527,6 +542,134 @@ router.delete('/admin/simulations/:batchId', adminOnlyMiddleware, (req, res) => 
     return;
   }
   res.json({ message: 'Batch deleted' });
+});
+
+// --- Bot AI Management ---
+
+const aiUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 500 * 1024 }, // 500KB
+  fileFilter: (_req, file, cb) => {
+    if (!file.originalname.endsWith('.ts')) {
+      cb(new Error('Only TypeScript (.ts) files are accepted'));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+const aiUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).optional(),
+  isActive: z.boolean().optional(),
+});
+
+router.get('/admin/ai', adminOnlyMiddleware, async (_req, res, next) => {
+  try {
+    const ais = await botaiService.listAllAIs();
+    res.json({ ais });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(
+  '/admin/ai',
+  adminOnlyMiddleware,
+  aiUpload.single('file'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: 'No file uploaded' });
+        return;
+      }
+      const name = req.body.name as string;
+      const description = (req.body.description as string) || '';
+      if (!name || name.length < 1 || name.length > 100) {
+        res.status(400).json({ error: 'Name is required (1-100 characters)' });
+        return;
+      }
+      const result = await botaiService.uploadAI(
+        name,
+        description,
+        req.file.buffer,
+        req.file.originalname,
+        req.user!.userId,
+      );
+      if (result.errors && result.errors.length > 0) {
+        res.status(400).json({ error: 'Compilation/validation failed', errors: result.errors });
+        return;
+      }
+      res.status(201).json({ ai: result.entry });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.put(
+  '/admin/ai/:id',
+  adminOnlyMiddleware,
+  validate(aiUpdateSchema),
+  async (req, res, next) => {
+    try {
+      await botaiService.updateAI(req.params.id, req.body, req.user!.userId);
+      res.json({ message: 'AI updated' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.put(
+  '/admin/ai/:id/upload',
+  adminOnlyMiddleware,
+  aiUpload.single('file'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: 'No file uploaded' });
+        return;
+      }
+      const result = await botaiService.reuploadAI(
+        req.params.id,
+        req.file.buffer,
+        req.file.originalname,
+        req.user!.userId,
+      );
+      if (!result.success) {
+        res.status(400).json({ error: 'Compilation/validation failed', errors: result.errors });
+        return;
+      }
+      res.json({ message: 'AI updated' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get('/admin/ai/:id/download', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const source = await botaiService.downloadSource(req.params.id);
+    if (!source) {
+      res.status(404).json({ error: 'AI source not found' });
+      return;
+    }
+    res.setHeader('Content-Type', 'text/typescript');
+    res.setHeader('Content-Disposition', `attachment; filename="${source.filename}"`);
+    res.send(source.content);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/admin/ai/:id', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    await botaiService.deleteAI(req.params.id, req.user!.userId);
+    res.json({ message: 'AI deleted' });
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

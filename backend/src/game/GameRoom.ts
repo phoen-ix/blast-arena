@@ -57,6 +57,7 @@ export class GameRoom {
       botDifficulty: room.config.botDifficulty ?? 'normal',
       reinforcedWalls: room.config.reinforcedWalls ?? false,
       enableMapEvents: room.config.enableMapEvents ?? false,
+      botAiId: room.config.botAiId,
     });
 
     // Add human players

@@ -26,6 +26,7 @@ services:
       - ./data/gamelogs:/app/gamelogs
       - ./data/simulations:/app/simulations
       - ./data/replays:/app/replays
+      - ./data/ai:/app/ai
     healthcheck:
       start_period: 10s
 

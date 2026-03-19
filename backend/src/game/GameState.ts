@@ -22,7 +22,8 @@ import { CollisionSystem } from './CollisionSystem';
 import { BattleRoyaleZone } from './BattleRoyale';
 import { generateMap } from './Map';
 import { InputBuffer } from './InputBuffer';
-import { BotAI } from './BotAI';
+import { IBotAI } from './BotAI';
+import { getBotAIRegistry } from '../services/botai-registry';
 import { GameLogger } from '../utils/gameLogger';
 
 /** Single-pass Map-to-array transform (avoids intermediate Array.from allocation) */
@@ -58,6 +59,7 @@ export interface GameConfig {
   botDifficulty?: 'easy' | 'normal' | 'hard';
   reinforcedWalls?: boolean;
   enableMapEvents?: boolean;
+  botAiId?: string;
 }
 
 export class GameStateManager {
@@ -86,7 +88,8 @@ export class GameStateManager {
   private powerUpDropRate: number;
   private friendlyFire: boolean;
   private botDifficulty: 'easy' | 'normal' | 'hard';
-  private botAIs: Map<number, BotAI> = new Map();
+  private botAiId: string;
+  private botAIs: Map<number, IBotAI> = new Map();
   private finishTick: number | null = null;
   public finishReason: string = '';
   public gameLogger: GameLogger | null = null;
@@ -130,7 +133,9 @@ export class GameStateManager {
       botDifficulty = 'normal',
       reinforcedWalls = false,
       enableMapEvents = false,
+      botAiId = 'builtin',
     } = config;
+    this.botAiId = botAiId;
 
     this.map = generateMap(mapWidth, mapHeight, mapSeed, wallDensity);
     this.collisionSystem = new CollisionSystem(
@@ -184,7 +189,13 @@ export class GameStateManager {
     this.players.set(id, player);
     this.placementCounter++;
     if (isBot) {
-      this.botAIs.set(id, new BotAI(this.botDifficulty, { width: this.map.width, height: this.map.height }));
+      this.botAIs.set(
+        id,
+        getBotAIRegistry().createInstance(this.botAiId, this.botDifficulty, {
+          width: this.map.width,
+          height: this.map.height,
+        }),
+      );
     }
     return player;
   }
@@ -231,9 +242,24 @@ export class GameStateManager {
       for (const [botId, ai] of this.botAIs) {
         const botPlayer = this.players.get(botId);
         if (botPlayer && botPlayer.alive) {
-          const input = ai.generateInput(botPlayer, this, this.gameLogger);
-          if (input) {
-            this.inputBuffer.addInput(botId, input);
+          try {
+            const input = ai.generateInput(botPlayer, this, this.gameLogger);
+            if (input) {
+              this.inputBuffer.addInput(botId, input);
+            }
+          } catch (err: unknown) {
+            // Custom AI crashed — replace with built-in fallback
+            const msg = err instanceof Error ? err.message : String(err);
+            if (this.gameLogger) {
+              this.gameLogger.logBotDecision(botId, 'ai_crash', `Custom AI error: ${msg}`);
+            }
+            this.botAIs.set(
+              botId,
+              getBotAIRegistry().createInstance('builtin', this.botDifficulty, {
+                width: this.map.width,
+                height: this.map.height,
+              }),
+            );
           }
         }
       }

@@ -6,6 +6,7 @@ import { createRedisClient } from './db/redis';
 import { runMigrations } from './db/migrations/runner';
 import { createApp } from './app';
 import { createSocketServer } from './socket';
+import { getBotAIRegistry } from './services/botai-registry';
 
 async function main(): Promise<void> {
   // 1. Load and validate config
@@ -21,7 +22,10 @@ async function main(): Promise<void> {
   // 4. Run migrations
   await runMigrations();
 
-  // 5. Create Express app
+  // 5. Initialize BotAI registry
+  await getBotAIRegistry().initialize();
+
+  // 6. Create Express app
   const app = createApp();
   const httpServer = http.createServer(app);
 
