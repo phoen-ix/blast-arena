@@ -573,31 +573,26 @@ export class CampaignUI {
     try {
       this.notifications.info('Loading level...');
 
-      const [levelData, enemyTypes] = await Promise.all([
-        ApiClient.get<any>(`/campaign/levels/${levelId}`),
-        ApiClient.get<any>('/campaign/enemy-types'),
-      ]);
+      // Fetch enemy types for texture generation
+      const enemyTypesResp = await ApiClient.get<any>('/campaign/enemy-types');
 
-      // Clear all DOM overlays
-      const uiOverlay = document.getElementById('ui-overlay');
-      if (uiOverlay) {
-        while (uiOverlay.firstChild) {
-          uiOverlay.removeChild(uiOverlay.firstChild);
+      // Listen for the server's initial state before transitioning
+      const gameStartHandler = (data: any) => {
+        this.socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
+
+        // Clear all DOM overlays
+        const uiOverlay = document.getElementById('ui-overlay');
+        if (uiOverlay) {
+          while (uiOverlay.firstChild) {
+            uiOverlay.removeChild(uiOverlay.firstChild);
+          }
         }
-      }
 
-      // Set registry flags for GameScene
-      const registry = game.registry;
-      registry.set('campaignMode', true);
-      registry.set('initialGameState', levelData.state);
-      registry.set('campaignEnemyTypes', enemyTypes);
-
-      // Emit campaign:start socket event
-      this.socketClient.emit('campaign:start' as any, { levelId }, (response: any) => {
-        if (response && response.error) {
-          this.notifications.error(response.error);
-          return;
-        }
+        // Set registry flags for GameScene
+        const registry = game.registry;
+        registry.set('campaignMode', true);
+        registry.set('initialGameState', data.state.gameState);
+        registry.set('campaignEnemyTypes', enemyTypesResp.enemyTypes || []);
 
         // Transition to GameScene + HUDScene
         const activeScene =
@@ -605,6 +600,15 @@ export class CampaignUI {
         if (activeScene) {
           activeScene.scene.start('GameScene');
           activeScene.scene.launch('HUDScene');
+        }
+      };
+      this.socketClient.on('campaign:gameStart' as any, gameStartHandler as any);
+
+      // Emit campaign:start socket event
+      this.socketClient.emit('campaign:start' as any, { levelId }, (response: any) => {
+        if (response && response.error) {
+          this.socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
+          this.notifications.error(response.error);
         }
       });
     } catch (err: unknown) {
