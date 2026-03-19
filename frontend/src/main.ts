@@ -5,6 +5,7 @@ import { LobbyScene } from './scenes/LobbyScene';
 import { GameScene } from './scenes/GameScene';
 import { HUDScene } from './scenes/HUDScene';
 import { GameOverScene } from './scenes/GameOverScene';
+import { LevelEditorScene } from './scenes/LevelEditorScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -25,7 +26,7 @@ const config: Phaser.Types.Core.GameConfig = {
   input: {
     gamepad: true,
   },
-  scene: [BootScene, MenuScene, LobbyScene, GameScene, HUDScene, GameOverScene],
+  scene: [BootScene, MenuScene, LobbyScene, GameScene, HUDScene, GameOverScene, LevelEditorScene],
 };
 
 const game = new Phaser.Game(config);

@@ -1,7 +1,8 @@
-import { GameState, PlayerInput } from './game';
+import { GameState, PlayerInput, Position } from './game';
 import { Room, RoomPlayer, CreateRoomRequest, RoomListItem } from './lobby';
 import { UserRole } from './auth';
 import { SimulationConfig, SimulationBatchStatus, SimulationGameResult } from './simulation';
+import { CampaignGameState, CampaignLevelSummary } from './campaign';
 
 // Client -> Server events
 export interface ClientToServerEvents {
@@ -54,6 +55,13 @@ export interface ClientToServerEvents {
     callback: (response: { success: boolean; error?: string }) => void,
   ) => void;
   'sim:unspectate': (data: { batchId: string }) => void;
+  'campaign:start': (
+    data: { levelId: number },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'campaign:input': (input: PlayerInput) => void;
+  'campaign:quit': () => void;
+  'campaign:buddyInput': (input: PlayerInput) => void; // stub — buddy mode foundation
 }
 
 // Server -> Client events
@@ -102,6 +110,31 @@ export interface ServerToClientEvents {
     lastResult: SimulationGameResult | null;
   }) => void;
   'sim:completed': (data: { batchId: string; status: SimulationBatchStatus }) => void;
+  'campaign:gameStart': (data: {
+    state: CampaignGameState;
+    level: CampaignLevelSummary;
+  }) => void;
+  'campaign:state': (state: CampaignGameState) => void;
+  'campaign:playerDied': (data: {
+    livesRemaining: number;
+    respawnPosition: Position;
+  }) => void;
+  'campaign:enemyDied': (data: {
+    enemyId: number;
+    position: Position;
+    isBoss: boolean;
+  }) => void;
+  'campaign:exitOpened': (data: { position: Position }) => void;
+  'campaign:levelComplete': (data: {
+    levelId: number;
+    timeSeconds: number;
+    stars: number;
+    nextLevelId: number | null;
+  }) => void;
+  'campaign:gameOver': (data: {
+    levelId: number;
+    reason: string;
+  }) => void;
 }
 
 // Inter-server events (if scaling later)
@@ -116,4 +149,6 @@ export interface SocketData {
   role: UserRole;
   /** Cached room code for fast game:input dispatch (avoids Redis lookup per input) */
   activeRoomCode?: string;
+  /** Cached campaign session ID for fast campaign:input dispatch */
+  activeCampaignSession?: string;
 }

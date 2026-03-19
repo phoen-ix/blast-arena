@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SocketClient } from '../network/SocketClient';
 import { AuthManager } from '../network/AuthManager';
-import { GameState, ReplayData, ReplayTickEvents, TILE_SIZE, TICK_MS } from '@blast-arena/shared';
+import { GameState, CampaignGameState, ReplayData, ReplayTickEvents, TILE_SIZE, TICK_MS } from '@blast-arena/shared';
 import { TileMapRenderer } from '../game/TileMap';
 import { PlayerSpriteRenderer } from '../game/PlayerSprite';
 import { BombSpriteRenderer } from '../game/BombSprite';
@@ -16,6 +16,8 @@ import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { ReplayPlayer } from '../game/ReplayPlayer';
 import { ReplayControls } from '../game/ReplayControls';
 import { ReplayLogPanel } from '../game/ReplayLogPanel';
+import { EnemySpriteRenderer } from '../game/EnemySprite';
+import { EnemyTextureGenerator } from '../game/EnemyTextureGenerator';
 
 export class GameScene extends Phaser.Scene {
   private socketClient!: SocketClient;
@@ -54,6 +56,11 @@ export class GameScene extends Phaser.Scene {
   private replayPlayer: ReplayPlayer | null = null;
   private replayControls: ReplayControls | null = null;
   private replayLogPanel: ReplayLogPanel | null = null;
+
+  // Campaign mode
+  private campaignMode: boolean = false;
+  private enemyRenderer: EnemySpriteRenderer | null = null;
+  private lastCampaignState: CampaignGameState | null = null;
 
   // Spectator mode
   private freeCamX: number = 0;
@@ -223,6 +230,46 @@ export class GameScene extends Phaser.Scene {
           this.scene.start('LobbyScene');
         }) as any,
       );
+    } else if (this.registry.get('campaignMode')) {
+      // Campaign mode: listen on campaign-specific events
+      this.campaignMode = true;
+
+      // Generate enemy textures from loaded enemy types
+      const campaignEnemyTypes = this.registry.get('campaignEnemyTypes');
+      if (campaignEnemyTypes) {
+        EnemyTextureGenerator.generateForLevel(this, campaignEnemyTypes);
+      }
+      this.enemyRenderer = new EnemySpriteRenderer(this);
+
+      this.socketClient.on('campaign:state' as any, ((state: CampaignGameState) => {
+        this.lastCampaignState = state;
+        this.updateState(state.gameState);
+        this.enemyRenderer?.update(state.enemies);
+      }) as any);
+
+      this.socketClient.on('campaign:levelComplete' as any, ((data: any) => {
+        this.registry.set('gameOverData', {
+          campaignResult: true,
+          success: true,
+          levelId: data.levelId,
+          timeSeconds: data.timeSeconds,
+          stars: data.stars,
+          nextLevelId: data.nextLevelId,
+        });
+        this.scene.stop('HUDScene');
+        this.scene.start('GameOverScene');
+      }) as any);
+
+      this.socketClient.on('campaign:gameOver' as any, ((data: any) => {
+        this.registry.set('gameOverData', {
+          campaignResult: true,
+          success: false,
+          levelId: data.levelId,
+          reason: data.reason,
+        });
+        this.scene.stop('HUDScene');
+        this.scene.start('GameOverScene');
+      }) as any);
     } else {
       this.socketClient.on('game:state', ((state: GameState) => {
         this.updateState(state);
@@ -481,12 +528,17 @@ export class GameScene extends Phaser.Scene {
     if (direction || action) {
       this.lastInputTime = now;
       this.lastInputSeq++;
-      this.socketClient.emit('game:input', {
+      const input = {
         seq: this.lastInputSeq,
         direction: direction as any,
         action: action as any,
         tick: this.lastGameState?.tick || 0,
-      });
+      };
+      if (this.campaignMode) {
+        this.socketClient.emit('campaign:input' as any, input);
+      } else {
+        this.socketClient.emit('game:input', input);
+      }
     }
   }
 
@@ -622,6 +674,8 @@ export class GameScene extends Phaser.Scene {
     this.effectSystem?.destroy();
     this.countdownOverlay?.destroy();
     this.gamepadManager?.destroy();
+    this.enemyRenderer?.destroy();
+    this.enemyRenderer = null;
   }
 
   shutdown(): void {
@@ -630,6 +684,11 @@ export class GameScene extends Phaser.Scene {
     this.socketClient.off('sim:state' as any);
     this.socketClient.off('sim:gameTransition' as any);
     this.socketClient.off('sim:completed' as any);
+    this.socketClient.off('campaign:state' as any);
+    this.socketClient.off('campaign:levelComplete' as any);
+    this.socketClient.off('campaign:gameOver' as any);
+    this.campaignMode = false;
+    this.lastCampaignState = null;
     this.replayPlayer?.destroy();
     this.replayControls?.destroy();
     this.replayLogPanel?.destroy();

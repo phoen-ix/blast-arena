@@ -1,4 +1,4 @@
-export type TileType = 'empty' | 'wall' | 'destructible' | 'spawn' | 'destructible_cracked' | 'teleporter_a' | 'teleporter_b' | 'conveyor_up' | 'conveyor_down' | 'conveyor_left' | 'conveyor_right';
+export type TileType = 'empty' | 'wall' | 'destructible' | 'spawn' | 'destructible_cracked' | 'teleporter_a' | 'teleporter_b' | 'conveyor_up' | 'conveyor_down' | 'conveyor_left' | 'conveyor_right' | 'exit' | 'goal';
 
 export interface Tile {
   x: number;

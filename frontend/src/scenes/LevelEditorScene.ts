@@ -1,0 +1,655 @@
+import Phaser from 'phaser';
+import { TileType, TILE_SIZE, CampaignLevel, EnemyTypeEntry } from '@blast-arena/shared';
+import { EnemyTextureGenerator } from '../game/EnemyTextureGenerator';
+import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
+import { ApiClient } from '../network/ApiClient';
+
+type EditorTool =
+  | 'empty'
+  | 'wall'
+  | 'destructible'
+  | 'spawn'
+  | 'exit'
+  | 'goal'
+  | 'enemy'
+  | 'powerup'
+  | 'eraser';
+
+interface PlacedEnemy {
+  id: number;
+  enemyTypeId: number;
+  x: number;
+  y: number;
+  sprite?: Phaser.GameObjects.Sprite;
+}
+
+interface PlacedPowerUp {
+  id: number;
+  type: string;
+  x: number;
+  y: number;
+  hidden: boolean;
+  sprite?: Phaser.GameObjects.Sprite;
+}
+
+export class LevelEditorScene extends Phaser.Scene {
+  private levelId: number | null = null;
+  private level: CampaignLevel | null = null;
+  private enemyTypes: EnemyTypeEntry[] = [];
+
+  private mapWidth = 15;
+  private mapHeight = 13;
+  private tiles: TileType[][] = [];
+  private tileSprites: Phaser.GameObjects.Sprite[][] = [];
+  private gridOverlay!: Phaser.GameObjects.Graphics;
+
+  private enemies: PlacedEnemy[] = [];
+  private powerups: PlacedPowerUp[] = [];
+  private nextEntityId = 1;
+
+  private currentTool: EditorTool = 'empty';
+  private selectedEnemyTypeId: number = 0;
+  private selectedPowerUpType: string = 'bomb_up';
+
+  // History for undo/redo
+  private undoStack: string[] = [];
+  private redoStack: string[] = [];
+
+  // DOM overlay
+  private editorContainer: HTMLElement | null = null;
+  private isPanning = false;
+  private lastPanX = 0;
+  private lastPanY = 0;
+
+  constructor() {
+    super({ key: 'LevelEditorScene' });
+  }
+
+  create(): void {
+    UIGamepadNavigator.getInstance().setActive(false);
+
+    this.levelId = this.registry.get('editorLevelId') ?? null;
+    this.enemies = [];
+    this.powerups = [];
+    this.tileSprites = [];
+    this.nextEntityId = 1;
+    this.undoStack = [];
+    this.redoStack = [];
+
+    this.events.once('shutdown', this.shutdown, this);
+
+    // Load enemy types
+    this.loadData().then(() => {
+      this.buildGrid();
+      this.buildGridOverlay();
+      this.setupCamera();
+      this.setupInput();
+      this.buildEditorUI();
+    });
+  }
+
+  private async loadData(): Promise<void> {
+    const apiClient = ApiClient;
+
+    // Load enemy types
+    try {
+      const resp = await apiClient.get<{ enemyTypes: EnemyTypeEntry[] }>('/campaign/enemy-types');
+      this.enemyTypes = resp.enemyTypes || [];
+      EnemyTextureGenerator.generateForLevel(this, this.enemyTypes);
+    } catch {
+      this.enemyTypes = [];
+    }
+
+    // Load level if editing existing
+    if (this.levelId) {
+      try {
+        const resp = await apiClient.get<{ level: CampaignLevel }>(`/admin/campaign/levels/${this.levelId}`);
+        this.level = resp.level;
+        if (this.level) {
+          this.mapWidth = this.level.mapWidth;
+          this.mapHeight = this.level.mapHeight;
+          this.tiles = this.level.tiles.map((row) => [...row]);
+
+          // Restore enemy placements
+          for (const ep of this.level.enemyPlacements) {
+            this.enemies.push({
+              id: this.nextEntityId++,
+              enemyTypeId: ep.enemyTypeId,
+              x: ep.x,
+              y: ep.y,
+            });
+          }
+
+          // Restore power-up placements
+          for (const pp of this.level.powerupPlacements) {
+            this.powerups.push({
+              id: this.nextEntityId++,
+              type: pp.type,
+              x: pp.x,
+              y: pp.y,
+              hidden: pp.hidden,
+            });
+          }
+        }
+      } catch {
+        this.level = null;
+      }
+    }
+
+    // Initialize empty map if no level loaded
+    if (this.tiles.length === 0) {
+      this.initEmptyMap();
+    }
+  }
+
+  private initEmptyMap(): void {
+    this.tiles = [];
+    for (let y = 0; y < this.mapHeight; y++) {
+      this.tiles[y] = [];
+      for (let x = 0; x < this.mapWidth; x++) {
+        if (x === 0 || y === 0 || x === this.mapWidth - 1 || y === this.mapHeight - 1) {
+          this.tiles[y][x] = 'wall';
+        } else if (x % 2 === 0 && y % 2 === 0) {
+          this.tiles[y][x] = 'wall';
+        } else {
+          this.tiles[y][x] = 'empty';
+        }
+      }
+    }
+  }
+
+  private buildGrid(): void {
+    // Destroy existing
+    for (const row of this.tileSprites) {
+      for (const s of row) s?.destroy();
+    }
+    this.tileSprites = [];
+
+    for (let y = 0; y < this.mapHeight; y++) {
+      this.tileSprites[y] = [];
+      for (let x = 0; x < this.mapWidth; x++) {
+        const texture = this.getTileTexture(this.tiles[y][x], x, y);
+        const sprite = this.add.sprite(
+          x * TILE_SIZE + TILE_SIZE / 2,
+          y * TILE_SIZE + TILE_SIZE / 2,
+          texture,
+        );
+        sprite.setDepth(0);
+        this.tileSprites[y][x] = sprite;
+      }
+    }
+
+    // Place entity sprites
+    for (const enemy of this.enemies) {
+      const key = `enemy_${enemy.enemyTypeId}_down`;
+      if (this.textures.exists(key)) {
+        enemy.sprite = this.add.sprite(
+          enemy.x * TILE_SIZE + TILE_SIZE / 2,
+          enemy.y * TILE_SIZE + TILE_SIZE / 2,
+          key,
+        );
+        enemy.sprite.setDepth(5);
+      }
+    }
+
+    for (const pu of this.powerups) {
+      const key = `powerup_${pu.type}`;
+      if (this.textures.exists(key)) {
+        pu.sprite = this.add.sprite(
+          pu.x * TILE_SIZE + TILE_SIZE / 2,
+          pu.y * TILE_SIZE + TILE_SIZE / 2,
+          key,
+        );
+        pu.sprite.setDepth(5);
+        if (pu.hidden) pu.sprite.setAlpha(0.4);
+      }
+    }
+  }
+
+  private buildGridOverlay(): void {
+    this.gridOverlay = this.add.graphics();
+    this.gridOverlay.setDepth(1);
+    this.gridOverlay.lineStyle(1, 0x444466, 0.3);
+    for (let x = 0; x <= this.mapWidth; x++) {
+      this.gridOverlay.lineBetween(x * TILE_SIZE, 0, x * TILE_SIZE, this.mapHeight * TILE_SIZE);
+    }
+    for (let y = 0; y <= this.mapHeight; y++) {
+      this.gridOverlay.lineBetween(0, y * TILE_SIZE, this.mapWidth * TILE_SIZE, y * TILE_SIZE);
+    }
+  }
+
+  private getTileTexture(type: TileType, x: number, y: number): string {
+    switch (type) {
+      case 'wall': return 'wall';
+      case 'destructible': return 'destructible';
+      case 'destructible_cracked': return 'destructible_cracked';
+      case 'exit': return 'exit';
+      case 'goal': return 'goal';
+      case 'spawn': return `floor_${(x + y) % 4}`;
+      default: return `floor_${(x + y) % 4}`;
+    }
+  }
+
+  private setupCamera(): void {
+    const cam = this.cameras.main;
+    const worldW = this.mapWidth * TILE_SIZE;
+    const worldH = this.mapHeight * TILE_SIZE;
+    cam.setBounds(-TILE_SIZE, -TILE_SIZE, worldW + TILE_SIZE * 2, worldH + TILE_SIZE * 2);
+    cam.centerOn(worldW / 2, worldH / 2);
+
+    // Zoom with scroll wheel
+    this.input.on('wheel', (_pointer: any, _gameObjects: any, _dx: number, _dy: number, dz: number) => {
+      const newZoom = Phaser.Math.Clamp(cam.zoom - dz * 0.001, 0.25, 3);
+      cam.setZoom(newZoom);
+    });
+  }
+
+  private setupInput(): void {
+    // Left click: place tile/entity
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.rightButtonDown() || pointer.middleButtonDown()) {
+        this.isPanning = true;
+        this.lastPanX = pointer.x;
+        this.lastPanY = pointer.y;
+        return;
+      }
+
+      // Check if clicking on UI
+      if (pointer.x < 200) return; // Left panel
+
+      this.saveUndoState();
+      this.handlePlacement(pointer);
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (this.isPanning) {
+        const cam = this.cameras.main;
+        cam.scrollX -= (pointer.x - this.lastPanX) / cam.zoom;
+        cam.scrollY -= (pointer.y - this.lastPanY) / cam.zoom;
+        this.lastPanX = pointer.x;
+        this.lastPanY = pointer.y;
+        return;
+      }
+
+      // Paint mode (left button held)
+      if (pointer.isDown && pointer.leftButtonDown() && pointer.x >= 200) {
+        this.handlePlacement(pointer);
+      }
+    });
+
+    this.input.on('pointerup', () => {
+      this.isPanning = false;
+    });
+
+    // Keyboard shortcuts
+    if (this.input.keyboard) {
+      this.input.keyboard.on('keydown-Z', (event: KeyboardEvent) => {
+        if (event.ctrlKey || event.metaKey) {
+          if (event.shiftKey) this.redo();
+          else this.undo();
+        }
+      });
+      this.input.keyboard.on('keydown-Y', (event: KeyboardEvent) => {
+        if (event.ctrlKey || event.metaKey) this.redo();
+      });
+    }
+  }
+
+  private handlePlacement(pointer: Phaser.Input.Pointer): void {
+    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const tx = Math.floor(worldPoint.x / TILE_SIZE);
+    const ty = Math.floor(worldPoint.y / TILE_SIZE);
+
+    if (tx < 0 || tx >= this.mapWidth || ty < 0 || ty >= this.mapHeight) return;
+
+    switch (this.currentTool) {
+      case 'empty':
+      case 'wall':
+      case 'destructible':
+      case 'spawn':
+      case 'exit':
+      case 'goal':
+        this.tiles[ty][tx] = this.currentTool as TileType;
+        this.updateTileSprite(tx, ty);
+        break;
+      case 'eraser':
+        this.tiles[ty][tx] = 'empty';
+        this.updateTileSprite(tx, ty);
+        // Remove entities at this position
+        this.removeEntitiesAt(tx, ty);
+        break;
+      case 'enemy':
+        if (this.selectedEnemyTypeId > 0) {
+          // Remove existing enemy at this tile
+          this.removeEnemiesAt(tx, ty);
+          const enemy: PlacedEnemy = {
+            id: this.nextEntityId++,
+            enemyTypeId: this.selectedEnemyTypeId,
+            x: tx,
+            y: ty,
+          };
+          const key = `enemy_${enemy.enemyTypeId}_down`;
+          if (this.textures.exists(key)) {
+            enemy.sprite = this.add.sprite(
+              tx * TILE_SIZE + TILE_SIZE / 2,
+              ty * TILE_SIZE + TILE_SIZE / 2,
+              key,
+            );
+            enemy.sprite.setDepth(5);
+          }
+          this.enemies.push(enemy);
+        }
+        break;
+      case 'powerup':
+        // Remove existing powerup at this tile
+        this.removePowerupsAt(tx, ty);
+        const pu: PlacedPowerUp = {
+          id: this.nextEntityId++,
+          type: this.selectedPowerUpType,
+          x: tx,
+          y: ty,
+          hidden: false,
+        };
+        const puKey = `powerup_${pu.type}`;
+        if (this.textures.exists(puKey)) {
+          pu.sprite = this.add.sprite(
+            tx * TILE_SIZE + TILE_SIZE / 2,
+            ty * TILE_SIZE + TILE_SIZE / 2,
+            puKey,
+          );
+          pu.sprite.setDepth(5);
+        }
+        this.powerups.push(pu);
+        break;
+    }
+  }
+
+  private updateTileSprite(x: number, y: number): void {
+    const texture = this.getTileTexture(this.tiles[y][x], x, y);
+    this.tileSprites[y]?.[x]?.setTexture(texture);
+  }
+
+  private removeEntitiesAt(x: number, y: number): void {
+    this.removeEnemiesAt(x, y);
+    this.removePowerupsAt(x, y);
+  }
+
+  private removeEnemiesAt(x: number, y: number): void {
+    this.enemies = this.enemies.filter((e) => {
+      if (e.x === x && e.y === y) {
+        e.sprite?.destroy();
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private removePowerupsAt(x: number, y: number): void {
+    this.powerups = this.powerups.filter((p) => {
+      if (p.x === x && p.y === y) {
+        p.sprite?.destroy();
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private saveUndoState(): void {
+    const state = JSON.stringify({
+      tiles: this.tiles,
+      enemies: this.enemies.map((e) => ({ enemyTypeId: e.enemyTypeId, x: e.x, y: e.y })),
+      powerups: this.powerups.map((p) => ({ type: p.type, x: p.x, y: p.y, hidden: p.hidden })),
+    });
+    this.undoStack.push(state);
+    if (this.undoStack.length > 50) this.undoStack.shift();
+    this.redoStack = [];
+  }
+
+  private undo(): void {
+    if (this.undoStack.length === 0) return;
+    const current = JSON.stringify({
+      tiles: this.tiles,
+      enemies: this.enemies.map((e) => ({ enemyTypeId: e.enemyTypeId, x: e.x, y: e.y })),
+      powerups: this.powerups.map((p) => ({ type: p.type, x: p.x, y: p.y, hidden: p.hidden })),
+    });
+    this.redoStack.push(current);
+    const prev = JSON.parse(this.undoStack.pop()!);
+    this.restoreState(prev);
+  }
+
+  private redo(): void {
+    if (this.redoStack.length === 0) return;
+    const current = JSON.stringify({
+      tiles: this.tiles,
+      enemies: this.enemies.map((e) => ({ enemyTypeId: e.enemyTypeId, x: e.x, y: e.y })),
+      powerups: this.powerups.map((p) => ({ type: p.type, x: p.x, y: p.y, hidden: p.hidden })),
+    });
+    this.undoStack.push(current);
+    const next = JSON.parse(this.redoStack.pop()!);
+    this.restoreState(next);
+  }
+
+  private restoreState(state: any): void {
+    this.tiles = state.tiles;
+    // Clear existing entity sprites
+    for (const e of this.enemies) e.sprite?.destroy();
+    for (const p of this.powerups) p.sprite?.destroy();
+    this.enemies = [];
+    this.powerups = [];
+
+    // Rebuild
+    for (let y = 0; y < this.mapHeight; y++) {
+      for (let x = 0; x < this.mapWidth; x++) {
+        this.updateTileSprite(x, y);
+      }
+    }
+    for (const e of state.enemies) {
+      const enemy: PlacedEnemy = { id: this.nextEntityId++, ...e };
+      const key = `enemy_${enemy.enemyTypeId}_down`;
+      if (this.textures.exists(key)) {
+        enemy.sprite = this.add.sprite(
+          enemy.x * TILE_SIZE + TILE_SIZE / 2,
+          enemy.y * TILE_SIZE + TILE_SIZE / 2,
+          key,
+        );
+        enemy.sprite.setDepth(5);
+      }
+      this.enemies.push(enemy);
+    }
+    for (const p of state.powerups) {
+      const pu: PlacedPowerUp = { id: this.nextEntityId++, ...p };
+      const puKey = `powerup_${pu.type}`;
+      if (this.textures.exists(puKey)) {
+        pu.sprite = this.add.sprite(
+          pu.x * TILE_SIZE + TILE_SIZE / 2,
+          pu.y * TILE_SIZE + TILE_SIZE / 2,
+          puKey,
+        );
+        pu.sprite.setDepth(5);
+        if (pu.hidden) pu.sprite.setAlpha(0.4);
+      }
+      this.powerups.push(pu);
+    }
+  }
+
+  private buildEditorUI(): void {
+    this.editorContainer = document.createElement('div');
+    this.editorContainer.id = 'level-editor-ui';
+    this.editorContainer.style.cssText =
+      'position:fixed;top:0;left:0;width:200px;height:100%;background:var(--bg-base);border-right:1px solid var(--bg-hover);overflow-y:auto;z-index:200;font-family:"DM Sans",sans-serif;color:var(--text);padding:8px;box-sizing:border-box;';
+
+    const title = document.createElement('h3');
+    title.textContent = 'Level Editor';
+    title.style.cssText = 'margin:0 0 8px 0;font-family:"Chakra Petch",sans-serif;color:var(--primary);font-size:16px;';
+    this.editorContainer.appendChild(title);
+
+    // Tool sections
+    this.addToolSection('Tiles', [
+      { label: 'Empty', tool: 'empty' },
+      { label: 'Wall', tool: 'wall' },
+      { label: 'Destructible', tool: 'destructible' },
+      { label: 'Spawn', tool: 'spawn' },
+      { label: 'Exit', tool: 'exit' },
+      { label: 'Goal', tool: 'goal' },
+      { label: 'Eraser', tool: 'eraser' },
+    ]);
+
+    // Enemy tools
+    if (this.enemyTypes.length > 0) {
+      const enemySection = document.createElement('div');
+      enemySection.style.marginTop = '8px';
+      const enemyLabel = document.createElement('div');
+      enemyLabel.textContent = 'Enemies';
+      enemyLabel.style.cssText = 'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
+      enemySection.appendChild(enemyLabel);
+
+      for (const et of this.enemyTypes) {
+        const btn = document.createElement('button');
+        btn.textContent = `${et.config.isBoss ? '👑 ' : ''}${et.name}`;
+        btn.style.cssText =
+          'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+        btn.addEventListener('click', () => {
+          this.currentTool = 'enemy';
+          this.selectedEnemyTypeId = et.id;
+          this.highlightActiveTool(btn);
+        });
+        enemySection.appendChild(btn);
+      }
+      this.editorContainer.appendChild(enemySection);
+    }
+
+    // Power-up tools
+    const puTypes = ['bomb_up', 'fire_up', 'speed_up', 'shield', 'kick', 'pierce_bomb', 'remote_bomb', 'line_bomb'];
+    const puSection = document.createElement('div');
+    puSection.style.marginTop = '8px';
+    const puLabel = document.createElement('div');
+    puLabel.textContent = 'Power-ups';
+    puLabel.style.cssText = 'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
+    puSection.appendChild(puLabel);
+    for (const type of puTypes) {
+      const btn = document.createElement('button');
+      btn.textContent = type.replace(/_/g, ' ');
+      btn.style.cssText =
+        'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+      btn.addEventListener('click', () => {
+        this.currentTool = 'powerup';
+        this.selectedPowerUpType = type;
+        this.highlightActiveTool(btn);
+      });
+      puSection.appendChild(btn);
+    }
+    this.editorContainer.appendChild(puSection);
+
+    // Action buttons
+    const actionSection = document.createElement('div');
+    actionSection.style.cssText = 'margin-top:16px;display:flex;flex-direction:column;gap:6px;';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save';
+    saveBtn.className = 'btn btn-primary';
+    saveBtn.style.cssText = 'padding:6px 12px;font-size:13px;';
+    saveBtn.addEventListener('click', () => this.saveLevel());
+    actionSection.appendChild(saveBtn);
+
+    const backBtn = document.createElement('button');
+    backBtn.textContent = 'Back';
+    backBtn.className = 'btn btn-ghost';
+    backBtn.style.cssText = 'padding:6px 12px;font-size:13px;';
+    backBtn.addEventListener('click', () => {
+      this.registry.remove('editorLevelId');
+      this.scene.start('LobbyScene');
+    });
+    actionSection.appendChild(backBtn);
+
+    this.editorContainer.appendChild(actionSection);
+    document.getElementById('ui-overlay')?.appendChild(this.editorContainer);
+  }
+
+  private addToolSection(
+    label: string,
+    tools: { label: string; tool: EditorTool }[],
+  ): void {
+    const section = document.createElement('div');
+    section.style.marginBottom = '4px';
+    const sectionLabel = document.createElement('div');
+    sectionLabel.textContent = label;
+    sectionLabel.style.cssText = 'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
+    section.appendChild(sectionLabel);
+
+    for (const t of tools) {
+      const btn = document.createElement('button');
+      btn.textContent = t.label;
+      btn.style.cssText =
+        'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+      btn.addEventListener('click', () => {
+        this.currentTool = t.tool;
+        this.highlightActiveTool(btn);
+      });
+      section.appendChild(btn);
+    }
+    this.editorContainer!.appendChild(section);
+  }
+
+  private highlightActiveTool(activeBtn: HTMLElement): void {
+    // Reset all tool buttons
+    const buttons = this.editorContainer?.querySelectorAll('button:not(.btn)');
+    buttons?.forEach((btn) => {
+      (btn as HTMLElement).style.background = 'var(--bg-surface)';
+      (btn as HTMLElement).style.borderColor = 'var(--bg-hover)';
+    });
+    activeBtn.style.background = 'var(--bg-elevated)';
+    activeBtn.style.borderColor = 'var(--primary)';
+  }
+
+  private async saveLevel(): Promise<void> {
+    const apiClient = ApiClient;
+
+    // Find spawn points
+    const playerSpawns: { x: number; y: number }[] = [];
+    for (let y = 0; y < this.mapHeight; y++) {
+      for (let x = 0; x < this.mapWidth; x++) {
+        if (this.tiles[y][x] === 'spawn') {
+          playerSpawns.push({ x, y });
+        }
+      }
+    }
+
+    const levelData = {
+      mapWidth: this.mapWidth,
+      mapHeight: this.mapHeight,
+      tiles: this.tiles,
+      playerSpawns,
+      enemyPlacements: this.enemies.map((e) => ({
+        enemyTypeId: e.enemyTypeId,
+        x: e.x,
+        y: e.y,
+      })),
+      powerupPlacements: this.powerups.map((p) => ({
+        type: p.type,
+        x: p.x,
+        y: p.y,
+        hidden: p.hidden,
+      })),
+    };
+
+    try {
+      if (this.levelId) {
+        await apiClient.put(`/admin/campaign/levels/${this.levelId}`, levelData);
+      }
+      alert('Level saved!');
+    } catch (err) {
+      alert('Save failed: ' + (err as Error).message);
+    }
+  }
+
+  shutdown(): void {
+    this.editorContainer?.remove();
+    this.editorContainer = null;
+    for (const row of this.tileSprites) {
+      for (const s of row) s?.destroy();
+    }
+    for (const e of this.enemies) e.sprite?.destroy();
+    for (const p of this.powerups) p.sprite?.destroy();
+    this.gridOverlay?.destroy();
+  }
+}

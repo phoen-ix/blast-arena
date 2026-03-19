@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GameState, PlayerState } from '@blast-arena/shared';
+import { GameState, PlayerState, CampaignGameState } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
 
 export class HUDScene extends Phaser.Scene {
@@ -33,6 +33,12 @@ export class HUDScene extends Phaser.Scene {
   } | null = null;
   // Player list element cache for differential updates
   private playerListCache: Map<string, HTMLElement> = new Map();
+
+  // Campaign HUD
+  private campaignMode: boolean = false;
+  private campaignHudEl: HTMLElement | null = null;
+  private lastCampaignLives: number = -1;
+  private lastCampaignEnemyCount: number = -1;
 
   constructor() {
     super({ key: 'HUDScene' });
@@ -129,6 +135,32 @@ export class HUDScene extends Phaser.Scene {
       this.updateHUD(state);
     };
     gameScene.events.on('stateUpdate', this.stateUpdateHandler);
+
+    // Campaign mode: add lives/enemy counter, hide player list and kill feed
+    this.campaignMode = !!this.registry.get('campaignMode');
+    if (this.campaignMode) {
+      this.playerListEl.style.display = 'none';
+      this.killFeedEl.style.display = 'none';
+
+      this.campaignHudEl = document.createElement('div');
+      this.campaignHudEl.className = 'hud-campaign';
+      this.campaignHudEl.style.cssText =
+        'position:fixed;top:10px;left:10px;display:flex;gap:16px;align-items:center;font-family:"Chakra Petch",sans-serif;font-size:16px;color:#eae8e4;z-index:100;';
+      this.campaignHudEl.innerHTML = `
+        <span id="campaign-lives" style="display:flex;align-items:center;gap:4px;"></span>
+        <span id="campaign-enemies" style="color:var(--danger);"></span>
+      `;
+      const overlay = document.getElementById('ui-overlay');
+      overlay?.appendChild(this.campaignHudEl);
+
+      // Listen for campaign state updates
+      const sc = this.registry.get('socketClient');
+      if (sc) {
+        sc.on('campaign:state', (state: CampaignGameState) => {
+          this.updateCampaignHUD(state);
+        });
+      }
+    }
   }
 
   private onPlayerDied(data: { playerId: number; killerId: number | null }): void {
@@ -327,6 +359,54 @@ export class HUDScene extends Phaser.Scene {
     this.renderKillFeed();
   }
 
+  private updateCampaignHUD(state: CampaignGameState): void {
+    // Lives display (hearts)
+    if (state.lives !== this.lastCampaignLives) {
+      this.lastCampaignLives = state.lives;
+      const livesEl = document.getElementById('campaign-lives');
+      if (livesEl) {
+        let hearts = '';
+        for (let i = 0; i < state.maxLives; i++) {
+          hearts += i < state.lives ? '❤️' : '🖤';
+        }
+        livesEl.textContent = hearts;
+      }
+    }
+
+    // Enemy count
+    const aliveEnemies = state.enemies.filter((e) => e.alive).length;
+    if (aliveEnemies !== this.lastCampaignEnemyCount) {
+      this.lastCampaignEnemyCount = aliveEnemies;
+      const enemiesEl = document.getElementById('campaign-enemies');
+      if (enemiesEl) {
+        enemiesEl.textContent = aliveEnemies > 0 ? `Enemies: ${aliveEnemies}` : '';
+      }
+    }
+
+    // Boss HP bar
+    const boss = state.enemies.find((e) => e.isBoss && e.alive);
+    let bossBar = document.getElementById('campaign-boss-hp');
+    if (boss) {
+      if (!bossBar) {
+        bossBar = document.createElement('div');
+        bossBar.id = 'campaign-boss-hp';
+        bossBar.style.cssText =
+          'position:fixed;top:40px;left:50%;transform:translateX(-50%);width:300px;height:20px;background:rgba(0,0,0,0.6);border-radius:4px;overflow:hidden;z-index:100;';
+        document.getElementById('ui-overlay')?.appendChild(bossBar);
+        const fill = document.createElement('div');
+        fill.id = 'campaign-boss-hp-fill';
+        fill.style.cssText = 'height:100%;background:var(--danger);transition:width 0.2s;';
+        bossBar.appendChild(fill);
+      }
+      const fill = document.getElementById('campaign-boss-hp-fill');
+      if (fill) {
+        fill.style.width = `${(boss.hp / boss.maxHp) * 100}%`;
+      }
+    } else if (bossBar) {
+      bossBar.remove();
+    }
+  }
+
   shutdown(): void {
     if (this.boundClickHandler) {
       this.playerListEl?.removeEventListener('mousedown', this.boundClickHandler);
@@ -345,5 +425,8 @@ export class HUDScene extends Phaser.Scene {
     this.statsEl?.remove();
     this.playerListEl?.remove();
     this.killFeedEl?.remove();
+    this.campaignHudEl?.remove();
+    this.campaignHudEl = null;
+    document.getElementById('campaign-boss-hp')?.remove();
   }
 }

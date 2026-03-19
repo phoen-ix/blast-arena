@@ -53,7 +53,9 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
   - `CountdownOverlay.ts` — animated "3, 2, 1, GO!" countdown at game start
   - `GamepadManager.ts` — gamepad/controller input polling with deadzone, D-pad/stick direction, just-pressed action tracking
   - `Settings.ts` — per-user visual settings (animations, screen shake, particles) stored in localStorage
-- **Procedural textures**: All sprites generated in `BootScene.generateTextures()` — no external image assets. Player textures include 4 directional variants with eyes per color. Power-up textures use Canvas2D with emoji icons (💣🔥⚡🛡️👢💥📡🧨) on colored rounded-rect backgrounds instead of abstract geometric shapes, matching the HUD stats display for visual consistency.
+  - `EnemySprite.ts` — campaign enemy sprites with directional textures, HP bars, position lerp (0.45), death animation (red tint, scale down, fade), ghost translucency
+  - `EnemyTextureGenerator.ts` — procedural enemy sprite generation (6 body shapes × 4 eye styles × 4 directions) with Canvas2D preview for admin editor
+- **Procedural textures**: All sprites generated in `BootScene.generateTextures()` — no external image assets. Player textures include 4 directional variants with eyes per color. Power-up textures use Canvas2D with emoji icons (💣🔥⚡🛡️👢💥📡🧨) on colored rounded-rect backgrounds instead of abstract geometric shapes, matching the HUD stats display for visual consistency. Enemy textures generated on-demand via `EnemyTextureGenerator.ts` for campaign mode
 - **Particle textures**: `particle_fire`, `particle_smoke`, `particle_spark`, `particle_debris`, `particle_star`, `particle_shield` generated in BootScene
 - **HUD**: DOM-based overlay in HUDScene.ts with timer, player list, kill feed, stats bar (bottom-left), spectator banner. In KOTH mode, player list shows scores sorted descending with crown icon for the controlling player
 - Settings and Help are in the lobby header (LobbyUI), not in-game HUD, to avoid overlapping player names
@@ -63,10 +65,41 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Gamepad UI navigation**: `UIGamepadNavigator` singleton (`frontend/src/game/UIGamepadNavigator.ts`) enables full controller navigation of all DOM menus. Uses browser `navigator.getGamepads()` (not Phaser plugin) with its own rAF polling loop. D-pad/stick navigates between focusable elements, A=confirm, B=back/close. Spatial navigation via `getBoundingClientRect()` with heavy cross-axis penalty (5x) so same-row/column neighbors always win over diagonal ones. Focus context stack handles nested UI (lobby → modal): each screen pushes a context on show and pops on hide. Custom dropdown overlay (`.gp-dropdown`) for `<select>` elements — A opens, up/down navigates options, A confirms, B cancels. Mouse movement auto-hides the `.gp-focus` ring; next D-pad input restores it. Disabled during gameplay (`setActive(false)` in GameScene) to avoid conflict with GamepadManager. GameOverScene has its own inline gamepad polling (Phaser text objects, not DOM). Out of scope: AdminUI, AuthUI (keyboard-dependent).
 - **Real-time lobby**: Room list auto-updates via `room:list` socket broadcast on every room mutation (create/join/leave/start/restart/disconnect) — no manual refresh needed
 
+## Solo Campaign System
+- Single-player campaign mode: progress through hand-crafted levels grouped into worlds, defeating enemies to advance
+- **World/level structure**: Worlds contain ordered levels. Each level has configurable: win condition, lives, timer, power-up carry-over, starting stats, map dimensions, tile layout
+- **Data-driven enemy types**: Admin-created templates stored in DB (`campaign_enemy_types` table). Each type specifies: speed, movement pattern, wall/bomb passability, HP, contact damage, bombing ability, sprite config, drop table, boss phases
+- **Movement patterns**: `random_walk` (60% continue, random at intersections), `chase_player` (BFS + 30% random), `patrol_path` (waypoint reversal), `wall_follow` (right-hand rule), `stationary`
+- **Enemy bomb triggers**: `timer` (every N ticks), `proximity` (manhattan distance check), `random` (15% chance)
+- **Win conditions**: `kill_all` (all enemies dead), `find_exit` (kill prerequisite → exit unlocks → player steps on it), `reach_goal` (step on goal tile), `survive_time` (elapsed time ≥ target)
+- **Lives system**: Configurable per level (1-99). On death: respawn at spawn point after 40 ticks with 40 ticks invulnerability. Lives exhausted → game over
+- **Boss support**: `isBoss` flag on enemy types with `bossPhases` (HP threshold triggers: speed changes, new movement patterns, minion spawns, bomb activation). Visual: `sizeMultiplier` for larger sprites, dedicated HP bar in HUD
+- **Hidden power-ups**: Power-ups marked `hidden: true` are placed under destructible walls; revealed when the wall is destroyed
+- **Procedural enemy textures**: `EnemyTextureGenerator.ts` renders 6 body shapes (blob, spiky, ghost, robot, bug, skull) × 4 eye styles (round, angry, sleepy, crazy) × 4 directions. Features: teeth, horns. Canvas2D preview for admin editor
+- **Campaign game session**: `CampaignGame.ts` wraps `GameStateManager` with `customMap` (bypasses `generateMap()`). Extended tick: enemy AI → movement → enemy-explosion collision → player-enemy contact → hidden powerup reveals → boss phases → win condition check
+- **Session management**: `CampaignGameManager` singleton — one active session per user. Starting a new level ends existing session
+- **Progress tracking**: `campaign_progress` table per user per level. Stars: 1=completed, 2=reasonable time, 3=zero deaths. Best time tracked. `campaign_user_state` for current position and carried powerups
+- **Frontend**: Campaign button in lobby → `CampaignUI` full-screen overlay with world cards, level selection, progress display, star ratings. Clicking "Start" fetches level + enemy types, sets `campaignMode` registry flag, emits `campaign:start`
+- **GameScene integration**: Detects `campaignMode` → creates `EnemySpriteRenderer`, listens on `campaign:state` instead of `game:state`, sends `campaign:input`
+- **HUD campaign variant**: Lives hearts (top-left), enemy count remaining, boss HP bar (300px, centered). Hides player list and kill feed
+- **Game over campaign variant**: "LEVEL COMPLETE!" (green) or "LEVEL FAILED" (red), stars display, time taken, Next Level / Retry / Campaign buttons
+- **Tile types**: `exit` (trapdoor texture, conditionally walkable) and `goal` (gold star texture, always walkable) added to `TileType` union, `CollisionSystem.isWalkable()`, `TileMap.getTileTexture()`, `BootScene.generateTextures()`
+- **Level editor**: `LevelEditorScene.ts` — full Phaser scene with DOM overlay. Tool palette (tiles, enemies, power-ups), click-to-place, paint mode (drag), zoom (scroll), pan (right-click drag), undo/redo (Ctrl+Z/Y, 50-state stack), save/load via API. Admin-only, launched from CampaignTab
+- **Admin CampaignTab**: Two views — "Worlds & Levels" (CRUD, reorder, publish/unpublish, edit launches editor) and "Enemy Types" (CRUD with live Canvas2D sprite preview, all config fields)
+- **Database**: Migration `008_campaign.sql` — 5 tables: `campaign_enemy_types`, `campaign_worlds`, `campaign_levels`, `campaign_progress`, `campaign_user_state`. Seed migration `009_campaign_seed.sql` — 3 enemy types + "Training Grounds" world with 3 levels
+- **API endpoints**: Player (auth): `GET /campaign/worlds`, `GET /campaign/worlds/:id/levels`, `GET /campaign/levels/:id`, `GET /campaign/progress`, `GET /campaign/enemy-types`. Admin: full CRUD for worlds, levels, enemy types at `/admin/campaign/*`
+- **Socket events (C→S)**: `campaign:start` (levelId, callback), `campaign:input` (PlayerInput), `campaign:quit`, `campaign:buddyInput` (stub)
+- **Socket events (S→C)**: `campaign:gameStart`, `campaign:state`, `campaign:playerDied`, `campaign:enemyDied`, `campaign:exitOpened`, `campaign:levelComplete`, `campaign:gameOver`
+- **Buddy mode stubs**: `BuddyEntity.ts` (backend, position/direction/active), `BuddySprite.ts` (frontend, empty renderer), `campaign:buddyInput` (no-op handler). Foundation for future second-player mini-character
+- **Seed data — Training Grounds** (3 levels):
+  - Level 1 "First Steps": 15×13, 3 lives, no timer, kill_all, 3 blob enemies, 2 hidden powerups
+  - Level 2 "Ghost Town": 19×15, 3 lives, 120s, find_exit (kill 3 to unlock), 2 blobs + 2 ghosts, 3 powerups
+  - Level 3 "Bomber's Lair": 21×17, 5 lives, 180s, kill_all, 3 blobs + 2 ghosts + 1 robot bomber (stationary, proximity bombs, 2 HP), 5 powerups
+
 ## Admin Panel
 - Full-screen panel accessible from lobby header (Admin button visible for admin and moderator roles)
-- **Top-tab navigation**: Dashboard, Users, Matches, Rooms, Logs, Simulations, AI, Announcements (role-filtered)
-- **Permission matrix**: Admin sees all 8 tabs (Simulations and AI are admin-only); Moderator sees Users, Matches, Rooms, Announcements only
+- **Top-tab navigation**: Dashboard, Users, Matches, Rooms, Logs, Simulations, AI, Campaign, Announcements (role-filtered)
+- **Permission matrix**: Admin sees all 9 tabs (Simulations, AI, and Campaign are admin-only); Moderator sees Users, Matches, Rooms, Announcements only
 - **Dashboard**: 5 stat cards (total users, active 24h, total matches, active rooms, online players) with 30s auto-refresh; "Server Settings" card with match recordings toggle (admin-only), collapsible "Game Creation Defaults" and "Simulation Defaults" editors
 - **Users**: Paginated table with search, role change dropdown, deactivate (soft delete), delete permanently (type-username confirmation), create user modal, admin password reset (sets new password, revokes tokens)
 - **Matches**: Paginated table, click row for detail modal with per-player stats. Admin-only delete per row and "Delete All Matches" button — deletes DB records (cascades to match_players) and cleans up replay files from disk. `DELETE /admin/matches/:id` and `DELETE /admin/matches` endpoints; both audit-logged

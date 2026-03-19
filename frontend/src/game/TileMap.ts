@@ -58,6 +58,10 @@ export class TileMapRenderer {
         return 'conveyor_left';
       case 'conveyor_right' as TileType:
         return 'conveyor_right';
+      case 'exit' as TileType:
+        return 'exit';
+      case 'goal' as TileType:
+        return 'goal';
       case 'empty':
       case 'spawn':
       default:

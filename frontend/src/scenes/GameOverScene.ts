@@ -56,6 +56,12 @@ export class GameOverScene extends Phaser.Scene {
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
 
+    // Campaign results
+    if (data?.campaignResult) {
+      this.createCampaignGameOver(width, height, data, socketClient);
+      return;
+    }
+
     const gameText = this.add
       .text(0, 45, 'GAME ', {
         fontSize: '42px',
@@ -194,6 +200,119 @@ export class GameOverScene extends Phaser.Scene {
           .setOrigin(0.5);
       });
     }
+  }
+
+  private createCampaignGameOver(width: number, height: number, data: any, socketClient: any): void {
+    const success = data.success;
+    const titleColor = success ? '#00e676' : '#ff3355';
+    const titleText = success ? 'LEVEL COMPLETE!' : 'LEVEL FAILED';
+
+    this.add
+      .text(width / 2, 50, titleText, {
+        fontSize: '38px',
+        color: titleColor,
+        fontFamily: 'Chakra Petch, sans-serif',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+
+    if (success) {
+      // Stars
+      const stars = data.stars || 0;
+      const starsText = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      this.add
+        .text(width / 2, 100, starsText, {
+          fontSize: '32px',
+          color: '#ffdd44',
+          fontFamily: 'Chakra Petch, sans-serif',
+        })
+        .setOrigin(0.5);
+
+      // Time
+      const mins = Math.floor((data.timeSeconds || 0) / 60);
+      const secs = (data.timeSeconds || 0) % 60;
+      this.add
+        .text(width / 2, 145, `Time: ${mins}:${secs.toString().padStart(2, '0')}`, {
+          fontSize: '18px',
+          color: '#8888a0',
+          fontFamily: 'DM Sans, sans-serif',
+        })
+        .setOrigin(0.5);
+
+      // Next Level button
+      if (data.nextLevelId) {
+        const nextBtn = this.add
+          .text(width / 2 - 120, height - 40, '[ Next Level ]', {
+            fontSize: '20px',
+            color: '#00e676',
+            fontFamily: 'Chakra Petch, sans-serif',
+            fontStyle: 'bold',
+          })
+          .setOrigin(0.5)
+          .setInteractive({ useHandCursor: true });
+        nextBtn.on('pointerover', () => nextBtn.setColor('#44ff88'));
+        nextBtn.on('pointerout', () => nextBtn.setColor('#00e676'));
+        nextBtn.on('pointerdown', () => {
+          this.registry.set('campaignNextLevelId', data.nextLevelId);
+          this.registry.remove('campaignMode');
+          this.scene.start('LobbyScene');
+        });
+        this.buttons.push(nextBtn);
+        this.baseColors.push('#00e676');
+        this.highlightColors.push('#44ff88');
+      }
+    } else {
+      // Reason
+      if (data.reason) {
+        this.add
+          .text(width / 2, 100, data.reason, {
+            fontSize: '18px',
+            color: '#8888a0',
+            fontFamily: 'DM Sans, sans-serif',
+          })
+          .setOrigin(0.5);
+      }
+    }
+
+    // Retry button
+    const retryBtn = this.add
+      .text(width / 2, height - 40, '[ Retry ]', {
+        fontSize: '20px',
+        color: '#ffffff',
+        fontFamily: 'Chakra Petch, sans-serif',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    retryBtn.on('pointerover', () => retryBtn.setColor('#cccccc'));
+    retryBtn.on('pointerout', () => retryBtn.setColor('#ffffff'));
+    retryBtn.on('pointerdown', () => {
+      this.registry.set('campaignRetryLevelId', data.levelId);
+      this.registry.remove('campaignMode');
+      this.scene.start('LobbyScene');
+    });
+
+    // Back to Campaign button
+    const backBtn = this.add
+      .text(width / 2 + 120, height - 40, '[ Campaign ]', {
+        fontSize: '20px',
+        color: '#ff6b35',
+        fontFamily: 'Chakra Petch, sans-serif',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    backBtn.on('pointerover', () => backBtn.setColor('#ff8555'));
+    backBtn.on('pointerout', () => backBtn.setColor('#ff6b35'));
+    backBtn.on('pointerdown', () => {
+      this.registry.remove('campaignMode');
+      this.scene.start('LobbyScene');
+    });
+
+    this.buttons = [retryBtn, backBtn];
+    this.baseColors = ['#ffffff', '#ff6b35'];
+    this.highlightColors = ['#cccccc', '#ff8555'];
+    this.underline = this.add.graphics();
   }
 
   update(): void {

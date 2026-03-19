@@ -23,7 +23,8 @@ export class CollisionSystem {
     return tile === 'empty' || tile === 'spawn'
       || tile === 'teleporter_a' || tile === 'teleporter_b'
       || tile === 'conveyor_up' || tile === 'conveyor_down'
-      || tile === 'conveyor_left' || tile === 'conveyor_right';
+      || tile === 'conveyor_left' || tile === 'conveyor_right'
+      || tile === 'exit' || tile === 'goal';
   }
 
   canMoveTo(fromX: number, fromY: number, direction: Direction, bombPositions: Position[], playerPositions: Position[] = []): Position | null {

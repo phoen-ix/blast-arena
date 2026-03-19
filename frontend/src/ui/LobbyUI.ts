@@ -3,6 +3,7 @@ import { AuthManager } from '../network/AuthManager';
 import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
 import { AdminUI } from './AdminUI';
+import { CampaignUI } from './CampaignUI';
 import { RoomListItem, Room, GameDefaults, BotAIEntry, getErrorMessage } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
 import { showCreateRoomModal } from './modals/CreateRoomModal';
@@ -70,6 +71,7 @@ export class LobbyUI {
           <span style="color:var(--text-dim);font-size:13px;">Welcome, <strong style="color:var(--text);">${user?.username}</strong></span>
           ${user?.role === 'admin' || user?.role === 'moderator' ? '<button class="btn btn-ghost" id="admin-btn">Admin</button>' : ''}
           <button class="btn btn-primary" id="create-room-btn">+ New Room</button>
+          <button class="btn" id="campaign-btn" style="background:linear-gradient(135deg, var(--primary), #ff8f35);color:#fff;font-weight:700;letter-spacing:0.5px;">Campaign</button>
           <button class="btn btn-ghost" id="account-btn">Account</button>
           <button class="btn btn-ghost" id="settings-btn">Settings</button>
           <button class="btn btn-ghost" id="help-btn">Help</button>
@@ -86,6 +88,13 @@ export class LobbyUI {
     this.container
       .querySelector('#create-room-btn')!
       .addEventListener('click', () => this.showCreateRoomModal());
+    this.container.querySelector('#campaign-btn')!.addEventListener('click', () => {
+      this.hide();
+      const campaignUI = new CampaignUI(this.socketClient, this.notifications, () => {
+        this.show();
+      });
+      campaignUI.show();
+    });
     this.container
       .querySelector('#account-btn')!
       .addEventListener('click', () => this.showAccountModal());

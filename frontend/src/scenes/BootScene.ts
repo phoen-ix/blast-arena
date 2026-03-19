@@ -280,6 +280,42 @@ export class BootScene extends Phaser.Scene {
       convGfx.generateTexture(`conveyor_${dir}`, 48, 48);
       convGfx.destroy();
     }
+
+    // Exit tile (trapdoor)
+    const exitGfx = this.make.graphics({ x: 0, y: 0 });
+    exitGfx.fillStyle(0x2a2a3e, 1);
+    exitGfx.fillRect(0, 0, 48, 48);
+    exitGfx.fillStyle(0x4a3a2e, 1);
+    exitGfx.fillRoundedRect(6, 6, 36, 36, 4);
+    exitGfx.fillStyle(0x3a2a1e, 1);
+    exitGfx.fillRoundedRect(8, 8, 32, 32, 3);
+    // Door handle
+    exitGfx.fillStyle(0xccaa44, 1);
+    exitGfx.fillCircle(30, 24, 3);
+    // Arrow down indicator
+    exitGfx.fillStyle(0x44ff44, 0.7);
+    exitGfx.fillTriangle(24, 34, 18, 26, 30, 26);
+    exitGfx.generateTexture('exit', 48, 48);
+    exitGfx.destroy();
+
+    // Goal tile (star marker)
+    const goalGfx = this.make.graphics({ x: 0, y: 0 });
+    goalGfx.fillStyle(0x2a2a3e, 1);
+    goalGfx.fillRect(0, 0, 48, 48);
+    goalGfx.fillStyle(0xffcc00, 0.2);
+    goalGfx.fillCircle(24, 24, 18);
+    goalGfx.fillStyle(0xffcc00, 0.4);
+    goalGfx.fillCircle(24, 24, 12);
+    // Star shape
+    goalGfx.fillStyle(0xffdd44, 0.9);
+    goalGfx.fillTriangle(24, 12, 27, 20, 35, 20);
+    goalGfx.fillTriangle(24, 12, 21, 20, 13, 20);
+    goalGfx.fillTriangle(24, 36, 27, 28, 35, 28);
+    goalGfx.fillTriangle(24, 36, 21, 28, 13, 28);
+    goalGfx.fillTriangle(13, 20, 17, 24, 13, 28);
+    goalGfx.fillTriangle(35, 20, 31, 24, 35, 28);
+    goalGfx.generateTexture('goal', 48, 48);
+    goalGfx.destroy();
   }
 
   private generateBombTexture(): void {

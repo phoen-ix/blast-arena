@@ -61,6 +61,8 @@ export interface GameConfig {
   reinforcedWalls?: boolean;
   enableMapEvents?: boolean;
   botAiId?: string;
+  /** If provided, use this pre-built map instead of generating one */
+  customMap?: ReturnType<typeof generateMap>;
 }
 
 export class GameStateManager {
@@ -144,7 +146,7 @@ export class GameStateManager {
     } = config;
     this.botAiId = botAiId;
 
-    this.map = generateMap(mapWidth, mapHeight, mapSeed, wallDensity);
+    this.map = config.customMap ?? generateMap(mapWidth, mapHeight, mapSeed, wallDensity);
     this.collisionSystem = new CollisionSystem(
       this.map.tiles,
       this.map.width,
@@ -211,6 +213,12 @@ export class GameStateManager {
     this.inputBuffer.clear(id);
     this.players.delete(id);
     this.botAIs.delete(id);
+  }
+
+  /** Spawn a power-up at a specific tile position (used by campaign mode) */
+  spawnPowerUpAt(x: number, y: number, type: PowerUpType): void {
+    const powerUp = new PowerUp({ x, y }, type);
+    this.powerUps.set(powerUp.id, powerUp);
   }
 
   processTick(): void {

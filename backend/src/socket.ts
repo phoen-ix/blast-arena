@@ -5,7 +5,7 @@ import { getConfig } from './config';
 import { logger } from './utils/logger';
 import * as lobbyService from './services/lobby';
 import { RoomManager } from './game/RoomManager';
-import { setRegistry, getSimulationManager } from './game/registry';
+import { setRegistry, getSimulationManager, getCampaignGameManager } from './game/registry';
 import { createRateLimiters } from './utils/socketRateLimit';
 import {
   ClientToServerEvents,
@@ -554,11 +554,148 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       socket.leave(`sim:${data.batchId}`);
     });
 
+    // Campaign: start level
+    socket.on('campaign:start', async (data, callback) => {
+      try {
+        const campaignManager = getCampaignGameManager();
+        const campaignService = await import('./services/campaign');
+        const enemyTypeService = await import('./services/enemy-type');
+        const progressService = await import('./services/campaign-progress');
+
+        const level = await campaignService.getLevel(data.levelId);
+        if (!level || !level.isPublished) {
+          return callback({ success: false, error: 'Level not found' });
+        }
+
+        // Gather enemy type configs
+        const typeIds = [...new Set(level.enemyPlacements.map((e) => e.enemyTypeId))];
+        const enemyTypes = await enemyTypeService.getEnemyTypeConfigs(typeIds);
+
+        // Get carried powerups if level supports carry-over
+        let carriedPowerups = null;
+        if (level.carryOverPowerups) {
+          const userState = await progressService.getUserState(socket.data.userId);
+          carriedPowerups = userState.carriedPowerups;
+        }
+
+        // Record attempt
+        await progressService.recordAttempt(socket.data.userId, level.id);
+        await progressService.updateCurrentLevel(socket.data.userId, level.worldId, level.id);
+
+        const nextLevelId = await campaignService.getNextLevel(level.id);
+
+        const game = campaignManager.startLevel(
+          socket.data.userId,
+          level,
+          enemyTypes,
+          {
+            onStateUpdate: (state) => {
+              socket.emit('campaign:state', state);
+            },
+            onPlayerDied: (livesRemaining, respawnPosition) => {
+              socket.emit('campaign:playerDied', { livesRemaining, respawnPosition });
+            },
+            onEnemyDied: (enemyId, position, isBoss) => {
+              socket.emit('campaign:enemyDied', { enemyId, position, isBoss });
+            },
+            onExitOpened: (position) => {
+              socket.emit('campaign:exitOpened', { position });
+            },
+            onLevelComplete: async (timeSeconds, deaths) => {
+              const stars = await progressService.recordCompletion(
+                socket.data.userId,
+                level.id,
+                timeSeconds,
+                deaths,
+              );
+              socket.emit('campaign:levelComplete', {
+                levelId: level.id,
+                timeSeconds,
+                stars,
+                nextLevelId,
+              });
+              socket.data.activeCampaignSession = undefined;
+              campaignManager.endSession(game.sessionId);
+            },
+            onGameOver: (reason) => {
+              socket.emit('campaign:gameOver', { levelId: level.id, reason });
+              socket.data.activeCampaignSession = undefined;
+              campaignManager.endSession(game.sessionId);
+            },
+          },
+          carriedPowerups,
+        );
+
+        socket.data.activeCampaignSession = game.sessionId;
+
+        // Build level summary for client
+        const levelSummary = {
+          id: level.id,
+          worldId: level.worldId,
+          name: level.name,
+          description: level.description,
+          sortOrder: level.sortOrder,
+          mapWidth: level.mapWidth,
+          mapHeight: level.mapHeight,
+          winCondition: level.winCondition,
+          lives: level.lives,
+          timeLimit: level.timeLimit,
+          enemyCount: level.enemyPlacements.length,
+          isPublished: level.isPublished,
+        };
+
+        game.start();
+        callback({ success: true });
+
+        // Send initial state
+        socket.emit('campaign:gameStart', {
+          state: {
+            gameState: game['gameState'].toState(),
+            enemies: Array.from(game['enemies'].values()).map((e) => e.toState()),
+            lives: game['lives'],
+            maxLives: game['maxLives'],
+            levelId: level.id,
+            exitOpen: false,
+          },
+          level: levelSummary,
+        });
+      } catch (err) {
+        logger.error({ err }, 'Campaign start error');
+        callback({ success: false, error: getErrorMessage(err) });
+      }
+    });
+
+    // Campaign: player input
+    socket.on('campaign:input', (input) => {
+      const sessionId = socket.data.activeCampaignSession;
+      if (!sessionId) return;
+      getCampaignGameManager().handleInput(sessionId, input);
+    });
+
+    // Campaign: quit
+    socket.on('campaign:quit', () => {
+      const sessionId = socket.data.activeCampaignSession;
+      if (!sessionId) return;
+      getCampaignGameManager().endSession(sessionId);
+      socket.data.activeCampaignSession = undefined;
+    });
+
+    // Buddy mode input stub — no-op for now
+    socket.on('campaign:buddyInput', () => {
+      // Future: route to BuddyEntity in active campaign session
+    });
+
     // Disconnect
     socket.on('disconnect', async () => {
       logger.info({ userId: socket.data.userId }, 'Socket disconnected');
       removeSocket(socket.id);
       socket.data.activeRoomCode = undefined;
+
+      // Clean up campaign session
+      if (socket.data.activeCampaignSession) {
+        getCampaignGameManager().endSession(socket.data.activeCampaignSession);
+        socket.data.activeCampaignSession = undefined;
+      }
 
       const roomCode = await lobbyService.getPlayerRoom(socket.data.userId);
       if (roomCode) {

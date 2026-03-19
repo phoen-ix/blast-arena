@@ -130,6 +130,89 @@ export interface SettingRow extends RowDataPacket {
   setting_value: string;
 }
 
+/** Campaign enemy type row */
+export interface CampaignEnemyTypeRow extends RowDataPacket {
+  id: number;
+  name: string;
+  description: string;
+  config: string; // JSON string
+  is_boss: boolean;
+  created_by: number | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/** Campaign world row */
+export interface CampaignWorldRow extends RowDataPacket {
+  id: number;
+  name: string;
+  description: string;
+  sort_order: number;
+  theme: string;
+  is_published: boolean;
+  created_by: number | null;
+  created_at: Date;
+  updated_at: Date;
+  level_count?: number;
+  completed_count?: number;
+}
+
+/** Campaign level row */
+export interface CampaignLevelRow extends RowDataPacket {
+  id: number;
+  world_id: number;
+  name: string;
+  description: string;
+  sort_order: number;
+  map_width: number;
+  map_height: number;
+  tiles: string; // JSON string
+  fill_mode: 'handcrafted' | 'hybrid';
+  wall_density: number;
+  player_spawns: string; // JSON string
+  enemy_placements: string; // JSON string
+  powerup_placements: string; // JSON string
+  win_condition: string;
+  win_condition_config: string | null; // JSON string
+  lives: number;
+  time_limit: number;
+  carry_over_powerups: boolean;
+  starting_powerups: string | null; // JSON string
+  available_powerup_types: string | null; // JSON string
+  powerup_drop_rate: number;
+  reinforced_walls: boolean;
+  hazard_tiles: boolean;
+  is_published: boolean;
+  created_by: number | null;
+  created_at: Date;
+  updated_at: Date;
+  enemy_count?: number;
+}
+
+/** Campaign progress row */
+export interface CampaignProgressRow extends RowDataPacket {
+  id: number;
+  user_id: number;
+  level_id: number;
+  completed: boolean;
+  best_time_seconds: number | null;
+  stars: number;
+  attempts: number;
+  completed_at: Date | null;
+  updated_at: Date;
+}
+
+/** Campaign user state row */
+export interface CampaignUserStateRow extends RowDataPacket {
+  user_id: number;
+  current_world_id: number | null;
+  current_level_id: number | null;
+  carried_powerups: string | null; // JSON string
+  total_levels_completed: number;
+  total_stars: number;
+  updated_at: Date;
+}
+
 /** Admin user list row (user joined with stats) */
 export interface AdminUserRow extends RowDataPacket {
   id: number;

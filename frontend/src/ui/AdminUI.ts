@@ -10,6 +10,7 @@ import { LogsTab } from './admin/LogsTab';
 import { AnnouncementsTab } from './admin/AnnouncementsTab';
 import { SimulationsTab } from './admin/SimulationsTab';
 import { AITab } from './admin/AITab';
+import { CampaignTab } from './admin/CampaignTab';
 
 interface Tab {
   id: string;
@@ -87,6 +88,12 @@ export class AdminUI {
         label: 'Announcements',
         adminOnly: false,
         instance: new AnnouncementsTab(notifications, role),
+      },
+      {
+        id: 'campaign',
+        label: 'Campaign',
+        adminOnly: true,
+        instance: new CampaignTab(notifications),
       },
     ];
 

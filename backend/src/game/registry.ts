@@ -8,6 +8,7 @@ import {
 import { RoomManager } from './RoomManager';
 import { SimulationManager } from '../simulation/SimulationManager';
 import { BotAIRegistry, getBotAIRegistry as _getBotAIRegistry } from '../services/botai-registry';
+import { CampaignGameManager } from './CampaignGameManager';
 
 type TypedServer = Server<
   ClientToServerEvents,
@@ -19,6 +20,7 @@ type TypedServer = Server<
 let roomManager: RoomManager | null = null;
 let io: TypedServer | null = null;
 let simulationManager: SimulationManager | null = null;
+let campaignGameManager: CampaignGameManager | null = null;
 
 export function setRegistry(rm: RoomManager, ioServer: TypedServer): void {
   roomManager = rm;
@@ -44,4 +46,11 @@ export function getSimulationManager(): SimulationManager {
     simulationManager = new SimulationManager();
   }
   return simulationManager;
+}
+
+export function getCampaignGameManager(): CampaignGameManager {
+  if (!campaignGameManager) {
+    campaignGameManager = new CampaignGameManager();
+  }
+  return campaignGameManager;
 }

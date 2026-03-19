@@ -1329,6 +1329,193 @@
       background: var(--primary);
       color: #fff;
     }
+
+    /* ============ CAMPAIGN UI ============ */
+    .campaign-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--bg-deep);
+      z-index: 200;
+      overflow-y: auto;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .campaign-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 32px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+    }
+    .campaign-header h1 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 28px;
+      margin: 0;
+    }
+    .campaign-content {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .world-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .world-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .world-card-header:hover {
+      background: var(--bg-hover);
+    }
+    .world-card-title {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .world-progress {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .world-levels {
+      border-top: 1px solid var(--border);
+      padding: 12px 20px;
+    }
+    .level-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .level-row:hover {
+      background: var(--bg-hover);
+    }
+    .level-row.locked {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .level-stars {
+      color: #ffdd44;
+      font-size: 16px;
+      min-width: 60px;
+    }
+    .level-name {
+      font-weight: 600;
+      flex: 1;
+    }
+    .level-meta {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-left: 12px;
+    }
+    .level-start-btn {
+      padding: 4px 16px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .level-start-btn:hover {
+      filter: brightness(1.15);
+    }
+
+    /* ============ LEVEL EDITOR ============ */
+    .editor-tool-palette {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      width: 200px;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      z-index: 100;
+      overflow-y: auto;
+      font-family: 'DM Sans', sans-serif;
+      padding: 8px;
+    }
+    .editor-tool-palette h3 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 12px 0 6px;
+      padding: 0 4px;
+    }
+    .editor-tool-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 6px 8px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .editor-tool-btn:hover {
+      background: var(--bg-hover);
+    }
+    .editor-tool-btn.active {
+      background: rgba(255, 107, 53, 0.15);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .editor-top-bar {
+      position: fixed;
+      top: 0; left: 200px; right: 0;
+      height: 44px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+    }
+    .editor-top-bar input,
+    .editor-top-bar select {
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .editor-top-bar .btn-sm {
+      padding: 4px 12px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 600;
+    }
+    .editor-top-bar .btn-save {
+      background: var(--success);
+      color: #fff;
+    }
+    .editor-top-bar .btn-back {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
   </style>
 </head>
 <body>

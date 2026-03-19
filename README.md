@@ -79,6 +79,57 @@ All optional — toggled per-room when creating:
 - **Map Events**: Meteor strikes hit random tiles every 30-45s (2s warning reticle). Power-up rain drops items across the map every 60s
 - **Hazard Tiles**: Teleporter pairs (blue/orange glowing pads — step on one to warp to the other) and Conveyor Belts (force movement in arrow direction)
 
+## Solo Campaign
+
+A single-player campaign mode with hand-crafted levels, enemies, and boss battles.
+
+### How It Works
+
+- Access from the **Campaign** button in the lobby
+- Progress through worlds containing ordered levels
+- Defeat enemies using bombs — same mechanics as multiplayer
+- Earn 1-3 stars per level: completed, under par time, zero deaths
+- Progress saved per-user in the database
+
+### Enemies
+
+Enemies are data-driven templates created by admins. Three built-in types ship with the "Training Grounds" world:
+
+| Enemy | Shape | HP | Movement | Special |
+|-------|-------|----|-----------| --------|
+| **Blobbor** | Blob | 1 | Random walk | Slow, drops common power-ups |
+| **Spectra** | Ghost | 1 | Chase player | Passes through walls and bombs |
+| **Bombotron** | Robot | 2 | Stationary | Drops proximity bombs (range 4) |
+
+Admin-created enemy types support: 5 movement patterns, 3 bomb triggers, wall/bomb passability, boss phases with HP thresholds, configurable drop tables, and 6 procedural body shapes × 4 eye styles.
+
+### Win Conditions
+
+| Condition | Description |
+|-----------|-------------|
+| **Kill All** | Destroy every enemy to complete the level |
+| **Find Exit** | Kill a target number of enemies to unlock a hidden exit, then reach it |
+| **Reach Goal** | Navigate to the goal tile |
+| **Survive Time** | Stay alive for the specified duration |
+
+### Level Editor
+
+Admins can create and edit levels with a visual drag-and-drop editor (Admin Panel → Campaign tab → Edit):
+
+- Paint tiles (walls, destructible, spawn, exit, goal) on a grid
+- Place enemies from the type catalog and power-ups (visible or hidden under walls)
+- Configure win condition, lives, timer, map dimensions, power-up settings
+- Undo/redo (Ctrl+Z/Y), zoom (scroll), pan (right-click drag)
+- Test play directly from the editor
+
+### Training Grounds (Built-in World)
+
+| # | Level | Size | Lives | Timer | Enemies | Win Condition |
+|---|-------|------|-------|-------|---------|---------------|
+| 1 | First Steps | 15×13 | 3 | — | 3 blobs | Kill all |
+| 2 | Ghost Town | 19×15 | 3 | 120s | 2 blobs + 2 ghosts | Find exit (kill 3) |
+| 3 | Bomber's Lair | 21×17 | 5 | 180s | 3 blobs + 2 ghosts + 1 bomber | Kill all |
+
 ## Room Configuration
 
 When creating a room, the host can configure:
@@ -150,6 +201,7 @@ Accessible from the lobby header for admin and moderator roles.
 | **Logs** | Admin | Audit trail of all admin actions with action type filter |
 | **Simulations** | Admin | Batch bot-only game simulations for AI analysis (see below) |
 | **AI** | Admin | Upload, manage, and switch between custom bot AI implementations (see below) |
+| **Campaign** | Admin | Create/edit worlds, levels (visual editor), and enemy types for solo campaign |
 | **Announcements** | Admin + Mod | Toast broadcast (ephemeral notification to all players) + persistent lobby banner (admin only) |
 
 All admin actions are logged to an audit table.
@@ -257,7 +309,7 @@ blast-arena/
 │       └── utils/           # Shared utilities
 ├── backend/
 │   └── src/
-│       ├── routes/          # REST endpoints (auth, lobby, user, admin, health)
+│       ├── routes/          # REST endpoints (auth, lobby, user, admin, campaign, health)
 │       ├── game/            # Server game logic
 │       │   ├── GameLoop.ts  # 20 tick/sec game loop
 │       │   ├── GameState.ts # Tick processing (movement, bombs, explosions, etc.)
@@ -271,22 +323,26 @@ blast-arena/
 │       │   ├── CollisionSystem.ts # Collision detection helpers
 │       │   ├── BattleRoyale.ts    # BR shrinking zone logic
 │       │   ├── InputBuffer.ts     # Input queuing
-│       │   └── RoomManager.ts # Room creation, joining, cleanup
+│       │   ├── RoomManager.ts     # Room creation, joining, cleanup
+│       │   ├── CampaignGame.ts    # Campaign session (enemies, lives, win conditions)
+│       │   ├── CampaignGameManager.ts # Singleton campaign session manager
+│       │   ├── Enemy.ts          # Runtime enemy entity
+│       │   └── EnemyAI.ts        # Enemy movement patterns + bomb triggers
 │       ├── simulation/      # Bot simulation system
 │       │   ├── SimulationGame.ts    # Headless single-game runner
 │       │   ├── SimulationRunner.ts  # Batch orchestrator
 │       │   └── SimulationManager.ts # Singleton manager
 │       ├── db/              # MariaDB connection, migrations, redis
-│       ├── services/        # Auth, user, admin, lobby, email, replay, settings
+│       ├── services/        # Auth, user, admin, lobby, email, replay, settings, campaign
 │       ├── middleware/       # Auth, rate limiting, staff checks
 │       └── socket.ts        # Socket.io event routing
 ├── frontend/
 │   ├── index.html           # HTML + full CSS design system (INFERNO theme)
 │   └── src/
-│       ├── scenes/          # Phaser scenes (Boot, Menu, Lobby, Game, HUD, GameOver)
-│       ├── ui/              # DOM-based UI (Auth, Lobby, Room, Notifications, Admin + 6 admin tabs)
+│       ├── scenes/          # Phaser scenes (Boot, Menu, Lobby, Game, HUD, GameOver, LevelEditor)
+│       ├── ui/              # DOM-based UI (Auth, Lobby, Room, Campaign, Notifications, Admin + 7 admin tabs)
 │       │   └── modals/      # AccountModal, CreateRoomModal, SettingsModal, HelpModal
-│       ├── game/            # Client renderers (players, bombs, explosions, effects, replay, gamepad)
+│       ├── game/            # Client renderers (players, bombs, explosions, enemies, effects, replay, gamepad)
 │       └── network/         # ApiClient, SocketClient, AuthManager
 ├── docker-compose.yml       # Production orchestration
 ├── docker-compose.dev.yml   # Development overrides (hot reload, exposed ports)
@@ -422,3 +478,6 @@ Migrations in `backend/src/db/migrations/` run automatically on server start:
 4. `004_remove_ban.sql` — Drop legacy ban/display_name columns
 5. `005_server_settings.sql` — Server settings key-value table (recordings toggle)
 6. `006_default_settings.sql` — Game creation and simulation default settings
+7. `007_bot_ais.sql` — Bot AI management table
+8. `008_campaign.sql` — Campaign tables (enemy types, worlds, levels, progress, user state)
+9. `009_campaign_seed.sql` — Seed data: 3 enemy types + "Training Grounds" world with 3 levels
