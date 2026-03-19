@@ -108,6 +108,8 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         socket.data.activeRoomCode = existingRoomCode;
         gameRoom.handlePlayerReconnect(socket.data.userId);
         // Send current game state so client can resume
+        const fullState = gameRoom.getFullState();
+        socket.emit('game:start', fullState);
         logger.info(
           { userId: socket.data.userId, roomCode: existingRoomCode },
           'Player reconnected to active game',
@@ -119,6 +121,17 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
     socket.on('room:create', async (data, callback) => {
       if (!createLimiter(socket.id)) return;
       try {
+        // Clean up stale room membership (e.g. player refreshed during a game)
+        const existingRoom = await lobbyService.getPlayerRoom(socket.data.userId);
+        if (existingRoom) {
+          const existingGameRoom = roomManager.getRoom(existingRoom);
+          if (existingGameRoom && existingGameRoom.isRunning()) {
+            existingGameRoom.handlePlayerDisconnect(socket.data.userId);
+          }
+          await lobbyService.leaveRoom(existingRoom, socket.data.userId);
+          socket.leave(`room:${existingRoom}`);
+        }
+
         const room = await lobbyService.createRoom(currentUser, data.name, data.config);
         socket.join(`room:${room.code}`);
         socket.data.activeRoomCode = room.code;
@@ -133,6 +146,17 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
     socket.on('room:join', async (data, callback) => {
       if (!joinLimiter(socket.id)) return;
       try {
+        // Clean up stale room membership (e.g. player refreshed during a game)
+        const existingRoom = await lobbyService.getPlayerRoom(socket.data.userId);
+        if (existingRoom) {
+          const existingGameRoom = roomManager.getRoom(existingRoom);
+          if (existingGameRoom && existingGameRoom.isRunning()) {
+            existingGameRoom.handlePlayerDisconnect(socket.data.userId);
+          }
+          await lobbyService.leaveRoom(existingRoom, socket.data.userId);
+          socket.leave(`room:${existingRoom}`);
+        }
+
         const room = await lobbyService.joinRoom(data.code, currentUser);
         socket.join(`room:${room.code}`);
         socket.data.activeRoomCode = room.code;

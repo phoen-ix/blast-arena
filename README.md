@@ -333,7 +333,9 @@ Games are recorded when recording is enabled (controlled via admin Dashboard tog
 
 - Socket.io reconnects indefinitely (1-5s backoff) with a "Reconnecting..." overlay that also polls `/api/health` every 3s — auto-reloads the page as soon as the backend is back
 - **Disconnect grace period**: Players get 10 seconds to reconnect during a game before being killed — prevents unfair deaths from brief network blips
-- On reconnect, server auto-detects active game and rejoins the player seamlessly
+- On reconnect, server auto-detects active game and rejoins the player seamlessly — emits full game state so the client resumes gameplay immediately
+- If a player creates or joins a new room while still in a running game, the old room membership is cleaned up automatically
+- Games with only bots remaining (all humans disconnected) end immediately and are saved as "aborted"
 - On reconnect, client checks server `buildId` — auto-refreshes if the server restarted
 - Nginx serves a custom 502 page during container rebuilds that auto-polls and refreshes when the app is back
 - Persistent sessions via httpOnly refresh cookies survive server restarts

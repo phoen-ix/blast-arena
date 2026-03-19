@@ -28,6 +28,30 @@ export class LobbyScene extends Phaser.Scene {
     this.socketClient = this.registry.get('socketClient');
     this.notifications = this.registry.get('notifications');
 
+    // Register early game:start listener for reconnection after browser refresh.
+    // If the server detects we were in an active game, it emits game:start on connect.
+    // This is replaced by onJoinRoom()'s handler during normal flow.
+    if (!this.gameStartHandler) {
+      this.gameStartHandler = (state: any) => {
+        if (this.gameStartHandler) {
+          this.socketClient.off('game:start' as any, this.gameStartHandler as any);
+          this.gameStartHandler = null;
+        }
+        this.lobbyUI?.hide();
+        this.roomUI?.hide();
+        const uiOverlay = document.getElementById('ui-overlay');
+        if (uiOverlay) {
+          while (uiOverlay.firstChild) {
+            uiOverlay.removeChild(uiOverlay.firstChild);
+          }
+        }
+        this.registry.set('initialGameState', state);
+        this.scene.start('GameScene');
+        this.scene.launch('HUDScene');
+      };
+      this.socketClient.on('game:start' as any, this.gameStartHandler as any);
+    }
+
     // Reset gamepad UI navigator for clean state
     const gpNav = UIGamepadNavigator.getInstance();
     gpNav.clearAll();

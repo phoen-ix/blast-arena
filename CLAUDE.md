@@ -348,7 +348,10 @@ npx jest --config tests/backend/jest.config.ts  # Run from project root
 - Socket.io reconnects indefinitely (1-5s backoff) with a "Reconnecting..." overlay when disconnected; overlay also starts health polling (`/api/health` every 3s) — when backend responds, page auto-reloads (handles stale Socket.io state, expired tokens, nginx DNS cache)
 - **Disconnect grace period**: when a player's socket disconnects during a game, they get 10 seconds (200 ticks) to reconnect before being killed. `GameRoom.disconnectedPlayers` tracks pending disconnects; `checkDisconnectGracePeriods()` runs each tick. On reconnect, `handlePlayerReconnect()` cancels the grace timer and the player resumes playing.
 - During disconnect grace period, the player is NOT removed from the lobby room — only on grace expiry or game end
-- On reconnect, server auto-detects if player was in an active game (`isPlayerDisconnected()`) and rejoins them to the socket room
+- On reconnect, server auto-detects if player was in an active game (`isPlayerDisconnected()`) and rejoins them to the socket room, emitting `game:start` with full state so the client can initialize GameScene directly
+- LobbyScene registers an early `game:start` listener in `create()` to handle reconnection — if the server sends game state on connect, the client skips the lobby and enters the game immediately
+- **Stale room cleanup**: `room:create` and `room:join` handlers check for existing room membership and clean up (disconnect from running game, leave old room) before creating/joining — prevents zombie games and stale state
+- **Bot-only game termination**: after all disconnect grace periods resolve, if no human players remain alive, the game ends immediately with `finishReason = 'All players disconnected'` and match status saved as `'aborted'` (not `'finished'`)
 - `GameState.killPlayer()` handles disconnect-timeout deaths with proper placement tracking, kill logging, and tickEvents emission
 - On reconnect, client fetches `/api/health` and compares `buildId` (server start timestamp). If different, the page auto-refreshes to load new frontend.
 - Nginx serves a custom 502 page (`docker/nginx/502.html`) during container rebuilds that auto-polls and refreshes when the app is back

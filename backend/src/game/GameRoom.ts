@@ -251,10 +251,26 @@ export class GameRoom {
         this.disconnectedPlayers.delete(playerId);
       }
     }
+
+    // End game if no human players remain alive (all disconnected/killed)
+    if (this.disconnectedPlayers.size === 0) {
+      const hasAliveHuman = Array.from(this.gameState.players.values()).some(
+        (p) => p.alive && !p.isBot,
+      );
+      if (!hasAliveHuman && this.gameLoop.isRunning()) {
+        logger.info({ code: this.code }, 'No human players alive, ending game');
+        this.gameState.status = 'finished';
+        this.gameState.finishReason = 'All players disconnected';
+      }
+    }
   }
 
   isPlayerDisconnected(playerId: number): boolean {
     return this.disconnectedPlayers.has(playerId);
+  }
+
+  getFullState(): GameState {
+    return this.gameState.toState();
   }
 
   private broadcastState(state: GameState): void {
@@ -336,9 +352,10 @@ export class GameRoom {
         const duration = Math.floor(state.timeElapsed);
         // Don't store bot IDs (negative) as winner_id in DB
         const dbWinnerId = state.winnerId && state.winnerId > 0 ? state.winnerId : null;
+        const matchStatus = this.gameState.finishReason === 'All players disconnected' ? 'aborted' : 'finished';
         await execute(
-          `UPDATE matches SET status = 'finished', finished_at = NOW(), duration = ?, winner_id = ? WHERE id = ?`,
-          [duration, dbWinnerId, this.matchId],
+          `UPDATE matches SET status = ?, finished_at = NOW(), duration = ?, winner_id = ? WHERE id = ?`,
+          [matchStatus, duration, dbWinnerId, this.matchId],
         );
 
         // Update match_players (skip bots)
