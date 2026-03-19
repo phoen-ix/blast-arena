@@ -99,12 +99,21 @@ const levelSchema = z.object({
 // Player endpoints (auth required)
 // ==========================
 
-// List published worlds with user progress
+// List published worlds with levels and user progress
 router.get('/campaign/worlds', authMiddleware, async (req, res, next) => {
   try {
     const userId = req.user!.userId;
     const worlds = await campaignService.listWorldsWithProgress(userId);
-    res.json({ worlds });
+
+    // Nest levels with progress inside each world
+    const worldsWithLevels = await Promise.all(
+      worlds.map(async (w) => {
+        const levels = await campaignService.listLevelsWithProgress(w.id, userId);
+        return { ...w, levels };
+      }),
+    );
+
+    res.json({ worlds: worldsWithLevels });
   } catch (err) {
     next(err);
   }

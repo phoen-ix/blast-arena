@@ -6,12 +6,12 @@ import { getErrorMessage } from '@blast-arena/shared';
 import game from '../main';
 
 interface CampaignLevel {
-  id: string;
+  id: number;
   name: string;
   description: string;
   enemyCount: number;
   lives: number;
-  timer: number;
+  timeLimit: number;
   completed: boolean;
   stars: number;
   bestTime: number | null;
@@ -19,10 +19,12 @@ interface CampaignLevel {
 }
 
 interface CampaignWorld {
-  id: string;
+  id: number;
   name: string;
   description: string;
   theme: string;
+  levelCount?: number;
+  completedCount?: number;
   levels: CampaignLevel[];
 }
 
@@ -35,8 +37,8 @@ export class CampaignUI {
   private notifications: NotificationUI;
   private socketClient: SocketClient;
   private onClose: () => void;
-  private expandedWorldId: string | null = null;
-  private selectedLevelId: string | null = null;
+  private expandedWorldId: number | null = null;
+  private selectedLevelId: number | null = null;
   private worlds: CampaignWorld[] = [];
 
   constructor(
@@ -80,8 +82,34 @@ export class CampaignUI {
 
   private async loadCampaignData(): Promise<void> {
     try {
-      const data = await ApiClient.get<CampaignData>('/campaign/worlds');
-      this.worlds = data.worlds;
+      const data = await ApiClient.get<{ worlds: any[] }>('/campaign/worlds');
+      // Map API response into local CampaignWorld shape
+      this.worlds = data.worlds.map((w: any) => {
+        const levels: CampaignLevel[] = (w.levels || []).map((l: any, i: number) => {
+          const prevCompleted = i === 0 || (w.levels[i - 1]?.progress?.completed ?? false);
+          return {
+            id: l.id,
+            name: l.name,
+            description: l.description || '',
+            enemyCount: l.enemyCount || 0,
+            lives: l.lives || 3,
+            timeLimit: l.timeLimit || 0,
+            completed: !!l.progress?.completed,
+            stars: l.progress?.stars || 0,
+            bestTime: l.progress?.bestTimeSeconds ?? null,
+            locked: !prevCompleted && !l.progress?.completed,
+          };
+        });
+        return {
+          id: w.id,
+          name: w.name,
+          description: w.description || '',
+          theme: w.theme || 'classic',
+          levelCount: w.levelCount,
+          completedCount: w.completedCount,
+          levels,
+        };
+      });
     } catch (err: unknown) {
       this.notifications.error('Failed to load campaign: ' + getErrorMessage(err));
       this.worlds = [];
@@ -460,8 +488,8 @@ export class CampaignUI {
       'var(--success)',
     );
 
-    const timerMins = Math.floor(level.timer / 60);
-    const timerSecs = level.timer % 60;
+    const timerMins = Math.floor(level.timeLimit / 60);
+    const timerSecs = level.timeLimit % 60;
     const timerStr =
       timerSecs > 0
         ? `${timerMins}:${timerSecs.toString().padStart(2, '0')}`
@@ -541,7 +569,7 @@ export class CampaignUI {
     return badge;
   }
 
-  private async startLevel(levelId: string): Promise<void> {
+  private async startLevel(levelId: number): Promise<void> {
     try {
       this.notifications.info('Loading level...');
 
