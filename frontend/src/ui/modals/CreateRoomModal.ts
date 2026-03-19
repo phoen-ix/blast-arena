@@ -194,13 +194,26 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
   const botsSelect = modal.querySelector('#room-bots') as HTMLSelectElement;
   const botDiffSelect = modal.querySelector('#room-bot-difficulty') as HTMLSelectElement;
   const botAiSelect = modal.querySelector('#room-bot-ai') as HTMLSelectElement | null;
+  const maxPlayersSelect = modal.querySelector('#room-max-players') as HTMLSelectElement;
   const updateBotDiffEnabled = () => {
-    const hasBots = parseInt(botsSelect.value) > 0;
+    const bots = parseInt(botsSelect.value);
+    const hasBots = bots > 0;
     botDiffSelect.disabled = !hasBots;
     botDiffSelect.style.opacity = hasBots ? '1' : '0.4';
     if (botAiSelect) {
       botAiSelect.disabled = !hasBots;
       botAiSelect.style.opacity = hasBots ? '1' : '0.4';
+    }
+    // Auto-raise max players so bots + 1 host fit
+    const needed = bots + 1;
+    const currentMax = parseInt(maxPlayersSelect.value);
+    if (needed > currentMax) {
+      // Find the smallest option >= needed
+      const options = Array.from(maxPlayersSelect.options).map((o) => parseInt(o.value));
+      const fit = options.find((v) => v >= needed);
+      if (fit) {
+        maxPlayersSelect.value = String(fit);
+      }
     }
   };
   botsSelect.addEventListener('change', updateBotDiffEnabled);
@@ -215,9 +228,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
   modal.querySelector('#modal-create')!.addEventListener('click', () => {
     const name = (modal.querySelector('#room-name') as HTMLInputElement).value.trim();
     const gameMode = (modal.querySelector('#room-mode') as HTMLSelectElement).value as any;
-    const maxPlayers = parseInt(
-      (modal.querySelector('#room-max-players') as HTMLSelectElement).value,
-    );
+    const maxPlayers = parseInt(maxPlayersSelect.value);
     const roundTime = parseInt(
       (modal.querySelector('#room-round-time') as HTMLSelectElement).value,
     );

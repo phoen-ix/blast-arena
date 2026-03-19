@@ -298,12 +298,12 @@ export class HUDScene extends Phaser.Scene {
           const clickable = p.alive && this.localPlayerDead;
           let teamHeader = '';
           if (isTeamMode && p.team !== lastTeam) {
-            lastTeam = p.team;
+            lastTeam = p.team ?? -1;
             const teamName = p.team === 0 ? 'Team Red' : 'Team Blue';
-            teamHeader = `<div style="font-size:11px;font-weight:600;color:${teamColors[p.team]};padding:4px 8px 2px;margin-top:${p.team > 0 ? '6px' : '0'};">${teamName}</div>`;
+            teamHeader = `<div style="font-size:11px;font-weight:600;color:${teamColors[p.team ?? 0]};padding:4px 8px 2px;margin-top:${(p.team ?? 0) > 0 ? '6px' : '0'};">${teamName}</div>`;
           }
           const teamDot = isTeamMode
-            ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${teamColors[p.team]};margin-right:4px;vertical-align:middle;"></span>`
+            ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${teamColors[p.team ?? 0]};margin-right:4px;vertical-align:middle;"></span>`
             : '';
 
           // KOTH score badge
