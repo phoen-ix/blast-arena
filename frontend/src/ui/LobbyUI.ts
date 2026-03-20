@@ -9,9 +9,8 @@ import { PartyBar } from './PartyBar';
 import { RoomListItem, Room, GameDefaults, BotAIEntry, getErrorMessage } from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../utils/html';
 import { showCreateRoomModal } from './modals/CreateRoomModal';
-import { showAccountModal } from './modals/AccountModal';
-import { showSettingsModal } from './modals/SettingsModal';
 import { showHelpModal } from './modals/HelpModal';
+import { SettingsUI } from './SettingsUI';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 
 export class LobbyUI {
@@ -88,7 +87,6 @@ export class LobbyUI {
           ${user?.role === 'admin' || user?.role === 'moderator' ? '<button class="btn btn-ghost" id="admin-btn">Admin</button>' : ''}
           <button class="btn btn-primary" id="create-room-btn">+ New Room</button>
           <button class="btn" id="campaign-btn" style="background:linear-gradient(135deg, var(--primary), #ff8f35);color:#fff;font-weight:700;letter-spacing:0.5px;">Campaign</button>
-          <button class="btn btn-ghost" id="account-btn">Account</button>
           <button class="btn btn-ghost" id="friends-btn" style="color:var(--accent);">Friends</button>
           <button class="btn btn-ghost" id="party-btn">Party</button>
           <button class="btn btn-ghost" id="settings-btn">Settings</button>
@@ -113,9 +111,6 @@ export class LobbyUI {
       });
       campaignUI.show();
     });
-    this.container
-      .querySelector('#account-btn')!
-      .addEventListener('click', () => this.showAccountModal());
     this.container.querySelector('#friends-btn')!.addEventListener('click', () => {
       this.friendsPanel.toggle();
     });
@@ -126,9 +121,13 @@ export class LobbyUI {
         this.partyBar.createParty();
       }
     });
-    this.container
-      .querySelector('#settings-btn')!
-      .addEventListener('click', () => this.showSettingsModal());
+    this.container.querySelector('#settings-btn')!.addEventListener('click', () => {
+      this.hide();
+      const settingsUI = new SettingsUI(this.authManager, this.notifications, () => {
+        this.show();
+      });
+      settingsUI.show();
+    });
     this.container
       .querySelector('#help-btn')!
       .addEventListener('click', () => this.showHelpModal());
@@ -252,18 +251,6 @@ export class LobbyUI {
       gameDefaults,
       activeAIs,
     });
-  }
-
-  private showAccountModal(): void {
-    showAccountModal({
-      authManager: this.authManager,
-      notifications: this.notifications,
-      onUpdate: () => this.render(),
-    });
-  }
-
-  private showSettingsModal(): void {
-    showSettingsModal();
   }
 
   private showHelpModal(): void {
