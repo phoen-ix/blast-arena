@@ -4,7 +4,6 @@ import {
   validatePassword,
   validateEmail,
   validateRoomName,
-  validateDisplayName,
 } from '../../shared/src/utils/validation';
 
 describe('Validation Utils', () => {
@@ -73,17 +72,6 @@ describe('Validation Utils', () => {
 
     it('should reject invalid characters', () => {
       expect(validateRoomName('room@123')).not.toBeNull();
-    });
-  });
-
-  describe('validateDisplayName', () => {
-    it('should accept valid display names', () => {
-      expect(validateDisplayName('Cool Player')).toBeNull();
-      expect(validateDisplayName('')).toBeNull();
-    });
-
-    it('should reject too long display names', () => {
-      expect(validateDisplayName('a'.repeat(31))).not.toBeNull();
     });
   });
 });

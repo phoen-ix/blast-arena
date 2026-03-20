@@ -156,8 +156,13 @@ Delta tile encoding, bot AI tick throttling, per-tick caching, efficient seriali
 npm test                    # Run all test suites
 npx jest --config tests/backend/jest.config.ts  # Run from project root
 ```
-- 117 tests across 8 suites (GameState integration, GameLoop, Bomb, Map, CollisionSystem, Auth, validation, grid)
-- GameState tests cover: lifecycle, movement, bombs, explosions, death, self-kills, shield, chain reactions, win conditions, grace period, power-ups, remote bombs, bomb kick, teams, deathmatch, KOTH, line/pierce bombs, reinforced walls, battle royale zone
+- 292 tests across 22 suites covering game logic, services, middleware, routes, and utilities
+- Game: GameState (lifecycle, movement, bombs, explosions, power-ups, all modes), GameLoop, GameRoom, Bomb, Map, CollisionSystem, InputBuffer, BattleRoyale, BotAI
+- Services: auth (register/login/refresh/logout/verify/reset), user (profile/username/email/password), lobby (rooms/join/leave/ready/teams), settings (get/set/defaults)
+- Middleware: auth + admin role checks, validation (Zod), error handler, rate limiter (Redis + fallback)
+- Routes: health endpoint
+- Utils: crypto (hash/compare/token), socket rate limiting
+- Shared: grid utilities, validation (username/password/email/room name)
 
 ## Documentation
 - [Bot AI Developer Guide](docs/bot-ai-guide.md) — writing custom bot AIs
