@@ -78,7 +78,7 @@ Admins can upload custom AI implementations as TypeScript files. See [docs/bot-a
 | Users | Staff | Search, roles, deactivate, delete, password reset |
 | Matches | Staff | History, per-player stats, replay viewer, delete |
 | Rooms | Staff | Live rooms, spectate, kick, force close |
-| Logs | Admin | Audit trail with filters |
+| Logs | Admin | Audit trail with filters, click-to-expand detail rows |
 | Simulations | Admin | Batch bot-only games (1-1000), fast/realtime, queue |
 | AI | Admin | Upload/manage custom bot AI implementations |
 | Campaign | Admin | Worlds, levels (visual editor), enemy types |

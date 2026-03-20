@@ -63,14 +63,17 @@ export class LogsTab {
           <tbody>
             ${result.actions
               .map(
-                (a: any) => `
-              <tr>
+                (a: any, i: number) => `
+              <tr class="log-row" data-log-index="${i}" style="cursor:pointer;">
                 <td>${new Date(a.created_at).toLocaleString()}</td>
                 <td>${escapeHtml(a.admin_username)}</td>
                 <td><span class="badge badge-${this.actionBadgeClass(a.action)}">${escapeHtml(a.action)}</span></td>
                 <td>${escapeHtml(a.target_type)}</td>
                 <td>${a.target_id}</td>
-                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeAttr(a.details || '')}">${escapeHtml(a.details || '-')}</td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(a.details || '-')}</td>
+              </tr>
+              <tr class="log-detail-row" data-detail-index="${i}" style="display:none;">
+                <td colspan="6" style="padding:12px 16px;background:var(--bg-card);white-space:pre-wrap;word-break:break-word;font-size:13px;color:var(--text-dim);border-top:none;">${escapeHtml(a.details || 'No details')}</td>
               </tr>
             `,
               )
@@ -97,6 +100,18 @@ export class LogsTab {
         if (target.dataset.page) {
           this.page = parseInt(target.dataset.page);
           this.loadActions();
+          return;
+        }
+        const logRow = target.closest('.log-row') as HTMLElement | null;
+        if (logRow) {
+          const index = logRow.dataset.logIndex;
+          const detailRow = this.container!.querySelector(
+            `[data-detail-index="${index}"]`,
+          ) as HTMLElement | null;
+          if (detailRow) {
+            const isVisible = detailRow.style.display !== 'none';
+            detailRow.style.display = isVisible ? 'none' : 'table-row';
+          }
         }
       });
     } catch {
