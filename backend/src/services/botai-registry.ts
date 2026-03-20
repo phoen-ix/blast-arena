@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { BotAI, IBotAI } from '../game/BotAI';
 import { query } from '../db/connection';
 import { BotAIRow } from '../db/types';
+import { loadBotAIInSandbox } from './botai-compiler';
 
 type BotAIConstructor = new (
   difficulty: 'easy' | 'normal' | 'hard',
@@ -36,7 +37,10 @@ export class BotAIRegistry {
         logger.info({ aiId: row.id, name: row.name }, 'Loaded custom BotAI');
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        logger.warn({ aiId: row.id, name: row.name, error: msg }, 'Failed to load custom BotAI, skipping');
+        logger.warn(
+          { aiId: row.id, name: row.name, error: msg },
+          'Failed to load custom BotAI, skipping',
+        );
       }
     }
 
@@ -63,17 +67,13 @@ export class BotAIRegistry {
       throw new Error(`Compiled AI file not found: ${jsPath}`);
     }
 
-    // Clear from require cache if previously loaded
-    const resolved = require.resolve(jsPath);
-    delete require.cache[resolved];
-
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require(jsPath);
+    const code = fs.readFileSync(jsPath, 'utf-8');
+    const mod = loadBotAIInSandbox(code);
 
     // Find the AI class in exports
     let AIClass: BotAIConstructor | undefined;
     if (typeof mod.default === 'function' && mod.default.prototype?.generateInput) {
-      AIClass = mod.default;
+      AIClass = mod.default as BotAIConstructor;
     } else {
       for (const val of Object.values(mod)) {
         if (
@@ -96,14 +96,6 @@ export class BotAIRegistry {
   unloadAI(id: string): void {
     if (id === 'builtin') return;
     this.loaded.delete(id);
-
-    const jsPath = path.join(AI_BASE_DIR, id, 'compiled.js');
-    try {
-      const resolved = require.resolve(jsPath);
-      delete require.cache[resolved];
-    } catch {
-      // File may not exist
-    }
   }
 
   reloadAI(id: string): void {

@@ -50,7 +50,7 @@ export class Enemy {
   }
 
   applyMoveCooldown(): void {
-    this.moveCooldown = Math.max(1, Math.round(MOVE_COOLDOWN_BASE / this.typeConfig.speed));
+    this.moveCooldown = Math.max(1, Math.round(MOVE_COOLDOWN_BASE / Math.max(0.01, this.typeConfig.speed)));
   }
 
   canPlaceBomb(): boolean {
@@ -92,7 +92,7 @@ export class Enemy {
         // Apply phase changes
         if (phase.speedMultiplier != null) {
           (this.typeConfig as EnemyTypeConfig).speed =
-            this.typeConfig.speed * phase.speedMultiplier;
+            Math.max(0.01, this.typeConfig.speed * phase.speedMultiplier);
         }
         if (phase.movementPattern != null) {
           (this.typeConfig as EnemyTypeConfig).movementPattern = phase.movementPattern;

@@ -125,7 +125,9 @@ router.post('/auth/refresh', async (req, res, next) => {
   }
 });
 
-router.get('/auth/verify-email/:token', async (req, res, next) => {
+router.get('/auth/verify-email/:token',
+  rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 10 }),
+  async (req, res, next) => {
   try {
     await authService.verifyEmail(req.params.token);
     res.json({ message: 'Email verified successfully' });
@@ -148,6 +150,7 @@ router.post('/auth/forgot-password',
 );
 
 router.post('/auth/reset-password',
+  rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 5 }),
   validate(resetPasswordSchema),
   async (req, res, next) => {
     try {

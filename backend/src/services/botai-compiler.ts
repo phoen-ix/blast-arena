@@ -1,9 +1,9 @@
 import * as esbuild from 'esbuild';
-import path from 'path';
-import fs from 'fs';
+import vm from 'vm';
 import { logger } from '../utils/logger';
 
 const MAX_FILE_SIZE = 500 * 1024; // 500KB
+const VM_TIMEOUT_MS = 5000;
 
 const DANGEROUS_MODULES = [
   'fs',
@@ -19,6 +19,18 @@ const DANGEROUS_MODULES = [
   'dns',
   'tls',
   'readline',
+  'path',
+  'crypto',
+  'stream',
+  'zlib',
+  'util',
+  'events',
+  'buffer',
+  'assert',
+  'perf_hooks',
+  'async_hooks',
+  'v8',
+  'inspector',
 ];
 
 const DANGEROUS_IMPORT_PATTERNS = DANGEROUS_MODULES.flatMap((mod) => [
@@ -28,10 +40,56 @@ const DANGEROUS_IMPORT_PATTERNS = DANGEROUS_MODULES.flatMap((mod) => [
   new RegExp(`require\\s*\\(\\s*['"\`]node:${mod}['"\`]\\s*\\)`, 'g'),
 ]);
 
+const DANGEROUS_GLOBAL_PATTERNS: { pattern: RegExp; label: string }[] = [
+  { pattern: /process[.[]/g, label: 'process access' },
+  { pattern: /globalThis/g, label: 'globalThis access' },
+  { pattern: /__proto__/g, label: '__proto__ access' },
+  { pattern: /Object\.defineProperty/g, label: 'Object.defineProperty' },
+  { pattern: /Object\.setPrototypeOf/g, label: 'Object.setPrototypeOf' },
+  { pattern: /Reflect\./g, label: 'Reflect access' },
+  { pattern: /new\s+Proxy\s*\(/g, label: 'Proxy constructor' },
+];
+
+const blockImportsPlugin: esbuild.Plugin = {
+  name: 'block-imports',
+  setup(build) {
+    build.onResolve({ filter: /.*/ }, (args) => {
+      return {
+        errors: [{ text: `Imports are not allowed in bot AI code: "${args.path}"` }],
+      };
+    });
+  },
+};
+
 export interface CompileResult {
   success: boolean;
   compiledCode?: string;
   errors: string[];
+}
+
+export function loadBotAIInSandbox(code: string): Record<string, unknown> {
+  const moduleObj = { exports: {} as Record<string, unknown> };
+  const frozenConsole = Object.freeze({
+    log: () => {},
+    warn: () => {},
+    error: () => {},
+    info: () => {},
+    debug: () => {},
+  });
+
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    console: frozenConsole,
+  };
+
+  const context = vm.createContext(sandbox, {
+    codeGeneration: { strings: false, wasm: false },
+  });
+
+  vm.runInContext(code, context, { timeout: VM_TIMEOUT_MS });
+
+  return moduleObj.exports;
 }
 
 export async function compileBotAI(source: string): Promise<CompileResult> {
@@ -39,7 +97,10 @@ export async function compileBotAI(source: string): Promise<CompileResult> {
 
   // 1. File size check
   if (Buffer.byteLength(source) > MAX_FILE_SIZE) {
-    return { success: false, errors: [`Source file exceeds maximum size of ${MAX_FILE_SIZE / 1024}KB`] };
+    return {
+      success: false,
+      errors: [`Source file exceeds maximum size of ${MAX_FILE_SIZE / 1024}KB`],
+    };
   }
 
   // 2. Dangerous import scan
@@ -54,7 +115,19 @@ export async function compileBotAI(source: string): Promise<CompileResult> {
     return { success: false, errors };
   }
 
-  // 3. esbuild transpilation
+  // 3. Dangerous global access scan
+  for (const { pattern, label } of DANGEROUS_GLOBAL_PATTERNS) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(source);
+    if (match) {
+      errors.push(`Forbidden pattern detected (${label}): ${match[0]}`);
+    }
+  }
+  if (errors.length > 0) {
+    return { success: false, errors };
+  }
+
+  // 4. esbuild transpilation (bundle: true with import blocking plugin)
   let compiledCode: string;
   try {
     const result = await esbuild.build({
@@ -63,11 +136,12 @@ export async function compileBotAI(source: string): Promise<CompileResult> {
         loader: 'ts',
         resolveDir: process.cwd(),
       },
-      bundle: false,
+      bundle: true,
       platform: 'node',
       format: 'cjs',
       target: 'node20',
       write: false,
+      plugins: [blockImportsPlugin],
     });
 
     if (result.errors.length > 0) {
@@ -83,23 +157,18 @@ export async function compileBotAI(source: string): Promise<CompileResult> {
     return { success: false, errors: [`TypeScript compilation failed: ${msg}`] };
   }
 
-  // 4. Structure validation — write temp file, require it, check exports
-  const tmpDir = path.join(process.cwd(), 'ai', '.tmp');
-  const tmpFile = path.join(tmpDir, `validate_${Date.now()}.js`);
+  // 5. Structure validation — run in VM sandbox, check exports
   try {
-    fs.mkdirSync(tmpDir, { recursive: true });
-    fs.writeFileSync(tmpFile, compiledCode);
-
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require(tmpFile);
+    const mod = loadBotAIInSandbox(compiledCode);
 
     // Find the exported class — check default export, then named exports
     let AIClass: unknown = mod.default || mod;
     if (typeof AIClass === 'object' && AIClass !== null) {
       // Look for a class in named exports
-      const exports = Object.values(mod);
-      AIClass = exports.find(
-        (v) => typeof v === 'function' && v.prototype && typeof v.prototype.generateInput === 'function',
+      const exportValues = Object.values(mod);
+      AIClass = exportValues.find(
+        (v) =>
+          typeof v === 'function' && v.prototype && typeof v.prototype.generateInput === 'function',
       );
     }
 
@@ -110,7 +179,10 @@ export async function compileBotAI(source: string): Promise<CompileResult> {
       };
     }
 
-    if (typeof (AIClass as { prototype: Record<string, unknown> }).prototype.generateInput !== 'function') {
+    if (
+      typeof (AIClass as { prototype: Record<string, unknown> }).prototype.generateInput !==
+      'function'
+    ) {
       return {
         success: false,
         errors: [
@@ -140,14 +212,6 @@ export async function compileBotAI(source: string): Promise<CompileResult> {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, errors: [`Structure validation failed: ${msg}`] };
-  } finally {
-    // Cleanup temp file
-    try {
-      delete require.cache[require.resolve(tmpFile)];
-      fs.unlinkSync(tmpFile);
-    } catch {
-      // ignore cleanup errors
-    }
   }
 
   logger.info('Bot AI compilation and validation successful');

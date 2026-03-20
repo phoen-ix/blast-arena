@@ -6,8 +6,15 @@ import { validate } from '../middleware/validation';
 import * as campaignService from '../services/campaign';
 import * as enemyTypeService from '../services/enemy-type';
 import * as progressService from '../services/campaign-progress';
+import { AppError } from '../middleware/errorHandler';
 
 const router = Router();
+
+function parseIntParam(value: string, paramName: string): number {
+  const n = parseInt(value, 10);
+  if (isNaN(n)) throw new AppError(`Invalid ${paramName}`, 400);
+  return n;
+}
 
 // --- Zod schemas ---
 
@@ -59,7 +66,7 @@ const enemyTypeSchema = z.object({
     sizeMultiplier: z.number().min(1).max(3),
     bossPhases: z.array(z.object({
       hpThreshold: z.number().min(0).max(1),
-      speedMultiplier: z.number().optional(),
+      speedMultiplier: z.number().min(0.01).optional(),
       movementPattern: z.enum(['random_walk', 'chase_player', 'patrol_path', 'wall_follow', 'stationary']).optional(),
       canBomb: z.boolean().optional(),
       bombConfig: z.any().optional(),
@@ -125,7 +132,7 @@ router.get('/campaign/worlds', authMiddleware, async (req, res, next) => {
 router.get('/campaign/worlds/:worldId/levels', authMiddleware, async (req, res, next) => {
   try {
     const userId = req.user!.userId;
-    const worldId = parseInt(req.params.worldId, 10);
+    const worldId = parseIntParam(req.params.worldId, 'worldId');
     const levels = await campaignService.listLevelsWithProgress(worldId, userId);
     res.json({ levels });
   } catch (err) {
@@ -136,7 +143,7 @@ router.get('/campaign/worlds/:worldId/levels', authMiddleware, async (req, res, 
 // Get full level data (published only)
 router.get('/campaign/levels/:levelId', authMiddleware, async (req, res, next) => {
   try {
-    const levelId = parseInt(req.params.levelId, 10);
+    const levelId = parseIntParam(req.params.levelId, 'levelId');
     const level = await campaignService.getLevel(levelId);
     if (!level || !level.isPublished) {
       return res.status(404).json({ error: 'Level not found' });
@@ -195,7 +202,7 @@ router.post('/admin/campaign/worlds', authMiddleware, adminOnlyMiddleware, valid
 
 router.put('/admin/campaign/worlds/:id', authMiddleware, adminOnlyMiddleware, validate(worldUpdateSchema), async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     await campaignService.updateWorld(id, req.body);
     res.json({ success: true });
   } catch (err) {
@@ -205,7 +212,7 @@ router.put('/admin/campaign/worlds/:id', authMiddleware, adminOnlyMiddleware, va
 
 router.delete('/admin/campaign/worlds/:id', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     await campaignService.deleteWorld(id);
     res.json({ success: true });
   } catch (err) {
@@ -215,7 +222,7 @@ router.delete('/admin/campaign/worlds/:id', authMiddleware, adminOnlyMiddleware,
 
 router.put('/admin/campaign/worlds/:id/order', authMiddleware, adminOnlyMiddleware, validate(orderSchema), async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     await campaignService.reorderWorld(id, req.body.sortOrder);
     res.json({ success: true });
   } catch (err) {
@@ -226,8 +233,7 @@ router.put('/admin/campaign/worlds/:id/order', authMiddleware, adminOnlyMiddlewa
 // --- Levels ---
 router.get('/admin/campaign/levels', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
   try {
-    const worldId = parseInt(req.query.worldId as string, 10);
-    if (isNaN(worldId)) return res.status(400).json({ error: 'worldId required' });
+    const worldId = parseIntParam(req.query.worldId as string, 'worldId');
     const levels = await campaignService.listLevels(worldId, true);
     res.json({ levels });
   } catch (err) {
@@ -238,8 +244,7 @@ router.get('/admin/campaign/levels', authMiddleware, adminOnlyMiddleware, async 
 router.post('/admin/campaign/levels', authMiddleware, adminOnlyMiddleware, validate(levelSchema), async (req, res, next) => {
   try {
     const userId = req.user!.userId;
-    const worldId = parseInt(req.body.worldId ?? req.query.worldId, 10);
-    if (isNaN(worldId)) return res.status(400).json({ error: 'worldId required' });
+    const worldId = parseIntParam(String(req.body.worldId ?? req.query.worldId ?? ''), 'worldId');
     const id = await campaignService.createLevel(worldId, req.body, userId);
     res.status(201).json({ id });
   } catch (err) {
@@ -249,7 +254,7 @@ router.post('/admin/campaign/levels', authMiddleware, adminOnlyMiddleware, valid
 
 router.get('/admin/campaign/levels/:id', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     const level = await campaignService.getLevel(id);
     if (!level) return res.status(404).json({ error: 'Level not found' });
     res.json({ level });
@@ -260,7 +265,7 @@ router.get('/admin/campaign/levels/:id', authMiddleware, adminOnlyMiddleware, as
 
 router.put('/admin/campaign/levels/:id', authMiddleware, adminOnlyMiddleware, validate(levelSchema), async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     await campaignService.updateLevel(id, req.body);
     res.json({ success: true });
   } catch (err) {
@@ -270,7 +275,7 @@ router.put('/admin/campaign/levels/:id', authMiddleware, adminOnlyMiddleware, va
 
 router.delete('/admin/campaign/levels/:id', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     await campaignService.deleteLevel(id);
     res.json({ success: true });
   } catch (err) {
@@ -280,7 +285,7 @@ router.delete('/admin/campaign/levels/:id', authMiddleware, adminOnlyMiddleware,
 
 router.put('/admin/campaign/levels/:id/order', authMiddleware, adminOnlyMiddleware, validate(orderSchema), async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     await campaignService.reorderLevel(id, req.body.sortOrder);
     res.json({ success: true });
   } catch (err) {
@@ -311,7 +316,7 @@ router.post('/admin/campaign/enemy-types', authMiddleware, adminOnlyMiddleware, 
 
 router.put('/admin/campaign/enemy-types/:id', authMiddleware, adminOnlyMiddleware, validate(enemyTypeSchema), async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     await enemyTypeService.updateEnemyType(id, req.body);
     res.json({ success: true });
   } catch (err) {
@@ -321,7 +326,7 @@ router.put('/admin/campaign/enemy-types/:id', authMiddleware, adminOnlyMiddlewar
 
 router.delete('/admin/campaign/enemy-types/:id', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     await enemyTypeService.deleteEnemyType(id);
     res.json({ success: true });
   } catch (err) {
@@ -344,7 +349,7 @@ function stripEnemyTypeDbFields(et: any) {
 // Export single level
 router.get('/admin/campaign/levels/:id/export', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     const level = await campaignService.getLevel(id);
     if (!level) return res.status(404).json({ error: 'Level not found' });
 
@@ -366,7 +371,7 @@ router.get('/admin/campaign/levels/:id/export', authMiddleware, adminOnlyMiddlew
 // Export level bundle (level + enemy types)
 router.get('/admin/campaign/levels/:id/export-bundle', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     const level = await campaignService.getLevel(id);
     if (!level) return res.status(404).json({ error: 'Level not found' });
 
@@ -405,7 +410,7 @@ router.get('/admin/campaign/levels/:id/export-bundle', authMiddleware, adminOnly
 // Export single enemy type
 router.get('/admin/campaign/enemy-types/:id/export', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseIntParam(req.params.id, 'id');
     const et = await enemyTypeService.getEnemyType(id);
     if (!et) return res.status(404).json({ error: 'Enemy type not found' });
 

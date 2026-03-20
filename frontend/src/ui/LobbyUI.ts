@@ -5,7 +5,7 @@ import { NotificationUI } from './NotificationUI';
 import { AdminUI } from './AdminUI';
 import { CampaignUI } from './CampaignUI';
 import { RoomListItem, Room, GameDefaults, BotAIEntry, getErrorMessage } from '@blast-arena/shared';
-import { escapeHtml } from '../utils/html';
+import { escapeHtml, escapeAttr } from '../utils/html';
 import { showCreateRoomModal } from './modals/CreateRoomModal';
 import { showAccountModal } from './modals/AccountModal';
 import { showSettingsModal } from './modals/SettingsModal';
@@ -68,7 +68,7 @@ export class LobbyUI {
       <div class="lobby-header">
         <h1><span>BLAST</span>ARENA</h1>
         <div style="display:flex;gap:10px;align-items:center;">
-          <span style="color:var(--text-dim);font-size:13px;">Welcome, <strong style="color:var(--text);">${user?.username}</strong></span>
+          <span style="color:var(--text-dim);font-size:13px;">Welcome, <strong style="color:var(--text);">${escapeHtml(user?.username ?? '')}</strong></span>
           ${user?.role === 'admin' || user?.role === 'moderator' ? '<button class="btn btn-ghost" id="admin-btn">Admin</button>' : ''}
           <button class="btn btn-primary" id="create-room-btn">+ New Room</button>
           <button class="btn" id="campaign-btn" style="background:linear-gradient(135deg, var(--primary), #ff8f35);color:#fff;font-weight:700;letter-spacing:0.5px;">Campaign</button>
@@ -161,7 +161,7 @@ export class LobbyUI {
     list.innerHTML = rooms
       .map(
         (room) => `
-      <div class="room-card" data-code="${room.code}">
+      <div class="room-card" data-code="${escapeAttr(room.code)}">
         <h3>${escapeHtml(room.name)}</h3>
         <div class="room-info">
           <span>${room.playerCount}/${room.maxPlayers} players</span>

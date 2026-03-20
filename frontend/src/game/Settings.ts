@@ -20,7 +20,11 @@ export function getSettings(): VisualSettings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      cached = { ...DEFAULTS, ...parsed };
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        cached = { ...DEFAULTS, ...parsed };
+      } else {
+        cached = { ...DEFAULTS };
+      }
       return cached!;
     }
   } catch { /* ignore */ }

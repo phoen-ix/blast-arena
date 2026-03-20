@@ -5,9 +5,11 @@ type AnyFn = (...args: any[]) => any;
 
 const mockQuery = jest.fn<AnyFn>();
 const mockExecute = jest.fn<AnyFn>();
+const mockWithTransaction = jest.fn<AnyFn>();
 jest.mock('../../../backend/src/db/connection', () => ({
   query: mockQuery,
   execute: mockExecute,
+  withTransaction: mockWithTransaction,
 }));
 
 const mockComparePassword = jest.fn<AnyFn>();
@@ -234,19 +236,27 @@ describe('user service', () => {
   // ── confirmEmailChange ─────────────────────────────────────────────
 
   describe('confirmEmailChange', () => {
+    let mockConnExecute: jest.Mock<AnyFn>;
+
+    beforeEach(() => {
+      mockConnExecute = jest.fn<AnyFn>();
+      mockWithTransaction.mockImplementation(async (fn: AnyFn) => fn({ execute: mockConnExecute }));
+    });
+
     it('updates email and clears pending fields on valid token', async () => {
       mockHashToken.mockReturnValue('hashed-token');
       const futureDate = new Date(Date.now() + 60 * 60 * 1000); // 1h from now
-      mockQuery.mockResolvedValueOnce([
-        { id: 5, pending_email: 'new@example.com', email_change_expires: futureDate },
+      // conn.execute returns [rows, fields] tuples
+      mockConnExecute.mockResolvedValueOnce([
+        [{ id: 5, pending_email: 'new@example.com', email_change_expires: futureDate }],
       ]);
-      mockQuery.mockResolvedValueOnce([]); // no conflict at confirmation time
-      mockExecute.mockResolvedValueOnce({});
+      mockConnExecute.mockResolvedValueOnce([[]]); // no conflict
+      mockConnExecute.mockResolvedValueOnce([{}]); // update result
 
       await confirmEmailChange('some-token');
 
       expect(mockHashToken).toHaveBeenCalledWith('some-token');
-      expect(mockExecute).toHaveBeenCalledWith(
+      expect(mockConnExecute).toHaveBeenCalledWith(
         'UPDATE users SET email = ?, email_verified = TRUE, pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
         ['new@example.com', 5],
       );
@@ -254,7 +264,7 @@ describe('user service', () => {
 
     it('throws 400 INVALID_TOKEN when token not found', async () => {
       mockHashToken.mockReturnValue('bad-hash');
-      mockQuery.mockResolvedValueOnce([]); // no matching row
+      mockConnExecute.mockResolvedValueOnce([[]]); // no matching row
 
       const promise = confirmEmailChange('bad-token');
       await expect(promise).rejects.toThrow(AppError);
@@ -267,10 +277,10 @@ describe('user service', () => {
     it('throws 400 TOKEN_EXPIRED when token is expired', async () => {
       mockHashToken.mockReturnValue('hashed-token');
       const pastDate = new Date(Date.now() - 60 * 60 * 1000); // 1h ago
-      mockQuery.mockResolvedValueOnce([
-        { id: 5, pending_email: 'new@example.com', email_change_expires: pastDate },
+      mockConnExecute.mockResolvedValueOnce([
+        [{ id: 5, pending_email: 'new@example.com', email_change_expires: pastDate }],
       ]);
-      mockExecute.mockResolvedValueOnce({}); // cleanup execute
+      mockConnExecute.mockResolvedValueOnce([{}]); // cleanup update
 
       const promise = confirmEmailChange('expired-token');
       await expect(promise).rejects.toThrow(AppError);
@@ -283,11 +293,11 @@ describe('user service', () => {
     it('throws 409 on race condition when email taken at confirmation time', async () => {
       mockHashToken.mockReturnValue('hashed-token');
       const futureDate = new Date(Date.now() + 60 * 60 * 1000);
-      mockQuery.mockResolvedValueOnce([
-        { id: 5, pending_email: 'race@example.com', email_change_expires: futureDate },
+      mockConnExecute.mockResolvedValueOnce([
+        [{ id: 5, pending_email: 'race@example.com', email_change_expires: futureDate }],
       ]);
-      mockQuery.mockResolvedValueOnce([{ id: 99 }]); // conflict found
-      mockExecute.mockResolvedValueOnce({}); // cleanup execute
+      mockConnExecute.mockResolvedValueOnce([[{ id: 99 }]]); // conflict found
+      mockConnExecute.mockResolvedValueOnce([{}]); // cleanup update
 
       const promise = confirmEmailChange('race-token');
       await expect(promise).rejects.toThrow(AppError);

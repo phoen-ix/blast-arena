@@ -77,7 +77,7 @@ JSON-based export/import for levels and enemy types. Export formats use `_format
 Full-screen panel for admin/moderator roles. 9 tabs: Dashboard, Users, Matches, Rooms, Logs, Simulations, AI, Campaign, Announcements. `staffMiddleware` (admin+moderator) and `adminOnlyMiddleware` for route protection. All actions audit-logged. Logs tab: rows are click-to-expand — clicking a row toggles a detail row showing the full message text. `admin_actions.target_id` is `INT NOT NULL` — use `0` (not `null`) for bulk operations without a specific target. Dashboard includes email/SMTP settings (admin-only) — stored in DB (`email_settings` key), `.env` values as fallback; password masked in API responses; `invalidateTransporter()` resets cached nodemailer on save. Registration toggle (`registration_enabled` setting) — when disabled, `/auth/register` returns 403 and AuthUI hides the register link. See [docs/admin-and-systems.md](docs/admin-and-systems.md) for full details.
 
 ## Bot AI Management
-Admin-only system for custom AI upload/management. Built-in AI as fallback. esbuild compilation pipeline with dangerous import scanning. `IBotAI` interface in `BotAI.ts`. Runtime crash recovery falls back to built-in. `botAiId` field in MatchConfig/SimulationConfig. See [docs/admin-and-systems.md](docs/admin-and-systems.md#bot-ai-management) and [docs/bot-ai-guide.md](docs/bot-ai-guide.md).
+Admin-only system for custom AI upload/management. Built-in AI as fallback. Three-layer sandbox: (1) source scan blocks dangerous module imports and global access patterns (`process`, `globalThis`, `__proto__`, `Reflect`, `Proxy`, etc.), (2) esbuild `bundle: true` with `blockImportsPlugin` rejects ALL import/require at build time, (3) `vm.runInContext()` executes code in isolated context with `codeGeneration: { strings: false }` (blocks `eval`/`Function`) and 5s timeout. `loadBotAIInSandbox()` exported from `botai-compiler.ts` — used by both compiler validation and registry runtime loading. `IBotAI` interface in `BotAI.ts`. Runtime crash recovery falls back to built-in. `botAiId` field in MatchConfig/SimulationConfig. See [docs/admin-and-systems.md](docs/admin-and-systems.md#bot-ai-management) and [docs/bot-ai-guide.md](docs/bot-ai-guide.md).
 
 ## Bot Simulation System
 Admin-only batch runner for bot-only games. Fast/real-time modes, queue system (max 10), live spectating. See [docs/admin-and-systems.md](docs/admin-and-systems.md#bot-simulation-system).
@@ -149,7 +149,7 @@ Delta tile encoding, bot AI tick throttling, per-tick caching, efficient seriali
 - Prettier with single quotes, trailing commas, 100 char width
 - Husky + lint-staged pre-commit hook runs ESLint `--fix` + Prettier on staged `.ts` files
 - `prepare` script uses `husky || true` to avoid failures in Docker builds
-- Socket rate limiting: `backend/src/utils/socketRateLimit.ts` — in-memory sliding window per socket ID
+- Socket rate limiting: `backend/src/utils/socketRateLimit.ts` — in-memory sliding window per socket ID + parallel per-IP rate limiters (`getSocketIp()` extracts IP from `x-real-ip`/`x-forwarded-for`)
 - All Socket.io server types fully parameterized — no `as any` casts on socket events
 - DB row types in `backend/src/db/types.ts`; all service queries use typed `query<T>()` calls
 - `shared/src/utils/error.ts`: `getErrorMessage(err: unknown)` in all catch blocks
@@ -163,9 +163,9 @@ Delta tile encoding, bot AI tick throttling, per-tick caching, efficient seriali
 npm test                    # Run all test suites
 npx jest --config tests/backend/jest.config.ts  # Run from project root
 ```
-- 292 tests across 22 suites covering game logic, services, middleware, routes, and utilities
+- 314 tests across 23 suites covering game logic, services, middleware, routes, and utilities
 - Game: GameState (lifecycle, movement, bombs, explosions, power-ups, all modes), GameLoop, GameRoom, Bomb, Map, CollisionSystem, InputBuffer, BattleRoyale, BotAI
-- Services: auth (register/login/refresh/logout/verify/reset), user (profile/username/email/password), lobby (rooms/join/leave/ready/teams), settings (get/set/defaults)
+- Services: auth (register/login/refresh/logout/verify/reset), user (profile/username/email/password), lobby (rooms/join/leave/ready/teams), settings (get/set/defaults), botai-sandbox (source scan, global blocking, vm sandbox, import blocking, eval/Function blocking, timeout)
 - Middleware: auth + admin role checks, validation (Zod), error handler, rate limiter (Redis + fallback)
 - Routes: health endpoint
 - Utils: crypto (hash/compare/token), socket rate limiting

@@ -1,4 +1,4 @@
-import { query, execute } from '../db/connection';
+import { query, execute, withTransaction } from '../db/connection';
 import { AppError } from '../middleware/errorHandler';
 import { comparePassword, hashPassword, generateToken, hashToken } from '../utils/crypto';
 import { sendEmailChangeEmail } from './email';
@@ -110,43 +110,45 @@ export async function requestEmailChange(userId: number, newEmail: string): Prom
 export async function confirmEmailChange(token: string): Promise<void> {
   const tokenHash = hashToken(token);
 
-  const rows = await query<UserEmailChangeRow[]>(
-    'SELECT id, pending_email, email_change_expires FROM users WHERE email_change_token = ?',
-    [tokenHash],
-  );
-
-  if (rows.length === 0) {
-    throw new AppError('Invalid confirmation token', 400, 'INVALID_TOKEN');
-  }
-
-  const row = rows[0];
-
-  if (new Date(row.email_change_expires) < new Date()) {
-    // Token expired — clean up pending fields
-    await execute(
-      'UPDATE users SET pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
-      [row.id],
+  await withTransaction(async (conn) => {
+    const [rows] = await conn.execute(
+      'SELECT id, pending_email, email_change_expires FROM users WHERE email_change_token = ? FOR UPDATE',
+      [tokenHash],
     );
-    throw new AppError('Confirmation link has expired', 400, 'TOKEN_EXPIRED');
-  }
 
-  // Final uniqueness check at confirmation time (race condition guard)
-  const conflict = await query<IdRow[]>('SELECT id FROM users WHERE email = ? AND id != ?', [
-    row.pending_email,
-    row.id,
-  ]);
-  if (conflict.length > 0) {
-    await execute(
-      'UPDATE users SET pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
-      [row.id],
+    const userRows = rows as UserEmailChangeRow[];
+    if (userRows.length === 0) {
+      throw new AppError('Invalid confirmation token', 400, 'INVALID_TOKEN');
+    }
+
+    const row = userRows[0];
+
+    if (new Date(row.email_change_expires) < new Date()) {
+      await conn.execute(
+        'UPDATE users SET pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
+        [row.id],
+      );
+      throw new AppError('Confirmation link has expired', 400, 'TOKEN_EXPIRED');
+    }
+
+    // Uniqueness check within transaction — FOR UPDATE prevents concurrent claims
+    const [conflict] = await conn.execute(
+      'SELECT id FROM users WHERE email = ? AND id != ? FOR UPDATE',
+      [row.pending_email, row.id],
     );
-    throw new AppError('Email is already in use by another account', 409, 'CONFLICT');
-  }
+    if ((conflict as IdRow[]).length > 0) {
+      await conn.execute(
+        'UPDATE users SET pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
+        [row.id],
+      );
+      throw new AppError('Email is already in use by another account', 409, 'CONFLICT');
+    }
 
-  await execute(
-    'UPDATE users SET email = ?, email_verified = TRUE, pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
-    [row.pending_email, row.id],
-  );
+    await conn.execute(
+      'UPDATE users SET email = ?, email_verified = TRUE, pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
+      [row.pending_email, row.id],
+    );
+  });
 }
 
 export async function changePassword(

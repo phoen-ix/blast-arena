@@ -29,7 +29,7 @@ services:
     image: redis:7-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-blast-arena}-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru
     volumes:
       - ./data/redis:/data
     networks:

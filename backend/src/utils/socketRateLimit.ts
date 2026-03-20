@@ -48,16 +48,39 @@ export function createSocketRateLimiter(maxPerSecond: number) {
 
 type SocketRateLimiter = ReturnType<typeof createSocketRateLimiter>;
 
+export function getSocketIp(socket: {
+  handshake: { headers: Record<string, string | string[] | undefined> };
+}): string {
+  const xRealIp = socket.handshake.headers['x-real-ip'];
+  const forwarded = socket.handshake.headers['x-forwarded-for'];
+  const forwardedStr = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  return (
+    (typeof xRealIp === 'string' ? xRealIp : forwardedStr?.split(',')[0]?.trim()) || 'unknown'
+  );
+}
+
 export function createRateLimiters() {
+  // Per-socket limiters
   const inputLimiter = createSocketRateLimiter(30); // game:input — 30/sec (game is 20 tps)
   const createLimiter = createSocketRateLimiter(2); // room:create — 2/sec
   const joinLimiter = createSocketRateLimiter(5); // room:join — 5/sec
 
-  const allLimiters: SocketRateLimiter[] = [inputLimiter, createLimiter, joinLimiter];
+  // Per-IP limiters (higher limits — multiple legitimate users can share an IP)
+  const ipInputLimiter = createSocketRateLimiter(100); // game:input — 100/sec per IP
+  const ipCreateLimiter = createSocketRateLimiter(5); // room:create — 5/sec per IP
+  const ipJoinLimiter = createSocketRateLimiter(10); // room:join — 10/sec per IP
 
-  /** Remove a disconnected socket from all limiters */
+  const perSocketLimiters: SocketRateLimiter[] = [inputLimiter, createLimiter, joinLimiter];
+  const allLimiters: SocketRateLimiter[] = [
+    ...perSocketLimiters,
+    ipInputLimiter,
+    ipCreateLimiter,
+    ipJoinLimiter,
+  ];
+
+  /** Remove a disconnected socket from per-socket limiters (IP entries expire naturally) */
   function removeSocket(socketId: string): void {
-    for (const limiter of allLimiters) {
+    for (const limiter of perSocketLimiters) {
       limiter.remove(socketId);
     }
   }
@@ -75,6 +98,9 @@ export function createRateLimiters() {
     inputLimiter: inputLimiter.isAllowed,
     createLimiter: createLimiter.isAllowed,
     joinLimiter: joinLimiter.isAllowed,
+    ipInputLimiter: ipInputLimiter.isAllowed,
+    ipCreateLimiter: ipCreateLimiter.isAllowed,
+    ipJoinLimiter: ipJoinLimiter.isAllowed,
     removeSocket,
   };
 }

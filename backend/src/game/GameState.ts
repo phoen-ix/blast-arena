@@ -173,6 +173,10 @@ export class GameStateManager {
       ];
     }
 
+    if (this.map.spawnPoints.length === 0) {
+      throw new Error('Map has no spawn points');
+    }
+
     if (hasZone) {
       this.zone = new BattleRoyaleZone(mapWidth, mapHeight);
     }
