@@ -4,6 +4,7 @@ import { validate } from '../middleware/validation';
 import { authMiddleware } from '../middleware/auth';
 import { rateLimiter } from '../middleware/rateLimiter';
 import * as authService from '../services/auth';
+import { isRegistrationEnabled } from '../services/settings';
 import { getConfig } from '../config';
 import {
   validateUsername, validatePassword, validateEmail,
@@ -38,6 +39,10 @@ router.post('/auth/register',
   validate(registerSchema),
   async (req, res, next) => {
     try {
+      if (!(await isRegistrationEnabled())) {
+        return res.status(403).json({ error: 'Registration is currently disabled' });
+      }
+
       const { username, email, password } = req.body;
 
       const usernameError = validateUsername(username);

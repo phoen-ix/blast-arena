@@ -22,6 +22,11 @@ export async function isRecordingEnabled(): Promise<boolean> {
   return value !== 'false';
 }
 
+export async function isRegistrationEnabled(): Promise<boolean> {
+  const value = await getSetting('registration_enabled');
+  return value !== 'false';
+}
+
 export async function getGameDefaults(): Promise<GameDefaults> {
   const value = await getSetting('game_defaults');
   if (!value) return {};

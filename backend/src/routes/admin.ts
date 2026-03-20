@@ -48,6 +48,16 @@ const createUserSchema = z.object({
   role: z.enum(['user', 'moderator', 'admin']).optional(),
 });
 
+// Public: get registration enabled setting (no auth required, needed by auth UI)
+router.get('/admin/settings/registration_enabled', async (_req, res, next) => {
+  try {
+    const enabled = await settingsService.isRegistrationEnabled();
+    res.json({ enabled });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Public: get recordings enabled setting (no auth required, like banner)
 router.get('/admin/settings/recordings_enabled', async (_req, res, next) => {
   try {
@@ -93,14 +103,37 @@ router.use(authMiddleware, staffMiddleware);
 
 // --- Settings ---
 
-const recordingsSchema = z.object({
+const toggleSchema = z.object({
   enabled: z.boolean(),
 });
 
 router.put(
+  '/admin/settings/registration_enabled',
+  adminOnlyMiddleware,
+  validate(toggleSchema),
+  async (req, res, next) => {
+    try {
+      await settingsService.setSetting('registration_enabled', String(req.body.enabled));
+      await execute(
+        'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+        [req.user!.userId, 'update_setting', 'setting', 0, JSON.stringify({ key: 'registration_enabled', value: req.body.enabled })],
+      );
+      const io = getIO();
+      io.emit('admin:settingsChanged' as any, {
+        key: 'registration_enabled',
+        value: req.body.enabled,
+      });
+      res.json({ message: 'Setting updated' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.put(
   '/admin/settings/recordings_enabled',
   adminOnlyMiddleware,
-  validate(recordingsSchema),
+  validate(toggleSchema),
   async (req, res, next) => {
     try {
       await settingsService.setSetting('recordings_enabled', String(req.body.enabled));

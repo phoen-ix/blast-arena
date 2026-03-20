@@ -17,6 +17,7 @@ export class DashboardTab {
   private notifications: NotificationUI;
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private recordingsEnabled: boolean = true;
+  private registrationEnabled: boolean = true;
   private gameDefaults: GameDefaults = {};
   private simulationDefaults: SimulationDefaults = {};
   private activeAIs: BotAIEntry[] = [];
@@ -45,13 +46,15 @@ export class DashboardTab {
 
   private async loadSettings(): Promise<void> {
     try {
-      const [recResp, gameResp, simResp, aiResp] = await Promise.all([
+      const [recResp, regResp, gameResp, simResp, aiResp] = await Promise.all([
         ApiClient.get<{ enabled: boolean }>('/admin/settings/recordings_enabled'),
+        ApiClient.get<{ enabled: boolean }>('/admin/settings/registration_enabled'),
         ApiClient.get<{ defaults: GameDefaults }>('/admin/settings/game_defaults'),
         ApiClient.get<{ defaults: SimulationDefaults }>('/admin/settings/simulation_defaults'),
         ApiClient.get<{ ais: BotAIEntry[] }>('/admin/ai/active'),
       ]);
       this.recordingsEnabled = recResp.enabled;
+      this.registrationEnabled = regResp.enabled;
       this.gameDefaults = gameResp.defaults ?? {};
       this.simulationDefaults = simResp.defaults ?? {};
       this.activeAIs = aiResp.ais ?? [];
@@ -79,13 +82,22 @@ export class DashboardTab {
     card.style.cssText = 'margin-top:20px;';
     card.innerHTML = `
       <h3 style="color:var(--text);font-size:15px;margin-bottom:12px;font-weight:600;">Server Settings</h3>
-      <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;
+      <div style="display:flex;flex-wrap:wrap;gap:12px;padding:14px 18px;
         background:var(--bg-card);border:1px solid var(--border);border-radius:8px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
-          <input type="checkbox" id="toggle-recordings" ${this.recordingsEnabled ? 'checked' : ''} style="accent-color:var(--accent);width:16px;height:16px;">
-          <span style="color:var(--text);font-weight:600;">Match Recordings</span>
-        </label>
-        <span style="color:var(--text-dim);font-size:12px;">Enable replay recording for all new games</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="toggle-recordings" ${this.recordingsEnabled ? 'checked' : ''} style="accent-color:var(--accent);width:16px;height:16px;">
+            <span style="color:var(--text);font-weight:600;">Match Recordings</span>
+          </label>
+          <span style="color:var(--text-dim);font-size:12px;">Enable replay recording for all new games</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="toggle-registration" ${this.registrationEnabled ? 'checked' : ''} style="accent-color:var(--accent);width:16px;height:16px;">
+            <span style="color:var(--text);font-weight:600;">User Registration</span>
+          </label>
+          <span style="color:var(--text-dim);font-size:12px;">Allow new users to create accounts</span>
+        </div>
       </div>
 
       ${this.renderEmailSettingsSection()}
@@ -100,6 +112,18 @@ export class DashboardTab {
         await ApiClient.put('/admin/settings/recordings_enabled', { enabled });
         this.recordingsEnabled = enabled;
         this.notifications.success(`Match recordings ${enabled ? 'enabled' : 'disabled'}`);
+      } catch {
+        (e.target as HTMLInputElement).checked = !enabled;
+        this.notifications.error('Failed to update setting');
+      }
+    });
+
+    card.querySelector('#toggle-registration')!.addEventListener('change', async (e) => {
+      const enabled = (e.target as HTMLInputElement).checked;
+      try {
+        await ApiClient.put('/admin/settings/registration_enabled', { enabled });
+        this.registrationEnabled = enabled;
+        this.notifications.success(`User registration ${enabled ? 'enabled' : 'disabled'}`);
       } catch {
         (e.target as HTMLInputElement).checked = !enabled;
         this.notifications.error('Failed to update setting');

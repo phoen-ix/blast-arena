@@ -1,4 +1,5 @@
 import { AuthManager } from '../network/AuthManager';
+import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
 import { getErrorMessage } from '@blast-arena/shared';
 
@@ -8,6 +9,7 @@ export class AuthUI {
   private notifications: NotificationUI;
   private mode: 'login' | 'register' | 'forgot' = 'login';
   private onAuthenticated: () => void;
+  private registrationEnabled: boolean = true;
 
   constructor(
     authManager: AuthManager,
@@ -19,7 +21,18 @@ export class AuthUI {
     this.onAuthenticated = onAuthenticated;
     this.overlay = document.createElement('div');
     this.overlay.className = 'auth-overlay';
+    this.checkRegistration();
     this.render();
+  }
+
+  private async checkRegistration(): Promise<void> {
+    try {
+      const resp = await ApiClient.get<{ enabled: boolean }>('/admin/settings/registration_enabled');
+      this.registrationEnabled = resp.enabled;
+      if (this.mode === 'login') this.render();
+    } catch {
+      // Default to enabled on failure
+    }
   }
 
   show(): void {
@@ -39,6 +52,11 @@ export class AuthUI {
         this.renderLogin();
         break;
       case 'register':
+        if (!this.registrationEnabled) {
+          this.mode = 'login';
+          this.renderLogin();
+          break;
+        }
         this.renderRegister();
         break;
       case 'forgot':
@@ -61,9 +79,9 @@ export class AuthUI {
         </div>
         <div class="form-error" id="login-error"></div>
         <button class="btn btn-primary" id="login-btn">Login</button>
-        <div class="auth-switch">
+        ${this.registrationEnabled ? `<div class="auth-switch">
           Don't have an account? <a id="switch-register">Register</a>
-        </div>
+        </div>` : ''}
         <div class="auth-switch">
           <a id="switch-forgot">Forgot password?</a>
         </div>
@@ -74,7 +92,7 @@ export class AuthUI {
     this.overlay.querySelector('#login-password')!.addEventListener('keydown', (e) => {
       if ((e as KeyboardEvent).key === 'Enter') this.handleLogin();
     });
-    this.overlay.querySelector('#switch-register')!.addEventListener('click', () => {
+    this.overlay.querySelector('#switch-register')?.addEventListener('click', () => {
       this.mode = 'register';
       this.render();
     });
