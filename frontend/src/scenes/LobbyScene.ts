@@ -5,6 +5,7 @@ import { NotificationUI } from '../ui/NotificationUI';
 import { LobbyUI } from '../ui/LobbyUI';
 import { RoomUI } from '../ui/RoomUI';
 import { CampaignUI } from '../ui/CampaignUI';
+import { AdminUI } from '../ui/AdminUI';
 import { Room } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
@@ -79,6 +80,8 @@ export class LobbyScene extends Phaser.Scene {
     const currentRoom = this.registry.get('currentRoom') as Room | undefined;
     const openCampaign = this.registry.get('openCampaign');
     this.registry.remove('openCampaign');
+    const returnToAdmin = this.registry.get('returnToAdmin') as string | undefined;
+    this.registry.remove('returnToAdmin');
     if (currentRoom && currentRoom.status === 'waiting') {
       this.onJoinRoom(currentRoom);
       this.registry.remove('currentRoom');
@@ -90,6 +93,18 @@ export class LobbyScene extends Phaser.Scene {
         this.showLobby();
       });
       campaignUI.show();
+    } else if (returnToAdmin) {
+      this.registry.remove('currentRoom');
+      this.showLobby();
+      this.lobbyUI?.hide();
+      const adminUI = new AdminUI(
+        this.socketClient,
+        this.authManager,
+        this.notifications,
+        () => this.showLobby(),
+        returnToAdmin,
+      );
+      adminUI.show();
     } else {
       this.registry.remove('currentRoom');
       this.showLobby();

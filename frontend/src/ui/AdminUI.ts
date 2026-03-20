@@ -35,6 +35,7 @@ export class AdminUI {
     authManager: AuthManager,
     notifications: NotificationUI,
     onClose: () => void,
+    initialTab?: string,
   ) {
     this.socketClient = socketClient;
     this.authManager = authManager;
@@ -103,7 +104,10 @@ export class AdminUI {
       this.tabs = this.tabs.filter((t) => !t.adminOnly);
     }
 
-    this.activeTabId = this.tabs[0]?.id || 'users';
+    this.activeTabId =
+      (initialTab && this.tabs.find((t) => t.id === initialTab) ? initialTab : null) ||
+      this.tabs[0]?.id ||
+      'users';
   }
 
   async show(): Promise<void> {

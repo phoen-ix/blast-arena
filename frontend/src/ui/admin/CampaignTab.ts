@@ -531,6 +531,7 @@ export class CampaignTab {
 
   private launchLevelEditor(levelId: number): void {
     game.registry.set('editorLevelId', levelId);
+    game.registry.set('returnToAdmin', 'campaign');
 
     // Clear admin UI DOM, then start the editor scene
     const uiOverlay = document.getElementById('ui-overlay');

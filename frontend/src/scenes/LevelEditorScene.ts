@@ -43,6 +43,7 @@ export class LevelEditorScene extends Phaser.Scene {
   private tileSprites: Phaser.GameObjects.Sprite[][] = [];
   private gridOverlay!: Phaser.GameObjects.Graphics;
   private spawnOverlay!: Phaser.GameObjects.Graphics;
+  private spawnLabels: Phaser.GameObjects.Text[] = [];
 
   private enemies: PlacedEnemy[] = [];
   private powerups: PlacedPowerUp[] = [];
@@ -101,6 +102,7 @@ export class LevelEditorScene extends Phaser.Scene {
     this.nextEntityId = 1;
     this.undoStack = [];
     this.redoStack = [];
+    this.spawnLabels = [];
 
     this.events.once('shutdown', this.shutdown, this);
 
@@ -261,6 +263,12 @@ export class LevelEditorScene extends Phaser.Scene {
     this.spawnOverlay.clear();
     this.spawnOverlay.setDepth(2);
 
+    // Remove old spawn labels
+    if (this.spawnLabels) {
+      for (const label of this.spawnLabels) label.destroy();
+    }
+    this.spawnLabels = [];
+
     for (let y = 0; y < this.mapHeight; y++) {
       for (let x = 0; x < this.mapWidth; x++) {
         if (this.tiles[y]?.[x] !== 'spawn') continue;
@@ -268,12 +276,16 @@ export class LevelEditorScene extends Phaser.Scene {
         const cy = y * TILE_SIZE + TILE_SIZE / 2;
         const r = TILE_SIZE * 0.35;
 
-        // Teal filled diamond
-        this.spawnOverlay.fillStyle(0x00d4aa, 0.35);
-        this.spawnOverlay.fillRect(x * TILE_SIZE + 1, y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+        // Solid teal filled background
+        this.spawnOverlay.fillStyle(0x115544, 1);
+        this.spawnOverlay.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+
+        // Bright teal border
+        this.spawnOverlay.lineStyle(3, 0x00ffcc, 1);
+        this.spawnOverlay.strokeRect(x * TILE_SIZE + 1, y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
 
         // Diamond outline
-        this.spawnOverlay.lineStyle(2, 0x00d4aa, 0.9);
+        this.spawnOverlay.lineStyle(2, 0x00ffcc, 1);
         this.spawnOverlay.beginPath();
         this.spawnOverlay.moveTo(cx, cy - r);
         this.spawnOverlay.lineTo(cx + r, cy);
@@ -282,9 +294,14 @@ export class LevelEditorScene extends Phaser.Scene {
         this.spawnOverlay.closePath();
         this.spawnOverlay.strokePath();
 
-        // Small dot in center
-        this.spawnOverlay.fillStyle(0x00d4aa, 0.9);
-        this.spawnOverlay.fillCircle(cx, cy, 3);
+        // "S" label
+        const label = this.add.text(cx, cy, 'S', {
+          fontSize: '16px',
+          color: '#00ffcc',
+          fontFamily: 'Chakra Petch, sans-serif',
+          fontStyle: 'bold',
+        }).setOrigin(0.5).setDepth(3);
+        this.spawnLabels.push(label);
       }
     }
   }
@@ -1116,5 +1133,7 @@ export class LevelEditorScene extends Phaser.Scene {
     for (const p of this.powerups) p.sprite?.destroy();
     this.gridOverlay?.destroy();
     this.spawnOverlay?.destroy();
+    for (const label of this.spawnLabels) label.destroy();
+    this.spawnLabels = [];
   }
 }
