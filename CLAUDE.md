@@ -21,12 +21,12 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ## Key Patterns
 - Server-authoritative game logic; client only renders + sends inputs
 - Grid-based movement: players occupy exactly one tile at a time
-- Movement cooldown system (MOVE_COOLDOWN_BASE ticks, reduced by speed power-ups)
+- Movement cooldown system (MOVE_COOLDOWN_BASE ticks, reduced by speed power-ups). Enemy speed uses divisor formula: `Math.round(MOVE_COOLDOWN_BASE / speed)` — speed 0.1 = 50 tick cooldown, speed 1 = 5 ticks, speed 5 = 1 tick
 - JWT (access token in memory) + httpOnly cookie (refresh token) auth
 - Cookie `secure` flag derived from APP_URL (not NODE_ENV) for HTTP/HTTPS compatibility
 - ApiClient 401 interceptor: auto-refreshes token and retries, but auth endpoints (login/register) use `skipAuthRetry` to pass 401 errors through directly — prevents logout side effects from corrupting session state
 - Vite `allowedHosts` derived from `APP_URL` env var (hostname extracted at config load time), passed via docker-compose `environment`
-- Zod for request validation
+- Zod for request validation; `ApiClient` appends field-level `details` from validation errors to the error message
 - All game constants in shared/src/constants/
 - Socket.io listeners use one-shot pattern for game:start to prevent leaks across scene transitions
 - Bot players use negative IDs (-(i+1)) to avoid DB conflicts; skipped in DB writes
@@ -64,7 +64,14 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Real-time lobby**: Room list auto-updates via `room:list` socket broadcast on every room mutation — no manual refresh needed
 
 ## Solo Campaign System
-Single-player campaign with hand-crafted levels, enemies, and bosses. Campaign uses `GameLoop` with `skipCountdown: true`. `CampaignGame.ts` wraps `GameStateManager` with `customMap`. `GameStateManager.checkWinCondition()` and time limit check skip `campaign` mode. Frontend detects `campaignMode` registry flag for different socket events (`campaign:state`/`campaign:input`). Level editor: camera viewport offset avoids toolbar overlap, WASD/arrow panning, resizable map dimensions (odd, 7-51) with content-preserving resize and undo support. See [docs/campaign.md](docs/campaign.md) for full details.
+Single-player campaign with hand-crafted levels, enemies, and bosses. Campaign uses `GameLoop` with `skipCountdown: true`. `CampaignGame.ts` wraps `GameStateManager` with `customMap`. `GameStateManager.checkWinCondition()` and time limit check skip `campaign` mode. Frontend detects `campaignMode` registry flag for different socket events (`campaign:state`/`campaign:input`). Level editor: camera viewport offset avoids toolbar overlap, WASD/arrow panning, resizable map dimensions (odd, 7-51) with content-preserving resize and undo support. `initEmptyMap()` places a default spawn tile at (1,1). `CampaignGame.buildGameMap()` has multi-layer spawn fallback: level spawns → scan tiles for 'spawn' → first empty tile → (1,1). Empty tiles array also triggers default map generation. See [docs/campaign.md](docs/campaign.md) for full details.
+
+## Campaign Export/Import
+JSON-based export/import for levels and enemy types. Export formats use `_format` and `_version` fields for validation. Types defined in `shared/src/types/campaign.ts` (`LevelExportData`, `EnemyTypeExportData`, `LevelBundleExportData`).
+- **Backend endpoints** (`backend/src/routes/campaign.ts`): `GET .../levels/:id/export` (single level), `GET .../levels/:id/export-bundle` (level + referenced enemy types), `GET .../enemy-types/:id/export`. `POST .../levels/import` (two-phase: first call returns `conflicts` array for unresolved enemy type IDs, second call with `enemyIdMap` resolves via create/use-existing/skip). `POST .../enemy-types/import`.
+- **Admin CampaignTab**: Export/Bundle buttons per level row, Export button per enemy type row, Import Level button per world (file picker + conflict resolution modal), Import Enemy Type button (file picker).
+- **Level Editor**: Client-side Export button (between Save and Back) serializes current editor state as JSON — no API call needed.
+- Download pattern: `Blob` + `createObjectURL` + click anchor (same as AITab).
 
 ## Admin Panel
 Full-screen panel for admin/moderator roles. 9 tabs: Dashboard, Users, Matches, Rooms, Logs, Simulations, AI, Campaign, Announcements. `staffMiddleware` (admin+moderator) and `adminOnlyMiddleware` for route protection. All actions audit-logged. Logs tab: rows are click-to-expand — clicking a row toggles a detail row showing the full message text. `admin_actions.target_id` is `INT NOT NULL` — use `0` (not `null`) for bulk operations without a specific target. Dashboard includes email/SMTP settings (admin-only) — stored in DB (`email_settings` key), `.env` values as fallback; password masked in API responses; `invalidateTransporter()` resets cached nodemailer on save. Registration toggle (`registration_enabled` setting) — when disabled, `/auth/register` returns 403 and AuthUI hides the register link. See [docs/admin-and-systems.md](docs/admin-and-systems.md) for full details.

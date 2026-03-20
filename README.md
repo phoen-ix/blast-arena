@@ -59,7 +59,7 @@ All optional, toggled per-room: **Reinforced Walls** (2-hit destructible walls),
 
 ## Solo Campaign
 
-Single-player campaign with hand-crafted levels grouped into worlds. Defeat enemies (5 movement patterns, boss phases), earn 1-3 stars per level, track progress. Admins create enemy types and levels via a visual editor with resizable maps, WASD/arrow panning, and zoom. Ships with "Training Grounds" (3 levels). See [docs/campaign.md](docs/campaign.md).
+Single-player campaign with hand-crafted levels grouped into worlds. Defeat enemies (5 movement patterns, boss phases), earn 1-3 stars per level, track progress. Admins create enemy types and levels via a visual editor with resizable maps, WASD/arrow panning, and zoom. Export/import levels and enemy types as JSON — export individual levels, bundled level+enemies, or enemy types; import with conflict resolution for enemy type ID remapping. Ships with "Training Grounds" (3 levels). See [docs/campaign.md](docs/campaign.md).
 
 ## Bot AI
 
@@ -81,7 +81,7 @@ Admins can upload custom AI implementations as TypeScript files. See [docs/bot-a
 | Logs | Admin | Audit trail with filters, click-to-expand detail rows |
 | Simulations | Admin | Batch bot-only games (1-1000), fast/realtime, queue |
 | AI | Admin | Upload/manage custom bot AI implementations |
-| Campaign | Admin | Worlds, levels (visual editor), enemy types |
+| Campaign | Admin | Worlds, levels (visual editor), enemy types, JSON export/import |
 | Announcements | Staff | Toast broadcasts, persistent banners |
 
 All actions audit-logged. See [docs/admin-and-systems.md](docs/admin-and-systems.md).

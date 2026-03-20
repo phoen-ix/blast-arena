@@ -307,6 +307,7 @@ export class GameOverScene extends Phaser.Scene {
     backBtn.on('pointerout', () => backBtn.setColor('#ff6b35'));
     backBtn.on('pointerdown', () => {
       this.registry.remove('campaignMode');
+      this.registry.set('openCampaign', true);
       this.scene.start('LobbyScene');
     });
 

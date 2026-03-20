@@ -1,6 +1,7 @@
 import { AuthManager } from '../network/AuthManager';
 import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
+import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { getErrorMessage } from '@blast-arena/shared';
 
 export class AuthUI {
@@ -43,7 +44,26 @@ export class AuthUI {
   }
 
   hide(): void {
+    UIGamepadNavigator.getInstance().popContext('auth');
     this.overlay.remove();
+  }
+
+  private pushGamepadContext(): void {
+    const gpNav = UIGamepadNavigator.getInstance();
+    gpNav.setActive(true);
+    gpNav.popContext('auth');
+    gpNav.pushContext({
+      id: 'auth',
+      elements: () => [
+        ...this.overlay.querySelectorAll<HTMLElement>('input, .btn-primary, .auth-switch a'),
+      ],
+      onBack: () => {
+        if (this.mode !== 'login') {
+          this.mode = 'login';
+          this.render();
+        }
+      },
+    });
   }
 
   private render(): void {
@@ -100,6 +120,8 @@ export class AuthUI {
       this.mode = 'forgot';
       this.render();
     });
+
+    this.pushGamepadContext();
   }
 
   private renderRegister(): void {
@@ -134,6 +156,8 @@ export class AuthUI {
       this.mode = 'login';
       this.render();
     });
+
+    this.pushGamepadContext();
   }
 
   private renderForgotPassword(): void {
@@ -159,6 +183,8 @@ export class AuthUI {
       this.mode = 'login';
       this.render();
     });
+
+    this.pushGamepadContext();
   }
 
   private async handleLogin(): Promise<void> {

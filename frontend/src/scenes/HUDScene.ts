@@ -145,7 +145,7 @@ export class HUDScene extends Phaser.Scene {
       this.campaignHudEl = document.createElement('div');
       this.campaignHudEl.className = 'hud-campaign';
       this.campaignHudEl.style.cssText =
-        'position:fixed;top:10px;left:10px;display:flex;gap:16px;align-items:center;font-family:"Chakra Petch",sans-serif;font-size:16px;color:#eae8e4;z-index:100;';
+        'position:fixed;top:48px;left:20px;display:flex;gap:16px;align-items:center;font-family:"Chakra Petch",sans-serif;font-size:16px;color:#eae8e4;z-index:100;';
       this.campaignHudEl.innerHTML = `
         <span id="campaign-lives" style="display:flex;align-items:center;gap:4px;"></span>
         <span id="campaign-enemies" style="color:var(--danger);"></span>
@@ -223,16 +223,18 @@ export class HUDScene extends Phaser.Scene {
   private updateHUD(state: GameState): void {
     this.lastKnownPlayers = state.players;
 
-    // Track local player death
+    // Track local player death (campaign: reset on respawn)
     const me = state.players.find((p) => p.id === this.localPlayerId);
     if (!this.localPlayerDead && me && !me.alive) {
       this.localPlayerDead = true;
+    } else if (this.localPlayerDead && this.campaignMode && me && me.alive) {
+      this.localPlayerDead = false;
     }
 
-    // Spectator banner
+    // Spectator banner (not useful in campaign — single player, respawns)
     const specBanner = document.getElementById('hud-spectator');
     if (specBanner) {
-      specBanner.style.display = this.localPlayerDead ? 'block' : 'none';
+      specBanner.style.display = this.localPlayerDead && !this.campaignMode ? 'block' : 'none';
     }
 
     // Timer (hide for campaign with no time limit)

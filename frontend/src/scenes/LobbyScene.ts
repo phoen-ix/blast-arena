@@ -4,6 +4,7 @@ import { SocketClient } from '../network/SocketClient';
 import { NotificationUI } from '../ui/NotificationUI';
 import { LobbyUI } from '../ui/LobbyUI';
 import { RoomUI } from '../ui/RoomUI';
+import { CampaignUI } from '../ui/CampaignUI';
 import { Room } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
@@ -76,9 +77,19 @@ export class LobbyScene extends Phaser.Scene {
 
     // Check if returning from "Play Again" with a room already set
     const currentRoom = this.registry.get('currentRoom') as Room | undefined;
+    const openCampaign = this.registry.get('openCampaign');
+    this.registry.remove('openCampaign');
     if (currentRoom && currentRoom.status === 'waiting') {
       this.onJoinRoom(currentRoom);
       this.registry.remove('currentRoom');
+    } else if (openCampaign) {
+      this.registry.remove('currentRoom');
+      this.showLobby();
+      this.lobbyUI?.hide();
+      const campaignUI = new CampaignUI(this.socketClient, this.notifications, () => {
+        this.showLobby();
+      });
+      campaignUI.show();
     } else {
       this.registry.remove('currentRoom');
       this.showLobby();

@@ -52,7 +52,12 @@ class ApiClientClass {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Request failed' }));
-      throw new Error(error.error || `HTTP ${response.status}`);
+      let message = error.error || `HTTP ${response.status}`;
+      if (error.details?.length) {
+        const fieldErrors = error.details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join(', ');
+        message += ` (${fieldErrors})`;
+      }
+      throw new Error(message);
     }
 
     return response.json();

@@ -50,7 +50,7 @@ export class Enemy {
   }
 
   applyMoveCooldown(): void {
-    this.moveCooldown = Math.max(1, MOVE_COOLDOWN_BASE - (this.typeConfig.speed - 1));
+    this.moveCooldown = Math.max(1, Math.round(MOVE_COOLDOWN_BASE / this.typeConfig.speed));
   }
 
   canPlaceBomb(): boolean {

@@ -1,6 +1,7 @@
 import { ApiClient } from '../network/ApiClient';
 import { SocketClient } from '../network/SocketClient';
 import { NotificationUI } from './NotificationUI';
+import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { escapeHtml } from '../utils/html';
 import { getErrorMessage } from '@blast-arena/shared';
 import game from '../main';
@@ -70,13 +71,16 @@ export class CampaignUI {
     }
     await this.loadCampaignData();
     this.render();
+    this.pushGamepadContext();
   }
 
   hide(): void {
+    UIGamepadNavigator.getInstance().popContext('campaign');
     this.container.remove();
   }
 
   destroy(): void {
+    UIGamepadNavigator.getInstance().popContext('campaign');
     this.container.remove();
   }
 
@@ -216,6 +220,7 @@ export class CampaignUI {
       flex-direction: column;
       gap: 10px;
     `;
+    worldHeader.dataset.worldId = String(world.id);
     worldHeader.addEventListener('mouseenter', () => {
       card.style.borderColor = 'var(--primary)';
     });
@@ -383,6 +388,9 @@ export class CampaignUI {
       background: ${isSelected ? 'var(--bg-elevated)' : 'transparent'};
       transition: background 0.15s;
     `;
+
+    card.dataset.levelId = String(level.id);
+    if (level.locked) card.dataset.locked = 'true';
 
     if (!level.locked) {
       card.addEventListener('mouseenter', () => {
@@ -567,6 +575,26 @@ export class CampaignUI {
     badge.appendChild(valEl);
     badge.appendChild(labelEl);
     return badge;
+  }
+
+  private pushGamepadContext(): void {
+    const gpNav = UIGamepadNavigator.getInstance();
+    gpNav.popContext('campaign');
+    gpNav.pushContext({
+      id: 'campaign',
+      elements: () => [
+        ...this.container.querySelectorAll<HTMLElement>('.btn-secondary'),
+        ...this.container.querySelectorAll<HTMLElement>('[data-world-id]'),
+        ...this.container.querySelectorAll<HTMLElement>(
+          '[data-level-id]:not([data-locked="true"])',
+        ),
+        ...this.container.querySelectorAll<HTMLElement>('.btn-primary'),
+      ],
+      onBack: () => {
+        this.hide();
+        this.onClose();
+      },
+    });
   }
 
   private async startLevel(levelId: number): Promise<void> {

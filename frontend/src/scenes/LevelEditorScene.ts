@@ -42,6 +42,7 @@ export class LevelEditorScene extends Phaser.Scene {
   private tiles: TileType[][] = [];
   private tileSprites: Phaser.GameObjects.Sprite[][] = [];
   private gridOverlay!: Phaser.GameObjects.Graphics;
+  private spawnOverlay!: Phaser.GameObjects.Graphics;
 
   private enemies: PlacedEnemy[] = [];
   private powerups: PlacedPowerUp[] = [];
@@ -92,7 +93,6 @@ export class LevelEditorScene extends Phaser.Scene {
   }
 
   create(): void {
-    UIGamepadNavigator.getInstance().setActive(false);
 
     this.levelId = this.registry.get('editorLevelId') ?? null;
     this.enemies = [];
@@ -108,9 +108,11 @@ export class LevelEditorScene extends Phaser.Scene {
     this.loadData().then(() => {
       this.buildGrid();
       this.buildGridOverlay();
+      this.drawSpawnOverlay();
       this.setupCamera();
       this.setupInput();
       this.buildEditorUI();
+      this.pushGamepadContext();
     });
   }
 
@@ -188,6 +190,8 @@ export class LevelEditorScene extends Phaser.Scene {
         }
       }
     }
+    // Place a default spawn at top-left corner (1,1)
+    this.tiles[1][1] = 'spawn';
   }
 
   private buildGrid(): void {
@@ -250,6 +254,41 @@ export class LevelEditorScene extends Phaser.Scene {
     }
   }
 
+  private drawSpawnOverlay(): void {
+    if (!this.spawnOverlay) {
+      this.spawnOverlay = this.add.graphics();
+    }
+    this.spawnOverlay.clear();
+    this.spawnOverlay.setDepth(2);
+
+    for (let y = 0; y < this.mapHeight; y++) {
+      for (let x = 0; x < this.mapWidth; x++) {
+        if (this.tiles[y]?.[x] !== 'spawn') continue;
+        const cx = x * TILE_SIZE + TILE_SIZE / 2;
+        const cy = y * TILE_SIZE + TILE_SIZE / 2;
+        const r = TILE_SIZE * 0.35;
+
+        // Teal filled diamond
+        this.spawnOverlay.fillStyle(0x00d4aa, 0.35);
+        this.spawnOverlay.fillRect(x * TILE_SIZE + 1, y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+
+        // Diamond outline
+        this.spawnOverlay.lineStyle(2, 0x00d4aa, 0.9);
+        this.spawnOverlay.beginPath();
+        this.spawnOverlay.moveTo(cx, cy - r);
+        this.spawnOverlay.lineTo(cx + r, cy);
+        this.spawnOverlay.lineTo(cx, cy + r);
+        this.spawnOverlay.lineTo(cx - r, cy);
+        this.spawnOverlay.closePath();
+        this.spawnOverlay.strokePath();
+
+        // Small dot in center
+        this.spawnOverlay.fillStyle(0x00d4aa, 0.9);
+        this.spawnOverlay.fillCircle(cx, cy, 3);
+      }
+    }
+  }
+
   private getTileTexture(type: TileType, x: number, y: number): string {
     switch (type) {
       case 'wall': return 'wall';
@@ -297,6 +336,9 @@ export class LevelEditorScene extends Phaser.Scene {
 
       // Check if clicking on UI
       if (pointer.x < LevelEditorScene.TOOLBAR_WIDTH) return; // Left panel
+
+      // Blur any focused input so keyboard panning resumes
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
 
       this.saveUndoState();
       this.handlePlacement(pointer);
@@ -446,9 +488,10 @@ export class LevelEditorScene extends Phaser.Scene {
     }
   }
 
-  private updateTileSprite(x: number, y: number): void {
+  private updateTileSprite(x: number, y: number, skipOverlay?: boolean): void {
     const texture = this.getTileTexture(this.tiles[y][x], x, y);
     this.tileSprites[y]?.[x]?.setTexture(texture);
+    if (!skipOverlay) this.drawSpawnOverlay();
   }
 
   private removeEntitiesAt(x: number, y: number): void {
@@ -524,9 +567,10 @@ export class LevelEditorScene extends Phaser.Scene {
     } else {
       for (let y = 0; y < this.mapHeight; y++) {
         for (let x = 0; x < this.mapWidth; x++) {
-          this.updateTileSprite(x, y);
+          this.updateTileSprite(x, y, true);
         }
       }
+      this.drawSpawnOverlay();
     }
 
     // Restore entities
@@ -567,6 +611,7 @@ export class LevelEditorScene extends Phaser.Scene {
     this.buildGrid();
     this.gridOverlay?.destroy();
     this.buildGridOverlay();
+    this.drawSpawnOverlay();
     const cam = this.cameras.main;
     const worldW = this.mapWidth * TILE_SIZE;
     const worldH = this.mapHeight * TILE_SIZE;
@@ -722,6 +767,13 @@ export class LevelEditorScene extends Phaser.Scene {
     saveBtn.style.cssText = 'padding:6px 12px;font-size:13px;';
     saveBtn.addEventListener('click', () => this.saveLevel());
     actionSection.appendChild(saveBtn);
+
+    const exportBtn = document.createElement('button');
+    exportBtn.textContent = 'Export';
+    exportBtn.className = 'btn btn-secondary';
+    exportBtn.style.cssText = 'padding:6px 12px;font-size:13px;';
+    exportBtn.addEventListener('click', () => this.exportLevel());
+    actionSection.appendChild(exportBtn);
 
     const backBtn = document.createElement('button');
     backBtn.textContent = 'Back';
@@ -978,7 +1030,83 @@ export class LevelEditorScene extends Phaser.Scene {
     }
   }
 
+  private exportLevel(): void {
+    // Collect spawn points from tiles
+    const playerSpawns: { x: number; y: number }[] = [];
+    for (let y = 0; y < this.mapHeight; y++) {
+      for (let x = 0; x < this.mapWidth; x++) {
+        if (this.tiles[y][x] === 'spawn') {
+          playerSpawns.push({ x, y });
+        }
+      }
+    }
+
+    const data = {
+      _format: 'blast-arena-level',
+      _version: 1,
+      name: this.levelName,
+      description: this.level?.description || '',
+      mapWidth: this.mapWidth,
+      mapHeight: this.mapHeight,
+      tiles: this.tiles,
+      fillMode: this.level?.fillMode || 'handcrafted',
+      wallDensity: this.level?.wallDensity ?? 0.3,
+      playerSpawns,
+      enemyPlacements: this.enemies.map((e) => ({
+        enemyTypeId: e.enemyTypeId,
+        x: e.x,
+        y: e.y,
+      })),
+      powerupPlacements: this.powerups.map((p) => ({
+        type: p.type,
+        x: p.x,
+        y: p.y,
+        hidden: p.hidden,
+      })),
+      winCondition: this.levelWinCondition,
+      winConditionConfig: this.level?.winConditionConfig ?? null,
+      lives: this.levelLives,
+      timeLimit: this.levelTimeLimit,
+      parTime: this.levelParTime,
+      carryOverPowerups: this.level?.carryOverPowerups ?? false,
+      startingPowerups: this.level?.startingPowerups ?? null,
+      availablePowerupTypes: this.level?.availablePowerupTypes ?? null,
+      powerupDropRate: this.level?.powerupDropRate ?? 0.3,
+      reinforcedWalls: this.level?.reinforcedWalls ?? false,
+      hazardTiles: this.level?.hazardTiles ?? false,
+    };
+
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `level-${this.levelName.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  }
+
+  private pushGamepadContext(): void {
+    const gpNav = UIGamepadNavigator.getInstance();
+    gpNav.setActive(true);
+    gpNav.pushContext({
+      id: 'level-editor',
+      elements: () => {
+        if (!this.editorContainer) return [];
+        return [
+          ...this.editorContainer.querySelectorAll<HTMLElement>('button, input, select'),
+        ];
+      },
+      onBack: () => {
+        this.registry.remove('editorLevelId');
+        this.scene.start('LobbyScene');
+      },
+    });
+  }
+
   shutdown(): void {
+    UIGamepadNavigator.getInstance().popContext('level-editor');
     this.editorContainer?.remove();
     this.editorContainer = null;
     for (const row of this.tileSprites) {
@@ -987,5 +1115,6 @@ export class LevelEditorScene extends Phaser.Scene {
     for (const e of this.enemies) e.sprite?.destroy();
     for (const p of this.powerups) p.sprite?.destroy();
     this.gridOverlay?.destroy();
+    this.spawnOverlay?.destroy();
   }
 }

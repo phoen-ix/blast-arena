@@ -32,7 +32,7 @@ const enemyTypeSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(2000).optional().default(''),
   config: z.object({
-    speed: z.number().min(0.5).max(4),
+    speed: z.number().min(0.1).max(5),
     movementPattern: z.enum(['random_walk', 'chase_player', 'patrol_path', 'wall_follow', 'stationary']),
     canPassWalls: z.boolean(),
     canPassBombs: z.boolean(),
@@ -324,6 +324,245 @@ router.delete('/admin/campaign/enemy-types/:id', authMiddleware, adminOnlyMiddle
     const id = parseInt(req.params.id, 10);
     await enemyTypeService.deleteEnemyType(id);
     res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Export/Import ---
+
+function stripLevelDbFields(level: any) {
+  const { id: _id, worldId: _wid, createdBy: _cb, createdAt: _ca, updatedAt: _ua, sortOrder: _so, isPublished: _ip, ...rest } = level;
+  return rest;
+}
+
+function stripEnemyTypeDbFields(et: any) {
+  const { id: _id, createdBy: _cb, createdAt: _ca, isBoss: _ib, ...rest } = et;
+  return rest;
+}
+
+// Export single level
+router.get('/admin/campaign/levels/:id/export', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const level = await campaignService.getLevel(id);
+    if (!level) return res.status(404).json({ error: 'Level not found' });
+
+    const data = {
+      _format: 'blast-arena-level',
+      _version: 1,
+      ...stripLevelDbFields(level),
+    };
+
+    const filename = `level-${level.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Export level bundle (level + enemy types)
+router.get('/admin/campaign/levels/:id/export-bundle', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const level = await campaignService.getLevel(id);
+    if (!level) return res.status(404).json({ error: 'Level not found' });
+
+    // Collect unique enemy type IDs from placements
+    const enemyTypeIds = [...new Set(level.enemyPlacements.map((ep) => ep.enemyTypeId))];
+    const enemyTypes: any[] = [];
+
+    for (const etId of enemyTypeIds) {
+      const et = await enemyTypeService.getEnemyType(etId);
+      if (et) {
+        enemyTypes.push({
+          originalId: et.id,
+          name: et.name,
+          description: et.description,
+          config: et.config,
+        });
+      }
+    }
+
+    const data = {
+      _format: 'blast-arena-level-bundle',
+      _version: 1,
+      level: stripLevelDbFields(level),
+      enemyTypes,
+    };
+
+    const filename = `level-bundle-${level.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Export single enemy type
+router.get('/admin/campaign/enemy-types/:id/export', authMiddleware, adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const et = await enemyTypeService.getEnemyType(id);
+    if (!et) return res.status(404).json({ error: 'Enemy type not found' });
+
+    const data = {
+      _format: 'blast-arena-enemy-type',
+      _version: 1,
+      ...stripEnemyTypeDbFields(et),
+    };
+
+    const filename = `enemy-${et.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Import level (with optional bundled enemy types)
+const importLevelSchema = z.object({
+  level: z.any(),
+  enemyTypes: z.array(z.any()).optional(),
+  worldId: z.number().int(),
+  enemyIdMap: z.record(z.union([z.number(), z.literal('create'), z.literal('skip')])).optional(),
+});
+
+router.post('/admin/campaign/levels/import', authMiddleware, adminOnlyMiddleware, validate(importLevelSchema), async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const { worldId, enemyIdMap } = req.body;
+
+    // Accept both plain level and bundle format
+    let levelData: any;
+    let bundledEnemyTypes: any[] | undefined;
+
+    if (req.body.level?._format === 'blast-arena-level-bundle' || req.body._format === 'blast-arena-level-bundle') {
+      // Bundle format posted at top level
+      const bundle = req.body._format === 'blast-arena-level-bundle' ? req.body : req.body.level;
+      levelData = bundle.level;
+      bundledEnemyTypes = bundle.enemyTypes;
+    } else if (req.body.level?._format === 'blast-arena-level') {
+      // Plain level export
+      const { _format, _version, ...rest } = req.body.level;
+      levelData = rest;
+    } else {
+      // Raw level data or stripped bundle
+      levelData = req.body.level;
+      bundledEnemyTypes = req.body.enemyTypes;
+    }
+
+    if (!levelData || !levelData.name || !levelData.tiles) {
+      return res.status(400).json({ error: 'Invalid level data' });
+    }
+
+    // Collect enemy type IDs referenced in placements
+    const referencedIds = [...new Set((levelData.enemyPlacements || []).map((ep: any) => ep.enemyTypeId))];
+
+    // Phase 1: Check for conflicts if no enemyIdMap provided
+    if (!enemyIdMap && referencedIds.length > 0) {
+      const conflicts: any[] = [];
+
+      for (const origId of referencedIds) {
+        const existing = await enemyTypeService.getEnemyType(origId as number);
+        const bundled = bundledEnemyTypes?.find((et: any) => et.originalId === origId);
+
+        if (existing) {
+          // ID exists in DB — might be a different enemy type
+          if (bundled) {
+            conflicts.push({
+              originalId: origId,
+              name: bundled.name,
+              existingId: existing.id,
+              existingName: existing.name,
+            });
+          }
+          // If no bundled data and ID exists, we can just use it as-is (no conflict)
+        } else if (bundled) {
+          // ID doesn't exist, but we have bundled data to create it
+          conflicts.push({
+            originalId: origId,
+            name: bundled.name,
+          });
+        } else {
+          // ID doesn't exist and no bundled data — this is also a conflict
+          conflicts.push({
+            originalId: origId,
+            name: `Unknown (ID ${origId})`,
+          });
+        }
+      }
+
+      if (conflicts.length > 0) {
+        return res.json({ conflicts });
+      }
+    }
+
+    // Phase 2: Remap enemy IDs
+    const idMap = new Map<number, number>();
+
+    if (enemyIdMap) {
+      for (const [origIdStr, action] of Object.entries(enemyIdMap)) {
+        const origId = Number(origIdStr);
+        if (action === 'skip') {
+          // Will filter out these placements
+          continue;
+        } else if (action === 'create') {
+          const bundled = bundledEnemyTypes?.find((et: any) => et.originalId === origId);
+          if (bundled) {
+            const newId = await enemyTypeService.createEnemyType(
+              bundled.name,
+              bundled.description || '',
+              bundled.config,
+              userId,
+            );
+            idMap.set(origId, newId);
+          }
+        } else if (typeof action === 'number') {
+          idMap.set(origId, action);
+        }
+      }
+    }
+
+    // Remap enemy placements
+    const skippedIds = new Set<number>();
+    if (enemyIdMap) {
+      for (const [origIdStr, action] of Object.entries(enemyIdMap)) {
+        if (action === 'skip') skippedIds.add(Number(origIdStr));
+      }
+    }
+
+    const remappedPlacements = (levelData.enemyPlacements || [])
+      .filter((ep: any) => !skippedIds.has(ep.enemyTypeId))
+      .map((ep: any) => ({
+        ...ep,
+        enemyTypeId: idMap.get(ep.enemyTypeId) ?? ep.enemyTypeId,
+      }));
+
+    // Create the level
+    const newLevelData = {
+      ...levelData,
+      enemyPlacements: remappedPlacements,
+    };
+
+    const levelId = await campaignService.createLevel(worldId, newLevelData, userId);
+    res.status(201).json({ id: levelId });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Import enemy type
+router.post('/admin/campaign/enemy-types/import', authMiddleware, adminOnlyMiddleware, validate(enemyTypeSchema), async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const { name, description, config } = req.body;
+    const id = await enemyTypeService.createEnemyType(name, description || '', config, userId);
+    res.status(201).json({ id });
   } catch (err) {
     next(err);
   }

@@ -1,6 +1,7 @@
 import { SocketClient } from '../network/SocketClient';
 import { AuthManager } from '../network/AuthManager';
 import { NotificationUI } from './NotificationUI';
+import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { UserRole } from '@blast-arena/shared';
 import { DashboardTab } from './admin/DashboardTab';
 import { UsersTab } from './admin/UsersTab';
@@ -111,9 +112,11 @@ export class AdminUI {
       uiOverlay.appendChild(this.container);
     }
     await this.render();
+    this.pushGamepadContext();
   }
 
   hide(): void {
+    UIGamepadNavigator.getInstance().popContext('admin');
     // Destroy active tab
     const activeTab = this.tabs.find((t) => t.id === this.activeTabId);
     activeTab?.instance.destroy();
@@ -174,6 +177,7 @@ export class AdminUI {
       this.contentEl.innerHTML = '';
     }
     await this.renderActiveTab();
+    this.pushGamepadContext();
   }
 
   private async renderActiveTab(): Promise<void> {
@@ -181,5 +185,24 @@ export class AdminUI {
     if (tab && this.contentEl) {
       await tab.instance.render(this.contentEl);
     }
+  }
+
+  private pushGamepadContext(): void {
+    const gpNav = UIGamepadNavigator.getInstance();
+    gpNav.popContext('admin');
+    gpNav.pushContext({
+      id: 'admin',
+      elements: () => [
+        ...this.container.querySelectorAll<HTMLElement>('#admin-close'),
+        ...this.container.querySelectorAll<HTMLElement>('.admin-tab'),
+        ...(this.contentEl?.querySelectorAll<HTMLElement>(
+          'input, select, textarea, button, .btn, .log-row',
+        ) || []),
+      ],
+      onBack: () => {
+        this.hide();
+        this.onClose();
+      },
+    });
   }
 }

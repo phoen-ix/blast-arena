@@ -93,6 +93,9 @@ export class CampaignGame {
     // Build GameMap from level tiles
     const gameMap = this.buildGameMap(level);
 
+    // Derive winConditionConfig from tile data if not explicitly set
+    this.deriveWinConditionConfig();
+
     // Create GameStateManager with custom map
     const gameConfig: GameConfig = {
       mapWidth: level.mapWidth,
@@ -171,16 +174,88 @@ export class CampaignGame {
   }
 
   private buildGameMap(level: CampaignLevel): GameMap {
-    // Deep copy tiles
-    const tiles: TileType[][] = level.tiles.map((row) => [...row]);
+    // Deep copy tiles, generate default if empty
+    let tiles: TileType[][];
+    if (!level.tiles || level.tiles.length === 0) {
+      tiles = [];
+      for (let y = 0; y < level.mapHeight; y++) {
+        tiles[y] = [];
+        for (let x = 0; x < level.mapWidth; x++) {
+          if (x === 0 || y === 0 || x === level.mapWidth - 1 || y === level.mapHeight - 1) {
+            tiles[y][x] = 'wall';
+          } else if (x % 2 === 0 && y % 2 === 0) {
+            tiles[y][x] = 'wall';
+          } else {
+            tiles[y][x] = 'empty';
+          }
+        }
+      }
+      // Place spawn at (1,1)
+      tiles[1][1] = 'spawn';
+    } else {
+      tiles = level.tiles.map((row) => [...row]);
+    }
+
+    // Use level spawns, or derive from tiles, or fall back to (1,1)
+    let spawnPoints = [...level.playerSpawns];
+    if (spawnPoints.length === 0) {
+      // Scan tiles for spawn markers
+      for (let y = 0; y < level.mapHeight; y++) {
+        for (let x = 0; x < level.mapWidth; x++) {
+          if (tiles[y]?.[x] === 'spawn') {
+            spawnPoints.push({ x, y });
+          }
+        }
+      }
+    }
+    if (spawnPoints.length === 0) {
+      // Last resort: find first empty tile
+      for (let y = 1; y < level.mapHeight - 1 && spawnPoints.length === 0; y++) {
+        for (let x = 1; x < level.mapWidth - 1 && spawnPoints.length === 0; x++) {
+          if (tiles[y]?.[x] === 'empty') {
+            spawnPoints.push({ x, y });
+          }
+        }
+      }
+    }
+    if (spawnPoints.length === 0) {
+      spawnPoints = [{ x: 1, y: 1 }];
+    }
 
     return {
       width: level.mapWidth,
       height: level.mapHeight,
       tiles,
-      spawnPoints: [...level.playerSpawns],
+      spawnPoints,
       seed: Date.now(),
     };
+  }
+
+  private deriveWinConditionConfig(): void {
+    if (!this.level.winConditionConfig) {
+      this.level.winConditionConfig = {};
+    }
+    const config = this.level.winConditionConfig;
+
+    // Scan tiles to find goal and exit positions if not already set
+    if (!config.goalPosition || !config.exitPosition) {
+      for (let y = 0; y < this.level.mapHeight; y++) {
+        for (let x = 0; x < this.level.mapWidth; x++) {
+          const tile = this.level.tiles[y]?.[x];
+          if (tile === 'goal' && !config.goalPosition) {
+            config.goalPosition = { x, y };
+          }
+          if (tile === 'exit' && !config.exitPosition) {
+            config.exitPosition = { x, y };
+          }
+        }
+      }
+    }
+
+    // Derive surviveTimeTicks from timeLimit if not set
+    if (this.level.winCondition === 'survive_time' && config.surviveTimeTicks == null && this.level.timeLimit > 0) {
+      config.surviveTimeTicks = this.level.timeLimit * TICK_RATE;
+    }
   }
 
   private applyStartingPowerups(player: Player, powerups: StartingPowerUps): void {

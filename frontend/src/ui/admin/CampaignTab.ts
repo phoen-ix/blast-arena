@@ -11,6 +11,7 @@ import {
   EnemyMovementPattern,
   CampaignWinCondition,
   PowerUpType,
+  ImportConflict,
   ENEMY_BODY_SHAPES,
   ENEMY_EYE_STYLES,
   MOVEMENT_PATTERNS,
@@ -229,7 +230,10 @@ export class CampaignTab {
     return `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <span style="color:var(--text-dim);font-size:13px;font-weight:600;">Levels in ${escapeHtml(world.name)}</span>
-        <button class="btn-sm btn-primary camp-create-level" data-world-id="${world.id}">Add Level</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-sm btn-secondary camp-import-level" data-world-id="${world.id}">Import Level</button>
+          <button class="btn-sm btn-primary camp-create-level" data-world-id="${world.id}">Add Level</button>
+        </div>
       </div>
       ${
         levels.length === 0
@@ -282,6 +286,8 @@ export class CampaignTab {
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn-sm btn-primary camp-edit-level" data-id="${level.id}">Edit</button>
+            <button class="btn-sm btn-secondary camp-export-level" data-id="${level.id}" data-name="${escapeAttr(level.name)}" title="Export level">Export</button>
+            <button class="btn-sm btn-secondary camp-export-bundle" data-id="${level.id}" data-name="${escapeAttr(level.name)}" title="Export level + enemy types">Bundle</button>
             <button class="btn-sm btn-secondary camp-toggle-pub-level" data-id="${level.id}" data-pub="${level.isPublished}">${level.isPublished ? 'Unpublish' : 'Publish'}</button>
             <button class="btn-sm btn-danger camp-delete-level" data-id="${level.id}" data-name="${escapeAttr(level.name)}">Delete</button>
           </div>
@@ -395,6 +401,32 @@ export class CampaignTab {
       btn.addEventListener('click', () => {
         const id = Number((btn as HTMLElement).dataset.id);
         this.launchLevelEditor(id);
+      });
+    });
+
+    // Export level
+    content.querySelectorAll('.camp-export-level').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = Number((btn as HTMLElement).dataset.id);
+        const name = (btn as HTMLElement).dataset.name || 'level';
+        await this.downloadExport(`/admin/campaign/levels/${id}/export`, `level-${name}.json`);
+      });
+    });
+
+    // Export bundle
+    content.querySelectorAll('.camp-export-bundle').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = Number((btn as HTMLElement).dataset.id);
+        const name = (btn as HTMLElement).dataset.name || 'level';
+        await this.downloadExport(`/admin/campaign/levels/${id}/export-bundle`, `level-bundle-${name}.json`);
+      });
+    });
+
+    // Import level
+    content.querySelectorAll('.camp-import-level').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const worldId = Number((btn as HTMLElement).dataset.worldId);
+        this.showImportLevelModal(worldId);
       });
     });
 
@@ -604,8 +636,9 @@ export class CampaignTab {
 
   private renderEnemyTypesTable(content: HTMLElement): void {
     content.innerHTML = `
-      <div style="margin-bottom:12px;">
+      <div style="margin-bottom:12px;display:flex;gap:8px;">
         <button class="btn btn-primary" id="camp-create-enemy">Create Enemy Type</button>
+        <button class="btn btn-secondary" id="camp-import-enemy">Import Enemy Type</button>
       </div>
       <table class="admin-table">
         <thead>
@@ -628,6 +661,10 @@ export class CampaignTab {
 
     content.querySelector('#camp-create-enemy')!.addEventListener('click', () => {
       this.showEnemyModal();
+    });
+
+    content.querySelector('#camp-import-enemy')!.addEventListener('click', () => {
+      this.importEnemyType();
     });
 
     // Generate canvas previews
@@ -664,6 +701,7 @@ export class CampaignTab {
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn-sm btn-secondary camp-edit-enemy" data-id="${et.id}">Edit</button>
+            <button class="btn-sm btn-secondary camp-export-enemy" data-id="${et.id}" data-name="${escapeAttr(et.name)}" title="Export enemy type">Export</button>
             <button class="btn-sm btn-danger camp-delete-enemy" data-id="${et.id}" data-name="${escapeAttr(et.name)}">Delete</button>
           </div>
         </td>
@@ -677,6 +715,14 @@ export class CampaignTab {
         const id = Number((btn as HTMLElement).dataset.id);
         const et = this.enemyTypes.find((e) => e.id === id);
         if (et) this.showEnemyModal(et);
+      });
+    });
+
+    content.querySelectorAll('.camp-export-enemy').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = Number((btn as HTMLElement).dataset.id);
+        const name = (btn as HTMLElement).dataset.name || 'enemy';
+        await this.downloadExport(`/admin/campaign/enemy-types/${id}/export`, `enemy-${name}.json`);
       });
     });
 
@@ -737,7 +783,7 @@ export class CampaignTab {
               </div>
               <div style="flex:1;">
                 <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">Size</label>
-                <input type="number" id="enemy-size" class="admin-input" value="${config.sizeMultiplier}" min="0.5" max="3" step="0.1" style="width:100%;box-sizing:border-box;">
+                <input type="number" id="enemy-size" class="admin-input" value="${config.sizeMultiplier}" min="1" max="3" step="0.1" style="width:100%;box-sizing:border-box;">
               </div>
             </div>
 
@@ -924,6 +970,244 @@ export class CampaignTab {
       hasHorns: (overlay.querySelector('#enemy-has-horns') as HTMLInputElement).checked,
     };
     EnemyTextureGenerator.generatePreview(canvas, spriteConfig, 80);
+  }
+
+  // ============================
+  // Export/Import Utilities
+  // ============================
+
+  private async downloadExport(url: string, fallbackFilename: string): Promise<void> {
+    try {
+      const data = await ApiClient.get<any>(url);
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fallbackFilename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      this.notifications.success('Export downloaded');
+    } catch (err: unknown) {
+      this.notifications.error(getErrorMessage(err));
+    }
+  }
+
+  private importEnemyType(): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        // Strip format metadata if present
+        const { _format, _version, ...rest } = data;
+        await ApiClient.post('/admin/campaign/enemy-types/import', rest);
+        this.notifications.success('Enemy type imported');
+        await this.loadEnemyTypes();
+      } catch (err: unknown) {
+        this.notifications.error(getErrorMessage(err));
+      }
+    });
+    input.click();
+  }
+
+  private showImportLevelModal(worldId: number): void {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.cssText =
+      'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;';
+
+    overlay.innerHTML = `
+      <div class="modal-content" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-width:90vw;">
+        <h3 style="margin:0 0 16px;color:var(--primary);">Import Level</h3>
+        <p style="color:var(--text-dim);margin:0 0 12px;font-size:13px;">
+          Select a level JSON file or a level bundle (level + enemy types).
+        </p>
+        <div style="margin-bottom:16px;">
+          <input type="file" id="import-level-file" accept=".json" style="color:var(--text);font-size:13px;">
+        </div>
+        <div id="import-level-status" style="color:var(--text-dim);font-size:12px;margin-bottom:12px;"></div>
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button class="btn btn-secondary" id="import-level-cancel">Cancel</button>
+          <button class="btn btn-primary" id="import-level-submit" disabled>Import</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    let parsedData: any = null;
+
+    const fileInput = overlay.querySelector('#import-level-file') as HTMLInputElement;
+    const statusEl = overlay.querySelector('#import-level-status') as HTMLElement;
+    const submitBtn = overlay.querySelector('#import-level-submit') as HTMLButtonElement;
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        parsedData = JSON.parse(text);
+
+        const format = parsedData._format || parsedData.level?._format || 'unknown';
+        if (format === 'blast-arena-level-bundle') {
+          const enemyCount = parsedData.enemyTypes?.length || 0;
+          statusEl.innerHTML = `<span style="color:var(--success);">Bundle detected:</span> level "${escapeHtml(parsedData.level?.name || '?')}" with ${enemyCount} enemy type(s)`;
+        } else if (format === 'blast-arena-level') {
+          statusEl.innerHTML = `<span style="color:var(--success);">Level detected:</span> "${escapeHtml(parsedData.name || '?')}"`;
+        } else {
+          statusEl.innerHTML = `<span style="color:var(--warning);">Unknown format — will attempt import</span>`;
+        }
+        submitBtn.disabled = false;
+      } catch {
+        statusEl.innerHTML = `<span style="color:var(--danger);">Invalid JSON file</span>`;
+        parsedData = null;
+        submitBtn.disabled = true;
+      }
+    });
+
+    overlay.querySelector('#import-level-cancel')!.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    submitBtn.addEventListener('click', async () => {
+      if (!parsedData) return;
+      submitBtn.disabled = true;
+      statusEl.textContent = 'Importing...';
+
+      try {
+        // Build request body
+        let levelPayload: any;
+        let enemyTypes: any[] | undefined;
+
+        if (parsedData._format === 'blast-arena-level-bundle') {
+          levelPayload = parsedData.level;
+          enemyTypes = parsedData.enemyTypes;
+        } else if (parsedData._format === 'blast-arena-level') {
+          const { _format, _version, ...rest } = parsedData;
+          levelPayload = rest;
+        } else {
+          levelPayload = parsedData;
+        }
+
+        const body: any = { level: levelPayload, worldId, enemyTypes };
+        const res = await ApiClient.post<any>('/admin/campaign/levels/import', body);
+
+        if (res.conflicts && res.conflicts.length > 0) {
+          overlay.remove();
+          this.showConflictResolutionModal(res.conflicts, levelPayload, enemyTypes, worldId);
+        } else {
+          this.notifications.success('Level imported successfully');
+          overlay.remove();
+          await this.loadWorlds();
+        }
+      } catch (err: unknown) {
+        this.notifications.error(getErrorMessage(err));
+        submitBtn.disabled = false;
+        statusEl.textContent = 'Import failed — check file format';
+      }
+    });
+  }
+
+  private showConflictResolutionModal(
+    conflicts: ImportConflict[],
+    levelData: any,
+    enemyTypes: any[] | undefined,
+    worldId: number,
+  ): void {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.cssText =
+      'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;overflow-y:auto;';
+
+    const conflictRows = conflicts.map((c, i) => {
+      const existingOption = c.existingId
+        ? `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+             <input type="radio" name="conflict-${i}" value="use-existing" data-existing-id="${c.existingId}">
+             Use existing: "${escapeHtml(c.existingName || '')}" (ID ${c.existingId})
+           </label>`
+        : '';
+
+      const createOption = enemyTypes?.find((et: any) => et.originalId === c.originalId)
+        ? `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+             <input type="radio" name="conflict-${i}" value="create" checked>
+             Create new "${escapeHtml(c.name)}"
+           </label>`
+        : '';
+
+      return `
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
+          <div style="font-weight:600;margin-bottom:6px;color:var(--text);">${escapeHtml(c.name)} <span style="color:var(--text-dim);font-size:12px;">(original ID ${c.originalId})</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text-dim);">
+            ${createOption}
+            ${existingOption}
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+              <input type="radio" name="conflict-${i}" value="skip" ${!createOption && !existingOption ? 'checked' : ''}>
+              Skip (remove placements of this enemy)
+            </label>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    overlay.innerHTML = `
+      <div class="modal-content" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;margin:20px 0;">
+        <h3 style="margin:0 0 12px;color:var(--warning);">Resolve Enemy Type Conflicts</h3>
+        <p style="color:var(--text-dim);margin:0 0 16px;font-size:13px;">
+          The imported level references enemy types that need to be resolved.
+        </p>
+        ${conflictRows}
+        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:12px;">
+          <button class="btn btn-secondary" id="conflict-cancel">Cancel</button>
+          <button class="btn btn-primary" id="conflict-submit">Import</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#conflict-cancel')!.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    overlay.querySelector('#conflict-submit')!.addEventListener('click', async () => {
+      const enemyIdMap: Record<string, number | 'create' | 'skip'> = {};
+
+      for (let i = 0; i < conflicts.length; i++) {
+        const selected = overlay.querySelector(`input[name="conflict-${i}"]:checked`) as HTMLInputElement;
+        if (!selected) continue;
+        const origId = String(conflicts[i].originalId);
+
+        if (selected.value === 'create') {
+          enemyIdMap[origId] = 'create';
+        } else if (selected.value === 'use-existing') {
+          enemyIdMap[origId] = Number(selected.dataset.existingId);
+        } else {
+          enemyIdMap[origId] = 'skip';
+        }
+      }
+
+      try {
+        await ApiClient.post('/admin/campaign/levels/import', {
+          level: levelData,
+          enemyTypes,
+          worldId,
+          enemyIdMap,
+        });
+        this.notifications.success('Level imported successfully');
+        overlay.remove();
+        await this.loadWorlds();
+      } catch (err: unknown) {
+        this.notifications.error(getErrorMessage(err));
+      }
+    });
   }
 
   // ============================

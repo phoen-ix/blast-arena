@@ -647,10 +647,9 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         };
 
         game.start();
-        callback({ success: true });
 
-        // Send initial state
-        socket.emit('campaign:gameStart', {
+        // Build initial state before callback to catch serialization errors
+        const initialState = {
           state: {
             gameState: game['gameState'].toState(),
             enemies: Array.from(game['enemies'].values()).map((e) => e.toState()),
@@ -660,7 +659,11 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
             exitOpen: false,
           },
           level: levelSummary,
-        });
+        };
+
+        callback({ success: true });
+        socket.emit('campaign:gameStart', initialState);
+        logger.info({ levelId: level.id, levelName: level.name }, 'Campaign level started');
       } catch (err) {
         logger.error({ err }, 'Campaign start error');
         callback({ success: false, error: getErrorMessage(err) });
