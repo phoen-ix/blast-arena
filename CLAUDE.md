@@ -82,7 +82,7 @@ Full-screen panel for admin/moderator roles. 9 tabs: Dashboard, Users, Matches, 
 Admin-only system for custom AI upload/management. Built-in AI as fallback. Three-layer sandbox: (1) source scan blocks dangerous module imports and global access patterns (`process`, `globalThis`, `__proto__`, `Reflect`, `Proxy`, etc.), (2) esbuild `bundle: true` with `blockImportsPlugin` rejects ALL import/require at build time, (3) `vm.runInContext()` executes code in isolated context with `codeGeneration: { strings: false }` (blocks `eval`/`Function`) and 5s timeout. `loadBotAIInSandbox()` exported from `botai-compiler.ts` — used by both compiler validation and registry runtime loading. `IBotAI` interface in `BotAI.ts`. Runtime crash recovery falls back to built-in. `botAiId` field in MatchConfig/SimulationConfig. See [docs/admin-and-systems.md](docs/admin-and-systems.md#bot-ai-management) and [docs/bot-ai-guide.md](docs/bot-ai-guide.md).
 
 ## Bot Simulation System
-Admin-only batch runner for bot-only games. Fast/real-time modes, queue system (max 10), live spectating. See [docs/admin-and-systems.md](docs/admin-and-systems.md#bot-simulation-system).
+Admin-only batch runner for bot-only games. Fast/real-time modes, queue system (max 10), live spectating. `getHistory(page, limit)` returns paginated `{ batches, total }`. See [docs/admin-and-systems.md](docs/admin-and-systems.md#bot-simulation-system).
 
 ## Game Architecture
 - 20 tick/sec server game loop (GameLoop.ts -> GameState.ts)
@@ -189,3 +189,4 @@ cd frontend && npx vitest run                   # Frontend only
 - [Replay System](docs/replay-system.md) — recording, playback, controls, API
 - [Performance & Internals](docs/performance-and-internals.md) — optimizations, game logging
 - [Infrastructure & Security](docs/infrastructure.md) — security, resilience, Docker, migrations
+- [API Reference](docs/openapi.yaml) — OpenAPI 3.0.3 specification for all REST endpoints

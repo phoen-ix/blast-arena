@@ -111,7 +111,10 @@ export class SimulationManager {
     return statuses;
   }
 
-  getHistory(): SimulationBatchStatus[] {
+  getHistory(
+    page: number = 1,
+    limit: number = 20,
+  ): { batches: SimulationBatchStatus[]; total: number } {
     const history: SimulationBatchStatus[] = [];
 
     // Include queued entries
@@ -143,7 +146,7 @@ export class SimulationManager {
         history.sort(
           (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
         );
-        return history;
+        return { batches: history.slice((page - 1) * limit, page * limit), total: history.length };
       }
 
       const gameModes = fs.readdirSync(SIM_LOG_DIR, { withFileTypes: true });
@@ -209,7 +212,7 @@ export class SimulationManager {
       return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
     });
 
-    return history;
+    return { batches: history.slice((page - 1) * limit, page * limit), total: history.length };
   }
 
   getBatchResults(batchId: string): { results: any[]; summary: any } | null {

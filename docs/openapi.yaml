@@ -1,0 +1,3655 @@
+openapi: 3.0.3
+info:
+  title: BlastArena API
+  version: 1.0.0
+  description: |
+    REST API for BlastArena, a multiplayer online grid-based explosive arena game.
+    All endpoints are mounted under the `/api` prefix.
+    Authentication uses JWT Bearer tokens (access token) and httpOnly cookies (refresh token).
+
+servers:
+  - url: /api
+    description: API base path
+
+tags:
+  - name: Health
+    description: Service health check
+  - name: Auth
+    description: Authentication (register, login, logout, token refresh, email verification, password reset)
+  - name: User
+    description: User profile and account management
+  - name: Lobby
+    description: Game room listing and creation
+  - name: Campaign
+    description: Player-facing campaign endpoints (worlds, levels, progress, enemy types)
+  - name: Campaign Admin
+    description: Admin campaign management (worlds, levels, enemy types, import/export)
+  - name: Settings
+    description: Application settings (public reads, admin writes)
+  - name: Users Admin
+    description: Admin user management
+  - name: Matches
+    description: Match history and management
+  - name: Rooms
+    description: Active room listing (admin/staff)
+  - name: Audit Log
+    description: Admin action audit log
+  - name: Announcements
+    description: Toast and banner announcements
+  - name: Replays
+    description: Game replay management
+  - name: Simulations
+    description: Bot simulation batch management
+  - name: Bot AI
+    description: Custom bot AI upload and management
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ===================== Health =====================
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      security: []
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  buildId:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorWithMessage'
+
+  # ===================== Auth =====================
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      security: []
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          description: Registration disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username or email already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with credentials
+      description: Returns access token in body and sets httpOnly refreshToken cookie.
+      security: []
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: httpOnly refreshToken cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out (revoke refresh token)
+      operationId: logout
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token using cookie
+      description: Uses the httpOnly refreshToken cookie. No Authorization header needed.
+      security:
+        - CookieAuth: []
+      operationId: refreshToken
+      responses:
+        '200':
+          description: Token refreshed
+          headers:
+            Set-Cookie:
+              description: Updated httpOnly refreshToken cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: No refresh token or token invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/verify-email/{token}:
+    get:
+      tags: [Auth]
+      summary: Verify email address
+      security: []
+      operationId: verifyEmail
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset email
+      security: []
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Reset email sent (if account exists)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password with token
+      security: []
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+      responses:
+        '200':
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid token or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  # ===================== User =====================
+  /user/profile:
+    get:
+      tags: [User]
+      summary: Get current user profile
+      operationId: getUserProfile
+      responses:
+        '200':
+          description: User profile with stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [User]
+      summary: Update user profile
+      operationId: updateUserProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 20
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Username taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /user/email:
+    post:
+      tags: [User]
+      summary: Change email address
+      description: Admins get direct update; regular users receive a confirmation email.
+      operationId: changeEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+      responses:
+        '200':
+          description: Email updated or confirmation sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [User]
+      summary: Cancel pending email change
+      operationId: cancelEmailChange
+      responses:
+        '200':
+          description: Pending change cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /user/password:
+    post:
+      tags: [User]
+      summary: Change password
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  maxLength: 128
+                newPassword:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          description: Validation error or same password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /user/confirm-email/{token}:
+    get:
+      tags: [User]
+      summary: Confirm email change
+      security: []
+      operationId: confirmEmailChange
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===================== Lobby =====================
+  /lobby/rooms:
+    get:
+      tags: [Lobby]
+      summary: List active rooms
+      operationId: listRooms
+      responses:
+        '200':
+          description: Array of room list items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoomListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Lobby]
+      summary: Create a new room
+      operationId: createRoom
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, config]
+              properties:
+                name:
+                  type: string
+                  minLength: 3
+                  maxLength: 30
+                config:
+                  type: object
+                  required: [gameMode, maxPlayers]
+                  properties:
+                    gameMode:
+                      $ref: '#/components/schemas/GameMode'
+                    maxPlayers:
+                      type: integer
+                      minimum: 2
+                      maximum: 8
+                    mapWidth:
+                      type: integer
+                      minimum: 11
+                      maximum: 21
+                      default: 15
+                    mapHeight:
+                      type: integer
+                      minimum: 9
+                      maximum: 17
+                      default: 13
+                    mapSeed:
+                      type: integer
+                    roundTime:
+                      type: integer
+                      minimum: 60
+                      maximum: 600
+                      default: 180
+      responses:
+        '201':
+          description: Room created
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ===================== Campaign (Player) =====================
+  /campaign/worlds:
+    get:
+      tags: [Campaign]
+      summary: List published worlds with progress
+      operationId: getCampaignWorlds
+      responses:
+        '200':
+          description: Worlds with nested levels and user progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  worlds:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CampaignWorldWithLevels'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /campaign/worlds/{worldId}/levels:
+    get:
+      tags: [Campaign]
+      summary: List published levels in a world
+      operationId: getCampaignWorldLevels
+      parameters:
+        - name: worldId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Levels in world
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  levels:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CampaignLevelSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /campaign/levels/{levelId}:
+    get:
+      tags: [Campaign]
+      summary: Get full level data
+      description: Returns published levels only.
+      operationId: getCampaignLevel
+      parameters:
+        - name: levelId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Full level data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  level:
+                    $ref: '#/components/schemas/CampaignLevel'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Level not found or not published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /campaign/progress:
+    get:
+      tags: [Campaign]
+      summary: Get user campaign state
+      operationId: getCampaignProgress
+      responses:
+        '200':
+          description: User campaign progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  state:
+                    $ref: '#/components/schemas/CampaignUserState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /campaign/enemy-types:
+    get:
+      tags: [Campaign]
+      summary: List all enemy types
+      operationId: getCampaignEnemyTypes
+      responses:
+        '200':
+          description: All enemy types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enemyTypes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EnemyTypeEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ===================== Campaign Admin =====================
+  /admin/campaign/worlds:
+    get:
+      tags: [Campaign Admin]
+      summary: List all worlds (including unpublished)
+      operationId: adminListWorlds
+      responses:
+        '200':
+          description: All worlds
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  worlds:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CampaignWorld'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Campaign Admin]
+      summary: Create a world
+      operationId: adminCreateWorld
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 2000
+                theme:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  default: classic
+      responses:
+        '201':
+          description: World created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/campaign/worlds/{id}:
+    put:
+      tags: [Campaign Admin]
+      summary: Update a world
+      operationId: adminUpdateWorld
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 2000
+                theme:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                isPublished:
+                  type: boolean
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Campaign Admin]
+      summary: Delete a world
+      operationId: adminDeleteWorld
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/campaign/worlds/{id}/order:
+    put:
+      tags: [Campaign Admin]
+      summary: Reorder a world
+      operationId: adminReorderWorld
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SortOrderRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/campaign/levels:
+    get:
+      tags: [Campaign Admin]
+      summary: List levels in a world
+      operationId: adminListLevels
+      parameters:
+        - name: worldId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Levels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  levels:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CampaignLevel'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Campaign Admin]
+      summary: Create a level
+      operationId: adminCreateLevel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LevelInput'
+      responses:
+        '201':
+          description: Level created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/campaign/levels/{id}:
+    get:
+      tags: [Campaign Admin]
+      summary: Get level detail
+      operationId: adminGetLevel
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Level detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  level:
+                    $ref: '#/components/schemas/CampaignLevel'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Level not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Campaign Admin]
+      summary: Update a level
+      operationId: adminUpdateLevel
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LevelInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Campaign Admin]
+      summary: Delete a level
+      operationId: adminDeleteLevel
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/campaign/levels/{id}/order:
+    put:
+      tags: [Campaign Admin]
+      summary: Reorder a level
+      operationId: adminReorderLevel
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SortOrderRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/campaign/levels/{id}/export:
+    get:
+      tags: [Campaign Admin]
+      summary: Export level as JSON
+      operationId: adminExportLevel
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: JSON file download
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LevelExportData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Level not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/campaign/levels/{id}/export-bundle:
+    get:
+      tags: [Campaign Admin]
+      summary: Export level bundle (level + enemy types)
+      operationId: adminExportLevelBundle
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Bundle JSON file download
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LevelBundleExportData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Level not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/campaign/levels/import:
+    post:
+      tags: [Campaign Admin]
+      summary: Import a level (two-phase with conflict resolution)
+      description: |
+        Phase 1: Post without `enemyIdMap` to get a `conflicts` array for unresolved enemy type IDs.
+        Phase 2: Post with `enemyIdMap` to resolve conflicts (create/use-existing/skip) and create the level.
+      operationId: adminImportLevel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [level, worldId]
+              properties:
+                level:
+                  type: object
+                  description: Level export data or raw level data
+                enemyTypes:
+                  type: array
+                  items:
+                    type: object
+                  description: Bundled enemy types (from bundle export)
+                worldId:
+                  type: integer
+                enemyIdMap:
+                  type: object
+                  additionalProperties:
+                    oneOf:
+                      - type: integer
+                      - type: string
+                        enum: [create, skip]
+                  description: "Mapping of original enemy type ID to action: existing ID (number), 'create', or 'skip'"
+      responses:
+        '200':
+          description: Phase 1 response with conflicts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conflicts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ImportConflict'
+        '201':
+          description: Level imported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '400':
+          description: Invalid level data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/campaign/enemy-types:
+    get:
+      tags: [Campaign Admin]
+      summary: List all enemy types (admin)
+      operationId: adminListEnemyTypes
+      responses:
+        '200':
+          description: All enemy types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enemyTypes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EnemyTypeEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Campaign Admin]
+      summary: Create an enemy type
+      operationId: adminCreateEnemyType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnemyTypeInput'
+      responses:
+        '201':
+          description: Enemy type created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/campaign/enemy-types/{id}:
+    put:
+      tags: [Campaign Admin]
+      summary: Update an enemy type
+      operationId: adminUpdateEnemyType
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnemyTypeInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Campaign Admin]
+      summary: Delete an enemy type
+      operationId: adminDeleteEnemyType
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/campaign/enemy-types/{id}/export:
+    get:
+      tags: [Campaign Admin]
+      summary: Export enemy type as JSON
+      operationId: adminExportEnemyType
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Enemy type JSON file download
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnemyTypeExportData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Enemy type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/campaign/enemy-types/import:
+    post:
+      tags: [Campaign Admin]
+      summary: Import an enemy type
+      operationId: adminImportEnemyType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnemyTypeInput'
+      responses:
+        '201':
+          description: Enemy type imported
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ===================== Settings =====================
+  /admin/settings/registration_enabled:
+    get:
+      tags: [Settings]
+      summary: Get registration enabled status
+      security: []
+      operationId: getRegistrationEnabled
+      responses:
+        '200':
+          description: Registration status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+    put:
+      tags: [Settings]
+      summary: Set registration enabled (admin only)
+      operationId: setRegistrationEnabled
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Setting updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/settings/recordings_enabled:
+    get:
+      tags: [Settings]
+      summary: Get recordings enabled status
+      security: []
+      operationId: getRecordingsEnabled
+      responses:
+        '200':
+          description: Recordings status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+    put:
+      tags: [Settings]
+      summary: Set recordings enabled (admin only)
+      operationId: setRecordingsEnabled
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Setting updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/settings/game_defaults:
+    get:
+      tags: [Settings]
+      summary: Get game creation defaults
+      security: []
+      operationId: getGameDefaults
+      responses:
+        '200':
+          description: Game defaults
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  defaults:
+                    $ref: '#/components/schemas/GameDefaults'
+    put:
+      tags: [Settings]
+      summary: Set game creation defaults (admin only)
+      operationId: setGameDefaults
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [defaults]
+              properties:
+                defaults:
+                  $ref: '#/components/schemas/GameDefaults'
+      responses:
+        '200':
+          description: Defaults updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/settings/simulation_defaults:
+    get:
+      tags: [Settings]
+      summary: Get simulation defaults
+      security: []
+      operationId: getSimulationDefaults
+      responses:
+        '200':
+          description: Simulation defaults
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  defaults:
+                    $ref: '#/components/schemas/SimulationDefaults'
+    put:
+      tags: [Settings]
+      summary: Set simulation defaults (admin only)
+      operationId: setSimulationDefaults
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [defaults]
+              properties:
+                defaults:
+                  $ref: '#/components/schemas/SimulationDefaults'
+      responses:
+        '200':
+          description: Defaults updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/settings/email_settings:
+    get:
+      tags: [Settings]
+      summary: Get email/SMTP settings (admin only, password masked)
+      operationId: getEmailSettings
+      responses:
+        '200':
+          description: Email settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settings:
+                    $ref: '#/components/schemas/EmailSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags: [Settings]
+      summary: Update email/SMTP settings (admin only)
+      operationId: setEmailSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailSettings'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/settings/email_settings/test:
+    post:
+      tags: [Settings]
+      summary: Send a test email (admin only)
+      operationId: sendTestEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to]
+              properties:
+                to:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Test email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          description: Failed to send
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ===================== Users Admin =====================
+  /admin/users:
+    post:
+      tags: [Users Admin]
+      summary: Create a user (admin only)
+      operationId: adminCreateUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 20
+                  pattern: '^[a-zA-Z0-9_-]+$'
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                password:
+                  type: string
+                  minLength: 6
+                  maxLength: 128
+                role:
+                  $ref: '#/components/schemas/UserRole'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Username or email taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags: [Users Admin]
+      summary: List users (staff)
+      description: Accessible to both admin and moderator roles.
+      operationId: adminListUsers
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by username or email
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminUserListItem'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{id}/role:
+    put:
+      tags: [Users Admin]
+      summary: Change user role (admin only)
+      operationId: adminChangeUserRole
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  $ref: '#/components/schemas/UserRole'
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{id}/deactivate:
+    put:
+      tags: [Users Admin]
+      summary: Activate or deactivate a user (admin only)
+      operationId: adminDeactivateUser
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deactivated]
+              properties:
+                deactivated:
+                  type: boolean
+      responses:
+        '200':
+          description: User status changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{id}/password:
+    put:
+      tags: [Users Admin]
+      summary: Reset a user's password (admin only)
+      operationId: adminResetUserPassword
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 6
+                  maxLength: 128
+      responses:
+        '200':
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{id}:
+    delete:
+      tags: [Users Admin]
+      summary: Delete a user (admin only)
+      operationId: adminDeleteUser
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ===================== Admin Stats =====================
+  /admin/stats:
+    get:
+      tags: [Matches]
+      summary: Get server statistics (admin only)
+      operationId: adminGetStats
+      responses:
+        '200':
+          description: Server stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ===================== Matches =====================
+  /admin/matches:
+    get:
+      tags: [Matches]
+      summary: List match history (staff)
+      operationId: adminListMatches
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Paginated match history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matches:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MatchHistoryItem'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Matches]
+      summary: Delete all matches (admin only)
+      operationId: adminDeleteAllMatches
+      responses:
+        '200':
+          description: All matches deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  count:
+                    type: integer
+                  replaysCleaned:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/matches/{id}:
+    get:
+      tags: [Matches]
+      summary: Get match detail (staff)
+      operationId: adminGetMatch
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Match detail with players
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Matches]
+      summary: Delete a match (admin only)
+      operationId: adminDeleteMatch
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Match deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ===================== Rooms =====================
+  /admin/rooms:
+    get:
+      tags: [Rooms]
+      summary: List active rooms (staff)
+      operationId: adminListRooms
+      responses:
+        '200':
+          description: Active rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminActiveRoom'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ===================== Audit Log =====================
+  /admin/actions:
+    get:
+      tags: [Audit Log]
+      summary: List admin actions (admin only)
+      operationId: adminListActions
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: action
+          in: query
+          schema:
+            type: string
+          description: Filter by action type
+      responses:
+        '200':
+          description: Paginated admin action log
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminAction'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ===================== Announcements =====================
+  /admin/announcements/banner:
+    get:
+      tags: [Announcements]
+      summary: Get active banner
+      security: []
+      operationId: getBanner
+      responses:
+        '200':
+          description: Active banner (or null)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnouncementBanner'
+    post:
+      tags: [Announcements]
+      summary: Set banner (admin only)
+      operationId: setBanner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Banner set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Announcements]
+      summary: Clear banner (admin only)
+      operationId: clearBanner
+      responses:
+        '200':
+          description: Banner cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/announcements/toast:
+    post:
+      tags: [Announcements]
+      summary: Send a toast notification (staff)
+      operationId: sendToast
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+      responses:
+        '200':
+          description: Toast sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ===================== Replays =====================
+  /admin/replays:
+    get:
+      tags: [Replays]
+      summary: List replays (staff)
+      operationId: adminListReplays
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Paginated replay list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  replays:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReplayListItem'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/replays/{matchId}:
+    get:
+      tags: [Replays]
+      summary: Get replay data (staff)
+      operationId: adminGetReplay
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Full replay data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplayData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Replay not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Replays]
+      summary: Delete a replay (admin only)
+      operationId: adminDeleteReplay
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Replay deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Replay not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===================== Simulations =====================
+  /admin/simulations:
+    get:
+      tags: [Simulations]
+      summary: List simulation batches (admin only)
+      operationId: adminListSimulations
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Paginated simulation history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batches:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SimulationBatchStatus'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Simulations]
+      summary: Start a simulation batch (admin only)
+      operationId: adminStartSimulation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationConfig'
+      responses:
+        '201':
+          description: Simulation batch started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationBatchStatus'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          description: Queue full (max 10)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/simulations/{batchId}:
+    get:
+      tags: [Simulations]
+      summary: Get simulation batch results (admin only)
+      operationId: adminGetSimulation
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Batch results with game details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batch:
+                    $ref: '#/components/schemas/SimulationBatchStatus'
+                  games:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SimulationGameResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Batch not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Simulations]
+      summary: Delete a simulation batch (admin only)
+      operationId: adminDeleteSimulation
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Batch deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Batch not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/simulations/{batchId}/replay/{gameIndex}:
+    get:
+      tags: [Simulations]
+      summary: Get replay for a simulation game (admin only)
+      operationId: adminGetSimulationReplay
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: gameIndex
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Simulation game replay data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplayData'
+        '400':
+          description: Invalid game index
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Replay not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===================== Bot AI =====================
+  /admin/ai/active:
+    get:
+      tags: [Bot AI]
+      summary: List active bot AIs (public)
+      security: []
+      operationId: getActiveAIs
+      responses:
+        '200':
+          description: Active AI list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ais:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BotAIEntry'
+
+  /admin/ai:
+    get:
+      tags: [Bot AI]
+      summary: List all bot AIs (admin only)
+      operationId: adminListAIs
+      responses:
+        '200':
+          description: All AIs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ais:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BotAIEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Bot AI]
+      summary: Upload a new bot AI (admin only)
+      operationId: adminUploadAI
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, name]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: TypeScript source file (.ts, max 500KB)
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+      responses:
+        '201':
+          description: AI uploaded and compiled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ai:
+                    $ref: '#/components/schemas/BotAIEntry'
+        '400':
+          description: Compilation/validation failed or no file
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/ai/{id}:
+    put:
+      tags: [Bot AI]
+      summary: Update bot AI metadata (admin only)
+      operationId: adminUpdateAI
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: AI updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Bot AI]
+      summary: Delete a bot AI (admin only)
+      operationId: adminDeleteAI
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AI deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/ai/{id}/upload:
+    put:
+      tags: [Bot AI]
+      summary: Re-upload bot AI source (admin only)
+      operationId: adminReuploadAI
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: TypeScript source file (.ts, max 500KB)
+      responses:
+        '200':
+          description: AI source updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          description: Compilation/validation failed or no file
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/ai/{id}/download:
+    get:
+      tags: [Bot AI]
+      summary: Download bot AI source (admin only)
+      operationId: adminDownloadAI
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: TypeScript source file
+          content:
+            text/typescript:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: AI source not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token passed in Authorization header
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+      description: httpOnly refresh token cookie (set by login/refresh endpoints)
+
+  parameters:
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Success:
+      description: Operation successful
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+
+  schemas:
+    # ---- Common ----
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    ErrorWithMessage:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+
+    Message:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    # ---- Enums ----
+    UserRole:
+      type: string
+      enum: [user, moderator, admin]
+
+    GameMode:
+      type: string
+      enum: [ffa, teams, battle_royale, sudden_death, deathmatch, king_of_the_hill]
+
+    PowerUpType:
+      type: string
+      enum: [bomb_up, fire_up, speed_up, shield, kick, pierce_bomb, remote_bomb, line_bomb]
+
+    BotDifficulty:
+      type: string
+      enum: [easy, normal, hard]
+
+    # ---- Auth ----
+    RegisterRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 20
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/PublicUser'
+        accessToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: Token expiry in seconds
+
+    PublicUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    # ---- User ----
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        emailVerified:
+          type: boolean
+        role:
+          $ref: '#/components/schemas/UserRole'
+        lastLogin:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        totalMatches:
+          type: integer
+        totalWins:
+          type: integer
+        totalKills:
+          type: integer
+        totalDeaths:
+          type: integer
+
+    # ---- Lobby ----
+    RoomListItem:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        host:
+          type: string
+        playerCount:
+          type: integer
+        maxPlayers:
+          type: integer
+        gameMode:
+          $ref: '#/components/schemas/GameMode'
+        status:
+          type: string
+          enum: [waiting, playing]
+
+    MatchConfig:
+      type: object
+      properties:
+        gameMode:
+          $ref: '#/components/schemas/GameMode'
+        maxPlayers:
+          type: integer
+          minimum: 2
+          maximum: 8
+        mapWidth:
+          type: integer
+        mapHeight:
+          type: integer
+        mapSeed:
+          type: integer
+        roundTime:
+          type: integer
+        teams:
+          type: integer
+        wallDensity:
+          type: number
+        enabledPowerUps:
+          type: array
+          items:
+            $ref: '#/components/schemas/PowerUpType'
+        powerUpDropRate:
+          type: number
+        botCount:
+          type: integer
+        botDifficulty:
+          $ref: '#/components/schemas/BotDifficulty'
+        botTeams:
+          type: array
+          items:
+            type: integer
+            nullable: true
+        friendlyFire:
+          type: boolean
+        hazardTiles:
+          type: boolean
+        enableMapEvents:
+          type: boolean
+        reinforcedWalls:
+          type: boolean
+        recordGame:
+          type: boolean
+        botAiId:
+          type: string
+
+    # ---- Campaign ----
+    CampaignWorld:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        sortOrder:
+          type: integer
+        theme:
+          type: string
+        isPublished:
+          type: boolean
+        levelCount:
+          type: integer
+        completedCount:
+          type: integer
+
+    CampaignWorldWithLevels:
+      allOf:
+        - $ref: '#/components/schemas/CampaignWorld'
+        - type: object
+          properties:
+            levels:
+              type: array
+              items:
+                $ref: '#/components/schemas/CampaignLevelSummary'
+
+    CampaignLevelSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        worldId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        sortOrder:
+          type: integer
+        mapWidth:
+          type: integer
+        mapHeight:
+          type: integer
+        winCondition:
+          $ref: '#/components/schemas/CampaignWinCondition'
+        lives:
+          type: integer
+        timeLimit:
+          type: integer
+        parTime:
+          type: integer
+        enemyCount:
+          type: integer
+        isPublished:
+          type: boolean
+        progress:
+          $ref: '#/components/schemas/LevelProgress'
+
+    CampaignLevel:
+      type: object
+      properties:
+        id:
+          type: integer
+        worldId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        sortOrder:
+          type: integer
+        mapWidth:
+          type: integer
+        mapHeight:
+          type: integer
+        tiles:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        fillMode:
+          type: string
+          enum: [handcrafted, hybrid]
+        wallDensity:
+          type: number
+        playerSpawns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+        enemyPlacements:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnemyPlacement'
+        powerupPlacements:
+          type: array
+          items:
+            $ref: '#/components/schemas/PowerUpPlacement'
+        winCondition:
+          $ref: '#/components/schemas/CampaignWinCondition'
+        winConditionConfig:
+          type: object
+          nullable: true
+        lives:
+          type: integer
+        timeLimit:
+          type: integer
+        parTime:
+          type: integer
+        carryOverPowerups:
+          type: boolean
+        startingPowerups:
+          type: object
+          nullable: true
+        availablePowerupTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/PowerUpType'
+          nullable: true
+        powerupDropRate:
+          type: number
+        reinforcedWalls:
+          type: boolean
+        hazardTiles:
+          type: boolean
+        isPublished:
+          type: boolean
+
+    CampaignWinCondition:
+      type: string
+      enum: [kill_all, find_exit, reach_goal, survive_time]
+
+    LevelProgress:
+      type: object
+      properties:
+        levelId:
+          type: integer
+        completed:
+          type: boolean
+        bestTimeSeconds:
+          type: number
+          nullable: true
+        stars:
+          type: integer
+        attempts:
+          type: integer
+
+    CampaignUserState:
+      type: object
+      properties:
+        currentWorldId:
+          type: integer
+          nullable: true
+        currentLevelId:
+          type: integer
+          nullable: true
+        carriedPowerups:
+          type: object
+          nullable: true
+        totalLevelsCompleted:
+          type: integer
+        totalStars:
+          type: integer
+
+    Position:
+      type: object
+      required: [x, y]
+      properties:
+        x:
+          type: integer
+        y:
+          type: integer
+
+    EnemyPlacement:
+      type: object
+      required: [enemyTypeId, x, y]
+      properties:
+        enemyTypeId:
+          type: integer
+        x:
+          type: integer
+        y:
+          type: integer
+        patrolPath:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+
+    PowerUpPlacement:
+      type: object
+      required: [type, x, y, hidden]
+      properties:
+        type:
+          $ref: '#/components/schemas/PowerUpType'
+        x:
+          type: integer
+        y:
+          type: integer
+        hidden:
+          type: boolean
+
+    EnemyTypeEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        config:
+          $ref: '#/components/schemas/EnemyTypeConfig'
+        isBoss:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    EnemyTypeConfig:
+      type: object
+      properties:
+        speed:
+          type: number
+          minimum: 0.1
+          maximum: 5
+        movementPattern:
+          type: string
+          enum: [random_walk, chase_player, patrol_path, wall_follow, stationary]
+        canPassWalls:
+          type: boolean
+        canPassBombs:
+          type: boolean
+        canBomb:
+          type: boolean
+        bombConfig:
+          $ref: '#/components/schemas/EnemyBombConfig'
+        hp:
+          type: integer
+          minimum: 1
+          maximum: 100
+        contactDamage:
+          type: boolean
+        sprite:
+          $ref: '#/components/schemas/EnemySpriteConfig'
+        dropChance:
+          type: number
+          minimum: 0
+          maximum: 1
+        dropTable:
+          type: array
+          items:
+            type: string
+        isBoss:
+          type: boolean
+        sizeMultiplier:
+          type: number
+          minimum: 1
+          maximum: 3
+        bossPhases:
+          type: array
+          items:
+            $ref: '#/components/schemas/BossPhaseConfig'
+
+    EnemyBombConfig:
+      type: object
+      properties:
+        fireRange:
+          type: integer
+          minimum: 1
+          maximum: 8
+        cooldownTicks:
+          type: integer
+          minimum: 10
+          maximum: 200
+        trigger:
+          type: string
+          enum: [timer, proximity, random]
+        proximityRange:
+          type: integer
+          minimum: 1
+          maximum: 20
+
+    EnemySpriteConfig:
+      type: object
+      properties:
+        bodyShape:
+          type: string
+          enum: [blob, spiky, ghost, robot, bug, skull]
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        eyeStyle:
+          type: string
+          enum: [round, angry, sleepy, crazy]
+        hasTeeth:
+          type: boolean
+        hasHorns:
+          type: boolean
+
+    BossPhaseConfig:
+      type: object
+      required: [hpThreshold]
+      properties:
+        hpThreshold:
+          type: number
+          minimum: 0
+          maximum: 1
+        speedMultiplier:
+          type: number
+        movementPattern:
+          type: string
+          enum: [random_walk, chase_player, patrol_path, wall_follow, stationary]
+        canBomb:
+          type: boolean
+        bombConfig:
+          $ref: '#/components/schemas/EnemyBombConfig'
+        spawnEnemies:
+          type: array
+          items:
+            type: object
+            properties:
+              enemyTypeId:
+                type: integer
+              count:
+                type: integer
+                minimum: 1
+                maximum: 10
+
+    EnemyTypeInput:
+      type: object
+      required: [name, config]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 2000
+        config:
+          $ref: '#/components/schemas/EnemyTypeConfig'
+
+    LevelInput:
+      type: object
+      properties:
+        worldId:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 2000
+        mapWidth:
+          type: integer
+          minimum: 7
+          maximum: 51
+        mapHeight:
+          type: integer
+          minimum: 7
+          maximum: 51
+        tiles:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        fillMode:
+          type: string
+          enum: [handcrafted, hybrid]
+        wallDensity:
+          type: number
+          minimum: 0.1
+          maximum: 0.9
+        playerSpawns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+        enemyPlacements:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnemyPlacement'
+        powerupPlacements:
+          type: array
+          items:
+            $ref: '#/components/schemas/PowerUpPlacement'
+        winCondition:
+          $ref: '#/components/schemas/CampaignWinCondition'
+        winConditionConfig:
+          type: object
+        lives:
+          type: integer
+          minimum: 1
+          maximum: 99
+        timeLimit:
+          type: integer
+          minimum: 0
+          maximum: 3600
+        parTime:
+          type: integer
+          minimum: 0
+          maximum: 3600
+        carryOverPowerups:
+          type: boolean
+        startingPowerups:
+          type: object
+        availablePowerupTypes:
+          type: array
+          items:
+            type: string
+        powerupDropRate:
+          type: number
+          minimum: 0
+          maximum: 1
+        reinforcedWalls:
+          type: boolean
+        hazardTiles:
+          type: boolean
+        isPublished:
+          type: boolean
+
+    LevelExportData:
+      type: object
+      properties:
+        _format:
+          type: string
+          enum: [blast-arena-level]
+        _version:
+          type: integer
+          enum: [1]
+        name:
+          type: string
+        description:
+          type: string
+        mapWidth:
+          type: integer
+        mapHeight:
+          type: integer
+        tiles:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        playerSpawns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+        enemyPlacements:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnemyPlacement'
+
+    LevelBundleExportData:
+      type: object
+      properties:
+        _format:
+          type: string
+          enum: [blast-arena-level-bundle]
+        _version:
+          type: integer
+          enum: [1]
+        level:
+          type: object
+        enemyTypes:
+          type: array
+          items:
+            type: object
+            properties:
+              originalId:
+                type: integer
+              name:
+                type: string
+              description:
+                type: string
+              config:
+                $ref: '#/components/schemas/EnemyTypeConfig'
+
+    EnemyTypeExportData:
+      type: object
+      properties:
+        _format:
+          type: string
+          enum: [blast-arena-enemy-type]
+        _version:
+          type: integer
+          enum: [1]
+        name:
+          type: string
+        description:
+          type: string
+        config:
+          $ref: '#/components/schemas/EnemyTypeConfig'
+
+    ImportConflict:
+      type: object
+      properties:
+        originalId:
+          type: integer
+        name:
+          type: string
+        existingId:
+          type: integer
+        existingName:
+          type: string
+
+    SortOrderRequest:
+      type: object
+      required: [sortOrder]
+      properties:
+        sortOrder:
+          type: integer
+          minimum: 0
+
+    # ---- Settings ----
+    GameDefaults:
+      type: object
+      properties:
+        gameMode:
+          $ref: '#/components/schemas/GameMode'
+        maxPlayers:
+          type: integer
+          minimum: 2
+          maximum: 8
+        roundTime:
+          type: integer
+          minimum: 30
+          maximum: 600
+        mapWidth:
+          type: integer
+          minimum: 11
+          maximum: 61
+        wallDensity:
+          type: number
+          minimum: 0
+          maximum: 1
+        powerUpDropRate:
+          type: number
+          minimum: 0
+          maximum: 1
+        botCount:
+          type: integer
+          minimum: 0
+          maximum: 7
+        botDifficulty:
+          $ref: '#/components/schemas/BotDifficulty'
+        reinforcedWalls:
+          type: boolean
+        enableMapEvents:
+          type: boolean
+        hazardTiles:
+          type: boolean
+        friendlyFire:
+          type: boolean
+        enabledPowerUps:
+          type: array
+          items:
+            $ref: '#/components/schemas/PowerUpType'
+        botAiId:
+          type: string
+          maxLength: 36
+
+    SimulationDefaults:
+      allOf:
+        - $ref: '#/components/schemas/GameDefaults'
+        - type: object
+          properties:
+            totalGames:
+              type: integer
+              minimum: 1
+              maximum: 1000
+            speed:
+              type: string
+              enum: [fast, realtime]
+            logVerbosity:
+              type: string
+              enum: [normal, detailed, full]
+            recordReplays:
+              type: boolean
+
+    EmailSettings:
+      type: object
+      properties:
+        smtpHost:
+          type: string
+          maxLength: 255
+        smtpPort:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        smtpUser:
+          type: string
+          maxLength: 255
+        smtpPassword:
+          type: string
+          maxLength: 255
+          description: Masked in GET responses
+        fromEmail:
+          type: string
+          format: email
+          maxLength: 255
+        fromName:
+          type: string
+          maxLength: 100
+
+    # ---- Admin ----
+    AdminUserListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        emailVerified:
+          type: boolean
+        isDeactivated:
+          type: boolean
+        deactivatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastLogin:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        totalMatches:
+          type: integer
+        totalWins:
+          type: integer
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        activeUsers24h:
+          type: integer
+        totalMatches:
+          type: integer
+        activeRooms:
+          type: integer
+        activePlayers:
+          type: integer
+
+    AdminAction:
+      type: object
+      properties:
+        id:
+          type: integer
+        adminId:
+          type: integer
+        adminUsername:
+          type: string
+        action:
+          type: string
+        targetType:
+          type: string
+        targetId:
+          type: integer
+        details:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminActiveRoom:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        host:
+          type: string
+        players:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              username:
+                type: string
+              isBot:
+                type: boolean
+        gameMode:
+          type: string
+        status:
+          type: string
+        maxPlayers:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    AnnouncementBanner:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: integer
+        message:
+          type: string
+        adminUsername:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # ---- Matches ----
+    MatchHistoryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        roomCode:
+          type: string
+        gameMode:
+          type: string
+        playerCount:
+          type: integer
+        status:
+          type: string
+        duration:
+          type: integer
+          nullable: true
+        winnerUsername:
+          type: string
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    MatchDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        roomCode:
+          type: string
+        gameMode:
+          type: string
+        mapSeed:
+          type: integer
+        mapWidth:
+          type: integer
+        mapHeight:
+          type: integer
+        maxPlayers:
+          type: integer
+        status:
+          type: string
+        duration:
+          type: integer
+          nullable: true
+        winnerId:
+          type: integer
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatchPlayerDetail'
+
+    MatchPlayerDetail:
+      type: object
+      properties:
+        userId:
+          type: integer
+        username:
+          type: string
+        team:
+          type: integer
+          nullable: true
+        placement:
+          type: integer
+          nullable: true
+        kills:
+          type: integer
+        deaths:
+          type: integer
+        bombsPlaced:
+          type: integer
+        powerupsCollected:
+          type: integer
+        survivedSeconds:
+          type: number
+
+    # ---- Replays ----
+    ReplayListItem:
+      type: object
+      properties:
+        matchId:
+          type: integer
+        roomCode:
+          type: string
+        gameMode:
+          type: string
+        duration:
+          type: number
+        playerCount:
+          type: integer
+        winnerName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        fileSizeKB:
+          type: number
+
+    ReplayData:
+      type: object
+      description: Full replay data (gzipped JSON at rest, decompressed in response)
+      properties:
+        version:
+          type: integer
+        matchId:
+          type: integer
+        roomCode:
+          type: string
+        gameMode:
+          type: string
+        config:
+          type: object
+          properties:
+            mapWidth:
+              type: integer
+            mapHeight:
+              type: integer
+            roundTime:
+              type: integer
+            wallDensity:
+              type: number
+            friendlyFire:
+              type: boolean
+            reinforcedWalls:
+              type: boolean
+            enableMapEvents:
+              type: boolean
+            hazardTiles:
+              type: boolean
+            botDifficulty:
+              type: string
+            botCount:
+              type: integer
+        totalTicks:
+          type: integer
+        tickRate:
+          type: integer
+        frames:
+          type: array
+          items:
+            type: object
+            description: Per-tick game state frame
+        log:
+          type: array
+          items:
+            type: object
+            description: Replay log entry
+
+    # ---- Simulations ----
+    SimulationConfig:
+      type: object
+      required:
+        - gameMode
+        - botCount
+        - botDifficulty
+        - mapWidth
+        - mapHeight
+        - roundTime
+        - wallDensity
+        - enabledPowerUps
+        - powerUpDropRate
+        - friendlyFire
+        - hazardTiles
+        - reinforcedWalls
+        - enableMapEvents
+        - totalGames
+        - speed
+        - logVerbosity
+      properties:
+        gameMode:
+          $ref: '#/components/schemas/GameMode'
+        botCount:
+          type: integer
+          minimum: 2
+          maximum: 8
+        botDifficulty:
+          $ref: '#/components/schemas/BotDifficulty'
+        mapWidth:
+          type: integer
+          minimum: 11
+          maximum: 61
+        mapHeight:
+          type: integer
+          minimum: 11
+          maximum: 61
+        roundTime:
+          type: integer
+          minimum: 30
+          maximum: 600
+        wallDensity:
+          type: number
+          minimum: 0
+          maximum: 1
+        enabledPowerUps:
+          type: array
+          items:
+            $ref: '#/components/schemas/PowerUpType'
+        powerUpDropRate:
+          type: number
+          minimum: 0
+          maximum: 1
+        friendlyFire:
+          type: boolean
+        hazardTiles:
+          type: boolean
+        reinforcedWalls:
+          type: boolean
+        enableMapEvents:
+          type: boolean
+        totalGames:
+          type: integer
+          minimum: 1
+          maximum: 1000
+        speed:
+          type: string
+          enum: [fast, realtime]
+        logVerbosity:
+          type: string
+          enum: [normal, detailed, full]
+        botTeams:
+          type: array
+          items:
+            type: integer
+            nullable: true
+        recordReplays:
+          type: boolean
+        botAiId:
+          type: string
+          maxLength: 36
+
+    SimulationBatchStatus:
+      type: object
+      properties:
+        batchId:
+          type: string
+        config:
+          $ref: '#/components/schemas/SimulationConfig'
+        status:
+          type: string
+          enum: [queued, running, completed, cancelled, error]
+        queuePosition:
+          type: integer
+          nullable: true
+        gamesCompleted:
+          type: integer
+        totalGames:
+          type: integer
+        currentGameTick:
+          type: integer
+          nullable: true
+        currentGameMaxTicks:
+          type: integer
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        error:
+          type: string
+
+    SimulationGameResult:
+      type: object
+      properties:
+        gameIndex:
+          type: integer
+        winnerId:
+          type: integer
+          nullable: true
+        winnerName:
+          type: string
+          nullable: true
+        finishReason:
+          type: string
+        durationTicks:
+          type: integer
+        durationSeconds:
+          type: number
+        mapSeed:
+          type: integer
+        hasReplay:
+          type: boolean
+        placements:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              kills:
+                type: integer
+              selfKills:
+                type: integer
+              deaths:
+                type: integer
+              placement:
+                type: integer
+              alive:
+                type: boolean
+              team:
+                type: integer
+                nullable: true
+              bombsPlaced:
+                type: integer
+              powerupsCollected:
+                type: integer
+
+    # ---- Bot AI ----
+    BotAIEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        filename:
+          type: string
+        isBuiltin:
+          type: boolean
+        isActive:
+          type: boolean
+        uploadedBy:
+          type: string
+          nullable: true
+        uploadedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+        fileSize:
+          type: integer
+          description: File size in bytes

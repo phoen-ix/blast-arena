@@ -644,9 +644,11 @@ const simulationConfigSchema = z.object({
   botAiId: z.string().max(36).optional(),
 });
 
-router.get('/admin/simulations', adminOnlyMiddleware, (_req, res) => {
+router.get('/admin/simulations', adminOnlyMiddleware, (req, res) => {
   const mgr = getSimulationManager();
-  res.json(mgr.getHistory());
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+  res.json(mgr.getHistory(page, limit));
 });
 
 router.get('/admin/simulations/:batchId', adminOnlyMiddleware, (req, res) => {

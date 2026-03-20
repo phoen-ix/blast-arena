@@ -173,3 +173,4 @@ npm run format:check        # Prettier format check
 - [Replay System](docs/replay-system.md) — recording, playback, controls
 - [Performance & Internals](docs/performance-and-internals.md) — optimizations, game logging
 - [Infrastructure & Security](docs/infrastructure.md) — security, resilience, Docker, migrations
+- [API Reference](docs/openapi.yaml) — OpenAPI 3.0.3 specification for all REST endpoints
