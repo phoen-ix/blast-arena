@@ -4,6 +4,8 @@ import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
 import { AdminUI } from './AdminUI';
 import { CampaignUI } from './CampaignUI';
+import { FriendsPanel } from './FriendsPanel';
+import { PartyBar } from './PartyBar';
 import { RoomListItem, Room, GameDefaults, BotAIEntry, getErrorMessage } from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../utils/html';
 import { showCreateRoomModal } from './modals/CreateRoomModal';
@@ -19,6 +21,8 @@ export class LobbyUI {
   private notifications: NotificationUI;
   private onJoinRoom: (room: Room) => void;
   private roomListHandler: ((rooms: RoomListItem[]) => void) | null = null;
+  private friendsPanel: FriendsPanel;
+  private partyBar: PartyBar;
 
   constructor(
     socketClient: SocketClient,
@@ -32,6 +36,10 @@ export class LobbyUI {
     this.onJoinRoom = onJoinRoom;
     this.container = document.createElement('div');
     this.container.className = 'lobby-container';
+    this.friendsPanel = new FriendsPanel(socketClient, notifications);
+    const userId = authManager.getUser()?.id ?? 0;
+    this.partyBar = new PartyBar(socketClient, notifications, userId);
+    this.partyBar.setJoinRoomCallback((roomCode) => this.joinRoom(roomCode));
   }
 
   show(): void {
@@ -44,6 +52,8 @@ export class LobbyUI {
     this.loadBanner();
     this.roomListHandler = (rooms: RoomListItem[]) => this.renderRooms(rooms);
     this.socketClient.on('room:list' as any, this.roomListHandler as any);
+    this.friendsPanel.mount();
+    this.partyBar.mount(this.container);
     UIGamepadNavigator.getInstance().pushContext({
       id: 'lobby',
       elements: () => [
@@ -59,7 +69,13 @@ export class LobbyUI {
       this.roomListHandler = null;
     }
     UIGamepadNavigator.getInstance().popContext('lobby');
+    this.friendsPanel.close();
     this.container.remove();
+  }
+
+  destroyPanels(): void {
+    this.friendsPanel.destroy();
+    this.partyBar.destroy();
   }
 
   private render(): void {
@@ -73,6 +89,8 @@ export class LobbyUI {
           <button class="btn btn-primary" id="create-room-btn">+ New Room</button>
           <button class="btn" id="campaign-btn" style="background:linear-gradient(135deg, var(--primary), #ff8f35);color:#fff;font-weight:700;letter-spacing:0.5px;">Campaign</button>
           <button class="btn btn-ghost" id="account-btn">Account</button>
+          <button class="btn btn-ghost" id="friends-btn" style="color:var(--accent);">Friends</button>
+          <button class="btn btn-ghost" id="party-btn">Party</button>
           <button class="btn btn-ghost" id="settings-btn">Settings</button>
           <button class="btn btn-ghost" id="help-btn">Help</button>
           <button class="btn btn-ghost" id="logout-btn">Logout</button>
@@ -98,6 +116,16 @@ export class LobbyUI {
     this.container
       .querySelector('#account-btn')!
       .addEventListener('click', () => this.showAccountModal());
+    this.container.querySelector('#friends-btn')!.addEventListener('click', () => {
+      this.friendsPanel.toggle();
+    });
+    this.container.querySelector('#party-btn')!.addEventListener('click', () => {
+      if (this.partyBar.getParty()) {
+        this.notifications.info('Already in a party');
+      } else {
+        this.partyBar.createParty();
+      }
+    });
     this.container
       .querySelector('#settings-btn')!
       .addEventListener('click', () => this.showSettingsModal());

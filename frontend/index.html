@@ -1516,6 +1516,304 @@
       background: var(--bg-hover);
       color: var(--text);
     }
+
+    /* ================================================
+       Friends Panel
+       ================================================ */
+    .friends-panel {
+      position: fixed;
+      right: -340px;
+      top: 0;
+      width: 340px;
+      height: 100%;
+      background: var(--bg-base);
+      border-left: 1px solid var(--border);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.25s ease;
+      font-family: var(--font-body);
+    }
+    .friends-panel.open {
+      right: 0;
+    }
+    .friends-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .friends-panel-header h3 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text);
+    }
+    .friends-panel-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .friends-panel-close:hover { color: var(--text); }
+    .friends-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .friends-tab {
+      flex: 1;
+      padding: 10px 0;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-dim);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: all var(--transition);
+    }
+    .friends-tab:hover { color: var(--text); }
+    .friends-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .friends-tab .badge {
+      display: inline-block;
+      background: var(--danger);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 8px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .friends-search {
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+    }
+    .friends-search input {
+      flex: 1;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font-body);
+      outline: none;
+    }
+    .friends-search input:focus {
+      border-color: var(--primary);
+    }
+    .friends-search button {
+      padding: 8px 14px;
+      font-size: 12px;
+    }
+    .friends-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
+    }
+    .friend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      transition: background var(--transition);
+    }
+    .friend-item:hover { background: var(--bg-surface); }
+    .friend-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 15px;
+      color: rgba(0,0,0,0.5);
+      font-family: var(--font-display);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .friend-avatar .status-dot {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-base);
+    }
+    .status-dot.online { background: var(--success); }
+    .status-dot.in_lobby { background: var(--success); }
+    .status-dot.in_game { background: var(--warning); }
+    .status-dot.in_campaign { background: var(--info); }
+    .status-dot.offline { background: var(--text-muted); }
+    .friend-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .friend-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .friend-activity {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .friend-activity.active { color: var(--success); }
+    .friend-activity.in-game { color: var(--warning); }
+    .friend-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .friend-actions .btn {
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Party Bar */
+    .party-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 24px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .party-bar .party-label {
+      color: var(--accent);
+      font-weight: 700;
+      font-family: var(--font-display);
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .party-members {
+      display: flex;
+      gap: 6px;
+      flex: 1;
+    }
+    .party-member-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 12px;
+      color: var(--text);
+    }
+    .party-member-chip .leader-icon {
+      color: var(--warning);
+      font-size: 10px;
+    }
+    .party-member-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 11px;
+      color: rgba(0,0,0,0.5);
+      background: var(--accent);
+    }
+
+    /* Party Chat */
+    .party-chat {
+      position: fixed;
+      bottom: 52px;
+      right: 16px;
+      width: 300px;
+      max-height: 250px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      z-index: 190;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .party-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      max-height: 180px;
+      font-size: 12px;
+    }
+    .party-chat-msg {
+      margin-bottom: 6px;
+    }
+    .party-chat-msg .sender {
+      font-weight: 600;
+      color: var(--accent);
+      margin-right: 6px;
+    }
+    .party-chat-msg .text {
+      color: var(--text-dim);
+    }
+    .party-chat-input {
+      display: flex;
+      border-top: 1px solid var(--border);
+      padding: 8px;
+      gap: 6px;
+    }
+    .party-chat-input input {
+      flex: 1;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: var(--font-body);
+      outline: none;
+    }
+
+    /* Invite toast */
+    .invite-toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      font-size: 13px;
+      animation: slideIn 0.3s ease;
+    }
+    .invite-toast .invite-text { flex: 1; color: var(--text); }
+    .invite-toast .invite-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .invite-toast .invite-actions .btn {
+      padding: 4px 12px;
+      font-size: 12px;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
   </style>
 </head>
 <body>

@@ -130,6 +130,7 @@ export class RoomUI {
           <span class="room-mode" style="font-size:12px;padding:4px 12px;">${modeLabel}</span>
         </div>
         <div style="display:flex;gap:12px;align-items:center;">
+          <button class="btn btn-ghost" id="room-invite-friend" style="padding:6px 14px;font-size:12px;color:var(--accent);">Invite Friend</button>
           <span style="color:var(--text-dim);font-size:13px;">Room Code: <strong style="color:var(--text);letter-spacing:2px;font-family:var(--font-mono);">${this.room.code}</strong></span>
         </div>
       </div>
@@ -232,6 +233,14 @@ export class RoomUI {
         </div>
       </div>
     `;
+
+    // Invite friend button
+    const inviteFriendBtn = this.container.querySelector('#room-invite-friend');
+    if (inviteFriendBtn) {
+      inviteFriendBtn.addEventListener('click', () => {
+        this.notifications.info('Use the Friends panel (lobby) to invite friends to this room');
+      });
+    }
 
     // Event listeners
     this.container.querySelector('#room-back')!.addEventListener('click', () => {

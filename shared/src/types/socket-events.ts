@@ -3,6 +3,7 @@ import { Room, RoomPlayer, CreateRoomRequest, RoomListItem } from './lobby';
 import { UserRole } from './auth';
 import { SimulationConfig, SimulationBatchStatus, SimulationGameResult } from './simulation';
 import { CampaignGameState, CampaignLevelSummary } from './campaign';
+import { Friend, FriendRequest, Party, PartyInvite, PartyChatMessage, ActivityStatus } from './friends';
 
 // Client -> Server events
 export interface ClientToServerEvents {
@@ -62,6 +63,78 @@ export interface ClientToServerEvents {
   'campaign:input': (input: PlayerInput) => void;
   'campaign:quit': () => void;
   'campaign:buddyInput': (input: PlayerInput) => void; // stub — buddy mode foundation
+
+  // Friends
+  'friend:list': (
+    callback: (response: {
+      success: boolean;
+      friends?: Friend[];
+      incoming?: FriendRequest[];
+      outgoing?: FriendRequest[];
+      error?: string;
+    }) => void,
+  ) => void;
+  'friend:request': (
+    data: { username: string },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'friend:accept': (
+    data: { fromUserId: number },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'friend:decline': (
+    data: { fromUserId: number },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'friend:cancel': (
+    data: { toUserId: number },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'friend:remove': (
+    data: { friendId: number },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'friend:block': (
+    data: { userId: number },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'friend:unblock': (
+    data: { userId: number },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+
+  // Party
+  'party:create': (
+    callback: (response: { success: boolean; party?: Party; error?: string }) => void,
+  ) => void;
+  'party:invite': (
+    data: { userId: number },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'party:acceptInvite': (
+    data: { inviteId: string },
+    callback: (response: { success: boolean; party?: Party; error?: string }) => void,
+  ) => void;
+  'party:declineInvite': (data: { inviteId: string }) => void;
+  'party:leave': (
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'party:kick': (
+    data: { userId: number },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'party:chat': (data: { message: string }) => void;
+
+  // Room invites
+  'invite:room': (
+    data: { userId: number },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'invite:acceptRoom': (
+    data: { inviteId: string },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+  'invite:declineRoom': (data: { inviteId: string }) => void;
 }
 
 // Server -> Client events
@@ -135,6 +208,23 @@ export interface ServerToClientEvents {
     levelId: number;
     reason: string;
   }) => void;
+
+  // Friends
+  'friend:update': (data: { friends: Friend[]; incoming: FriendRequest[]; outgoing: FriendRequest[] }) => void;
+  'friend:requestReceived': (data: FriendRequest) => void;
+  'friend:removed': (data: { userId: number }) => void;
+  'friend:online': (data: { userId: number; activity: ActivityStatus }) => void;
+  'friend:offline': (data: { userId: number }) => void;
+
+  // Party
+  'party:state': (party: Party) => void;
+  'party:disbanded': () => void;
+  'party:invite': (invite: PartyInvite) => void;
+  'party:chat': (message: PartyChatMessage) => void;
+  'party:joinRoom': (data: { roomCode: string }) => void;
+
+  // Room invites
+  'invite:room': (invite: PartyInvite) => void;
 }
 
 // Inter-server events (if scaling later)
@@ -151,4 +241,6 @@ export interface SocketData {
   activeRoomCode?: string;
   /** Cached campaign session ID for fast campaign:input dispatch */
   activeCampaignSession?: string;
+  /** Active party ID */
+  activePartyId?: string;
 }

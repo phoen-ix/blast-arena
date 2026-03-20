@@ -214,6 +214,28 @@ export interface CampaignUserStateRow extends RowDataPacket {
   updated_at: Date;
 }
 
+/** Friendship table row */
+export interface FriendshipRow extends RowDataPacket {
+  id: number;
+  user_id: number;
+  friend_id: number;
+  status: 'pending' | 'accepted';
+  created_at: Date;
+  updated_at: Date;
+  // Joined fields
+  username?: string;
+}
+
+/** User block table row */
+export interface UserBlockRow extends RowDataPacket {
+  id: number;
+  blocker_id: number;
+  blocked_id: number;
+  created_at: Date;
+  // Joined fields
+  username?: string;
+}
+
 /** Admin user list row (user joined with stats) */
 export interface AdminUserRow extends RowDataPacket {
   id: number;

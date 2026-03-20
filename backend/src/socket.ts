@@ -15,6 +15,10 @@ import {
   AuthPayload,
   PublicUser,
 } from '@blast-arena/shared';
+import { setupFriendHandlers, notifyFriendsOnline, notifyFriendsOffline, cleanupFriendLimiters } from './handlers/friendHandlers';
+import { setupPartyHandlers, handlePartyDisconnect, cleanupPartyLimiters } from './handlers/partyHandlers';
+import * as presenceService from './services/presence';
+import * as partyService from './services/party';
 
 type TypedServer = Server<
   ClientToServerEvents,
@@ -98,6 +102,24 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       socket.join('sim:admin');
     }
 
+    // Join user-specific room for friend/party notifications
+    socket.join(`user:${socket.data.userId}`);
+
+    // Set online presence and notify friends
+    presenceService.setPresence(socket.data.userId, 'in_lobby').catch(() => {});
+    notifyFriendsOnline(io, socket.data.userId, 'in_lobby');
+
+    // Restore party membership if reconnecting
+    const existingPartyId = await partyService.getPlayerParty(socket.data.userId);
+    if (existingPartyId) {
+      socket.data.activePartyId = existingPartyId;
+      socket.join(`party:${existingPartyId}`);
+    }
+
+    // Setup friend and party handlers
+    setupFriendHandlers(socket, io);
+    setupPartyHandlers(socket, io);
+
     // Check if player was in an active game (reconnection after disconnect)
     const existingRoomCode = await lobbyService.getPlayerRoom(socket.data.userId);
     if (existingRoomCode) {
@@ -137,6 +159,14 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         socket.data.activeRoomCode = room.code;
         callback({ success: true, room });
         broadcastRoomList();
+
+        // Party follows leader into room
+        if (socket.data.activePartyId) {
+          const party = await partyService.getParty(socket.data.activePartyId);
+          if (party && party.leaderId === socket.data.userId) {
+            socket.to(`party:${party.id}`).emit('party:joinRoom', { roomCode: room.code });
+          }
+        }
       } catch (err: unknown) {
         callback({ success: false, error: getErrorMessage(err) });
       }
@@ -165,6 +195,14 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
           .emit('room:playerJoined', { user: currentUser, ready: false, team: null });
         callback({ success: true, room });
         broadcastRoomList();
+
+        // Party follows leader into room
+        if (socket.data.activePartyId) {
+          const party = await partyService.getParty(socket.data.activePartyId);
+          if (party && party.leaderId === socket.data.userId) {
+            socket.to(`party:${party.id}`).emit('party:joinRoom', { roomCode: room.code });
+          }
+        }
       } catch (err: unknown) {
         callback({ success: false, error: getErrorMessage(err) });
       }
@@ -245,6 +283,15 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         await roomManager.createGame(room);
         logger.info({ roomCode, players: room.players.length }, 'Game started');
         broadcastRoomList();
+
+        // Update presence for all players in the room to 'in_game'
+        for (const player of room.players) {
+          presenceService.setPresence(player.user.id, 'in_game', {
+            roomCode,
+            gameMode: room.config.gameMode,
+          }).catch(() => {});
+          notifyFriendsOnline(io, player.user.id, 'in_game');
+        }
       } catch (err) {
         logger.error({ err, roomCode }, 'Failed to start game');
         io.to(`room:${roomCode}`).emit('error', { message: 'Failed to start game' });
@@ -648,6 +695,10 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
         game.start();
 
+        // Update presence to in_campaign
+        presenceService.setPresence(socket.data.userId, 'in_campaign').catch(() => {});
+        notifyFriendsOnline(io, socket.data.userId, 'in_campaign');
+
         // Build initial state before callback to catch serialization errors
         const initialState = {
           state: {
@@ -694,7 +745,16 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
     socket.on('disconnect', async () => {
       logger.info({ userId: socket.data.userId }, 'Socket disconnected');
       removeSocket(socket.id);
+      cleanupFriendLimiters(socket.id);
+      cleanupPartyLimiters(socket.id);
       socket.data.activeRoomCode = undefined;
+
+      // Remove presence and notify friends offline
+      presenceService.removePresence(socket.data.userId).catch(() => {});
+      notifyFriendsOffline(io, socket.data.userId);
+
+      // Handle party disconnect (leave/disband)
+      await handlePartyDisconnect(socket, io);
 
       // Clean up campaign session
       if (socket.data.activeCampaignSession) {

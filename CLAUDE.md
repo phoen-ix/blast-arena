@@ -84,6 +84,42 @@ Admin-only system for custom AI upload/management. Built-in AI as fallback. Thre
 ## Bot Simulation System
 Admin-only batch runner for bot-only games. Fast/real-time modes, queue system (max 10), live spectating. `getHistory(page, limit)` returns paginated `{ batches, total }`. See [docs/admin-and-systems.md](docs/admin-and-systems.md#bot-simulation-system).
 
+## Friends + Party System
+Social features for the lobby: friend list, online presence, party grouping, and invite system.
+
+### Architecture
+- **Friendships**: DB-backed (`friendships` table). One row per pending request, two reciprocal rows on accept (fast `WHERE user_id=?` lookups). `user_blocks` table for blocking.
+- **Presence**: Redis ephemeral keys (`presence:{userId}`) with 120s TTL. Statuses: `offline`, `online`, `in_lobby`, `in_game`, `in_campaign`. Batch lookup via MGET pipeline.
+- **Parties**: Redis-only (ephemeral). Keys: `party:{partyId}` (party state), `player:party:{userId}` (user→party lookup). 1-hour TTL. Atomic join via Lua script to prevent race conditions.
+- **Invites**: Redis with 60s TTL (`invite:{recipientId}:{inviteId}`). Auto-expire.
+
+### Key Patterns
+- Each socket joins `user:{userId}` room on connect for targeted friend/party notifications
+- Party follows leader: when leader creates/joins a room, all members receive `party:joinRoom` and auto-join
+- Socket handlers extracted to `backend/src/handlers/friendHandlers.ts` and `partyHandlers.ts`
+- Rate limiters: `friendRequestLimiter` (3/sec), `friendActionLimiter` (5/sec), `partyChatLimiter` (5/sec), `inviteLimiter` (3/sec)
+- On disconnect: presence removed, friends notified offline, party leave/disband handled
+
+### Frontend
+- **FriendsPanel** (`frontend/src/ui/FriendsPanel.ts`): Fixed slide-out panel (right side, z-index 200). Three tabs: Friends (sorted online-first), Requests (incoming+outgoing), Blocked. Search bar with username prefix lookup. Live-updates via socket events.
+- **PartyBar** (`frontend/src/ui/PartyBar.ts`): Persistent bar below lobby header when in party. Member chips, chat toggle, leave button. Chat window is in-memory ephemeral messages.
+- **Invite toasts**: Action toasts with Accept/Decline buttons, 30s auto-dismiss. Triggered by `party:invite` and `invite:room` socket events.
+- LobbyUI: Friends button + Party button added to lobby header. PartyBar mounted below header.
+
+### Services
+- `backend/src/services/friends.ts`: sendRequest, accept, decline, cancel, remove, block, unblock, getFriends, getFriendIds, getPending, areFriends, isBlocked, search
+- `backend/src/services/presence.ts`: set, get, getBatch (MGET), remove, refresh
+- `backend/src/services/party.ts`: create, get, join (Lua), leave, kick, disband, invite CRUD
+
+### REST Routes (`/api/friends`)
+- `GET /friends` — list friends + pending + blocked (authMiddleware)
+- `GET /friends/blocked` — blocked users (authMiddleware)
+- `POST /friends/search` — username prefix search (authMiddleware + validate)
+
+### Database
+- Migration `013_friends_parties.sql`: `friendships` + `user_blocks` tables
+- Row types: `FriendshipRow`, `UserBlockRow` in `backend/src/db/types.ts`
+
 ## Game Architecture
 - 20 tick/sec server game loop (GameLoop.ts -> GameState.ts)
 - GameState.processTick(): bot AI -> inputs -> movement -> bomb slide -> bomb timers -> explosions -> collisions -> power-ups -> KOTH scoring -> map events -> zone -> deathmatch respawns -> time check -> win check
@@ -172,12 +208,12 @@ npm test                    # Run all workspace tests (backend + frontend)
 npx jest --config tests/backend/jest.config.ts  # Backend only (from project root)
 cd frontend && npx vitest run                   # Frontend only
 ```
-- 1487 tests: 1445 backend (Jest, 43 suites) + 42 frontend (Vitest, 3 suites)
+- 1555 tests: 1513 backend (Jest, 47 suites) + 42 frontend (Vitest, 3 suites)
 - Game: GameState (lifecycle, movement, bombs, explosions, power-ups, all modes), GameLoop, GameRoom, Bomb, Map, CollisionSystem, InputBuffer, BattleRoyale, BotAI, Enemy (movement, speed, boss phases, type config), EnemyAI (5 movement patterns, pathfinding, boss behaviors), Player (state, movement, power-ups, shield, death, respawn), PowerUp (types, grid placement, removal), Explosion (propagation, timing, chain reactions, wall destruction), CampaignGame (map building, spawn fallback, enemy spawning, win/loss), RoomManager (room lifecycle, player connections, cleanup)
-- Services: auth (register/login/refresh/logout/verify/reset), user (profile/username/email/password), lobby (rooms/join/leave/ready/teams), settings (get/set/defaults), email (SMTP config, send verification/reset/change/test, transporter caching, env/DB config priority), botai-sandbox (source scan, global blocking, vm sandbox, import blocking, eval/Function blocking, timeout), campaign (worlds CRUD/reorder/progress, levels CRUD/reorder/next-level, JSON field mapping), campaign-progress (user state, level progress, star calculation, attempt/completion recording), enemy-type (CRUD, bulk config fetch, JSON config parsing, isBoss extraction), admin (user CRUD/roles/deactivation, server stats, match history/detail, audit log, announcements/banners), replay (list/read/delete/placements, gzip decompression, file discovery), botai (upload/compile/update/reupload/delete, registry lifecycle, source download)
+- Services: auth (register/login/refresh/logout/verify/reset), user (profile/username/email/password), lobby (rooms/join/leave/ready/teams), settings (get/set/defaults), email (SMTP config, send verification/reset/change/test, transporter caching, env/DB config priority), botai-sandbox (source scan, global blocking, vm sandbox, import blocking, eval/Function blocking, timeout), campaign (worlds CRUD/reorder/progress, levels CRUD/reorder/next-level, JSON field mapping), campaign-progress (user state, level progress, star calculation, attempt/completion recording), enemy-type (CRUD, bulk config fetch, JSON config parsing, isBoss extraction), admin (user CRUD/roles/deactivation, server stats, match history/detail, audit log, announcements/banners), replay (list/read/delete/placements, gzip decompression, file discovery), botai (upload/compile/update/reupload/delete, registry lifecycle, source download), friends (send/accept/decline/cancel/remove/block/unblock, getFriends with presence, getPending, areFriends, isBlocked, search, count), presence (set/get/getBatch/remove/refresh, TTL, JSON serialization), party (create/join/leave/kick/disband, Lua script, invite CRUD)
 - Simulation: SimulationManager (batch lifecycle, queue management, getHistory pagination, disk scanning, batch results/deletion)
 - Middleware: auth + admin role checks, validation (Zod), error handler, rate limiter (Redis + fallback)
-- Routes: health endpoint, auth (register/login/logout/refresh/verify/forgot/reset, cookie handling, middleware presence), lobby (room list/create, user mapping, middleware), user (profile CRUD, email change admin bypass, password validation, confirm-email public endpoint), campaign (worlds/levels/enemies CRUD, reorder, progress, import/export, middleware), admin (users/matches/rooms/audit/announcements/simulations/bot-ai/replays/settings, staff vs admin middleware)
+- Routes: health endpoint, auth (register/login/logout/refresh/verify/forgot/reset, cookie handling, middleware presence), lobby (room list/create, user mapping, middleware), user (profile CRUD, email change admin bypass, password validation, confirm-email public endpoint), campaign (worlds/levels/enemies CRUD, reorder, progress, import/export, middleware), admin (users/matches/rooms/audit/announcements/simulations/bot-ai/replays/settings, staff vs admin middleware), friends (list/blocked/search, middleware presence)
 - Utils: crypto (hash/compare/token), socket rate limiting
 - Shared: grid utilities, validation (username/password/email/room name)
 - Frontend (Vitest): html escaping (escapeHtml/escapeAttr), Settings (localStorage cache/defaults/merge), grid utils (posToTile/tileToPos/explosionCells/manhattanDistance/isInBounds)

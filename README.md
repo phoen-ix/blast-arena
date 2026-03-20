@@ -86,6 +86,13 @@ Admins can upload custom AI implementations as TypeScript files. See [docs/bot-a
 
 All actions audit-logged. See [docs/admin-and-systems.md](docs/admin-and-systems.md).
 
+## Friends + Party System
+
+- **Friends List**: Send/accept/decline friend requests, block/unblock, username search. Friends panel slides out from the right side of the lobby.
+- **Online Presence**: See friends' real-time status (online, in lobby, in game, in campaign). Presence tracked via Redis with 120s TTL.
+- **Parties**: Create a party, invite friends, party chat. When the party leader joins a room, all members auto-follow.
+- **Room Invites**: Invite friends directly to your current room. Invite toasts with Accept/Decline buttons (30s auto-dismiss).
+
 ## Game Replays
 
 Games recorded as gzipped JSON with video-player controls (play/pause, seek, 0.5-4x speed), synced event log panel, and click-to-follow spectating. Access via Matches tab or Simulations tab. See [docs/replay-system.md](docs/replay-system.md).
@@ -138,11 +145,11 @@ blast-arena/
 ├── shared/                  # Shared types, constants, utilities
 ├── backend/
 │   └── src/
-│       ├── routes/          # REST endpoints (auth, lobby, user, admin, campaign)
+│       ├── routes/          # REST endpoints (auth, lobby, user, admin, campaign, friends)
 │       ├── game/            # Server game logic (GameLoop, GameState, BotAI, etc.)
 │       ├── simulation/      # Bot simulation system
 │       ├── db/              # MariaDB connection, migrations, redis
-│       ├── services/        # Auth, user, admin, lobby, email, replay, settings
+│       ├── services/        # Auth, user, admin, lobby, email, replay, settings, friends, party, presence
 │       └── middleware/       # Auth, rate limiting, staff checks
 ├── frontend/
 │   ├── index.html           # HTML + full CSS design system (INFERNO theme)
@@ -159,7 +166,7 @@ blast-arena/
 ## Testing & Linting
 
 ```bash
-npm test                    # Run all test suites (1487 tests)
+npm test                    # Run all test suites (1555 tests)
 npm run lint                # ESLint across all workspaces
 npm run format:check        # Prettier format check
 ```

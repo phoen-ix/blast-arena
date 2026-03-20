@@ -20,6 +20,7 @@ export class LobbyScene extends Phaser.Scene {
   private adminToastHandler: ((data: any) => void) | null = null;
   private adminBannerHandler: ((data: any) => void) | null = null;
   private adminKickedHandler: ((data: any) => void) | null = null;
+  private partyJoinRoomHandler: ((data: any) => void) | null = null;
 
   constructor() {
     super({ key: 'LobbyScene' });
@@ -149,6 +150,19 @@ export class LobbyScene extends Phaser.Scene {
     };
     this.socketClient.on('admin:kicked' as any, this.adminKickedHandler as any);
 
+    // Party join room listener (party leader joined a room, follow them)
+    this.partyJoinRoomHandler = (data: any) => {
+      if (data.roomCode) {
+        this.socketClient.emit('room:join' as any, { code: data.roomCode }, ((response: any) => {
+          if (response.success && response.room) {
+            this.notifications.info('Following party leader into room');
+            this.onJoinRoom(response.room);
+          }
+        }) as any);
+      }
+    };
+    this.socketClient.on('party:joinRoom' as any, this.partyJoinRoomHandler as any);
+
     // Background
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
@@ -228,6 +242,11 @@ export class LobbyScene extends Phaser.Scene {
       this.socketClient.off('admin:kicked' as any, this.adminKickedHandler as any);
       this.adminKickedHandler = null;
     }
+    if (this.partyJoinRoomHandler) {
+      this.socketClient.off('party:joinRoom' as any, this.partyJoinRoomHandler as any);
+      this.partyJoinRoomHandler = null;
+    }
+    this.lobbyUI?.destroyPanels();
     this.lobbyUI?.hide();
     this.roomUI?.hide();
   }
