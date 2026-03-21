@@ -701,18 +701,19 @@ export class GameScene extends Phaser.Scene {
     const p1Sprite = this.playerRenderer.getSprite(this.localPlayerId);
     const p2Sprite = this.playerRenderer.getSprite(this.localP2Id);
 
-    this.drawPartnerArrow(this.p1PartnerArrow, this.cameras.main, p2Sprite);
-    this.drawPartnerArrow(this.p2PartnerArrow, this.p2Camera, p1Sprite);
+    this.drawPartnerArrow(this.p1PartnerArrow, this.cameras.main, p1Sprite, p2Sprite);
+    this.drawPartnerArrow(this.p2PartnerArrow, this.p2Camera, p2Sprite, p1Sprite);
   }
 
   private drawPartnerArrow(
     gfx: Phaser.GameObjects.Graphics | null,
     cam: Phaser.Cameras.Scene2D.Camera,
+    localSprite: Phaser.GameObjects.Sprite | undefined,
     partnerSprite: Phaser.GameObjects.Sprite | undefined,
   ): void {
     if (!gfx) return;
     gfx.clear();
-    if (!partnerSprite) return;
+    if (!partnerSprite || !localSprite) return;
 
     // Convert partner world position to camera-local coords
     const localX = (partnerSprite.x - cam.scrollX) * cam.zoom;
@@ -724,22 +725,40 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Direction from viewport center to off-screen partner
-    const cx = cam.width / 2;
-    const cy = cam.height / 2;
-    const dx = localX - cx;
-    const dy = localY - cy;
+    // Direction from local player to off-screen partner (line connecting the two)
+    const myX = (localSprite.x - cam.scrollX) * cam.zoom;
+    const myY = (localSprite.y - cam.scrollY) * cam.zoom;
+    const dx = localX - myX;
+    const dy = localY - myY;
     const angle = Math.atan2(dy, dx);
 
-    // Find edge intersection point
+    // Find edge intersection from local player along the player-to-partner line
     const edgePad = 24;
     const hw = cam.width / 2 - edgePad;
     const hh = cam.height / 2 - edgePad;
-    let scale = Math.min(Math.abs(hw / (dx || 0.001)), Math.abs(hh / (dy || 0.001)));
-    scale = Math.min(scale, 1);
+    const cx = cam.width / 2;
+    const cy = cam.height / 2;
+    // Ray from myX,myY in direction angle — find where it hits the viewport edge
+    let tMin = Infinity;
+    if (Math.abs(Math.cos(angle)) > 0.001) {
+      const tRight = (cx + hw - myX) / Math.cos(angle);
+      const tLeft = (cx - hw - myX) / Math.cos(angle);
+      if (tRight > 0) tMin = Math.min(tMin, tRight);
+      if (tLeft > 0) tMin = Math.min(tMin, tLeft);
+    }
+    if (Math.abs(Math.sin(angle)) > 0.001) {
+      const tBottom = (cy + hh - myY) / Math.sin(angle);
+      const tTop = (cy - hh - myY) / Math.sin(angle);
+      if (tBottom > 0) tMin = Math.min(tMin, tBottom);
+      if (tTop > 0) tMin = Math.min(tMin, tTop);
+    }
+    if (!isFinite(tMin)) tMin = 1;
 
-    const arrowX = cx + dx * scale;
-    const arrowY = cy + dy * scale;
+    const rawX = myX + Math.cos(angle) * tMin;
+    const rawY = myY + Math.sin(angle) * tMin;
+    // Clamp to viewport bounds
+    const arrowX = Math.max(edgePad, Math.min(cam.width - edgePad, rawX));
+    const arrowY = Math.max(edgePad, Math.min(cam.height - edgePad, rawY));
 
     // Triangle pointing toward partner
     const size = 10;
