@@ -1,6 +1,7 @@
 import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
 import { escapeHtml } from '../utils/html';
+import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import {
   LeaderboardResponse,
   LeaderboardEntry,
@@ -47,22 +48,78 @@ export class LeaderboardUI {
     this.container.remove();
   }
 
+  async renderEmbedded(container: HTMLElement): Promise<void> {
+    this.container = container;
+    this.container.innerHTML = `
+      <div class="view-content">
+        <div class="lb-filter-bar">
+          <label>Season:</label>
+          <select id="lb-season-select" class="admin-select">
+            <option value="">Loading...</option>
+          </select>
+        </div>
+        <div id="lb-table-container" class="lb-content">
+          <div class="lb-status">Loading...</div>
+        </div>
+        <div id="lb-pagination" class="admin-pagination"></div>
+      </div>
+    `;
+
+    this.container.querySelector('#lb-season-select')!.addEventListener('change', (e) => {
+      const val = (e.target as HTMLSelectElement).value;
+      this.currentSeasonId = val ? parseInt(val, 10) : null;
+      this.currentPage = 1;
+      this.loadLeaderboard();
+    });
+
+    this.container.addEventListener('click', (e: Event) => {
+      const target = (e.target as HTMLElement).closest('[data-user-id]') as HTMLElement | null;
+      if (target && this.onViewProfile) {
+        this.onViewProfile(parseInt(target.dataset.userId!, 10));
+      }
+    });
+
+    this.currentPage = 1;
+    this.pushGamepadContext();
+    await this.loadInitialData();
+  }
+
+  destroy(): void {
+    UIGamepadNavigator.getInstance().popContext('leaderboard-ui');
+  }
+
+  private pushGamepadContext(): void {
+    UIGamepadNavigator.getInstance().popContext('leaderboard-ui');
+    UIGamepadNavigator.getInstance().pushContext({
+      id: 'leaderboard-ui',
+      elements: () => [
+        ...this.container.querySelectorAll<HTMLElement>('#lb-season-select'),
+        ...this.container.querySelectorAll<HTMLElement>('.lb-user-link'),
+        ...this.container.querySelectorAll<HTMLElement>('#lb-prev, #lb-next'),
+      ],
+      onBack: () => {
+        this.hide();
+        this.onBack();
+      },
+    });
+  }
+
   private renderShell(): void {
     this.container.innerHTML = `
       <div class="admin-header">
-        <h1 style="color:var(--primary);margin:0;">Leaderboard</h1>
+        <h1>Leaderboard</h1>
         <button class="btn btn-secondary" id="lb-back">Back to Lobby</button>
       </div>
-      <div style="padding:0 24px 12px;display:flex;align-items:center;gap:12px;">
-        <label style="color:var(--text-dim);font-size:13px;">Season:</label>
-        <select id="lb-season-select" style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none;">
+      <div class="lb-filter-bar">
+        <label>Season:</label>
+        <select id="lb-season-select" class="admin-select">
           <option value="">Loading...</option>
         </select>
       </div>
-      <div id="lb-table-container" style="padding:0 24px 24px;">
-        <div style="color:var(--text-dim);padding:40px 0;text-align:center;">Loading...</div>
+      <div id="lb-table-container" class="lb-content">
+        <div class="lb-status">Loading...</div>
       </div>
-      <div id="lb-pagination" style="padding:0 24px 24px;display:flex;justify-content:center;align-items:center;gap:12px;"></div>
+      <div id="lb-pagination" class="admin-pagination"></div>
     `;
 
     this.container.querySelector('#lb-back')!.addEventListener('click', () => {
@@ -87,11 +144,11 @@ export class LeaderboardUI {
 
   private async loadInitialData(): Promise<void> {
     try {
-      const [seasonsData, tiersData] = await Promise.all([
-        ApiClient.get<Season[]>('/leaderboard/seasons'),
+      const [seasonsResp, tiersData] = await Promise.all([
+        ApiClient.get<{ seasons: Season[]; total: number }>('/leaderboard/seasons'),
         ApiClient.get<RankConfig>('/leaderboard/tiers'),
       ]);
-      this.seasons = seasonsData;
+      this.seasons = seasonsResp.seasons ?? [];
       this.rankConfig = tiersData;
       this.populateSeasonSelect();
     } catch (err: unknown) {
@@ -101,25 +158,31 @@ export class LeaderboardUI {
   }
 
   private populateSeasonSelect(): void {
-    const select = this.container.querySelector('#lb-season-select') as HTMLSelectElement;
+    const filterBar = this.container.querySelector('.lb-filter-bar') as HTMLElement;
+    if (!filterBar) return;
+
+    if (this.seasons.length === 0) {
+      filterBar.style.display = 'none';
+      return;
+    }
+
+    const select = filterBar.querySelector('#lb-season-select') as HTMLSelectElement;
     if (!select) return;
 
     const activeSeason = this.seasons.find((s) => s.isActive);
     if (activeSeason) this.currentSeasonId = activeSeason.id;
 
-    select.innerHTML =
-      this.seasons
-        .map(
-          (s) =>
-            `<option value="${s.id}" ${s.id === this.currentSeasonId ? 'selected' : ''}>${escapeHtml(s.name)}${s.isActive ? ' (Current)' : ''}</option>`,
-        )
-        .join('') || '<option value="">No seasons</option>';
+    select.innerHTML = this.seasons
+      .map(
+        (s) =>
+          `<option value="${s.id}" ${s.id === this.currentSeasonId ? 'selected' : ''}>${escapeHtml(s.name)}${s.isActive ? ' (Current)' : ''}</option>`,
+      )
+      .join('');
   }
 
   private async loadLeaderboard(): Promise<void> {
     const tableContainer = this.container.querySelector('#lb-table-container')!;
-    tableContainer.innerHTML =
-      '<div style="color:var(--text-dim);padding:40px 0;text-align:center;">Loading...</div>';
+    tableContainer.innerHTML = '<div class="lb-status">Loading...</div>';
 
     try {
       let url = `/leaderboard?page=${this.currentPage}&limit=${PAGE_LIMIT}`;
@@ -128,7 +191,7 @@ export class LeaderboardUI {
       this.renderTable(data);
       this.renderPagination(data);
     } catch (err: unknown) {
-      tableContainer.innerHTML = `<div style="color:var(--danger);padding:40px 0;text-align:center;">Failed to load leaderboard: ${escapeHtml(getErrorMessage(err))}</div>`;
+      tableContainer.innerHTML = `<div class="lb-status error">Failed to load leaderboard: ${escapeHtml(getErrorMessage(err))}</div>`;
     }
   }
 
@@ -136,13 +199,12 @@ export class LeaderboardUI {
     const tableContainer = this.container.querySelector('#lb-table-container')!;
 
     if (data.entries.length === 0) {
-      tableContainer.innerHTML =
-        '<div style="color:var(--text-dim);padding:40px 0;text-align:center;">No entries yet for this season.</div>';
+      tableContainer.innerHTML = '<div class="lb-status">No entries yet for this season.</div>';
       return;
     }
 
     tableContainer.innerHTML = `
-      <table class="admin-table">
+      <table class="data-table">
         <thead>
           <tr>
             <th style="width:50px;">#</th>
@@ -162,16 +224,16 @@ export class LeaderboardUI {
   }
 
   private renderRow(entry: LeaderboardEntry): string {
-    const rankBadge = `<span style="background:${escapeHtml(entry.rankColor)};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;">${escapeHtml(entry.rankTier)}</span>`;
+    const rankBadge = `<span class="lb-rank-pill" style="background:${escapeHtml(entry.rankColor)}">${escapeHtml(entry.rankTier)}</span>`;
 
     return `
       <tr>
-        <td style="font-weight:700;color:var(--text-dim);">${entry.rank}</td>
+        <td class="lb-rank-col">${entry.rank}</td>
         <td>
-          <span data-user-id="${entry.userId}" style="color:var(--accent);cursor:pointer;font-weight:600;">${escapeHtml(entry.username)}</span>
+          <span class="lb-user-link" data-user-id="${entry.userId}">${escapeHtml(entry.username)}</span>
         </td>
-        <td><span style="background:var(--bg-elevated);color:var(--text);padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;">${entry.level}</span></td>
-        <td style="font-weight:600;">${entry.eloRating}</td>
+        <td><span class="lb-level-pill">${entry.level}</span></td>
+        <td class="lb-elo-col">${entry.eloRating}</td>
         <td>${rankBadge}</td>
         <td>${entry.totalWins}</td>
         <td>${entry.totalKills}</td>
@@ -189,9 +251,9 @@ export class LeaderboardUI {
     }
 
     paginationEl.innerHTML = `
-      <button class="btn btn-secondary" id="lb-prev" ${this.currentPage <= 1 ? 'disabled' : ''} style="padding:6px 14px;font-size:13px;">Prev</button>
-      <span style="color:var(--text-dim);font-size:13px;">Page ${this.currentPage} of ${totalPages}</span>
-      <button class="btn btn-secondary" id="lb-next" ${this.currentPage >= totalPages ? 'disabled' : ''} style="padding:6px 14px;font-size:13px;">Next</button>
+      <button class="btn btn-secondary btn-sm" id="lb-prev" ${this.currentPage <= 1 ? 'disabled' : ''}>Prev</button>
+      <span class="page-info">Page ${this.currentPage} of ${totalPages}</span>
+      <button class="btn btn-secondary btn-sm" id="lb-next" ${this.currentPage >= totalPages ? 'disabled' : ''}>Next</button>
     `;
 
     paginationEl.querySelector('#lb-prev')?.addEventListener('click', () => {

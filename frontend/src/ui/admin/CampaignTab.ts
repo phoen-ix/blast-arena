@@ -88,9 +88,9 @@ export class CampaignTab {
     if (!this.container) return;
 
     this.container.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h3 style="color:var(--text);margin:0;">Campaign Manager</h3>
-        <div style="display:flex;gap:8px;">
+      <div class="camp-tab-header">
+        <h3>Campaign Manager</h3>
+        <div class="flex-row">
           <button class="btn ${this.viewMode === 'worlds' ? 'btn-primary' : 'btn-ghost'}" id="camp-view-worlds">Worlds &amp; Levels</button>
           <button class="btn ${this.viewMode === 'enemies' ? 'btn-primary' : 'btn-ghost'}" id="camp-view-enemies">Enemy Types</button>
         </div>
@@ -152,10 +152,10 @@ export class CampaignTab {
 
   private renderWorldsTable(content: HTMLElement): void {
     content.innerHTML = `
-      <div style="margin-bottom:12px;">
+      <div class="camp-toolbar">
         <button class="btn btn-primary" id="camp-create-world">Create World</button>
       </div>
-      <table class="admin-table">
+      <table class="data-table">
         <thead>
           <tr>
             <th style="width:30px;"></th>
@@ -168,7 +168,7 @@ export class CampaignTab {
           </tr>
         </thead>
         <tbody id="camp-worlds-body">
-          ${this.worlds.length === 0 ? '<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:24px;">No worlds created yet</td></tr>' : this.worlds.map((w) => this.renderWorldRow(w)).join('')}
+          ${this.worlds.length === 0 ? '<tr><td colspan="7" class="camp-empty-cell">No worlds created yet</td></tr>' : this.worlds.map((w) => this.renderWorldRow(w)).join('')}
         </tbody>
       </table>
     `;
@@ -182,26 +182,26 @@ export class CampaignTab {
 
   private renderWorldRow(world: WorldWithLevels): string {
     const publishBadge = world.isPublished
-      ? '<span style="color:var(--success);font-weight:600;">Published</span>'
-      : '<span style="color:var(--text-dim);">Draft</span>';
+      ? '<span class="text-success font-semibold">Published</span>'
+      : '<span class="text-dim">Draft</span>';
     const expandIcon = world.expanded ? '&#9660;' : '&#9654;';
 
     let rows = `
-      <tr data-world-id="${world.id}" class="camp-world-row" style="cursor:pointer;">
-        <td style="text-align:center;font-size:11px;" class="camp-expand">${expandIcon}</td>
+      <tr data-world-id="${world.id}" class="camp-world-row clickable">
+        <td class="camp-expand-cell camp-expand">${expandIcon}</td>
         <td><strong>${escapeHtml(world.name)}</strong></td>
-        <td><span style="background:var(--bg-hover);padding:2px 8px;border-radius:4px;font-size:12px;">${escapeHtml(world.theme)}</span></td>
+        <td><span class="camp-theme-badge">${escapeHtml(world.theme)}</span></td>
         <td>${world.levelCount ?? 0}</td>
         <td>${publishBadge}</td>
         <td>
-          <div style="display:flex;gap:4px;align-items:center;">
+          <div class="camp-order-cell">
             <button class="btn-sm btn-ghost camp-order-up" data-id="${world.id}" title="Move up">&#9650;</button>
-            <span style="min-width:24px;text-align:center;">${world.sortOrder}</span>
+            <span class="camp-order-value">${world.sortOrder}</span>
             <button class="btn-sm btn-ghost camp-order-down" data-id="${world.id}" title="Move down">&#9660;</button>
           </div>
         </td>
         <td>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div class="camp-btn-group">
             <button class="btn-sm btn-secondary camp-toggle-pub-world" data-id="${world.id}" data-pub="${world.isPublished}">${world.isPublished ? 'Unpublish' : 'Publish'}</button>
             <button class="btn-sm btn-secondary camp-edit-world" data-id="${world.id}">Edit</button>
             <button class="btn-sm btn-danger camp-delete-world" data-id="${world.id}" data-name="${escapeAttr(world.name)}">Delete</button>
@@ -213,9 +213,9 @@ export class CampaignTab {
     if (world.expanded) {
       rows += `
         <tr class="camp-levels-container" data-world-id="${world.id}">
-          <td colspan="7" style="padding:0 0 0 32px;background:var(--bg-deep);">
-            <div id="camp-levels-${world.id}" style="padding:12px 0;">
-              ${world.levels ? this.renderLevelsSection(world) : '<span style="color:var(--text-dim);">Loading levels...</span>'}
+          <td colspan="7" class="camp-levels-nested">
+            <div id="camp-levels-${world.id}" class="camp-levels-inner">
+              ${world.levels ? this.renderLevelsSection(world) : '<span class="text-dim">Loading levels...</span>'}
             </div>
           </td>
         </tr>
@@ -228,17 +228,17 @@ export class CampaignTab {
   private renderLevelsSection(world: WorldWithLevels): string {
     const levels = world.levels || [];
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="color:var(--text-dim);font-size:13px;font-weight:600;">Levels in ${escapeHtml(world.name)}</span>
-        <div style="display:flex;gap:6px;">
+      <div class="camp-levels-header">
+        <span class="camp-levels-title">Levels in ${escapeHtml(world.name)}</span>
+        <div class="camp-btn-group">
           <button class="btn-sm btn-secondary camp-import-level" data-world-id="${world.id}">Import Level</button>
           <button class="btn-sm btn-primary camp-create-level" data-world-id="${world.id}">Add Level</button>
         </div>
       </div>
       ${
         levels.length === 0
-          ? '<div style="color:var(--text-dim);padding:12px;text-align:center;">No levels yet</div>'
-          : `<table class="admin-table" style="margin:0;">
+          ? '<div class="camp-levels-empty">No levels yet</div>'
+          : `<table class="data-table compact">
         <thead>
           <tr>
             <th>#</th>
@@ -262,29 +262,32 @@ export class CampaignTab {
 
   private renderLevelRow(level: CampaignLevelSummary): string {
     const publishBadge = level.isPublished
-      ? '<span style="color:var(--success);">Yes</span>'
-      : '<span style="color:var(--text-dim);">No</span>';
-    const timeStr = level.timeLimit > 0 ? `${Math.floor(level.timeLimit / 60)}:${String(level.timeLimit % 60).padStart(2, '0')}` : 'None';
+      ? '<span class="text-success">Yes</span>'
+      : '<span class="text-dim">No</span>';
+    const timeStr =
+      level.timeLimit > 0
+        ? `${Math.floor(level.timeLimit / 60)}:${String(level.timeLimit % 60).padStart(2, '0')}`
+        : 'None';
     const winLabel = WIN_CONDITION_LABELS[level.winCondition] || level.winCondition;
 
     return `
       <tr data-level-id="${level.id}">
         <td>
-          <div style="display:flex;gap:2px;align-items:center;">
-            <button class="btn-sm btn-ghost camp-level-order-up" data-id="${level.id}" title="Move up" style="padding:0 2px;font-size:10px;">&#9650;</button>
-            <span style="min-width:18px;text-align:center;">${level.sortOrder}</span>
-            <button class="btn-sm btn-ghost camp-level-order-down" data-id="${level.id}" title="Move down" style="padding:0 2px;font-size:10px;">&#9660;</button>
+          <div class="camp-level-order-cell">
+            <button class="btn-sm btn-ghost camp-level-order-up camp-level-order-btn" data-id="${level.id}" title="Move up">&#9650;</button>
+            <span class="camp-level-order-value">${level.sortOrder}</span>
+            <button class="btn-sm btn-ghost camp-level-order-down camp-level-order-btn" data-id="${level.id}" title="Move down">&#9660;</button>
           </div>
         </td>
         <td>${escapeHtml(level.name)}</td>
         <td>${level.mapWidth}x${level.mapHeight}</td>
-        <td><span style="font-size:12px;">${escapeHtml(winLabel)}</span></td>
+        <td><span class="text-xs">${escapeHtml(winLabel)}</span></td>
         <td>${level.lives}</td>
         <td>${timeStr}</td>
         <td>${level.enemyCount}</td>
         <td>${publishBadge}</td>
         <td>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div class="camp-btn-group">
             <button class="btn-sm btn-primary camp-edit-level" data-id="${level.id}">Edit</button>
             <button class="btn-sm btn-secondary camp-export-level" data-id="${level.id}" data-name="${escapeAttr(level.name)}" title="Export level">Export</button>
             <button class="btn-sm btn-secondary camp-export-bundle" data-id="${level.id}" data-name="${escapeAttr(level.name)}" title="Export level + enemy types">Bundle</button>
@@ -418,7 +421,10 @@ export class CampaignTab {
       btn.addEventListener('click', async () => {
         const id = Number((btn as HTMLElement).dataset.id);
         const name = (btn as HTMLElement).dataset.name || 'level';
-        await this.downloadExport(`/admin/campaign/levels/${id}/export-bundle`, `level-bundle-${name}.json`);
+        await this.downloadExport(
+          `/admin/campaign/levels/${id}/export-bundle`,
+          `level-bundle-${name}.json`,
+        );
       });
     });
 
@@ -548,8 +554,6 @@ export class CampaignTab {
     const isEdit = !!existing;
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    overlay.style.cssText =
-      'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;';
 
     const themeOptions = THEME_OPTIONS.map(
       (t) =>
@@ -557,24 +561,24 @@ export class CampaignTab {
     ).join('');
 
     overlay.innerHTML = `
-      <div class="modal-content" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-width:90vw;">
-        <h3 style="margin:0 0 16px;color:var(--primary);">${isEdit ? 'Edit World' : 'Create World'}</h3>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div>
-            <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">Name *</label>
-            <input type="text" id="world-name" class="admin-input" value="${escapeAttr(existing?.name || '')}" placeholder="World name" maxlength="100" style="width:100%;box-sizing:border-box;">
+      <div class="camp-modal-body md">
+        <h3 class="camp-modal-title">${isEdit ? 'Edit World' : 'Create World'}</h3>
+        <div class="camp-modal-form">
+          <div class="form-group">
+            <label class="camp-form-label">Name *</label>
+            <input type="text" id="world-name" class="admin-input w-full" value="${escapeAttr(existing?.name || '')}" placeholder="World name" maxlength="100">
           </div>
-          <div>
-            <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">Description</label>
-            <textarea id="world-desc" class="admin-input" placeholder="Optional description..." maxlength="500" rows="2" style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;">${escapeHtml(existing?.description || '')}</textarea>
+          <div class="form-group">
+            <label class="camp-form-label">Description</label>
+            <textarea id="world-desc" class="admin-textarea" placeholder="Optional description..." maxlength="500" rows="2">${escapeHtml(existing?.description || '')}</textarea>
           </div>
-          <div>
-            <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">Theme</label>
-            <select id="world-theme" class="admin-input" style="width:100%;box-sizing:border-box;">
+          <div class="form-group">
+            <label class="camp-form-label">Theme</label>
+            <select id="world-theme" class="admin-input w-full">
               ${themeOptions}
             </select>
           </div>
-          <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
+          <div class="camp-modal-actions">
             <button class="btn btn-secondary" id="world-modal-cancel">Cancel</button>
             <button class="btn btn-primary" id="world-modal-submit">${isEdit ? 'Save' : 'Create'}</button>
           </div>
@@ -591,7 +595,9 @@ export class CampaignTab {
 
     overlay.querySelector('#world-modal-submit')!.addEventListener('click', async () => {
       const name = (overlay.querySelector('#world-name') as HTMLInputElement).value.trim();
-      const description = (overlay.querySelector('#world-desc') as HTMLTextAreaElement).value.trim();
+      const description = (
+        overlay.querySelector('#world-desc') as HTMLTextAreaElement
+      ).value.trim();
       const theme = (overlay.querySelector('#world-theme') as HTMLSelectElement).value;
 
       if (!name) {
@@ -601,7 +607,11 @@ export class CampaignTab {
 
       try {
         if (isEdit) {
-          await ApiClient.put(`/admin/campaign/worlds/${existing!.id}`, { name, description, theme });
+          await ApiClient.put(`/admin/campaign/worlds/${existing!.id}`, {
+            name,
+            description,
+            theme,
+          });
           this.notifications.success('World updated');
         } else {
           await ApiClient.post('/admin/campaign/worlds', { name, description, theme });
@@ -625,7 +635,9 @@ export class CampaignTab {
     if (!content) return;
 
     try {
-      const res = await ApiClient.get<{ enemyTypes: EnemyTypeEntry[] }>('/admin/campaign/enemy-types');
+      const res = await ApiClient.get<{ enemyTypes: EnemyTypeEntry[] }>(
+        '/admin/campaign/enemy-types',
+      );
       this.enemyTypes = res.enemyTypes;
     } catch (err: unknown) {
       this.notifications.error(getErrorMessage(err));
@@ -637,11 +649,11 @@ export class CampaignTab {
 
   private renderEnemyTypesTable(content: HTMLElement): void {
     content.innerHTML = `
-      <div style="margin-bottom:12px;display:flex;gap:8px;">
+      <div class="camp-toolbar-multi">
         <button class="btn btn-primary" id="camp-create-enemy">Create Enemy Type</button>
         <button class="btn btn-secondary" id="camp-import-enemy">Import Enemy Type</button>
       </div>
-      <table class="admin-table">
+      <table class="data-table">
         <thead>
           <tr>
             <th style="width:60px;">Preview</th>
@@ -655,7 +667,7 @@ export class CampaignTab {
           </tr>
         </thead>
         <tbody id="camp-enemies-body">
-          ${this.enemyTypes.length === 0 ? '<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:24px;">No enemy types defined</td></tr>' : this.enemyTypes.map((et) => this.renderEnemyRow(et)).join('')}
+          ${this.enemyTypes.length === 0 ? '<tr><td colspan="8" class="camp-empty-cell">No enemy types defined</td></tr>' : this.enemyTypes.map((et) => this.renderEnemyRow(et)).join('')}
         </tbody>
       </table>
     `;
@@ -681,26 +693,26 @@ export class CampaignTab {
 
   private renderEnemyRow(et: EnemyTypeEntry): string {
     const bossBadge = et.isBoss
-      ? '<span style="color:var(--warning);font-weight:600;">Boss</span>'
-      : '<span style="color:var(--text-dim);">No</span>';
+      ? '<span class="text-warning font-semibold">Boss</span>'
+      : '<span class="text-dim">No</span>';
     const patternLabel = et.config.movementPattern.replace(/_/g, ' ');
 
     return `
       <tr data-enemy-id="${et.id}">
-        <td style="text-align:center;">
-          <canvas id="enemy-preview-${et.id}" width="48" height="48" style="border-radius:4px;background:var(--bg-deep);"></canvas>
+        <td class="col-center">
+          <canvas id="enemy-preview-${et.id}" width="48" height="48" class="camp-preview-canvas"></canvas>
         </td>
         <td>
           <strong>${escapeHtml(et.name)}</strong>
-          ${et.description ? `<div style="color:var(--text-dim);font-size:12px;margin-top:2px;">${escapeHtml(et.description)}</div>` : ''}
+          ${et.description ? `<div class="camp-enemy-desc">${escapeHtml(et.description)}</div>` : ''}
         </td>
-        <td><span style="text-transform:capitalize;">${escapeHtml(et.config.sprite.bodyShape)}</span></td>
+        <td><span class="text-capitalize">${escapeHtml(et.config.sprite.bodyShape)}</span></td>
         <td>${et.config.hp}</td>
         <td>${et.config.speed}</td>
-        <td style="text-transform:capitalize;font-size:12px;">${escapeHtml(patternLabel)}</td>
+        <td class="text-capitalize text-xs">${escapeHtml(patternLabel)}</td>
         <td>${bossBadge}</td>
         <td>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div class="camp-btn-group">
             <button class="btn-sm btn-secondary camp-edit-enemy" data-id="${et.id}">Edit</button>
             <button class="btn-sm btn-secondary camp-export-enemy" data-id="${et.id}" data-name="${escapeAttr(et.name)}" title="Export enemy type">Export</button>
             <button class="btn-sm btn-danger camp-delete-enemy" data-id="${et.id}" data-name="${escapeAttr(et.name)}">Delete</button>
@@ -743,14 +755,14 @@ export class CampaignTab {
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    overlay.style.cssText =
-      'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;overflow-y:auto;';
 
     const bodyShapeOptions = ENEMY_BODY_SHAPES.map(
-      (s) => `<option value="${s}" ${sprite.bodyShape === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`,
+      (s) =>
+        `<option value="${s}" ${sprite.bodyShape === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`,
     ).join('');
     const eyeStyleOptions = ENEMY_EYE_STYLES.map(
-      (s) => `<option value="${s}" ${sprite.eyeStyle === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`,
+      (s) =>
+        `<option value="${s}" ${sprite.eyeStyle === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`,
     ).join('');
     const movementOptions = MOVEMENT_PATTERNS.map(
       (p) =>
@@ -758,109 +770,109 @@ export class CampaignTab {
     ).join('');
 
     overlay.innerHTML = `
-      <div class="modal-content" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:600px;max-width:95vw;max-height:90vh;overflow-y:auto;margin:20px 0;">
-        <h3 style="margin:0 0 16px;color:var(--primary);">${isEdit ? 'Edit Enemy Type' : 'Create Enemy Type'}</h3>
+      <div class="camp-modal-body lg">
+        <h3 class="camp-modal-title">${isEdit ? 'Edit Enemy Type' : 'Create Enemy Type'}</h3>
 
-        <div style="display:flex;gap:24px;">
+        <div class="camp-enemy-columns">
           <!-- Left column: fields -->
-          <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
-            <div>
-              <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">Name *</label>
-              <input type="text" id="enemy-name" class="admin-input" value="${escapeAttr(existing?.name || '')}" placeholder="Enemy name" maxlength="100" style="width:100%;box-sizing:border-box;">
+          <div class="camp-enemy-left">
+            <div class="form-group">
+              <label class="camp-form-label">Name *</label>
+              <input type="text" id="enemy-name" class="admin-input w-full" value="${escapeAttr(existing?.name || '')}" placeholder="Enemy name" maxlength="100">
             </div>
-            <div>
-              <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">Description</label>
-              <input type="text" id="enemy-desc" class="admin-input" value="${escapeAttr(existing?.description || '')}" placeholder="Optional" maxlength="200" style="width:100%;box-sizing:border-box;">
-            </div>
-
-            <div style="display:flex;gap:8px;">
-              <div style="flex:1;">
-                <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">HP</label>
-                <input type="number" id="enemy-hp" class="admin-input" value="${config.hp}" min="1" max="100" style="width:100%;box-sizing:border-box;">
-              </div>
-              <div style="flex:1;">
-                <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">Speed</label>
-                <input type="number" id="enemy-speed" class="admin-input" value="${config.speed}" min="0.1" max="5" step="0.1" style="width:100%;box-sizing:border-box;">
-              </div>
-              <div style="flex:1;">
-                <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">Size</label>
-                <input type="number" id="enemy-size" class="admin-input" value="${config.sizeMultiplier}" min="1" max="3" step="0.1" style="width:100%;box-sizing:border-box;">
-              </div>
+            <div class="form-group">
+              <label class="camp-form-label">Description</label>
+              <input type="text" id="enemy-desc" class="admin-input w-full" value="${escapeAttr(existing?.description || '')}" placeholder="Optional" maxlength="200">
             </div>
 
-            <div>
-              <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">Movement Pattern</label>
-              <select id="enemy-movement" class="admin-input" style="width:100%;box-sizing:border-box;">
+            <div class="camp-form-row">
+              <div class="camp-form-col">
+                <label class="camp-form-label">HP</label>
+                <input type="number" id="enemy-hp" class="admin-input w-full" value="${config.hp}" min="1" max="100">
+              </div>
+              <div class="camp-form-col">
+                <label class="camp-form-label">Speed</label>
+                <input type="number" id="enemy-speed" class="admin-input w-full" value="${config.speed}" min="0.1" max="5" step="0.1">
+              </div>
+              <div class="camp-form-col">
+                <label class="camp-form-label">Size</label>
+                <input type="number" id="enemy-size" class="admin-input w-full" value="${config.sizeMultiplier}" min="1" max="3" step="0.1">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="camp-form-label">Movement Pattern</label>
+              <select id="enemy-movement" class="admin-input w-full">
                 ${movementOptions}
               </select>
             </div>
 
-            <div style="display:flex;gap:12px;flex-wrap:wrap;">
-              <label style="display:flex;align-items:center;gap:4px;color:var(--text-dim);font-size:13px;cursor:pointer;">
+            <div class="camp-checkbox-row">
+              <label class="camp-checkbox-label">
                 <input type="checkbox" id="enemy-boss" ${config.isBoss ? 'checked' : ''}> Boss
               </label>
-              <label style="display:flex;align-items:center;gap:4px;color:var(--text-dim);font-size:13px;cursor:pointer;">
+              <label class="camp-checkbox-label">
                 <input type="checkbox" id="enemy-contact-dmg" ${config.contactDamage ? 'checked' : ''}> Contact Damage
               </label>
-              <label style="display:flex;align-items:center;gap:4px;color:var(--text-dim);font-size:13px;cursor:pointer;">
+              <label class="camp-checkbox-label">
                 <input type="checkbox" id="enemy-can-bomb" ${config.canBomb ? 'checked' : ''}> Can Bomb
               </label>
-              <label style="display:flex;align-items:center;gap:4px;color:var(--text-dim);font-size:13px;cursor:pointer;">
+              <label class="camp-checkbox-label">
                 <input type="checkbox" id="enemy-pass-walls" ${config.canPassWalls ? 'checked' : ''}> Pass Walls
               </label>
-              <label style="display:flex;align-items:center;gap:4px;color:var(--text-dim);font-size:13px;cursor:pointer;">
+              <label class="camp-checkbox-label">
                 <input type="checkbox" id="enemy-pass-bombs" ${config.canPassBombs ? 'checked' : ''}> Pass Bombs
               </label>
             </div>
 
-            <div style="display:flex;gap:8px;">
-              <div style="flex:1;">
-                <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:13px;">Drop Chance</label>
-                <input type="number" id="enemy-drop-chance" class="admin-input" value="${config.dropChance}" min="0" max="1" step="0.05" style="width:100%;box-sizing:border-box;">
+            <div class="camp-form-row">
+              <div class="camp-form-col">
+                <label class="camp-form-label">Drop Chance</label>
+                <input type="number" id="enemy-drop-chance" class="admin-input w-full" value="${config.dropChance}" min="0" max="1" step="0.05">
               </div>
             </div>
           </div>
 
           <!-- Right column: sprite config + preview -->
-          <div style="width:180px;display:flex;flex-direction:column;gap:10px;">
-            <div style="text-align:center;margin-bottom:4px;">
-              <canvas id="enemy-modal-preview" width="80" height="80" style="border-radius:8px;background:var(--bg-deep);border:1px solid var(--border);"></canvas>
+          <div class="camp-enemy-right">
+            <div class="camp-preview-center">
+              <canvas id="enemy-modal-preview" width="80" height="80" class="camp-modal-preview"></canvas>
             </div>
 
-            <div>
-              <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:12px;">Body Shape</label>
-              <select id="enemy-body-shape" class="admin-input" style="width:100%;box-sizing:border-box;font-size:12px;">
+            <div class="form-group">
+              <label class="camp-form-label sm">Body Shape</label>
+              <select id="enemy-body-shape" class="admin-input w-full text-xs">
                 ${bodyShapeOptions}
               </select>
             </div>
-            <div>
-              <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:12px;">Eye Style</label>
-              <select id="enemy-eye-style" class="admin-input" style="width:100%;box-sizing:border-box;font-size:12px;">
+            <div class="form-group">
+              <label class="camp-form-label sm">Eye Style</label>
+              <select id="enemy-eye-style" class="admin-input w-full text-xs">
                 ${eyeStyleOptions}
               </select>
             </div>
-            <div style="display:flex;gap:6px;">
-              <div style="flex:1;">
-                <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:12px;">Primary</label>
-                <input type="color" id="enemy-primary-color" value="${sprite.primaryColor}" style="width:100%;height:28px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:transparent;">
+            <div class="camp-color-row">
+              <div class="camp-form-col">
+                <label class="camp-form-label sm">Primary</label>
+                <input type="color" id="enemy-primary-color" value="${sprite.primaryColor}" class="camp-color-input">
               </div>
-              <div style="flex:1;">
-                <label style="display:block;margin-bottom:4px;color:var(--text-dim);font-size:12px;">Secondary</label>
-                <input type="color" id="enemy-secondary-color" value="${sprite.secondaryColor}" style="width:100%;height:28px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:transparent;">
+              <div class="camp-form-col">
+                <label class="camp-form-label sm">Secondary</label>
+                <input type="color" id="enemy-secondary-color" value="${sprite.secondaryColor}" class="camp-color-input">
               </div>
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <label style="display:flex;align-items:center;gap:4px;color:var(--text-dim);font-size:12px;cursor:pointer;">
+            <div class="camp-checkbox-row">
+              <label class="camp-checkbox-label sm">
                 <input type="checkbox" id="enemy-has-teeth" ${sprite.hasTeeth ? 'checked' : ''}> Teeth
               </label>
-              <label style="display:flex;align-items:center;gap:4px;color:var(--text-dim);font-size:12px;cursor:pointer;">
+              <label class="camp-checkbox-label sm">
                 <input type="checkbox" id="enemy-has-horns" ${sprite.hasHorns ? 'checked' : ''}> Horns
               </label>
             </div>
           </div>
         </div>
 
-        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
+        <div class="camp-modal-actions mt-md">
           <button class="btn btn-secondary" id="enemy-modal-cancel">Cancel</button>
           <button class="btn btn-primary" id="enemy-modal-submit">${isEdit ? 'Save' : 'Create'}</button>
         </div>
@@ -1020,20 +1032,18 @@ export class CampaignTab {
   private showImportLevelModal(worldId: number): void {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    overlay.style.cssText =
-      'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;';
 
     overlay.innerHTML = `
-      <div class="modal-content" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-width:90vw;">
-        <h3 style="margin:0 0 16px;color:var(--primary);">Import Level</h3>
-        <p style="color:var(--text-dim);margin:0 0 12px;font-size:13px;">
+      <div class="camp-modal-body md">
+        <h3 class="camp-modal-title">Import Level</h3>
+        <p class="camp-import-hint">
           Select a level JSON file or a level bundle (level + enemy types).
         </p>
-        <div style="margin-bottom:16px;">
-          <input type="file" id="import-level-file" accept=".json" style="color:var(--text);font-size:13px;">
+        <div class="camp-import-file-wrap">
+          <input type="file" id="import-level-file" accept=".json" class="camp-import-file">
         </div>
-        <div id="import-level-status" style="color:var(--text-dim);font-size:12px;margin-bottom:12px;"></div>
-        <div style="display:flex;gap:12px;justify-content:flex-end;">
+        <div id="import-level-status" class="camp-import-status"></div>
+        <div class="camp-modal-actions">
           <button class="btn btn-secondary" id="import-level-cancel">Cancel</button>
           <button class="btn btn-primary" id="import-level-submit" disabled>Import</button>
         </div>
@@ -1058,21 +1068,23 @@ export class CampaignTab {
         const format = parsedData._format || parsedData.level?._format || 'unknown';
         if (format === 'blast-arena-level-bundle') {
           const enemyCount = parsedData.enemyTypes?.length || 0;
-          statusEl.innerHTML = `<span style="color:var(--success);">Bundle detected:</span> level "${escapeHtml(parsedData.level?.name || '?')}" with ${enemyCount} enemy type(s)`;
+          statusEl.innerHTML = `<span class="text-success">Bundle detected:</span> level "${escapeHtml(parsedData.level?.name || '?')}" with ${enemyCount} enemy type(s)`;
         } else if (format === 'blast-arena-level') {
-          statusEl.innerHTML = `<span style="color:var(--success);">Level detected:</span> "${escapeHtml(parsedData.name || '?')}"`;
+          statusEl.innerHTML = `<span class="text-success">Level detected:</span> "${escapeHtml(parsedData.name || '?')}"`;
         } else {
-          statusEl.innerHTML = `<span style="color:var(--warning);">Unknown format — will attempt import</span>`;
+          statusEl.innerHTML = `<span class="text-warning">Unknown format — will attempt import</span>`;
         }
         submitBtn.disabled = false;
       } catch {
-        statusEl.innerHTML = `<span style="color:var(--danger);">Invalid JSON file</span>`;
+        statusEl.innerHTML = `<span class="text-danger">Invalid JSON file</span>`;
         parsedData = null;
         submitBtn.disabled = true;
       }
     });
 
-    overlay.querySelector('#import-level-cancel')!.addEventListener('click', () => overlay.remove());
+    overlay
+      .querySelector('#import-level-cancel')!
+      .addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.remove();
     });
@@ -1124,47 +1136,47 @@ export class CampaignTab {
   ): void {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    overlay.style.cssText =
-      'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;overflow-y:auto;';
 
-    const conflictRows = conflicts.map((c, i) => {
-      const existingOption = c.existingId
-        ? `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+    const conflictRows = conflicts
+      .map((c, i) => {
+        const existingOption = c.existingId
+          ? `<label class="camp-conflict-option">
              <input type="radio" name="conflict-${i}" value="use-existing" data-existing-id="${c.existingId}">
              Use existing: "${escapeHtml(c.existingName || '')}" (ID ${c.existingId})
            </label>`
-        : '';
+          : '';
 
-      const createOption = enemyTypes?.find((et: any) => et.originalId === c.originalId)
-        ? `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+        const createOption = enemyTypes?.find((et: any) => et.originalId === c.originalId)
+          ? `<label class="camp-conflict-option">
              <input type="radio" name="conflict-${i}" value="create" checked>
              Create new "${escapeHtml(c.name)}"
            </label>`
-        : '';
+          : '';
 
-      return `
-        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
-          <div style="font-weight:600;margin-bottom:6px;color:var(--text);">${escapeHtml(c.name)} <span style="color:var(--text-dim);font-size:12px;">(original ID ${c.originalId})</span></div>
-          <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text-dim);">
+        return `
+        <div class="camp-conflict-card">
+          <div class="camp-conflict-name">${escapeHtml(c.name)} <span class="camp-conflict-orig-id">(original ID ${c.originalId})</span></div>
+          <div class="camp-conflict-options">
             ${createOption}
             ${existingOption}
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+            <label class="camp-conflict-option">
               <input type="radio" name="conflict-${i}" value="skip" ${!createOption && !existingOption ? 'checked' : ''}>
               Skip (remove placements of this enemy)
             </label>
           </div>
         </div>
       `;
-    }).join('');
+      })
+      .join('');
 
     overlay.innerHTML = `
-      <div class="modal-content" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;margin:20px 0;">
-        <h3 style="margin:0 0 12px;color:var(--warning);">Resolve Enemy Type Conflicts</h3>
-        <p style="color:var(--text-dim);margin:0 0 16px;font-size:13px;">
+      <div class="camp-modal-body conflict">
+        <h3 class="camp-modal-title warning">Resolve Enemy Type Conflicts</h3>
+        <p class="camp-import-hint mb-md">
           The imported level references enemy types that need to be resolved.
         </p>
         ${conflictRows}
-        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:12px;">
+        <div class="camp-modal-actions mt-sm">
           <button class="btn btn-secondary" id="conflict-cancel">Cancel</button>
           <button class="btn btn-primary" id="conflict-submit">Import</button>
         </div>
@@ -1182,7 +1194,9 @@ export class CampaignTab {
       const enemyIdMap: Record<string, number | 'create' | 'skip'> = {};
 
       for (let i = 0; i < conflicts.length; i++) {
-        const selected = overlay.querySelector(`input[name="conflict-${i}"]:checked`) as HTMLInputElement;
+        const selected = overlay.querySelector(
+          `input[name="conflict-${i}"]:checked`,
+        ) as HTMLInputElement;
         if (!selected) continue;
         const origId = String(conflicts[i].originalId);
 
@@ -1226,25 +1240,21 @@ export class CampaignTab {
       enemy: 'Enemy Type',
     };
     const warnings: Record<string, string> = {
-      world:
-        'This will permanently delete this world and <strong>all its levels</strong>.',
+      world: 'This will permanently delete this world and <strong>all its levels</strong>.',
       level: 'This will permanently delete this level.',
-      enemy:
-        'This will permanently delete this enemy type. Levels referencing it may break.',
+      enemy: 'This will permanently delete this enemy type. Levels referencing it may break.',
     };
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    overlay.style.cssText =
-      'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;';
 
     overlay.innerHTML = `
-      <div class="modal-content" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:420px;max-width:90vw;">
-        <h3 style="margin:0 0 12px;color:var(--danger);">Delete ${labels[entityType]}</h3>
-        <p style="color:var(--text-dim);margin:0 0 12px;">${warnings[entityType]} <strong style="color:var(--text);">${escapeHtml(name)}</strong></p>
-        <p style="color:var(--text-dim);margin:0 0 16px;font-size:13px;">Type the name to confirm:</p>
-        <input type="text" id="camp-delete-confirm" class="admin-input" placeholder="${escapeAttr(name)}" style="width:100%;box-sizing:border-box;margin-bottom:16px;">
-        <div style="display:flex;gap:12px;justify-content:flex-end;">
+      <div class="camp-modal-body sm">
+        <h3 class="camp-modal-title danger">Delete ${labels[entityType]}</h3>
+        <p class="camp-delete-confirm-text">${warnings[entityType]} <strong>${escapeHtml(name)}</strong></p>
+        <p class="camp-delete-confirm-hint">Type the name to confirm:</p>
+        <input type="text" id="camp-delete-confirm" class="admin-input w-full mb-md" placeholder="${escapeAttr(name)}">
+        <div class="camp-modal-actions">
           <button class="btn btn-secondary" id="camp-delete-cancel">Cancel</button>
           <button class="btn btn-danger" id="camp-delete-submit" disabled>Delete</button>
         </div>
@@ -1260,9 +1270,7 @@ export class CampaignTab {
       deleteBtn.disabled = confirmInput.value !== name;
     });
 
-    overlay.querySelector('#camp-delete-cancel')!.addEventListener('click', () =>
-      overlay.remove(),
-    );
+    overlay.querySelector('#camp-delete-cancel')!.addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.remove();
     });

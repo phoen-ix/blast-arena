@@ -2,7 +2,6 @@ import { NotificationUI } from './NotificationUI';
 import { ApiClient } from '../network/ApiClient';
 import { escapeHtml } from '../utils/html';
 import type { PublicProfile, AchievementProgress } from '@blast-arena/shared';
-import { getErrorMessage } from '@blast-arena/shared';
 
 export class ProfilePanel {
   private container: HTMLElement;
@@ -12,22 +11,7 @@ export class ProfilePanel {
   constructor(notifications: NotificationUI) {
     this.notifications = notifications;
     this.container = document.createElement('div');
-    Object.assign(this.container.style, {
-      position: 'fixed',
-      right: '0',
-      top: '0',
-      width: '380px',
-      height: '100vh',
-      background: 'var(--bg-base)',
-      borderLeft: '1px solid var(--border)',
-      zIndex: '202',
-      display: 'flex',
-      flexDirection: 'column',
-      fontFamily: 'var(--font-body)',
-      transform: 'translateX(100%)',
-      transition: 'transform 0.3s ease',
-      overflowY: 'auto',
-    });
+    this.container.className = 'slide-panel w-profile';
     const uiOverlay = document.getElementById('ui-overlay');
     if (uiOverlay) uiOverlay.appendChild(this.container);
   }
@@ -35,7 +19,7 @@ export class ProfilePanel {
   async open(userId: number): Promise<void> {
     this.container.innerHTML = this.renderLoading();
     this.isOpen = true;
-    this.container.style.transform = 'translateX(0)';
+    this.container.classList.add('open');
 
     try {
       const profile = await ApiClient.get<PublicProfile>(`/user/${userId}/public`);
@@ -50,39 +34,49 @@ export class ProfilePanel {
 
   close(): void {
     this.isOpen = false;
-    this.container.style.transform = 'translateX(100%)';
+    this.container.classList.remove('open');
   }
 
   private renderHeader(title: string): string {
     return `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border);flex-shrink:0;">
-        <h3 style="font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--text);margin:0;">${title}</h3>
-        <button class="profile-panel-close" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px 8px;">&times;</button>
+      <div class="panel-header">
+        <h3 class="panel-header-title">${title}</h3>
+        <button class="profile-panel-close panel-header-close">&times;</button>
       </div>`;
   }
 
   private renderLoading(): string {
-    return this.renderHeader('Profile') +
-      '<div style="text-align:center;padding:60px 16px;color:var(--text-dim);font-size:14px;">Loading profile...</div>';
+    return this.renderHeader('Profile') + '<div class="profile-empty-msg">Loading profile...</div>';
   }
 
   private renderPrivate(): string {
-    return this.renderHeader('Profile') +
-      '<div style="text-align:center;padding:60px 16px;color:var(--text-muted);font-size:14px;">Profile is private or does not exist.</div>';
+    return (
+      this.renderHeader('Profile') +
+      '<div class="profile-empty-msg muted">Profile is private or does not exist.</div>'
+    );
   }
 
   private renderProfile(p: PublicProfile): string {
-    const kd = p.stats.totalDeaths > 0
-      ? (p.stats.totalKills / p.stats.totalDeaths).toFixed(2)
-      : p.stats.totalKills.toString();
+    const kd =
+      p.stats.totalDeaths > 0
+        ? (p.stats.totalKills / p.stats.totalDeaths).toFixed(2)
+        : p.stats.totalKills.toString();
     const playtime = this.formatPlaytime(p.stats.totalMatches);
-    const roleColor = p.role === 'admin' ? 'var(--primary)' : p.role === 'moderator' ? 'var(--info)' : 'var(--text-dim)';
-    const roleBadge = p.role !== 'user'
-      ? `<span style="font-size:11px;color:${roleColor};font-weight:600;text-transform:uppercase;margin-left:8px;">${escapeHtml(p.role)}</span>`
-      : '';
+    const roleColor =
+      p.role === 'admin'
+        ? 'var(--primary)'
+        : p.role === 'moderator'
+          ? 'var(--info)'
+          : 'var(--text-dim)';
+    const roleBadge =
+      p.role !== 'user'
+        ? `<span class="profile-role-badge" style="color:${roleColor}">${escapeHtml(p.role)}</span>`
+        : '';
 
-    return this.renderHeader('Player Profile') + `
-      <div style="padding:20px 16px;overflow-y:auto;flex:1;">
+    return (
+      this.renderHeader('Player Profile') +
+      `
+      <div class="panel-content">
         ${this.renderIdentity(p, roleBadge)}
         ${this.renderRank(p)}
         ${this.renderStats(p, kd, playtime)}
@@ -91,23 +85,34 @@ export class ProfilePanel {
         <div id="profile-progress-container"></div>
         ${this.renderCosmetics(p)}
         ${this.renderActions(p)}
-      </div>`;
+      </div>`
+    );
   }
 
   private renderIdentity(p: PublicProfile, roleBadge: string): string {
-    const colors = ['#ff6b35', '#448aff', '#00e676', '#ffaa22', '#bb44ff', '#00d4aa'];
+    const colors = [
+      'var(--primary)',
+      'var(--info)',
+      'var(--success)',
+      'var(--warning)',
+      '#bb44ff',
+      'var(--accent)',
+    ];
     const color = colors[p.id % colors.length];
-    const joinDate = new Date(p.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    const joinDate = new Date(p.createdAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+    });
     return `
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-        <div style="width:52px;height:52px;border-radius:12px;background:${color};display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;font-family:var(--font-display);flex-shrink:0;">
+      <div class="profile-identity">
+        <div class="profile-avatar" style="background:${color}">
           ${escapeHtml(p.username.charAt(0).toUpperCase())}
         </div>
         <div>
-          <div style="font-size:18px;font-weight:700;color:var(--text);font-family:var(--font-display);">
+          <div class="profile-username">
             ${escapeHtml(p.username)}${roleBadge}
           </div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Joined ${joinDate}</div>
+          <div class="profile-join-date">Joined ${joinDate}</div>
         </div>
       </div>`;
   }
@@ -122,28 +127,28 @@ export class ProfilePanel {
     const pct = xpToNext > 0 ? Math.min(100, Math.round((xpProgress / xpToNext) * 100)) : 0;
 
     return `
-      <div style="background:var(--bg-card);border-radius:10px;padding:14px;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="profile-rank-card">
+        <div class="profile-rank-row">
           <div>
-            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Rank</div>
-            <div style="font-size:16px;font-weight:700;color:${p.rankColor};font-family:var(--font-display);">${escapeHtml(p.rankTier)}</div>
+            <div class="profile-rank-label">Rank</div>
+            <div class="profile-rank-value" style="color:${p.rankColor}">${escapeHtml(p.rankTier)}</div>
           </div>
-          <div style="text-align:center;">
-            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Level</div>
-            <div style="font-size:22px;font-weight:700;color:var(--primary);font-family:var(--font-display);">${level}</div>
+          <div style="text-align:center">
+            <div class="profile-rank-label">Level</div>
+            <div class="profile-level-value">${level}</div>
           </div>
-          <div style="text-align:right;">
-            <div style="font-size:22px;font-weight:700;color:var(--text);font-family:var(--font-display);">${p.stats.eloRating}</div>
-            <div style="font-size:11px;color:var(--text-muted);">Peak: ${p.stats.peakElo}</div>
+          <div style="text-align:right">
+            <div class="profile-elo-value">${p.stats.eloRating}</div>
+            <div class="profile-elo-peak">Peak: ${p.stats.peakElo}</div>
           </div>
         </div>
-        <div style="margin-top:6px;">
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:3px;">
+        <div class="profile-xp-bar">
+          <div class="profile-xp-labels">
             <span>XP: ${xpProgress}/${xpToNext}</span>
             <span>${pct}%</span>
           </div>
-          <div style="height:4px;background:var(--bg-surface);border-radius:2px;overflow:hidden;">
-            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, var(--primary), var(--accent));border-radius:2px;transition:width 0.3s;"></div>
+          <div class="profile-xp-track">
+            <div class="profile-xp-fill" style="width:${pct}%"></div>
           </div>
         </div>
       </div>`;
@@ -158,37 +163,45 @@ export class ProfilePanel {
       { label: 'Win Streak', value: p.stats.winStreak.toString() },
       { label: 'Best Streak', value: p.stats.bestWinStreak.toString() },
     ];
-    const grid = items.map(i => `
-      <div style="background:var(--bg-deep);border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-size:16px;font-weight:700;color:var(--text);font-family:var(--font-display);">${i.value}</div>
-        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;margin-top:2px;">${i.label}</div>
-      </div>`).join('');
+    const grid = items
+      .map(
+        (i) => `
+      <div class="profile-stat-item">
+        <div class="profile-stat-value">${i.value}</div>
+        <div class="profile-stat-label">${i.label}</div>
+      </div>`,
+      )
+      .join('');
 
     return `
-      <div style="font-size:12px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Statistics</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">${grid}</div>`;
+      <div class="profile-section-title">Statistics</div>
+      <div class="profile-stats-grid">${grid}</div>`;
   }
 
   private renderSeasonHistory(p: PublicProfile): string {
     if (!p.seasonHistory || p.seasonHistory.length === 0) return '';
-    const rows = p.seasonHistory.map(s => `
+    const rows = p.seasonHistory
+      .map(
+        (s) => `
       <tr>
-        <td style="padding:6px 8px;color:var(--text);font-size:13px;">${escapeHtml(s.seasonName)}</td>
-        <td style="padding:6px 8px;color:var(--text);font-size:13px;text-align:center;">${s.finalElo}</td>
-        <td style="padding:6px 8px;color:var(--text-dim);font-size:13px;text-align:center;">${s.peakElo}</td>
-        <td style="padding:6px 8px;color:var(--text-dim);font-size:13px;text-align:center;">${s.matchesPlayed}</td>
-      </tr>`).join('');
+        <td class="text-primary">${escapeHtml(s.seasonName)}</td>
+        <td class="col-center text-primary">${s.finalElo}</td>
+        <td class="col-center text-dim">${s.peakElo}</td>
+        <td class="col-center text-dim">${s.matchesPlayed}</td>
+      </tr>`,
+      )
+      .join('');
 
     return `
-      <div style="font-size:12px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Season History</div>
-      <div style="background:var(--bg-card);border-radius:10px;overflow:hidden;margin-bottom:16px;">
-        <table style="width:100%;border-collapse:collapse;">
+      <div class="profile-section-title">Season History</div>
+      <div class="profile-season-card">
+        <table class="profile-season-table">
           <thead>
-            <tr style="border-bottom:1px solid var(--border);">
-              <th style="padding:8px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;">Season</th>
-              <th style="padding:8px;text-align:center;font-size:11px;color:var(--text-muted);font-weight:600;">Elo</th>
-              <th style="padding:8px;text-align:center;font-size:11px;color:var(--text-muted);font-weight:600;">Peak</th>
-              <th style="padding:8px;text-align:center;font-size:11px;color:var(--text-muted);font-weight:600;">Games</th>
+            <tr>
+              <th>Season</th>
+              <th class="col-center">Elo</th>
+              <th class="col-center">Peak</th>
+              <th class="col-center">Games</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -198,19 +211,24 @@ export class ProfilePanel {
 
   private renderAchievements(p: PublicProfile): string {
     if (!p.achievements || p.achievements.length === 0) return '';
-    const items = p.achievements.slice(0, 12).map(a => `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-deep);border-radius:8px;" title="${escapeHtml(a.achievement.description)}">
-        <span style="font-size:18px;flex-shrink:0;">${a.achievement.icon || '\u2B50'}</span>
-        <div style="min-width:0;">
-          <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(a.achievement.name)}</div>
+    const items = p.achievements
+      .slice(0, 12)
+      .map(
+        (a) => `
+      <div class="profile-achievement" title="${escapeHtml(a.achievement.description)}">
+        <span class="profile-achievement-icon">${a.achievement.icon || '\u2B50'}</span>
+        <div style="min-width:0">
+          <div class="profile-achievement-name">${escapeHtml(a.achievement.name)}</div>
         </div>
-      </div>`).join('');
+      </div>`,
+      )
+      .join('');
 
     return `
-      <div style="font-size:12px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">
+      <div class="profile-section-title">
         Achievements (${p.achievements.length})
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px;">${items}</div>`;
+      <div class="profile-achievements-grid">${items}</div>`;
   }
 
   private renderCosmetics(p: PublicProfile): string {
@@ -224,28 +242,29 @@ export class ProfilePanel {
     if (c.bombSkinId) slots.push(this.cosmeticChip('\uD83D\uDCA3', 'Bomb Skin'));
 
     return `
-      <div style="font-size:12px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Equipped Cosmetics</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">${slots.join('')}</div>`;
+      <div class="profile-section-title">Equipped Cosmetics</div>
+      <div class="profile-cosmetics">${slots.join('')}</div>`;
   }
 
   private cosmeticChip(icon: string, label: string): string {
-    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border-radius:8px;font-size:12px;color:var(--text);">
-      <span style="font-size:16px;">${icon}</span>${label}
+    return `<div class="profile-cosmetic-chip">
+      <span class="profile-cosmetic-icon">${icon}</span>${label}
     </div>`;
   }
 
   private renderActions(p: PublicProfile): string {
     return `
-      <div style="padding-top:8px;display:flex;gap:8px;">
-        <button class="profile-add-friend btn btn-primary" data-user-id="${p.id}" data-username="${escapeHtml(p.username)}"
-          style="flex:1;padding:10px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;background:var(--primary);color:#fff;border:none;font-family:var(--font-body);">
+      <div class="profile-actions">
+        <button class="profile-add-friend btn btn-primary" data-user-id="${p.id}" data-username="${escapeHtml(p.username)}">
           Add Friend
         </button>
       </div>`;
   }
 
   private attachListeners(): void {
-    this.container.querySelector('.profile-panel-close')?.addEventListener('click', () => this.close());
+    this.container
+      .querySelector('.profile-panel-close')
+      ?.addEventListener('click', () => this.close());
 
     this.container.querySelector('.profile-add-friend')?.addEventListener('click', (e) => {
       const btn = e.currentTarget as HTMLElement;
@@ -265,7 +284,9 @@ export class ProfilePanel {
     if (!progressContainer) return;
 
     try {
-      const res = await ApiClient.get<{ progress: AchievementProgress[] }>('/achievements/progress');
+      const res = await ApiClient.get<{ progress: AchievementProgress[] }>(
+        '/achievements/progress',
+      );
       const locked = res.progress.filter((p) => !p.unlocked && p.threshold > 0);
       if (locked.length === 0) return;
 
@@ -277,24 +298,24 @@ export class ProfilePanel {
         .map((p) => {
           const pct = Math.min(100, Math.round((p.current / p.threshold) * 100));
           return `
-          <div style="padding:8px 10px;background:var(--bg-deep);border-radius:8px;" title="${escapeHtml(p.description)}">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              <span style="font-size:16px;flex-shrink:0;">${p.icon || '\u2B50'}</span>
-              <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${escapeHtml(p.name)}</span>
-              <span style="font-size:11px;color:var(--text-muted);flex-shrink:0;">${p.current}/${p.threshold}</span>
+          <div class="profile-progress-item" title="${escapeHtml(p.description)}">
+            <div class="profile-progress-header">
+              <span class="profile-progress-icon">${p.icon || '\u2B50'}</span>
+              <span class="profile-progress-name">${escapeHtml(p.name)}</span>
+              <span class="profile-progress-count">${p.current}/${p.threshold}</span>
             </div>
-            <div style="height:4px;background:var(--bg-surface);border-radius:2px;overflow:hidden;">
-              <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, var(--primary), var(--accent));border-radius:2px;"></div>
+            <div class="profile-xp-track">
+              <div class="profile-xp-fill" style="width:${pct}%"></div>
             </div>
           </div>`;
         })
         .join('');
 
       progressContainer.innerHTML = `
-        <div style="font-size:12px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">
+        <div class="profile-section-title">
           In Progress (${locked.length})
         </div>
-        <div style="display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:16px;">${items}</div>`;
+        <div class="profile-progress-grid">${items}</div>`;
     } catch {
       // Silently skip — progress is optional
     }

@@ -69,7 +69,7 @@ const UNLOCK_TYPES: CosmeticUnlockType[] = ['achievement', 'campaign_stars', 'de
 const RARITY_COLORS: Record<CosmeticRarity, string> = {
   common: 'var(--text-dim)',
   rare: 'var(--info)',
-  epic: '#bb66ff',
+  epic: 'var(--rarity-epic)',
   legendary: 'var(--primary)',
 };
 
@@ -100,9 +100,9 @@ export class AchievementsTab {
     if (!this.container) return;
 
     this.container.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h3 style="color:var(--text);margin:0;">Achievements &amp; Cosmetics</h3>
-        <div style="display:flex;gap:8px;">
+      <div class="section-header">
+        <h3 class="admin-section-title">Achievements &amp; Cosmetics</h3>
+        <div class="btn-group">
           <button class="btn ${this.currentView === 'achievements' ? 'btn-primary' : 'btn-ghost'}" id="ach-view-achievements">Achievements</button>
           <button class="btn ${this.currentView === 'cosmetics' ? 'btn-primary' : 'btn-ghost'}" id="ach-view-cosmetics">Cosmetics</button>
         </div>
@@ -147,9 +147,9 @@ export class AchievementsTab {
 
     content.innerHTML = `
       <div class="admin-section">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <span style="color:var(--text-dim);font-size:13px;">${this.achievements.length} achievement${this.achievements.length !== 1 ? 's' : ''}</span>
-          <div style="display:flex;gap:8px;">
+        <div class="section-header">
+          <span class="admin-count">${this.achievements.length} achievement${this.achievements.length !== 1 ? 's' : ''}</span>
+          <div class="btn-group">
             <button class="btn btn-secondary" id="ach-export-all">Export All</button>
             <button class="btn btn-secondary" id="ach-import">Import</button>
             <button class="btn btn-primary" id="ach-create">Create Achievement</button>
@@ -188,23 +188,23 @@ export class AchievementsTab {
 
   private renderAchievementRow(a: Achievement): string {
     const statusBadge = a.isActive
-      ? '<span style="color:var(--success);font-weight:600;">Active</span>'
-      : '<span style="color:var(--text-dim);">Inactive</span>';
+      ? '<span class="text-success font-semibold">Active</span>'
+      : '<span class="text-dim">Inactive</span>';
     const rewardLabel =
       a.rewardType === 'none'
-        ? '<span style="color:var(--text-dim);">None</span>'
-        : `<span style="color:var(--accent);">${escapeHtml(a.rewardType)}${a.rewardId ? ` #${a.rewardId}` : ''}</span>`;
+        ? '<span class="text-dim">None</span>'
+        : `<span class="text-accent">${escapeHtml(a.rewardType)}${a.rewardId ? ` #${a.rewardId}` : ''}</span>`;
 
     return `
       <tr>
-        <td style="font-size:20px;text-align:center;">${escapeHtml(a.icon)}</td>
+        <td class="icon-cell">${escapeHtml(a.icon)}</td>
         <td>${escapeHtml(a.name)}</td>
-        <td style="color:var(--text-dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(a.description)}</td>
+        <td class="truncate-cell">${escapeHtml(a.description)}</td>
         <td><span class="badge">${escapeHtml(CONDITION_LABELS[a.conditionType] || a.conditionType)}</span></td>
         <td>${rewardLabel}</td>
         <td>${statusBadge}</td>
         <td>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div class="actions-cell">
             <button class="btn-sm btn-secondary ach-edit" data-id="${a.id}">Edit</button>
             <button class="btn-sm btn-secondary ach-export" data-id="${a.id}">Export</button>
             <button class="btn-sm btn-danger ach-delete" data-id="${a.id}" data-name="${escapeAttr(a.name)}">Delete</button>
@@ -227,7 +227,9 @@ export class AchievementsTab {
       btn.addEventListener('click', async () => {
         const id = parseInt((btn as HTMLElement).dataset.id!);
         try {
-          const data = await ApiClient.get<Record<string, unknown>>(`/admin/achievements/${id}/export`);
+          const data = await ApiClient.get<Record<string, unknown>>(
+            `/admin/achievements/${id}/export`,
+          );
           this.downloadExport(data, `achievement-${id}.json`);
           this.notifications.success('Achievement exported');
         } catch (err: unknown) {
@@ -258,55 +260,55 @@ export class AchievementsTab {
     const currentCondType = existing?.conditionType || 'cumulative';
 
     overlay.innerHTML = `
-      <div class="modal" style="max-width:520px;max-height:85vh;overflow-y:auto;">
-        <h2 style="margin-bottom:16px;">${isEdit ? 'Edit' : 'Create'} Achievement</h2>
-        <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="modal modal-scroll" style="max-width:520px;">
+        <h2>${isEdit ? 'Edit' : 'Create'} Achievement</h2>
+        <div class="form-stack">
           <div>
-            <label style="color:var(--text-dim);font-size:13px;">Name *</label>
-            <input type="text" class="admin-input" id="am-name" value="${escapeAttr(existing?.name || '')}" placeholder="Achievement name" style="margin-top:4px;">
+            <label class="field-label">Name *</label>
+            <input type="text" class="admin-input mt-label" id="am-name" value="${escapeAttr(existing?.name || '')}" placeholder="Achievement name">
           </div>
           <div>
-            <label style="color:var(--text-dim);font-size:13px;">Description *</label>
-            <input type="text" class="admin-input" id="am-desc" value="${escapeAttr(existing?.description || '')}" placeholder="Short description" style="margin-top:4px;">
+            <label class="field-label">Description *</label>
+            <input type="text" class="admin-input mt-label" id="am-desc" value="${escapeAttr(existing?.description || '')}" placeholder="Short description">
           </div>
-          <div style="display:flex;gap:12px;">
-            <div style="flex:1;">
-              <label style="color:var(--text-dim);font-size:13px;">Icon</label>
-              <input type="text" class="admin-input" id="am-icon" value="${escapeAttr(existing?.icon || '')}" placeholder="Emoji or text" style="margin-top:4px;">
+          <div class="form-row">
+            <div>
+              <label class="field-label">Icon</label>
+              <input type="text" class="admin-input mt-label" id="am-icon" value="${escapeAttr(existing?.icon || '')}" placeholder="Emoji or text">
             </div>
-            <div style="flex:1;">
-              <label style="color:var(--text-dim);font-size:13px;">Category</label>
-              <input type="text" class="admin-input" id="am-category" value="${escapeAttr(existing?.category || '')}" placeholder="e.g. combat, survival" style="margin-top:4px;">
+            <div>
+              <label class="field-label">Category</label>
+              <input type="text" class="admin-input mt-label" id="am-category" value="${escapeAttr(existing?.category || '')}" placeholder="e.g. combat, survival">
             </div>
           </div>
           <div>
-            <label style="color:var(--text-dim);font-size:13px;">Condition Type *</label>
-            <select class="admin-select" id="am-condType" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
+            <label class="field-label">Condition Type *</label>
+            <select class="admin-select w-full mt-label" id="am-condType">
               ${CONDITION_TYPES.map((t) => `<option value="${t}" ${currentCondType === t ? 'selected' : ''}>${CONDITION_LABELS[t]}</option>`).join('')}
             </select>
           </div>
           <div id="am-cond-fields"></div>
-          <div style="display:flex;gap:12px;">
-            <div style="flex:1;">
-              <label style="color:var(--text-dim);font-size:13px;">Reward Type</label>
-              <select class="admin-select" id="am-rewardType" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
-                <option value="none" ${(!existing || existing.rewardType === 'none') ? 'selected' : ''}>None</option>
+          <div class="form-row">
+            <div>
+              <label class="field-label">Reward Type</label>
+              <select class="admin-select w-full mt-label" id="am-rewardType">
+                <option value="none" ${!existing || existing.rewardType === 'none' ? 'selected' : ''}>None</option>
                 <option value="cosmetic" ${existing?.rewardType === 'cosmetic' ? 'selected' : ''}>Cosmetic</option>
                 <option value="title" ${existing?.rewardType === 'title' ? 'selected' : ''}>Title</option>
               </select>
             </div>
-            <div style="flex:1;" id="am-reward-id-wrap">
-              <label style="color:var(--text-dim);font-size:13px;">Reward Cosmetic ID</label>
-              <input type="number" class="admin-input" id="am-rewardId" value="${existing?.rewardId ?? ''}" placeholder="Cosmetic ID" style="margin-top:4px;" min="0">
+            <div id="am-reward-id-wrap">
+              <label class="field-label">Reward Cosmetic ID</label>
+              <input type="number" class="admin-input mt-label" id="am-rewardId" value="${existing?.rewardId ?? ''}" placeholder="Cosmetic ID" min="0">
             </div>
           </div>
           <div>
-            <label style="color:var(--text-dim);font-size:13px;">Sort Order</label>
-            <input type="number" class="admin-input" id="am-sortOrder" value="${existing?.sortOrder ?? 0}" style="margin-top:4px;" min="0">
+            <label class="field-label">Sort Order</label>
+            <input type="number" class="admin-input mt-label" id="am-sortOrder" value="${existing?.sortOrder ?? 0}" min="0">
           </div>
         </div>
-        <div id="am-error" style="color:var(--danger);font-size:13px;margin-top:8px;display:none;"></div>
-        <div class="modal-actions" style="margin-top:16px;">
+        <div id="am-error" class="modal-error"></div>
+        <div class="modal-actions">
           <button class="btn btn-secondary" id="am-cancel">Cancel</button>
           <button class="btn btn-primary" id="am-submit">${isEdit ? 'Save' : 'Create'}</button>
         </div>
@@ -321,7 +323,11 @@ export class AchievementsTab {
     const rewardIdWrap = overlay.querySelector('#am-reward-id-wrap') as HTMLElement;
 
     const updateCondFields = () => {
-      this.renderConditionFields(condFieldsEl, condTypeSelect.value as AchievementConditionType, condCfg);
+      this.renderConditionFields(
+        condFieldsEl,
+        condTypeSelect.value as AchievementConditionType,
+        condCfg,
+      );
     };
 
     const updateRewardVisibility = () => {
@@ -348,7 +354,8 @@ export class AchievementsTab {
       const rewardType = rewardTypeSelect.value as AchievementRewardType;
       const rewardIdVal = (overlay.querySelector('#am-rewardId') as HTMLInputElement).value;
       const rewardId = rewardType === 'cosmetic' && rewardIdVal ? parseInt(rewardIdVal) : null;
-      const sortOrder = parseInt((overlay.querySelector('#am-sortOrder') as HTMLInputElement).value) || 0;
+      const sortOrder =
+        parseInt((overlay.querySelector('#am-sortOrder') as HTMLInputElement).value) || 0;
       const errorEl = overlay.querySelector('#am-error') as HTMLElement;
 
       if (!name || !description) {
@@ -395,73 +402,73 @@ export class AchievementsTab {
   ): void {
     if (type === 'cumulative') {
       container.innerHTML = `
-        <div style="display:flex;gap:12px;">
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Stat</label>
-            <select class="admin-select" id="am-cond-stat" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
+        <div class="form-row">
+          <div>
+            <label class="field-label">Stat</label>
+            <select class="admin-select w-full mt-label" id="am-cond-stat">
               ${CUMULATIVE_STATS.map((s) => `<option value="${s}" ${cfg.stat === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Threshold</label>
-            <input type="number" class="admin-input" id="am-cond-threshold" value="${cfg.threshold ?? 1}" style="margin-top:4px;" min="1">
+          <div>
+            <label class="field-label">Threshold</label>
+            <input type="number" class="admin-input mt-label" id="am-cond-threshold" value="${cfg.threshold ?? 1}" min="1">
           </div>
         </div>
       `;
     } else if (type === 'per_game') {
       container.innerHTML = `
-        <div style="display:flex;gap:12px;">
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Stat</label>
-            <select class="admin-select" id="am-cond-stat" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
+        <div class="form-row">
+          <div>
+            <label class="field-label">Stat</label>
+            <select class="admin-select w-full mt-label" id="am-cond-stat">
               ${PER_GAME_STATS.map((s) => `<option value="${s}" ${cfg.stat === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
-          <div style="flex:0.5;">
-            <label style="color:var(--text-dim);font-size:13px;">Operator</label>
-            <select class="admin-select" id="am-cond-operator" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
+          <div class="form-row-half">
+            <label class="field-label">Operator</label>
+            <select class="admin-select w-full mt-label" id="am-cond-operator">
               ${PER_GAME_OPERATORS.map((o) => `<option value="${escapeAttr(o)}" ${cfg.operator === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}
             </select>
           </div>
-          <div style="flex:0.5;">
-            <label style="color:var(--text-dim);font-size:13px;">Threshold</label>
-            <input type="number" class="admin-input" id="am-cond-threshold" value="${cfg.threshold ?? 1}" style="margin-top:4px;" min="0">
+          <div class="form-row-half">
+            <label class="field-label">Threshold</label>
+            <input type="number" class="admin-input mt-label" id="am-cond-threshold" value="${cfg.threshold ?? 1}" min="0">
           </div>
         </div>
       `;
     } else if (type === 'mode_specific') {
       container.innerHTML = `
-        <div style="display:flex;gap:12px;">
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Game Mode</label>
-            <select class="admin-select" id="am-cond-mode" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
+        <div class="form-row">
+          <div>
+            <label class="field-label">Game Mode</label>
+            <select class="admin-select w-full mt-label" id="am-cond-mode">
               ${GAME_MODES.map((m) => `<option value="${m}" ${cfg.mode === m ? 'selected' : ''}>${m}</option>`).join('')}
             </select>
           </div>
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Stat</label>
-            <select class="admin-select" id="am-cond-stat" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
+          <div>
+            <label class="field-label">Stat</label>
+            <select class="admin-select w-full mt-label" id="am-cond-stat">
               ${MODE_SPECIFIC_STATS.map((s) => `<option value="${s}" ${cfg.stat === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
-          <div style="flex:0.5;">
-            <label style="color:var(--text-dim);font-size:13px;">Threshold</label>
-            <input type="number" class="admin-input" id="am-cond-threshold" value="${cfg.threshold ?? 1}" style="margin-top:4px;" min="1">
+          <div class="form-row-half">
+            <label class="field-label">Threshold</label>
+            <input type="number" class="admin-input mt-label" id="am-cond-threshold" value="${cfg.threshold ?? 1}" min="1">
           </div>
         </div>
       `;
     } else if (type === 'campaign') {
       container.innerHTML = `
-        <div style="display:flex;gap:12px;">
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Sub-Type</label>
-            <select class="admin-select" id="am-cond-subType" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
+        <div class="form-row">
+          <div>
+            <label class="field-label">Sub-Type</label>
+            <select class="admin-select w-full mt-label" id="am-cond-subType">
               ${CAMPAIGN_SUBTYPES.map((s) => `<option value="${s}" ${cfg.subType === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Threshold</label>
-            <input type="number" class="admin-input" id="am-cond-threshold" value="${cfg.threshold ?? 1}" style="margin-top:4px;" min="1">
+          <div>
+            <label class="field-label">Threshold</label>
+            <input type="number" class="admin-input mt-label" id="am-cond-threshold" value="${cfg.threshold ?? 1}" min="1">
           </div>
         </div>
       `;
@@ -491,8 +498,7 @@ export class AchievementsTab {
       config.stat = stat;
       config.threshold = threshold;
     } else if (type === 'campaign') {
-      config.subType =
-        (overlay.querySelector('#am-cond-subType') as HTMLSelectElement)?.value;
+      config.subType = (overlay.querySelector('#am-cond-subType') as HTMLSelectElement)?.value;
       config.threshold = threshold;
     }
 
@@ -516,9 +522,9 @@ export class AchievementsTab {
 
     content.innerHTML = `
       <div class="admin-section">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <span style="color:var(--text-dim);font-size:13px;">${this.cosmetics.length} cosmetic${this.cosmetics.length !== 1 ? 's' : ''}</span>
-          <div style="display:flex;gap:8px;">
+        <div class="section-header">
+          <span class="admin-count">${this.cosmetics.length} cosmetic${this.cosmetics.length !== 1 ? 's' : ''}</span>
+          <div class="btn-group">
             <button class="btn btn-secondary" id="cos-import">Import</button>
             <button class="btn btn-primary" id="cos-create">Create Cosmetic</button>
           </div>
@@ -552,19 +558,19 @@ export class AchievementsTab {
 
   private renderCosmeticRow(c: Cosmetic): string {
     const statusBadge = c.isActive
-      ? '<span style="color:var(--success);font-weight:600;">Active</span>'
-      : '<span style="color:var(--text-dim);">Inactive</span>';
+      ? '<span class="text-success font-semibold">Active</span>'
+      : '<span class="text-dim">Inactive</span>';
     const rarityColor = RARITY_COLORS[c.rarity] || 'var(--text)';
 
     return `
       <tr>
         <td>${escapeHtml(c.name)}</td>
         <td><span class="badge">${escapeHtml(c.type)}</span></td>
-        <td><span style="color:${rarityColor};font-weight:600;">${escapeHtml(c.rarity)}</span></td>
-        <td style="color:var(--text-dim);">${escapeHtml(c.unlockType)}</td>
+        <td><span class="font-semibold" style="color:${rarityColor};">${escapeHtml(c.rarity)}</span></td>
+        <td class="text-dim">${escapeHtml(c.unlockType)}</td>
         <td>${statusBadge}</td>
         <td>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <div class="actions-cell">
             <button class="btn-sm btn-secondary cos-edit" data-id="${c.id}">Edit</button>
             <button class="btn-sm btn-secondary cos-export" data-id="${c.id}">Export</button>
             <button class="btn-sm btn-danger cos-delete" data-id="${c.id}" data-name="${escapeAttr(c.name)}">Delete</button>
@@ -587,7 +593,9 @@ export class AchievementsTab {
       btn.addEventListener('click', async () => {
         const id = parseInt((btn as HTMLElement).dataset.id!);
         try {
-          const data = await ApiClient.get<Record<string, unknown>>(`/admin/cosmetics/${id}/export`);
+          const data = await ApiClient.get<Record<string, unknown>>(
+            `/admin/cosmetics/${id}/export`,
+          );
           this.downloadExport(data, `cosmetic-${id}.json`);
           this.notifications.success('Cosmetic exported');
         } catch (err: unknown) {
@@ -618,47 +626,47 @@ export class AchievementsTab {
     const cfg = existing?.config || {};
 
     overlay.innerHTML = `
-      <div class="modal" style="max-width:520px;max-height:85vh;overflow-y:auto;">
-        <h2 style="margin-bottom:16px;">${isEdit ? 'Edit' : 'Create'} Cosmetic</h2>
-        <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="modal modal-scroll" style="max-width:520px;">
+        <h2>${isEdit ? 'Edit' : 'Create'} Cosmetic</h2>
+        <div class="form-stack">
           <div>
-            <label style="color:var(--text-dim);font-size:13px;">Name *</label>
-            <input type="text" class="admin-input" id="cm-name" value="${escapeAttr(existing?.name || '')}" placeholder="Cosmetic name" style="margin-top:4px;">
+            <label class="field-label">Name *</label>
+            <input type="text" class="admin-input mt-label" id="cm-name" value="${escapeAttr(existing?.name || '')}" placeholder="Cosmetic name">
           </div>
-          <div style="display:flex;gap:12px;">
-            <div style="flex:1;">
-              <label style="color:var(--text-dim);font-size:13px;">Type *</label>
-              <select class="admin-select" id="cm-type" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
+          <div class="form-row">
+            <div>
+              <label class="field-label">Type *</label>
+              <select class="admin-select w-full mt-label" id="cm-type">
                 ${COSMETIC_TYPES.map((t) => `<option value="${t}" ${currentType === t ? 'selected' : ''}>${t}</option>`).join('')}
               </select>
             </div>
-            <div style="flex:1;">
-              <label style="color:var(--text-dim);font-size:13px;">Rarity</label>
-              <select class="admin-select" id="cm-rarity" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
+            <div>
+              <label class="field-label">Rarity</label>
+              <select class="admin-select w-full mt-label" id="cm-rarity">
                 ${RARITY_OPTIONS.map((r) => `<option value="${r}" ${existing?.rarity === r ? 'selected' : ''}>${r}</option>`).join('')}
               </select>
             </div>
           </div>
           <div id="cm-config-fields"></div>
-          <div style="display:flex;gap:12px;">
-            <div style="flex:1;">
-              <label style="color:var(--text-dim);font-size:13px;">Unlock Type</label>
-              <select class="admin-select" id="cm-unlockType" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
+          <div class="form-row">
+            <div>
+              <label class="field-label">Unlock Type</label>
+              <select class="admin-select w-full mt-label" id="cm-unlockType">
                 ${UNLOCK_TYPES.map((u) => `<option value="${u}" ${existing?.unlockType === u ? 'selected' : ''}>${u}</option>`).join('')}
               </select>
             </div>
-            <div style="flex:1;" id="cm-unlock-req-wrap">
-              <label style="color:var(--text-dim);font-size:13px;">Unlock Requirement</label>
-              <textarea class="admin-input" id="cm-unlockReq" rows="2" placeholder='{"threshold": 50}' style="margin-top:4px;width:100%;box-sizing:border-box;resize:vertical;font-family:monospace;font-size:12px;">${existing?.unlockRequirement ? JSON.stringify(existing.unlockRequirement, null, 2) : ''}</textarea>
+            <div id="cm-unlock-req-wrap">
+              <label class="field-label">Unlock Requirement</label>
+              <textarea class="admin-input admin-textarea-mono" id="cm-unlockReq" rows="2" placeholder='{"threshold": 50}'>${existing?.unlockRequirement ? JSON.stringify(existing.unlockRequirement, null, 2) : ''}</textarea>
             </div>
           </div>
           <div>
-            <label style="color:var(--text-dim);font-size:13px;">Sort Order</label>
-            <input type="number" class="admin-input" id="cm-sortOrder" value="${existing?.sortOrder ?? 0}" style="margin-top:4px;" min="0">
+            <label class="field-label">Sort Order</label>
+            <input type="number" class="admin-input mt-label" id="cm-sortOrder" value="${existing?.sortOrder ?? 0}" min="0">
           </div>
         </div>
-        <div id="cm-error" style="color:var(--danger);font-size:13px;margin-top:8px;display:none;"></div>
-        <div class="modal-actions" style="margin-top:16px;">
+        <div id="cm-error" class="modal-error"></div>
+        <div class="modal-actions">
           <button class="btn btn-secondary" id="cm-cancel">Cancel</button>
           <button class="btn btn-primary" id="cm-submit">${isEdit ? 'Save' : 'Create'}</button>
         </div>
@@ -694,9 +702,11 @@ export class AchievementsTab {
     overlay.querySelector('#cm-submit')!.addEventListener('click', async () => {
       const name = (overlay.querySelector('#cm-name') as HTMLInputElement).value.trim();
       const type = typeSelect.value as CosmeticType;
-      const rarity = (overlay.querySelector('#cm-rarity') as HTMLSelectElement).value as CosmeticRarity;
+      const rarity = (overlay.querySelector('#cm-rarity') as HTMLSelectElement)
+        .value as CosmeticRarity;
       const unlockType = unlockTypeSelect.value as CosmeticUnlockType;
-      const sortOrder = parseInt((overlay.querySelector('#cm-sortOrder') as HTMLInputElement).value) || 0;
+      const sortOrder =
+        parseInt((overlay.querySelector('#cm-sortOrder') as HTMLInputElement).value) || 0;
       const errorEl = overlay.querySelector('#cm-error') as HTMLElement;
 
       if (!name) {
@@ -762,10 +772,10 @@ export class AchievementsTab {
       const hex = typeof cfg.hex === 'string' ? cfg.hex : '#ff6b35';
       container.innerHTML = `
         <div>
-          <label style="color:var(--text-dim);font-size:13px;">Hex Color</label>
-          <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
-            <input type="color" id="cm-cfg-hex" value="${escapeAttr(hex)}" style="width:48px;height:36px;border:none;cursor:pointer;">
-            <input type="text" class="admin-input" id="cm-cfg-hex-text" value="${escapeAttr(hex)}" placeholder="#ff6b35" style="flex:1;">
+          <label class="field-label">Hex Color</label>
+          <div class="color-picker-row">
+            <input type="color" id="cm-cfg-hex" value="${escapeAttr(hex)}" class="color-picker-swatch">
+            <input type="text" class="admin-input flex-1" id="cm-cfg-hex-text" value="${escapeAttr(hex)}" placeholder="#ff6b35">
           </div>
         </div>
       `;
@@ -783,42 +793,42 @@ export class AchievementsTab {
       const style = typeof cfg.style === 'string' ? cfg.style : 'round';
       container.innerHTML = `
         <div>
-          <label style="color:var(--text-dim);font-size:13px;">Eye Style</label>
-          <input type="text" class="admin-input" id="cm-cfg-style" value="${escapeAttr(style)}" placeholder="e.g. round, angry, cute" style="margin-top:4px;">
+          <label class="field-label">Eye Style</label>
+          <input type="text" class="admin-input mt-label" id="cm-cfg-style" value="${escapeAttr(style)}" placeholder="e.g. round, angry, cute">
         </div>
       `;
     } else if (type === 'trail') {
       container.innerHTML = `
-        <div style="display:flex;gap:12px;">
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Particle Key</label>
-            <input type="text" class="admin-input" id="cm-cfg-particleKey" value="${escapeAttr(String(cfg.particleKey || 'particle_fire'))}" placeholder="particle_fire" style="margin-top:4px;">
+        <div class="form-row">
+          <div>
+            <label class="field-label">Particle Key</label>
+            <input type="text" class="admin-input mt-label" id="cm-cfg-particleKey" value="${escapeAttr(String(cfg.particleKey || 'particle_fire'))}" placeholder="particle_fire">
           </div>
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Tint (hex number)</label>
-            <input type="text" class="admin-input" id="cm-cfg-tint" value="${cfg.tint != null ? '0x' + (Number(cfg.tint) >>> 0).toString(16).padStart(6, '0') : '0xff6b35'}" placeholder="0xff6b35" style="margin-top:4px;">
+          <div>
+            <label class="field-label">Tint (hex number)</label>
+            <input type="text" class="admin-input mt-label" id="cm-cfg-tint" value="${cfg.tint != null ? '0x' + (Number(cfg.tint) >>> 0).toString(16).padStart(6, '0') : '0xff6b35'}" placeholder="0xff6b35">
           </div>
         </div>
         <div>
-          <label style="color:var(--text-dim);font-size:13px;">Frequency</label>
-          <input type="number" class="admin-input" id="cm-cfg-frequency" value="${cfg.frequency ?? 100}" style="margin-top:4px;" min="1" max="1000">
+          <label class="field-label">Frequency</label>
+          <input type="number" class="admin-input mt-label" id="cm-cfg-frequency" value="${cfg.frequency ?? 100}" min="1" max="1000">
         </div>
       `;
     } else if (type === 'bomb_skin') {
       container.innerHTML = `
-        <div style="display:flex;gap:12px;">
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Base Color (hex number)</label>
-            <input type="text" class="admin-input" id="cm-cfg-baseColor" value="${cfg.baseColor != null ? '0x' + (Number(cfg.baseColor) >>> 0).toString(16).padStart(6, '0') : '0x333333'}" placeholder="0x333333" style="margin-top:4px;">
+        <div class="form-row">
+          <div>
+            <label class="field-label">Base Color (hex number)</label>
+            <input type="text" class="admin-input mt-label" id="cm-cfg-baseColor" value="${cfg.baseColor != null ? '0x' + (Number(cfg.baseColor) >>> 0).toString(16).padStart(6, '0') : '0x333333'}" placeholder="0x333333">
           </div>
-          <div style="flex:1;">
-            <label style="color:var(--text-dim);font-size:13px;">Fuse Color (hex number)</label>
-            <input type="text" class="admin-input" id="cm-cfg-fuseColor" value="${cfg.fuseColor != null ? '0x' + (Number(cfg.fuseColor) >>> 0).toString(16).padStart(6, '0') : '0xff4400'}" placeholder="0xff4400" style="margin-top:4px;">
+          <div>
+            <label class="field-label">Fuse Color (hex number)</label>
+            <input type="text" class="admin-input mt-label" id="cm-cfg-fuseColor" value="${cfg.fuseColor != null ? '0x' + (Number(cfg.fuseColor) >>> 0).toString(16).padStart(6, '0') : '0xff4400'}" placeholder="0xff4400">
           </div>
         </div>
         <div>
-          <label style="color:var(--text-dim);font-size:13px;">Label</label>
-          <input type="text" class="admin-input" id="cm-cfg-label" value="${escapeAttr(String(cfg.label || ''))}" placeholder="Short label" style="margin-top:4px;">
+          <label class="field-label">Label</label>
+          <input type="text" class="admin-input mt-label" id="cm-cfg-label" value="${escapeAttr(String(cfg.label || ''))}" placeholder="Short label">
         </div>
       `;
     }
@@ -837,15 +847,23 @@ export class AchievementsTab {
       if (!style) return null;
       return { style };
     } else if (type === 'trail') {
-      const particleKey = (overlay.querySelector('#cm-cfg-particleKey') as HTMLInputElement)?.value.trim();
+      const particleKey = (
+        overlay.querySelector('#cm-cfg-particleKey') as HTMLInputElement
+      )?.value.trim();
       const tintStr = (overlay.querySelector('#cm-cfg-tint') as HTMLInputElement)?.value.trim();
-      const frequency = parseInt((overlay.querySelector('#cm-cfg-frequency') as HTMLInputElement)?.value || '100');
+      const frequency = parseInt(
+        (overlay.querySelector('#cm-cfg-frequency') as HTMLInputElement)?.value || '100',
+      );
       const tint = parseInt(tintStr, 16) || parseInt(tintStr) || 0;
       if (!particleKey) return null;
       return { particleKey, tint, frequency };
     } else if (type === 'bomb_skin') {
-      const baseStr = (overlay.querySelector('#cm-cfg-baseColor') as HTMLInputElement)?.value.trim();
-      const fuseStr = (overlay.querySelector('#cm-cfg-fuseColor') as HTMLInputElement)?.value.trim();
+      const baseStr = (
+        overlay.querySelector('#cm-cfg-baseColor') as HTMLInputElement
+      )?.value.trim();
+      const fuseStr = (
+        overlay.querySelector('#cm-cfg-fuseColor') as HTMLInputElement
+      )?.value.trim();
       const label = (overlay.querySelector('#cm-cfg-label') as HTMLInputElement)?.value.trim();
       const baseColor = parseInt(baseStr, 16) || parseInt(baseStr) || 0;
       const fuseColor = parseInt(fuseStr, 16) || parseInt(fuseStr) || 0;
@@ -868,7 +886,9 @@ export class AchievementsTab {
 
   private async exportAllAchievements(): Promise<void> {
     try {
-      const data = await ApiClient.get<AchievementBundleExportData>('/admin/achievements/export-all');
+      const data = await ApiClient.get<AchievementBundleExportData>(
+        '/admin/achievements/export-all',
+      );
       this.downloadExport(data, 'achievements-bundle.json');
       this.notifications.success('Achievement bundle exported');
     } catch (err: unknown) {
@@ -882,14 +902,14 @@ export class AchievementsTab {
 
     overlay.innerHTML = `
       <div class="modal" style="max-width:520px;">
-        <h2 style="margin-bottom:16px;">Import Achievements</h2>
-        <p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">
+        <h2>Import Achievements</h2>
+        <p class="modal-desc">
           Select a JSON file (single achievement or achievement bundle).
         </p>
-        <input type="file" accept=".json" id="ach-import-file" style="margin-bottom:12px;color:var(--text);">
-        <div id="ach-import-error" style="color:var(--danger);font-size:13px;display:none;margin-bottom:8px;"></div>
-        <div id="ach-import-preview" style="display:none;margin-bottom:12px;"></div>
-        <div class="modal-actions" style="margin-top:16px;">
+        <input type="file" accept=".json" id="ach-import-file" class="file-input">
+        <div id="ach-import-error" class="modal-error" style="margin-bottom:8px;"></div>
+        <div id="ach-import-preview" class="import-preview"></div>
+        <div class="modal-actions">
           <button class="btn btn-secondary" id="ach-import-cancel">Cancel</button>
           <button class="btn btn-primary" id="ach-import-submit" disabled>Import</button>
         </div>
@@ -920,31 +940,38 @@ export class AchievementsTab {
 
         if (json._format === 'blast-arena-achievement-bundle') {
           parsedData = json;
-          previewEl.innerHTML = `<span style="color:var(--accent);">Bundle: ${json.achievements?.length || 0} achievements, ${json.cosmetics?.length || 0} cosmetics</span>`;
+          previewEl.innerHTML = `<span class="text-accent">Bundle: ${json.achievements?.length || 0} achievements, ${json.cosmetics?.length || 0} cosmetics</span>`;
         } else if (json._format === 'blast-arena-achievement') {
           // Wrap single achievement into bundle format
           parsedData = {
             _format: 'blast-arena-achievement-bundle',
             _version: 1,
-            achievements: [{
-              name: json.name,
-              description: json.description,
-              icon: json.icon,
-              category: json.category,
-              conditionType: json.conditionType,
-              conditionConfig: json.conditionConfig,
-              rewardType: json.rewardType,
-              reward: json.reward,
-              sortOrder: json.sortOrder,
-            }],
-            cosmetics: json.reward ? [{
-              originalId: 0,
-              data: json.reward,
-            }] : [],
+            achievements: [
+              {
+                name: json.name,
+                description: json.description,
+                icon: json.icon,
+                category: json.category,
+                conditionType: json.conditionType,
+                conditionConfig: json.conditionConfig,
+                rewardType: json.rewardType,
+                reward: json.reward,
+                sortOrder: json.sortOrder,
+              },
+            ],
+            cosmetics: json.reward
+              ? [
+                  {
+                    originalId: 0,
+                    data: json.reward,
+                  },
+                ]
+              : [],
           };
-          previewEl.innerHTML = `<span style="color:var(--accent);">Single achievement: ${escapeHtml(json.name)}</span>`;
+          previewEl.innerHTML = `<span class="text-accent">Single achievement: ${escapeHtml(json.name)}</span>`;
         } else {
-          errorEl.textContent = 'Invalid file format. Expected blast-arena-achievement or blast-arena-achievement-bundle.';
+          errorEl.textContent =
+            'Invalid file format. Expected blast-arena-achievement or blast-arena-achievement-bundle.';
           errorEl.style.display = 'block';
           return;
         }
@@ -968,13 +995,14 @@ export class AchievementsTab {
 
       try {
         // Phase 1: check for conflicts
-        const result = await ApiClient.post<{ conflicts?: AchievementImportConflict[]; message?: string; created?: number }>(
-          '/admin/achievements/import',
-          {
-            achievements: parsedData.achievements,
-            cosmetics: parsedData.cosmetics,
-          },
-        );
+        const result = await ApiClient.post<{
+          conflicts?: AchievementImportConflict[];
+          message?: string;
+          created?: number;
+        }>('/admin/achievements/import', {
+          achievements: parsedData.achievements,
+          cosmetics: parsedData.cosmetics,
+        });
 
         if (result.conflicts && result.conflicts.length > 0) {
           overlay.remove();
@@ -1000,38 +1028,44 @@ export class AchievementsTab {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
 
-    const rows = conflicts.map((c, i) => {
-      const existingInfo = c.existingId
-        ? `<span style="color:var(--accent);">Existing: "${escapeHtml(c.existingName || '')}" (ID ${c.existingId})</span>`
-        : '<span style="color:var(--text-dim);">No existing match</span>';
+    const rows = conflicts
+      .map((c, i) => {
+        const existingInfo = c.existingId
+          ? `<span class="text-accent">Existing: "${escapeHtml(c.existingName || '')}" (ID ${c.existingId})</span>`
+          : '<span class="text-dim">No existing match</span>';
 
-      return `
-        <div style="padding:10px;background:var(--bg-elevated);border-radius:6px;margin-bottom:8px;">
-          <div style="font-weight:600;margin-bottom:6px;">${escapeHtml(c.cosmeticName)}</div>
-          <div style="font-size:12px;margin-bottom:8px;">${existingInfo}</div>
-          <div style="display:flex;gap:12px;font-size:13px;">
-            <label style="color:var(--text);">
+        return `
+        <div class="conflict-card">
+          <div class="conflict-card-name">${escapeHtml(c.cosmeticName)}</div>
+          <div class="conflict-card-info">${existingInfo}</div>
+          <div class="conflict-card-options">
+            <label>
               <input type="radio" name="conflict-${i}" value="create" checked> Create new
             </label>
-            ${c.existingId ? `<label style="color:var(--text);">
+            ${
+              c.existingId
+                ? `<label>
               <input type="radio" name="conflict-${i}" value="${c.existingId}"> Use existing
-            </label>` : ''}
-            <label style="color:var(--text);">
+            </label>`
+                : ''
+            }
+            <label>
               <input type="radio" name="conflict-${i}" value="skip"> Skip (no reward)
             </label>
           </div>
         </div>
       `;
-    }).join('');
+      })
+      .join('');
 
     overlay.innerHTML = `
-      <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
-        <h2 style="margin-bottom:8px;">Resolve Cosmetic Conflicts</h2>
-        <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px;">
+      <div class="modal modal-scroll" style="max-width:560px;">
+        <h2>Resolve Cosmetic Conflicts</h2>
+        <p class="modal-desc" style="margin-bottom:16px;">
           The following cosmetics are referenced by achievements in the import. Choose how to handle each:
         </p>
         ${rows}
-        <div class="modal-actions" style="margin-top:16px;">
+        <div class="modal-actions">
           <button class="btn btn-secondary" id="conflict-cancel">Cancel</button>
           <button class="btn btn-primary" id="conflict-submit">Import</button>
         </div>
@@ -1048,7 +1082,9 @@ export class AchievementsTab {
     overlay.querySelector('#conflict-submit')!.addEventListener('click', async () => {
       const cosmeticIdMap: Record<string, 'create' | 'skip' | number> = {};
       conflicts.forEach((c, i) => {
-        const selected = (overlay.querySelector(`input[name="conflict-${i}"]:checked`) as HTMLInputElement)?.value;
+        const selected = (
+          overlay.querySelector(`input[name="conflict-${i}"]:checked`) as HTMLInputElement
+        )?.value;
         if (selected === 'create') {
           cosmeticIdMap[String(c.originalCosmeticId)] = 'create';
         } else if (selected === 'skip') {
@@ -1116,13 +1152,13 @@ export class AchievementsTab {
 
     overlay.innerHTML = `
       <div class="modal" style="max-width:420px;">
-        <h2 style="margin-bottom:12px;color:var(--danger);">Delete ${escapeHtml(entity)}</h2>
-        <p style="color:var(--text-dim);font-size:14px;">This will permanently delete <strong style="color:var(--text);">${escapeHtml(name)}</strong>. This action cannot be undone.</p>
-        <p style="color:var(--text-dim);font-size:13px;margin-top:8px;">Type the name to confirm:</p>
-        <input type="text" class="admin-input" id="del-confirm-input" placeholder="${escapeAttr(name)}" style="margin-top:4px;">
-        <div class="modal-actions" style="margin-top:16px;">
+        <h2 class="text-danger">Delete ${escapeHtml(entity)}</h2>
+        <p class="modal-desc" style="font-size:14px;">This will permanently delete <strong>${escapeHtml(name)}</strong>. This action cannot be undone.</p>
+        <p class="modal-hint">Type the name to confirm:</p>
+        <input type="text" class="admin-input mt-label" id="del-confirm-input" placeholder="${escapeAttr(name)}">
+        <div class="modal-actions">
           <button class="btn btn-secondary" id="del-cancel">Cancel</button>
-          <button class="btn-danger" style="padding:8px 16px;font-size:14px;opacity:0.5;" id="del-confirm" disabled>Delete</button>
+          <button class="btn-danger btn-confirm" id="del-confirm" style="opacity:0.5;" disabled>Delete</button>
         </div>
       </div>
     `;

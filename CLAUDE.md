@@ -32,17 +32,21 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - All game constants in shared/src/constants/
 - Socket.io listeners use one-shot pattern for game:start to prevent leaks across scene transitions
 - Bot players use negative IDs (-(i+1)) to avoid DB conflicts; skipped in DB writes
-- Bot count auto-capped to maxPlayers - humanPlayers (both frontend and backend); CreateRoomModal auto-raises maxPlayers when bot count exceeds capacity
+- Bot count auto-capped to maxPlayers - humanPlayers (both frontend and backend); CreateRoomView auto-raises maxPlayers when bot count exceeds capacity
 - Singleplayer: 1 human + 1+ bots is enough to start a game
 - Friendly fire config: when OFF, same-team explosions don't damage teammates (self-damage still applies)
 - Map dimensions should be odd numbers for proper indestructible wall grid pattern
-- Branding: "BLAST" in white, "ARENA" in orange (`--primary`). In HTML use `<span>BLAST</span>ARENA` where parent is `color: var(--primary)` and `span` is `color: var(--text)`. In Phaser canvas (MenuScene) use two separate text objects side by side
+- Branding: "BLAST" in white, "ARENA" in primary (`--primary`). In sidebar brand use `<span>BLAST</span>ARENA` where parent is `color: var(--primary)` and `span` is `color: var(--text)` (collapses to "BA" icon-only). In Phaser canvas (MenuScene) use two separate text objects via `themeManager.getCanvasColors()`. Watermark in lobby `.main-body::before` shows "BLASTARENA" with gradient `background-clip: text` for two-tone (BLAST white, ARENA primary/orange), increased blur and reduced opacity
 - Game canvas uses `Phaser.Scale.RESIZE` mode to fill the full browser viewport. Camera bounds auto-adjust: small maps are centered, large maps scroll with the player via smooth lerp
 - Player sprite interpolation factor is 0.45 (snappy grid movement, not floaty)
 - Modal overlay uses `position: fixed` to prevent backdrop-filter repaint flashes from sibling DOM mutations
 
 ## Frontend Architecture
-- **Design System ("INFERNO")**: All CSS in `frontend/index.html` using CSS custom properties (`:root` vars). Colors: `--primary` (#ff6b35 hot orange), `--accent` (#00d4aa teal), `--danger` (#ff3355), `--success` (#00e676), `--warning` (#ffaa22), `--info` (#448aff). Backgrounds: `--bg-deep` (#080810) through `--bg-hover` (#24243e). Typography: Chakra Petch (display/headings) + DM Sans (body) via Google Fonts. Team colors: `--team-red` (#ff4466), `--team-blue` (#448aff). Always use CSS variables in inline styles (e.g. `var(--primary)` not hardcoded hex) for consistency.
+- **Design System & Themes**: All CSS in `frontend/index.html` using CSS custom properties (`:root` vars). 5 theme palettes: Inferno (default, orange/teal), Arctic (ice blue/mint), Toxic (neon green/purple), Crimson (deep red/gold), Midnight (soft indigo/teal). Theme constants in `shared/src/constants/themes.ts` (`THEME_IDS`, `ThemeId`, `THEME_NAMES`). Theme definitions (CSS vars + Phaser canvas colors) in `frontend/src/themes/definitions.ts`. `ThemeManager` singleton (`frontend/src/themes/ThemeManager.ts`) manages theme selection: reads localStorage, falls back to admin default (`GET /api/admin/settings/default_theme`), then 'inferno'. Applies via `[data-theme]` attribute on `<html>`. Flash prevention: inline `<script>` in `<head>` reads localStorage and sets attribute before CSS loads. Phaser scenes use `themeManager.getCanvasColors()` for theme-aware rendering. User theme picker in Settings > Preferences tab; admin default theme in Dashboard tab.
+- **CSS Architecture**: Inferno colors are `:root` defaults; other themes override via `[data-theme="arctic"]` etc. Spacing scale: `--sp-1` (4px) through `--sp-8` (32px). Elevation shadows: `--shadow-sm` through `--shadow-xl`. Always use CSS variables (e.g. `var(--primary)` not hardcoded hex) for theme compatibility. Prefer CSS classes over inline styles; use utility classes (`.text-success`, `.text-dim`, `.flex-row`, `.btn-sm`, etc.) for common patterns. Typography: Chakra Petch (display/headings) + DM Sans (body) via Google Fonts.
+- **Sidebar Layout & View System**: Lobby uses `.app-layout` with collapsible left sidebar (`.sidebar`, 240px / 64px collapsed) + `.main-content`. Sidebar has brand, nav sections (Play/Social/Progress), settings/help/admin links, user footer with rank/level badges. Collapse state persisted in `localStorage('blast-arena-sidebar-collapsed')`. Collapse/expand toggle is a small protruding "ear" tab on the sidebar's right edge (vertically centered). All lobby views render inline in `.main-body` — no overlays or slide-out panels. Sidebar stays persistent while content swaps. `.main-header` is always 60px matching sidebar brand height; views with their own sub-header (admin, settings, help, friends) hide `.main-header`. Tab bars in `.view-content` are 60px with `overflow-y: hidden`. "BLASTARENA" watermark rendered as CSS `::before` pseudo-element on `.main-body`. Gamepad nav queries `.sidebar-nav-item` + `.room-card` selectors.
+- **View Architecture**: `ILobbyView` interface (`viewId`, `title`, `getHeaderActions?()`, `render()`, `destroy()`) with `ViewDeps`. Views created via `LobbyUI.createView()` factory with dynamic imports. Thin wrapper views delegate to existing panel UIs via `renderEmbedded()`. View files in `frontend/src/ui/views/`: `types.ts`, `RoomsView.ts`, `AdminView.ts`, `SettingsView.ts`, `HelpView.ts`, `LeaderboardView.ts`, `CampaignView.ts`, `FriendsView.ts`, `MessagesView.ts`, `PartyView.ts`, `CreateRoomView.ts`, `ProfileView.ts`.
+- **Unified CSS Classes**: `.panel-header`/`.panel-content` (panel structure), `.tab-bar`/`.tab-item` (tabs), `.data-table` (tables with sticky headers), `.form-grid`/`.form-group`/`.input`/`.select` (forms), `.toggle-switch` (replaces checkboxes), `.setting-row` (labeled settings), `.option-chip` (selectable chips), `.mini-stat` (stat cards), `.modal-header`/`.modal-body`/`.modal-footer` (modal structure), `.btn`/`.btn-primary`/`.btn-secondary`/`.btn-ghost`/`.btn-sm` (buttons).
 - **Composed rendering**: GameScene.ts delegates to renderer classes in `frontend/src/game/`:
   - `TileMap.ts` — tile grid, floor variants, destruction animation, teleporters/conveyors/cracked walls
   - `PlayerSprite.ts` — directional eyes, shield aura, squash/stretch movement (`activeMoveAnim` Set prevents tween stacking), dust particles, death effects
@@ -59,8 +63,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Procedural textures**: All sprites generated in `BootScene.generateTextures()` — no external image assets. Player textures: 4 directional variants with eyes per color. Power-up textures: Canvas2D emoji icons (💣🔥⚡🛡️👢💥📡🧨) on rounded-rect backgrounds. Enemy textures on-demand via `EnemyTextureGenerator.ts`
 - **Particle textures**: `particle_fire`, `particle_smoke`, `particle_spark`, `particle_debris`, `particle_star`, `particle_shield` generated in BootScene
 - **HUD**: DOM-based overlay in HUDScene.ts with timer, player list, kill feed, stats bar (bottom-left), spectator banner. KOTH mode: scores sorted descending with crown icon
-- Settings and Help are in the lobby header (LobbyUI), not in-game HUD, to avoid overlapping player names
-- **SettingsUI** (`frontend/src/ui/SettingsUI.ts`): Full-screen tabbed panel (reuses `admin-container` CSS) with Account tab (username, email, password) and Preferences tab (visual settings). Replaces the old separate Account and Settings modals — single "Settings" button in lobby header. Pattern matches AdminUI (tabs, switchTab, gamepad context).
+- Settings and Help are in the sidebar navigation (LobbyUI), not in-game HUD, to avoid overlapping player names
+- **SettingsUI** (`frontend/src/ui/SettingsUI.ts`): Full-screen tabbed panel (reuses `admin-container` CSS) with Account tab (username, email, password), Preferences tab (theme picker + visual settings), Privacy tab, and Cosmetics tab. Preferences tab has visual theme swatches at top. Pattern matches AdminUI (tabs, switchTab, gamepad context).
 - **HelpUI** (`frontend/src/ui/HelpUI.ts`): Full-screen tabbed panel (reuses `admin-container` CSS) with 7 tabs: Getting Started, Power-Ups, Game Modes, Map Features, Guides, Level Editor (staff), Admin Docs (staff). Power-Ups tab uses Canvas2D inline `<canvas>` elements via `frontend/src/utils/powerUpCanvas.ts` (same drawing logic as BootScene). Guides/Admin Docs tabs fetch markdown from `GET /api/docs/:filename` and `GET /api/docs/admin/:filename` endpoints, rendered with `marked` library into `.help-markdown` styled containers. Collapsible `<details>` sections for each doc. Role-based tab filtering: regular users see 5 tabs, staff see all 7. Markdown response cache prevents re-fetching on tab revisit.
 - Countdown synced between server and client: GameLoop holds `status: 'countdown'` for 36 ticks (1.8s) while CountdownOverlay plays "3, 2, 1" — gameplay starts on "GO!". Both client and server block inputs during countdown.
 - **Gamepad support**: Xbox/standard gamepad via Phaser plugin. D-pad/left stick for movement (0.3 deadzone), A=bomb, B=detonate, LB/RB=cycle spectate. Actions latched in `pendingGamepadAction` to survive 50ms tick throttle. Keyboard takes priority.
@@ -87,9 +91,9 @@ Admin-defined start/end dates stored in `seasons` table. `season_elo` tracks per
 Admin-configurable via `rank_tiers` JSON in `server_settings`. Default 6 tiers: Bronze(0-999), Silver(1000-1199), Gold(1200-1399), Platinum(1400-1599), Diamond(1600-1799), Champion(1800+). Sub-tiers (I/II/III) split each tier into thirds. `getRankForElo()` pure function in leaderboard service.
 
 ### Frontend
-- LeaderboardUI: full-screen panel with season selector, paginated table, rank badge pills, clickable usernames → ProfilePanel
-- ProfilePanel: slide-out right panel (z-index 202), shows stats/rank/season history/achievements/cosmetics
-- LobbyUI: Leaderboard button in header, rank badge next to welcome message
+- LeaderboardUI: full-screen view with season selector (hidden when no seasons exist), paginated table, rank badge pills, clickable usernames → ProfileView
+- ProfileView: full-page profile with stats grid, rank card, achievements, season history, cosmetics. Replaces the old slide-out ProfilePanel.
+- LobbyUI: Leaderboard in sidebar nav, rank badge next to welcome message
 - GameOverScene: Elo delta display (+N green / -N red) next to each player in placements, achievement unlock toasts
 
 ## Achievements
@@ -102,7 +106,7 @@ Admin-configurable via CRUD. 4 condition types: `cumulative` (checks user_stats)
 XP earned per match: kills×50 + bombs×5 + powerups×10 + completion(25) + placement bonus (1st=100, 2nd=50, 3rd=25) + win bonus(100). Level curve: level N→N+1 costs N×100 XP. Constants/math in `shared/src/constants/xp.ts`. Admin `xp_multiplier` setting (default 1.0). Calculated in `GameRoom.onGameOver()` after Elo processing, emitted via `game:xpUpdate` socket event. Level milestone cosmetics: `unlock_type='level_milestone'`, checked via `checkLevelMilestoneUnlocks()`.
 
 ## Achievement Progress Tracking
-`getAchievementProgress(userId)` in achievements service returns progress for all active achievements. Batch queries for per_game bests (`MAX()` from match_players) and mode-specific counts. Frontend: `GET /achievements/progress` endpoint, rendered as progress bars in ProfilePanel (own profile only). Progress sorted by completion percentage.
+`getAchievementProgress(userId)` in achievements service returns progress for all active achievements. Batch queries for per_game bests (`MAX()` from match_players) and mode-specific counts. Frontend: `GET /achievements/progress` endpoint, rendered as progress bars in ProfileView (own profile only). Progress sorted by completion percentage.
 
 ## Spectator Chat
 In-game text chat for dead players. Admin-controlled via `spectator_chat_mode` (ChatMode). Backend handler validates sender is dead via `GameRoom.isPlayerAlive()`, 3/sec rate limit, broadcasts to room. Frontend: `SpectatorChat.ts` DOM panel (bottom-left, collapsible) mounted by HUDScene when `localPlayerDead` becomes true (not campaign/replay/sim). Admin Dashboard: spectator chat dropdown.
@@ -123,7 +127,7 @@ JSON-based export/import following the campaign pattern. Export formats use `_fo
 - GameScene: builds cosmeticsMap from initial state, passes to BombSpriteRenderer
 
 ## Public Profiles & Privacy
-Click usernames in leaderboard/game-over to view public profile. Privacy toggle (`is_profile_public` column on users, default true) hides profile from leaderboard and public endpoint. Friend request accept toggle (`accept_friend_requests` column, default true) checked in `sendFriendRequest`. Settings → Privacy tab for toggles.
+Click usernames in leaderboard/game-over to view public profile via full-page ProfileView (stats grid, rank card, achievements, season history, cosmetics). Privacy toggle (`is_profile_public` column on users, default true) hides profile from leaderboard and public endpoint. Friend request accept toggle (`accept_friend_requests` column, default true) checked in `sendFriendRequest`. Settings → Privacy tab for toggles.
 
 ## Admin Panel
 Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches, Rooms, Logs, Simulations, AI, Campaign, Announcements, Seasons, Achievements. Dashboard includes chat mode dropdowns for Party Chat, Lobby Chat, Direct Messages, In-Game Emotes, and Spectator Chat — each with 4 options (Everyone, Staff Only, Admin Only, Disabled). Also includes XP multiplier setting. `staffMiddleware` (admin+moderator) and `adminOnlyMiddleware` for route protection. All actions audit-logged. Logs tab: rows are click-to-expand — clicking a row toggles a detail row showing the full message text. `admin_actions.target_id` is `INT NOT NULL` — use `0` (not `null`) for bulk operations without a specific target. Dashboard includes email/SMTP settings (admin-only) — stored in DB (`email_settings` key), `.env` values as fallback; password masked in API responses; `invalidateTransporter()` resets cached nodemailer on save. Registration toggle (`registration_enabled` setting) — when disabled, `/auth/register` returns 403 and AuthUI hides the register link. Party chat mode (`party_chat_mode` setting) — `ChatMode` type: `'everyone'` (default), `'staff'` (admin+mod), `'admin_only'`, `'disabled'`. Admin-only PUT; public GET. Backend enforces in `party:chat` handler; frontend hides chat button and auto-closes open chat on mode change. See [docs/admin-and-systems.md](docs/admin-and-systems.md) for full details.
@@ -151,13 +155,16 @@ Social features for the lobby: friend list, online presence, party grouping, and
 - On disconnect: presence removed, friends notified offline, party leave/disband handled
 
 ### Frontend
-- **FriendsPanel** (`frontend/src/ui/FriendsPanel.ts`): Fixed slide-out panel (right side, z-index 200). Three tabs: Friends (sorted online-first), Requests (incoming+outgoing), Blocked. Search bar with username prefix lookup. Live-updates via socket events.
-- **PartyBar** (`frontend/src/ui/PartyBar.ts`): Persistent bar below lobby header when in party. Member chips, chat toggle (hidden when chat disabled for user's role), leave button. Chat window is in-memory ephemeral messages. Fetches `party_chat_mode` on init and listens for `admin:settingsChanged` to update in real-time.
+- **FriendsView** (`frontend/src/ui/views/FriendsView.ts`): Full-page inline view with tabs (Friends/Requests/Blocked), search bar, friend cards with online status. Delegates to `FriendsPanel.renderEmbedded()`.
+- **MessagesView** (`frontend/src/ui/views/MessagesView.ts`): Full-page inline view with two-column layout (conversation sidebar + active conversation). Delegates to `DMPanel.renderEmbedded()`.
+- **PartyView** (`frontend/src/ui/views/PartyView.ts`): Full-page inline view with two states: empty (create party button) / active (member cards, chat panel, invite modal).
+- **FriendsPanel** (`frontend/src/ui/FriendsPanel.ts`): Three tabs: Friends (sorted online-first), Requests (incoming+outgoing), Blocked. Search bar with username prefix lookup. Live-updates via socket events. Supports `renderEmbedded()` for inline view rendering.
+- **PartyBar** (`frontend/src/ui/PartyBar.ts`): Persistent bar at top of `.main-content` when in party. Member chips, chat toggle (hidden when chat disabled for user's role), leave button. Chat window is in-memory ephemeral messages. Fetches `party_chat_mode` on init and listens for `admin:settingsChanged` to update in real-time.
 - **Invite toasts**: Action toasts with Accept/Decline buttons, 30s auto-dismiss. Triggered by `party:invite` and `invite:room` socket events.
-- **LobbyChatPanel** (`frontend/src/ui/LobbyChatPanel.ts`): Fixed collapsible panel bottom-left (z-index 150). Broadcasts to all users. Role-colored names. Checks `lobby_chat_mode` setting.
-- **DMPanel** (`frontend/src/ui/DMPanel.ts`): Slide-out panel right side (z-index 201). Two views: conversation list with unread badges, active conversation with message history. Real-time via `dm:receive`/`dm:read` socket events.
+- **LobbyChatPanel** (`frontend/src/ui/LobbyChatPanel.ts`): Fixed collapsible panel bottom-right (z-index 150, 380px wide). Uses `.lobby-chat` CSS classes. Broadcasts to all users. Role-colored names. Checks `lobby_chat_mode` setting.
+- **DMPanel** (`frontend/src/ui/DMPanel.ts`): Two views: conversation list with unread badges, active conversation with message history. Real-time via `dm:receive`/`dm:read` socket events. Supports `renderEmbedded()` for inline view rendering.
 - **EmoteBubbleRenderer** (`frontend/src/game/EmoteBubble.ts`): Phaser composed renderer. Floating text bubbles above players with tween animations (float up + fade out). Follows player positions.
-- LobbyUI: Friends, Messages, Party buttons in lobby header. PartyBar and LobbyChatPanel mounted with lobby. DMPanel accessible from Messages button or "Msg" button on friends.
+- LobbyUI: Friends, Messages, Party in sidebar nav (Social section). PartyBar and LobbyChatPanel mounted with lobby.
 
 ### Services
 - `backend/src/services/friends.ts`: sendRequest, accept, decline, cancel, remove, block, unblock, getFriends, getFriendIds, getPending, areFriends, isBlocked, search
@@ -191,12 +198,12 @@ Three additional social features, all admin-configurable with `ChatMode` (`'ever
 - Admin setting: `lobby_chat_mode` (public GET, admin PUT on `/api/admin/settings/lobby_chat_mode`).
 
 ### Direct Messages
-- Persistent (DB), between friends only. Slide-out panel on right side of lobby (z-index 201, overlays FriendsPanel).
+- Persistent (DB), between friends only. Full-page MessagesView with two-column layout.
 - Backend service: `backend/src/services/messages.ts` — sendMessage (checks areFriends + isBlocked), getConversation (paginated), getConversationList (with unread counts), markRead, getUnreadCounts.
 - Socket handlers: `backend/src/handlers/dmHandlers.ts`. Rate limit: 5/sec. `dm:send` with callback, `dm:read` with sender notification.
 - REST routes: `GET /messages`, `GET /messages/unread`, `GET /messages/:userId`, `PUT /messages/:userId/read`.
 - Frontend: `frontend/src/ui/DMPanel.ts`. Conversation list + active conversation views, real-time delivery, read receipts.
-- FriendsPanel: "Msg" button per friend opens DMPanel.openConversation(). LobbyUI: "Messages" button in header.
+- FriendsPanel: "Msg" button per friend navigates to MessagesView. LobbyUI: "Messages" in sidebar nav.
 - Admin setting: `dm_mode`.
 
 ### In-Game Quick Emotes
@@ -282,7 +289,7 @@ Delta tile encoding, bot AI tick throttling, per-tick caching, efficient seriali
 - `GameStateManager` constructor takes a `GameConfig` object (not positional parameters)
 - `frontend/src/utils/html.ts`: shared `escapeHtml()` and `escapeAttr()` utilities
 - `frontend/src/utils/powerUpCanvas.ts`: standalone Canvas2D power-up icon renderer (extracted from BootScene), used by HelpUI for inline `<canvas>` elements
-- LobbyUI modals extracted to `frontend/src/ui/modals/` — LobbyUI.ts is thin orchestrator (~200 lines)
+- LobbyUI modals extracted to `frontend/src/ui/modals/`, views to `frontend/src/ui/views/` — LobbyUI.ts is thin orchestrator (~200 lines)
 
 ## Database Migrations
 - Forward migrations in `backend/src/db/migrations/*.sql`, numbered `NNN_description.sql`
@@ -300,7 +307,7 @@ cd frontend && npx vitest run                   # Frontend only
 - See [docs/testing.md](docs/testing.md) for full inventory, mocking patterns, and guide for writing new tests
 
 ## Documentation
-Docs are accessible in-app via the Help panel (lobby header → Help button). Player-facing docs (campaign, replays, bot AI guide) appear in the Guides tab for all users. Staff-only docs appear in Level Editor and Admin Docs tabs. Docs are served via `/api/docs/` endpoints from the `docs/` directory (bind-mounted in dev, baked into Docker image for prod).
+Docs are accessible in-app via the Help view (sidebar → Help). Player-facing docs (campaign, replays, bot AI guide) appear in the Guides tab for all users. Staff-only docs appear in Level Editor and Admin Docs tabs. Docs are served via `/api/docs/` endpoints from the `docs/` directory (bind-mounted in dev, baked into Docker image for prod).
 
 - [Bot AI Developer Guide](docs/bot-ai-guide.md) — writing custom bot AIs
 - [Bot AI Internals](docs/bot-ai-internals.md) — built-in BotAI decision engine details

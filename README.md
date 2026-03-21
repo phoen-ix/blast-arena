@@ -73,7 +73,7 @@ Admins can upload custom AI implementations as TypeScript files. See [docs/bot-a
 
 ## Leaderboard & Ranking
 
-Elo-based competitive ranking across all game modes. Standard Elo formula with adaptive K-factor. Seasonal system with admin-defined dates, history archiving, and hard/soft resets. Six rank tiers (Bronze through Champion) with optional sub-tiers (I/II/III) — all admin-configurable. Public leaderboard page with season filtering and clickable profiles. Rank and level badges displayed next to usernames in lobby. Elo deltas and XP gains shown on game-over screen.
+Elo-based competitive ranking across all game modes. Standard Elo formula with adaptive K-factor. Seasonal system with admin-defined dates, history archiving, and hard/soft resets. Six rank tiers (Bronze through Champion) with optional sub-tiers (I/II/III) — all admin-configurable. Leaderboard view with season filtering (hidden when no seasons) and clickable profiles leading to full-page profile views. Rank and level badges displayed next to usernames in lobby. Elo deltas and XP gains shown on game-over screen.
 
 ## Player XP & Levels
 
@@ -81,13 +81,13 @@ XP-based leveling system separate from Elo. Earn XP from kills, bomb placements,
 
 ## Achievements & Cosmetics
 
-Admin-configurable achievement system with four condition types: cumulative stats, per-game feats, mode-specific milestones, and campaign progress. Ships with a default pack of 47 achievements and 25 cosmetic rewards across combat, victory, dedication, mode mastery, and campaign categories. Achievement progress tracking with progress bars on profiles (own profile only). Achievements can reward cosmetics. Four cosmetic types: player colors, eye styles, movement trails, and bomb skins. Unlocked via achievements, campaign stars, level milestones, or by default. Export/import achievements and cosmetics as JSON. Public profiles show rank, level, season history, achievements, and equipped cosmetics with a privacy toggle.
+Admin-configurable achievement system with four condition types: cumulative stats, per-game feats, mode-specific milestones, and campaign progress. Ships with a default pack of 47 achievements and 25 cosmetic rewards across combat, victory, dedication, mode mastery, and campaign categories. Achievement progress tracking with progress bars on profiles (own profile only). Achievements can reward cosmetics. Four cosmetic types: player colors, eye styles, movement trails, and bomb skins. Unlocked via achievements, campaign stars, level milestones, or by default. Export/import achievements and cosmetics as JSON. Full-page profile views show rank, level, stats grid, season history, achievements, and equipped cosmetics with a privacy toggle.
 
 ## Admin Panel
 
 | Tab | Access | Key Features |
 |-----|--------|-------------|
-| Dashboard | Admin | Stats, server settings (recordings, registration, email/SMTP, chat modes, XP multiplier), game/simulation defaults |
+| Dashboard | Admin | Stats, server settings (recordings, registration, email/SMTP, chat modes, XP multiplier, default theme), game/simulation defaults |
 | Users | Staff | Search, roles, deactivate, delete, password reset |
 | Matches | Staff | History, per-player stats, replay viewer, delete |
 | Rooms | Staff | Live rooms, spectate, kick, force close |
@@ -103,12 +103,14 @@ All actions audit-logged. See [docs/admin-and-systems.md](docs/admin-and-systems
 
 ## Social Features
 
-- **Friends List**: Send/accept/decline friend requests, block/unblock, username search. Friends panel slides out from the right side of the lobby.
+- **Theme System**: 5 color themes (Inferno, Arctic, Toxic, Crimson, Midnight). User selects in Settings > Preferences; admin sets global default in Dashboard. Themes affect all UI and Phaser canvas colors.
+- **Sidebar Navigation**: Persistent collapsible left sidebar with "ear" toggle tab. All lobby views (Rooms, Friends, Messages, Party, Leaderboard, Settings, Help, Admin, Campaign, Create Room, Profile) render inline in the main content area — no overlays or slide-out panels.
+- **Friends**: Full-page view with tabs (Friends/Requests/Blocked), search, friend cards with online status indicators.
 - **Online Presence**: See friends' real-time status (online, in lobby, in game, in campaign). Presence tracked via Redis with 120s TTL.
-- **Parties**: Create a party, invite friends, party chat. When the party leader joins a room, all members auto-follow.
+- **Parties**: Full-page view with two states: empty (create party) / active (member cards, chat, invites). When the party leader joins a room, all members auto-follow.
 - **Room Invites**: Invite friends directly to your current room. Invite toasts with Accept/Decline buttons (30s auto-dismiss).
-- **Lobby Chat**: Global ephemeral chat for all connected lobby users. Collapsible panel bottom-left.
-- **Direct Messages**: Persistent messages between friends. Conversation list with unread badges, real-time delivery, read receipts. Accessible via "Messages" button or "Msg" on any friend.
+- **Lobby Chat**: Global ephemeral chat for all connected lobby users. Collapsible panel bottom-right.
+- **Direct Messages**: Full-page two-column view (conversation sidebar + active conversation). Persistent messages between friends with unread badges, real-time delivery, read receipts.
 - **In-Game Emotes**: 6 predefined quick phrases (GG, Help!, Nice!, Oops, Taunt, Thanks) — keys 1-6 during gameplay. Floating bubbles above player sprites with 3s cooldown.
 - **Spectator Chat**: Dead players can text chat during live games. Collapsible panel bottom-left, role-colored usernames, 3/sec rate limit.
 - **Rematch Voting**: After game over, players vote for rematch. >50% triggers auto-restart with same settings. 30s timeout. Replaces manual "Play Again" flow.
@@ -120,7 +122,7 @@ Games recorded as gzipped JSON with video-player controls (play/pause, seek, 0.5
 
 ## In-Game Help & Documentation
 
-Full-screen Help panel accessible from the lobby header. Seven tabs with role-based filtering:
+Full-page Help view accessible from the lobby sidebar. Seven tabs with role-based filtering:
 
 | Tab | Access | Content |
 |-----|--------|---------|
@@ -189,10 +191,10 @@ blast-arena/
 │       ├── services/        # Auth, user, admin, lobby, email, replay, settings, friends, party, presence, messages, elo, season, leaderboard, achievements, cosmetics
 │       └── middleware/       # Auth, rate limiting, staff checks
 ├── frontend/
-│   ├── index.html           # HTML + full CSS design system (INFERNO theme)
+│   ├── index.html           # HTML + full CSS design system (5 themes)
 │   └── src/
 │       ├── scenes/          # Phaser scenes (Boot, Menu, Lobby, Game, HUD, GameOver)
-│       ├── ui/              # DOM-based UI (Auth, Lobby, Room, Campaign, Admin)
+│       ├── ui/              # DOM-based UI (Auth, Lobby, Room, Campaign, Admin, Views)
 │       ├── game/            # Client renderers, effects, replay, gamepad
 │       └── network/         # ApiClient, SocketClient, AuthManager
 ├── docs/                    # Detailed documentation (see below)

@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
+import { themeManager } from '../themes/ThemeManager';
 
-export const PLAYER_COLORS = [0xe94560, 0x44aaff, 0x44ff44, 0xff8800, 0xcc44ff, 0xffff44, 0xff44ff, 0x44ffff];
+export const PLAYER_COLORS = [
+  0xe94560, 0x44aaff, 0x44ff44, 0xff8800, 0xcc44ff, 0xffff44, 0xff44ff, 0x44ffff,
+];
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -16,14 +19,17 @@ export class BootScene extends Phaser.Scene {
     progressBox.fillStyle(0x2a2a48, 0.8);
     progressBox.fillRect(width / 2 - 160, height / 2 - 15, 320, 30);
 
-    const loadingText = this.add.text(width / 2, height / 2 - 40, 'Loading...', {
-      fontSize: '18px',
-      color: '#ff6b35',
-    }).setOrigin(0.5);
+    const colors = themeManager.getCanvasColors();
+    const loadingText = this.add
+      .text(width / 2, height / 2 - 40, 'Loading...', {
+        fontSize: '18px',
+        color: colors.primaryHex,
+      })
+      .setOrigin(0.5);
 
     this.load.on('progress', (value: number) => {
       progressBar.clear();
-      progressBar.fillStyle(0xff6b35, 1);
+      progressBar.fillStyle(colors.primary, 1);
       progressBar.fillRect(width / 2 - 155, height / 2 - 10, 310 * value, 20);
     });
 
@@ -48,17 +54,21 @@ export class BootScene extends Phaser.Scene {
   private generatePlayerTextures(): void {
     const directions: string[] = ['down', 'up', 'left', 'right'];
     // Eye positions relative to center for each direction
-    const eyeOffsets: Record<string, { lx: number; ly: number; rx: number; ry: number; px: number; py: number }> = {
-      down:  { lx: -7, ly: 2, rx: 7, ry: 2, px: 0, py: 2 },
-      up:    { lx: -7, ly: -4, rx: 7, ry: -4, px: 0, py: -2 },
-      left:  { lx: -8, ly: -1, rx: -1, ry: -1, px: -2, py: 0 },
+    const eyeOffsets: Record<
+      string,
+      { lx: number; ly: number; rx: number; ry: number; px: number; py: number }
+    > = {
+      down: { lx: -7, ly: 2, rx: 7, ry: 2, px: 0, py: 2 },
+      up: { lx: -7, ly: -4, rx: 7, ry: -4, px: 0, py: -2 },
+      left: { lx: -8, ly: -1, rx: -1, ry: -1, px: -2, py: 0 },
       right: { lx: 1, ly: -1, rx: 8, ry: -1, px: 2, py: 0 },
     };
 
     PLAYER_COLORS.forEach((color, i) => {
       for (const dir of directions) {
         const gfx = this.make.graphics({ x: 0, y: 0 });
-        const cx = 24, cy = 24;
+        const cx = 24,
+          cy = 24;
 
         // Body gradient: darker bottom, lighter top
         const darkerColor = Phaser.Display.Color.IntegerToColor(color).darken(20).color;
@@ -192,7 +202,7 @@ export class BootScene extends Phaser.Scene {
     // Floor tiles (4 variants for variety)
     for (let v = 0; v < 4; v++) {
       const floorGfx = this.make.graphics({ x: 0, y: 0 });
-      const baseShade = 0x2a2a3e + (v * 0x010102);
+      const baseShade = 0x2a2a3e + v * 0x010102;
       floorGfx.fillStyle(baseShade, 1);
       floorGfx.fillRect(0, 0, 48, 48);
       floorGfx.lineStyle(1, 0x333348, 0.2);
@@ -249,7 +259,12 @@ export class BootScene extends Phaser.Scene {
     }
 
     // Conveyor textures
-    const arrowDirs: Record<string, number> = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 };
+    const arrowDirs: Record<string, number> = {
+      up: -Math.PI / 2,
+      down: Math.PI / 2,
+      left: Math.PI,
+      right: 0,
+    };
     for (const [dir, angle] of Object.entries(arrowDirs)) {
       const convGfx = this.make.graphics({ x: 0, y: 0 });
       convGfx.fillStyle(0x2a2a3e, 1);
@@ -380,14 +395,14 @@ export class BootScene extends Phaser.Scene {
 
   private generatePowerUpTextures(): void {
     const defs: Record<string, { color: string; emoji: string }> = {
-      bomb_up:     { color: '#ff4444', emoji: '💣' },
-      fire_up:     { color: '#ff8800', emoji: '🔥' },
-      speed_up:    { color: '#44aaff', emoji: '⚡' },
-      shield:      { color: '#44ff44', emoji: '🛡️' },
-      kick:        { color: '#cc44ff', emoji: '👢' },
+      bomb_up: { color: '#ff4444', emoji: '💣' },
+      fire_up: { color: '#ff8800', emoji: '🔥' },
+      speed_up: { color: '#44aaff', emoji: '⚡' },
+      shield: { color: '#44ff44', emoji: '🛡️' },
+      kick: { color: '#cc44ff', emoji: '👢' },
       pierce_bomb: { color: '#ff2222', emoji: '💥' },
       remote_bomb: { color: '#4488ff', emoji: '📡' },
-      line_bomb:   { color: '#ffaa44', emoji: '🧨' },
+      line_bomb: { color: '#ffaa44', emoji: '🧨' },
     };
 
     for (const [type, def] of Object.entries(defs)) {
@@ -427,7 +442,14 @@ export class BootScene extends Phaser.Scene {
     }
   }
 
-  private canvasRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  private canvasRoundRect(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r: number,
+  ): void {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.lineTo(x + w - r, y);
@@ -504,10 +526,13 @@ export class BootScene extends Phaser.Scene {
    */
   static generateCustomPlayerTextures(scene: Phaser.Scene, hex: number, eyeStyle?: string): void {
     const directions = ['down', 'up', 'left', 'right'];
-    const eyeOffsets: Record<string, { lx: number; ly: number; rx: number; ry: number; px: number; py: number }> = {
-      down:  { lx: -7, ly: 2, rx: 7, ry: 2, px: 0, py: 2 },
-      up:    { lx: -7, ly: -4, rx: 7, ry: -4, px: 0, py: -2 },
-      left:  { lx: -8, ly: -1, rx: -1, ry: -1, px: -2, py: 0 },
+    const eyeOffsets: Record<
+      string,
+      { lx: number; ly: number; rx: number; ry: number; px: number; py: number }
+    > = {
+      down: { lx: -7, ly: 2, rx: 7, ry: 2, px: 0, py: 2 },
+      up: { lx: -7, ly: -4, rx: 7, ry: -4, px: 0, py: -2 },
+      left: { lx: -8, ly: -1, rx: -1, ry: -1, px: -2, py: 0 },
       right: { lx: 1, ly: -1, rx: 8, ry: -1, px: 2, py: 0 },
     };
 
@@ -518,7 +543,8 @@ export class BootScene extends Phaser.Scene {
       if (scene.textures.exists(key)) continue;
 
       const gfx = scene.make.graphics({ x: 0, y: 0 });
-      const cx = 24, cy = 24;
+      const cx = 24,
+        cy = 24;
 
       const darkerColor = Phaser.Display.Color.IntegerToColor(hex).darken(20).color;
       gfx.fillStyle(darkerColor, 1);

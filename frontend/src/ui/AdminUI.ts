@@ -205,19 +205,66 @@ export class AdminUI {
     }
   }
 
+  private isEmbedded = false;
+
+  async renderEmbedded(container: HTMLElement): Promise<void> {
+    this.isEmbedded = true;
+    this.container = container;
+
+    const viewContent = document.createElement('div');
+    viewContent.className = 'view-content';
+    viewContent.innerHTML = `
+      <div class="admin-tabs" id="admin-tab-bar">
+        ${this.tabs
+          .map(
+            (t) => `
+          <button class="admin-tab ${t.id === this.activeTabId ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>
+        `,
+          )
+          .join('')}
+      </div>
+      <div class="admin-tab-content" id="admin-tab-content"></div>
+    `;
+
+    this.container.appendChild(viewContent);
+
+    this.container.querySelector('#admin-tab-bar')!.addEventListener('click', (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.dataset.tab && target.dataset.tab !== this.activeTabId) {
+        this.switchTab(target.dataset.tab);
+      }
+    });
+
+    this.contentEl = this.container.querySelector('#admin-tab-content');
+    await this.renderActiveTab();
+    this.pushGamepadContext();
+  }
+
+  destroy(): void {
+    const activeTab = this.tabs.find((t) => t.id === this.activeTabId);
+    activeTab?.instance.destroy();
+    UIGamepadNavigator.getInstance().popContext('admin');
+  }
+
   private pushGamepadContext(): void {
     const gpNav = UIGamepadNavigator.getInstance();
     gpNav.popContext('admin');
+
+    const closeBtn = this.container.querySelector<HTMLElement>('#admin-close');
+
     gpNav.pushContext({
       id: 'admin',
       elements: () => [
-        ...this.container.querySelectorAll<HTMLElement>('#admin-close'),
+        ...(closeBtn ? [closeBtn] : []),
         ...this.container.querySelectorAll<HTMLElement>('.admin-tab'),
         ...(this.contentEl?.querySelectorAll<HTMLElement>(
           'input, select, textarea, button, .btn, .log-row',
         ) || []),
       ],
       onBack: () => {
+        if (this.isEmbedded) {
+          return;
+        }
         this.hide();
         this.onClose();
       },

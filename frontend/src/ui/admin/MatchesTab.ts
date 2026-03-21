@@ -36,9 +36,13 @@ export class MatchesTab {
 
       const colCount = this.isAdmin ? 9 : 8;
       this.container.innerHTML = `
-        ${this.isAdmin && result.total > 0 ? `<div style="margin-bottom:10px;display:flex;justify-content:flex-end;">
+        ${
+          this.isAdmin && result.total > 0
+            ? `<div style="margin-bottom:10px;display:flex;justify-content:flex-end;">
           <button class="btn btn-secondary" id="delete-all-matches" style="font-size:12px;padding:5px 12px;color:var(--danger);border-color:var(--danger);">Delete All Matches</button>
-        </div>` : ''}
+        </div>`
+            : ''
+        }
         <table class="admin-table">
           <thead>
             <tr>
@@ -100,7 +104,8 @@ export class MatchesTab {
     if (target.dataset.deleteMatch) {
       e.stopPropagation();
       const matchId = parseInt(target.dataset.deleteMatch);
-      if (!confirm(`Delete match #${matchId}? This will also delete its replay if one exists.`)) return;
+      if (!confirm(`Delete match #${matchId}? This will also delete its replay if one exists.`))
+        return;
       try {
         await ApiClient.delete(`/admin/matches/${matchId}`);
         this.notifications.success(`Match #${matchId} deleted`);
@@ -115,8 +120,12 @@ export class MatchesTab {
     if (target.id === 'delete-all-matches' || target.closest('#delete-all-matches')) {
       if (!confirm('Delete ALL matches and their replays? This cannot be undone.')) return;
       try {
-        const result = await ApiClient.delete<{ count: number; replaysCleaned: number }>('/admin/matches');
-        this.notifications.success(`Deleted ${result.count} matches, ${result.replaysCleaned} replays cleaned`);
+        const result = await ApiClient.delete<{ count: number; replaysCleaned: number }>(
+          '/admin/matches',
+        );
+        this.notifications.success(
+          `Deleted ${result.count} matches, ${result.replaysCleaned} replays cleaned`,
+        );
         this.page = 1;
         await this.loadMatches();
       } catch {
@@ -150,13 +159,11 @@ export class MatchesTab {
           const selfKills = p.selfKills ?? 0;
           const team = p.team;
           const alive = p.alive ?? false;
-          const isWinner =
-            (p.userId ?? p.id) === match.winnerId ||
-            (placement === 1 && alive);
+          const isWinner = (p.userId ?? p.id) === match.winnerId || (placement === 1 && alive);
           const displayName =
             escapeHtml(name) +
             (isBot ? ' <span style="color:var(--text-dim);">(bot)</span>' : '') +
-            (isWinner ? ' <span style="color:#ffd700;">&#9733;</span>' : '');
+            (isWinner ? ' <span style="color:var(--warning);">&#9733;</span>' : '');
           const rowStyle = !alive ? 'color:var(--text-dim);' : '';
 
           return `
@@ -267,8 +274,7 @@ export class MatchesTab {
       registry.set('replayData', replayData);
 
       // Start GameScene and HUDScene
-      const activeScene =
-        game.scene.getScene('LobbyScene') || game.scene.getScene('MenuScene');
+      const activeScene = game.scene.getScene('LobbyScene') || game.scene.getScene('MenuScene');
       if (activeScene) {
         activeScene.scene.start('GameScene');
         activeScene.scene.launch('HUDScene');

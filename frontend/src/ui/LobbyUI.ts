@@ -1,21 +1,15 @@
 import { SocketClient } from '../network/SocketClient';
 import { AuthManager } from '../network/AuthManager';
-import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
-import { AdminUI } from './AdminUI';
-import { CampaignUI } from './CampaignUI';
-import { FriendsPanel } from './FriendsPanel';
 import { PartyBar } from './PartyBar';
 import { LobbyChatPanel } from './LobbyChatPanel';
-import { DMPanel } from './DMPanel';
-import { RoomListItem, Room, GameDefaults, BotAIEntry, getErrorMessage } from '@blast-arena/shared';
-import { escapeHtml, escapeAttr } from '../utils/html';
-import { showCreateRoomModal } from './modals/CreateRoomModal';
-import { HelpUI } from './HelpUI';
-import { SettingsUI } from './SettingsUI';
-import { LeaderboardUI } from './LeaderboardUI';
-import { ProfilePanel } from './ProfilePanel';
+import { RoomListItem, Room } from '@blast-arena/shared';
+import { escapeHtml } from '../utils/html';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
+import { ILobbyView, ViewDeps } from './views/types';
+import { RoomsView } from './views/RoomsView';
+
+const SIDEBAR_COLLAPSED_KEY = 'blast-arena-sidebar-collapsed';
 
 export class LobbyUI {
   private container: HTMLElement;
@@ -24,10 +18,14 @@ export class LobbyUI {
   private notifications: NotificationUI;
   private onJoinRoom: (room: Room) => void;
   private roomListHandler: ((rooms: RoomListItem[]) => void) | null = null;
-  private friendsPanel: FriendsPanel;
   private partyBar: PartyBar;
   private lobbyChatPanel: LobbyChatPanel;
-  private dmPanel: DMPanel;
+  private sidebarCollapsed = false;
+  private activeView: ILobbyView | null = null;
+  private activeViewId = 'rooms';
+  private roomsView: RoomsView | null = null;
+  private initialView: string | null = null;
+  private initialViewOptions: Record<string, any> | null = null;
 
   constructor(
     socketClient: SocketClient,
@@ -40,237 +38,347 @@ export class LobbyUI {
     this.notifications = notifications;
     this.onJoinRoom = onJoinRoom;
     this.container = document.createElement('div');
-    this.container.className = 'lobby-container';
+    this.container.className = 'app-layout';
+    this.sidebarCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
     const user = authManager.getUser();
     const userId = user?.id ?? 0;
     const userRole = user?.role ?? 'user';
-    this.dmPanel = new DMPanel(socketClient, notifications, userId, userRole);
-    this.friendsPanel = new FriendsPanel(socketClient, notifications, (fUserId, fUsername) => {
-      this.dmPanel.openConversation(fUserId, fUsername);
-    });
     this.lobbyChatPanel = new LobbyChatPanel(socketClient, notifications, userId, userRole);
     this.partyBar = new PartyBar(socketClient, notifications, userId, userRole);
     this.partyBar.setJoinRoomCallback((roomCode) => this.joinRoom(roomCode));
   }
 
-  show(): void {
+  show(initialView?: string, viewOptions?: Record<string, any>): void {
+    this.initialView = initialView || null;
+    this.initialViewOptions = viewOptions || null;
+
     const uiOverlay = document.getElementById('ui-overlay');
     if (uiOverlay && !uiOverlay.contains(this.container)) {
       uiOverlay.appendChild(this.container);
     }
     this.render();
-    this.loadRooms();
-    this.loadBanner();
-    this.roomListHandler = (rooms: RoomListItem[]) => this.renderRooms(rooms);
+
+    // Set up room list listener (stays active across view changes)
+    this.roomListHandler = (rooms: RoomListItem[]) => {
+      if (this.roomsView) {
+        this.roomsView.updateRooms(rooms);
+      }
+    };
     this.socketClient.on('room:list' as any, this.roomListHandler as any);
-    this.friendsPanel.mount();
-    this.partyBar.mount(this.container);
+
+    // Mount persistent UI
+    const mainContent = this.container.querySelector('.main-content') as HTMLElement;
+    if (mainContent) {
+      this.partyBar.mount(mainContent);
+    }
     this.lobbyChatPanel.mount(this.container);
-    this.dmPanel.mount();
-    UIGamepadNavigator.getInstance().pushContext({
-      id: 'lobby',
-      elements: () => [
-        ...this.container.querySelectorAll<HTMLElement>('.lobby-header .btn'),
-        ...this.container.querySelectorAll<HTMLElement>('.room-card'),
-      ],
-    });
+
+    // Navigate to initial view
+    this.navigateTo(this.initialView || 'rooms', this.initialViewOptions || undefined);
+
+    // Sidebar rank/level badges
+    this.loadSidebarBadges();
+  }
+
+  showView(viewId: string, options?: Record<string, any>): void {
+    this.navigateTo(viewId, options);
   }
 
   hide(): void {
+    this.activeView?.destroy();
+    this.activeView = null;
+    this.roomsView = null;
     if (this.roomListHandler) {
       this.socketClient.off('room:list' as any, this.roomListHandler as any);
       this.roomListHandler = null;
     }
     UIGamepadNavigator.getInstance().popContext('lobby');
-    this.friendsPanel.close();
     this.lobbyChatPanel.unmount();
-    this.dmPanel.close();
     this.container.remove();
   }
 
   destroyPanels(): void {
-    this.friendsPanel.destroy();
     this.partyBar.destroy();
     this.lobbyChatPanel.destroy();
-    this.dmPanel.destroy();
+  }
+
+  private async navigateTo(viewId: string, options?: Record<string, any>): Promise<void> {
+    // Destroy current view
+    if (this.activeView) {
+      this.activeView.destroy();
+      this.activeView = null;
+    }
+
+    this.activeViewId = viewId;
+
+    // Update sidebar active state
+    this.container.querySelectorAll('.sidebar-nav-item').forEach((item) => {
+      item.classList.toggle('active', item.id === `nav-${viewId}`);
+    });
+
+    // Create view
+    const view = await this.createView(viewId, options);
+    this.activeView = view;
+
+    // Update main header actions
+    const headerActions = this.container.querySelector('.main-header-actions') as HTMLElement;
+    if (headerActions) {
+      headerActions.innerHTML = view.getHeaderActions?.() ?? '';
+      this.bindHeaderActions(viewId);
+    }
+
+    // Views with their own sub-header hide .main-header; others show it
+    const viewsWithOwnHeader = ['admin', 'settings', 'help', 'friends'];
+    const mainHeader = this.container.querySelector('.main-header') as HTMLElement;
+    if (mainHeader) {
+      mainHeader.style.display = viewsWithOwnHeader.includes(viewId) ? 'none' : '';
+    }
+
+    // Clear and render main body
+    const mainBody = this.container.querySelector('.main-body') as HTMLElement;
+    if (mainBody) {
+      mainBody.innerHTML = '';
+      await view.render(mainBody);
+    }
+
+    // Update gamepad context
+    this.updateGamepadContext();
+  }
+
+  private async createView(viewId: string, options?: Record<string, any>): Promise<ILobbyView> {
+    const deps: ViewDeps = {
+      socketClient: this.socketClient,
+      authManager: this.authManager,
+      notifications: this.notifications,
+    };
+
+    switch (viewId) {
+      case 'rooms': {
+        const view = new RoomsView(deps, (room) => {
+          this.hide();
+          this.onJoinRoom(room);
+        });
+        this.roomsView = view;
+        return view;
+      }
+      case 'admin': {
+        const { AdminView } = await import('./views/AdminView');
+        return new AdminView(deps, options);
+      }
+      case 'settings': {
+        const { SettingsView } = await import('./views/SettingsView');
+        return new SettingsView(deps);
+      }
+      case 'help': {
+        const { HelpView } = await import('./views/HelpView');
+        return new HelpView(deps);
+      }
+      case 'leaderboard': {
+        const { LeaderboardView } = await import('./views/LeaderboardView');
+        return new LeaderboardView(deps, (userId) => this.navigateTo('profile', { userId }));
+      }
+      case 'campaign': {
+        const { CampaignView } = await import('./views/CampaignView');
+        return new CampaignView(deps);
+      }
+      case 'friends': {
+        const { FriendsView } = await import('./views/FriendsView');
+        return new FriendsView(deps, (userId: number, username: string) => {
+          this.navigateTo('messages', { userId, username });
+        });
+      }
+      case 'messages': {
+        const { MessagesView } = await import('./views/MessagesView');
+        return new MessagesView(deps, options);
+      }
+      case 'party': {
+        const { PartyView } = await import('./views/PartyView');
+        return new PartyView(deps, this.partyBar);
+      }
+      case 'create-room': {
+        const { CreateRoomView } = await import('./views/CreateRoomView');
+        return new CreateRoomView(
+          deps,
+          (room) => {
+            this.hide();
+            this.onJoinRoom(room);
+          },
+          () => this.navigateTo('rooms'),
+        );
+      }
+      case 'profile': {
+        const { ProfileView } = await import('./views/ProfileView');
+        return new ProfileView(deps, options);
+      }
+      default:
+        return new RoomsView(deps, (room) => {
+          this.hide();
+          this.onJoinRoom(room);
+        });
+    }
+  }
+
+  private bindHeaderActions(viewId: string): void {
+    if (viewId === 'rooms') {
+      const createBtn = this.container.querySelector('#create-room-btn');
+      if (createBtn) {
+        createBtn.addEventListener('click', () => this.navigateTo('create-room'));
+      }
+    }
   }
 
   private render(): void {
     const user = this.authManager.getUser();
+    const isStaff = user?.role === 'admin' || user?.role === 'moderator';
+    const username = escapeHtml(user?.username ?? '');
+    const initial = (user?.username ?? 'U')[0].toUpperCase();
+    const collapsedClass = this.sidebarCollapsed ? ' collapsed' : '';
+
     this.container.innerHTML = `
-      <div class="lobby-header">
-        <h1><span>BLAST</span>ARENA</h1>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <span style="color:var(--text-dim);font-size:13px;">Welcome, <strong style="color:var(--text);">${escapeHtml(user?.username ?? '')}</strong></span>
-          <span id="level-badge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:var(--bg-elevated);color:var(--primary);display:none;"></span>
-          <span id="rank-badge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;display:none;"></span>
-          ${user?.role === 'admin' || user?.role === 'moderator' ? '<button class="btn btn-ghost" id="admin-btn">Admin</button>' : ''}
-          <button class="btn btn-primary" id="create-room-btn">+ New Room</button>
-          <button class="btn" id="campaign-btn" style="background:linear-gradient(135deg, var(--primary), #ff8f35);color:#fff;font-weight:700;letter-spacing:0.5px;">Campaign</button>
-          <button class="btn btn-ghost" id="leaderboard-btn" style="color:var(--warning);">Leaderboard</button>
-          <button class="btn btn-ghost" id="friends-btn" style="color:var(--accent);">Friends</button>
-          <button class="btn btn-ghost" id="messages-btn">Messages</button>
-          <button class="btn btn-ghost" id="party-btn">Party</button>
-          <button class="btn btn-ghost" id="settings-btn">Settings</button>
-          <button class="btn btn-ghost" id="help-btn">Help</button>
-          <button class="btn btn-ghost" id="logout-btn">Logout</button>
+      <nav class="sidebar${collapsedClass}">
+        <div class="sidebar-brand">
+          <h1 class="sidebar-brand-full"><span>BLAST</span>ARENA</h1>
+          <div class="sidebar-brand-icon"><span>B</span>A</div>
         </div>
-      </div>
-      <div id="lobby-banner-area" style="padding:0 24px;"></div>
-      <div style="padding:16px 24px 0;"><span style="color:var(--text-dim);font-size:13px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Available Rooms</span></div>
-      <div class="room-list" id="room-list">
-        <div style="color:var(--text-muted);text-align:center;padding:60px 20px;font-size:15px;">Loading rooms...</div>
+
+        <div class="sidebar-nav">
+          <div class="sidebar-section-label">Play</div>
+          <button class="sidebar-nav-item active" id="nav-rooms">
+            <span class="nav-icon">&#9776;</span>
+            <span class="nav-label">Rooms</span>
+          </button>
+          <button class="sidebar-nav-item" id="nav-campaign">
+            <span class="nav-icon">&#9876;</span>
+            <span class="nav-label">Campaign</span>
+          </button>
+
+          <div class="sidebar-section-label">Social</div>
+          <button class="sidebar-nav-item" id="nav-friends">
+            <span class="nav-icon">&#9835;</span>
+            <span class="nav-label">Friends</span>
+          </button>
+          <button class="sidebar-nav-item" id="nav-messages">
+            <span class="nav-icon">&#9993;</span>
+            <span class="nav-label">Messages</span>
+          </button>
+          <button class="sidebar-nav-item" id="nav-party">
+            <span class="nav-icon">&#9733;</span>
+            <span class="nav-label">Party</span>
+          </button>
+
+          <div class="sidebar-section-label">Progress</div>
+          <button class="sidebar-nav-item" id="nav-leaderboard">
+            <span class="nav-icon">&#9813;</span>
+            <span class="nav-label">Leaderboard</span>
+          </button>
+
+          <div class="sidebar-divider"></div>
+
+          <button class="sidebar-nav-item" id="nav-settings">
+            <span class="nav-icon">&#9881;</span>
+            <span class="nav-label">Settings</span>
+          </button>
+          <button class="sidebar-nav-item" id="nav-help">
+            <span class="nav-icon">?</span>
+            <span class="nav-label">Help</span>
+          </button>
+          ${
+            isStaff
+              ? `
+          <button class="sidebar-nav-item" id="nav-admin">
+            <span class="nav-icon">&#9888;</span>
+            <span class="nav-label">Admin</span>
+          </button>
+          `
+              : ''
+          }
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-user" id="sidebar-user-profile" style="cursor:pointer;" title="View profile">
+            <div class="sidebar-user-avatar">${initial}</div>
+            <div class="sidebar-user-info">
+              <div class="sidebar-user-name">${username}</div>
+              <div class="sidebar-user-rank">
+                <span id="sidebar-level"></span>
+                <span id="sidebar-rank"></span>
+              </div>
+            </div>
+          </div>
+          <button class="sidebar-nav-item" id="nav-logout">
+            <span class="nav-icon">&#8618;</span>
+            <span class="nav-label">Logout</span>
+          </button>
+        </div>
+      </nav>
+      <button class="sidebar-ear" id="sidebar-toggle" title="${this.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}">
+        <span class="sidebar-ear-icon">${this.sidebarCollapsed ? '&#9654;' : '&#9664;'}</span>
+      </button>
+
+      <div class="main-content">
+        <div class="main-header">
+          <div class="main-header-actions"></div>
+        </div>
+        <div class="main-body"></div>
       </div>
     `;
 
+    this.bindEvents();
+  }
+
+  private bindEvents(): void {
+    // Navigation items
     this.container
-      .querySelector('#create-room-btn')!
-      .addEventListener('click', () => this.showCreateRoomModal());
-    this.container.querySelector('#campaign-btn')!.addEventListener('click', () => {
-      this.hide();
-      const campaignUI = new CampaignUI(this.socketClient, this.notifications, () => {
-        this.show();
-      });
-      campaignUI.show();
+      .querySelector('#nav-rooms')!
+      .addEventListener('click', () => this.navigateTo('rooms'));
+    this.container
+      .querySelector('#nav-campaign')!
+      .addEventListener('click', () => this.navigateTo('campaign'));
+    this.container
+      .querySelector('#nav-friends')!
+      .addEventListener('click', () => this.navigateTo('friends'));
+    this.container
+      .querySelector('#nav-messages')!
+      .addEventListener('click', () => this.navigateTo('messages'));
+    this.container
+      .querySelector('#nav-leaderboard')!
+      .addEventListener('click', () => this.navigateTo('leaderboard'));
+    this.container
+      .querySelector('#nav-settings')!
+      .addEventListener('click', () => this.navigateTo('settings'));
+    this.container
+      .querySelector('#nav-help')!
+      .addEventListener('click', () => this.navigateTo('help'));
+
+    const adminBtn = this.container.querySelector('#nav-admin');
+    if (adminBtn) {
+      adminBtn.addEventListener('click', () => this.navigateTo('admin'));
+    }
+
+    this.container
+      .querySelector('#nav-party')!
+      .addEventListener('click', () => this.navigateTo('party'));
+
+    this.container.querySelector('#sidebar-user-profile')!.addEventListener('click', () => {
+      const user = this.authManager.getUser();
+      if (user) this.navigateTo('profile', { userId: user.id });
     });
-    const profilePanel = new ProfilePanel(this.notifications);
-    this.container.querySelector('#leaderboard-btn')!.addEventListener('click', () => {
-      this.hide();
-      const leaderboardUI = new LeaderboardUI(
-        this.notifications,
-        () => {
-          this.show();
-        },
-        (userId) => {
-          profilePanel.open(userId);
-        },
-      );
-      leaderboardUI.show();
-    });
-    this.container.querySelector('#friends-btn')!.addEventListener('click', () => {
-      this.friendsPanel.toggle();
-    });
-    this.container.querySelector('#messages-btn')!.addEventListener('click', () => {
-      this.dmPanel.toggle();
-    });
-    this.container.querySelector('#party-btn')!.addEventListener('click', () => {
-      if (this.partyBar.getParty()) {
-        this.notifications.info('Already in a party');
-      } else {
-        this.partyBar.createParty();
-      }
-    });
-    this.container.querySelector('#settings-btn')!.addEventListener('click', () => {
-      this.hide();
-      const settingsUI = new SettingsUI(this.authManager, this.notifications, () => {
-        this.show();
-      });
-      settingsUI.show();
-    });
-    this.container.querySelector('#help-btn')!.addEventListener('click', () => {
-      this.hide();
-      const helpUI = new HelpUI(this.authManager, this.notifications, () => {
-        this.show();
-      });
-      helpUI.show();
-    });
-    this.container.querySelector('#logout-btn')!.addEventListener('click', () => {
+
+    this.container.querySelector('#nav-logout')!.addEventListener('click', () => {
       this.authManager.logout();
       this.hide();
     });
 
-    const adminBtn = this.container.querySelector('#admin-btn');
-    if (adminBtn) {
-      adminBtn.addEventListener('click', () => {
-        this.hide();
-        const adminUI = new AdminUI(this.socketClient, this.authManager, this.notifications, () => {
-          this.show();
-        });
-        adminUI.show();
-      });
-    }
-
-    // Load rank badge and level
-    ApiClient.get<{ rankTier: string; rankColor: string; level?: number }>('/user/rank')
-      .then((rank) => {
-        const badge = this.container.querySelector('#rank-badge') as HTMLElement;
-        if (badge && rank.rankTier) {
-          badge.style.display = 'inline-block';
-          badge.style.background = rank.rankColor;
-          badge.style.color = '#fff';
-          badge.textContent = rank.rankTier;
-        }
-        const levelBadge = this.container.querySelector('#level-badge') as HTMLElement;
-        if (levelBadge && rank.level) {
-          levelBadge.style.display = 'inline-block';
-          levelBadge.textContent = `Lvl ${rank.level}`;
-        }
-      })
-      .catch(() => {
-        /* ignore rank load failure */
-      });
-  }
-
-  private async loadRooms(): Promise<void> {
-    try {
-      const rooms = await ApiClient.get<RoomListItem[]>('/lobby/rooms');
-      this.renderRooms(rooms);
-    } catch (err: unknown) {
-      this.notifications.error('Failed to load rooms: ' + getErrorMessage(err));
-    }
-  }
-
-  private async loadBanner(): Promise<void> {
-    try {
-      const banner = await ApiClient.get<any>('/admin/announcements/banner');
-      const area = this.container.querySelector('#lobby-banner-area');
-      if (area && banner && banner.message) {
-        area.innerHTML = `
-          <div class="admin-banner">
-            <span>${escapeHtml(banner.message)}</span>
-            <button class="banner-close">&times;</button>
-          </div>
-        `;
-        area.querySelector('.banner-close')?.addEventListener('click', () => {
-          area.innerHTML = '';
-        });
-      }
-    } catch {
-      // No banner or error — ignore
-    }
-  }
-
-  private renderRooms(rooms: RoomListItem[]): void {
-    const list = this.container.querySelector('#room-list')!;
-    if (rooms.length === 0) {
-      list.innerHTML =
-        '<div style="color:var(--text-muted);text-align:center;padding:60px 20px;font-size:15px;">No rooms yet — create one to get started!</div>';
-      return;
-    }
-
-    list.innerHTML = rooms
-      .map(
-        (room) => `
-      <div class="room-card" data-code="${escapeAttr(room.code)}">
-        <h3>${escapeHtml(room.name)}</h3>
-        <div class="room-info">
-          <span>${room.playerCount}/${room.maxPlayers} players</span>
-          <span class="room-mode">${room.gameMode.replace('_', ' ').toUpperCase()}</span>
-        </div>
-        <div class="room-info" style="margin-top:6px;">
-          <span>Host: ${escapeHtml(room.host)}</span>
-          <span style="color:${room.status === 'playing' ? 'var(--warning)' : 'var(--success)'};">${room.status}</span>
-        </div>
-      </div>
-    `,
-      )
-      .join('');
-
-    list.querySelectorAll('.room-card').forEach((card) => {
-      card.addEventListener('click', () => {
-        const code = card.getAttribute('data-code')!;
-        this.joinRoom(code);
-      });
+    // Sidebar collapse toggle (ear)
+    this.container.querySelector('#sidebar-toggle')!.addEventListener('click', () => {
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(this.sidebarCollapsed));
+      const sidebar = this.container.querySelector('.sidebar')!;
+      sidebar.classList.toggle('collapsed', this.sidebarCollapsed);
+      const ear = this.container.querySelector('#sidebar-toggle') as HTMLElement;
+      const icon = ear.querySelector('.sidebar-ear-icon')!;
+      icon.innerHTML = this.sidebarCollapsed ? '&#9654;' : '&#9664;';
+      ear.title = this.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
     });
   }
 
@@ -286,63 +394,41 @@ export class LobbyUI {
     });
   }
 
-  private async showCreateRoomModal(): Promise<void> {
-    let recordingsEnabled = false;
-    let gameDefaults: GameDefaults = {};
-    let activeAIs: BotAIEntry[] = [];
-    try {
-      const [recResp, defResp, aiResp] = await Promise.all([
-        ApiClient.get<{ enabled: boolean }>('/admin/settings/recordings_enabled'),
-        ApiClient.get<{ defaults: GameDefaults }>('/admin/settings/game_defaults'),
-        ApiClient.get<{ ais: BotAIEntry[] }>('/admin/ai/active'),
-      ]);
-      recordingsEnabled = recResp.enabled;
-      gameDefaults = defResp.defaults ?? {};
-      activeAIs = aiResp.ais ?? [];
-    } catch {
-      // Default to false/empty on fetch failure
-    }
-    showCreateRoomModal({
-      socketClient: this.socketClient,
-      notifications: this.notifications,
-      onRoomCreated: (room) => {
-        this.hide();
-        this.onJoinRoom(room);
-      },
-      generateRoomName: () => this.generateRoomName(),
-      recordingsEnabled,
-      gameDefaults,
-      activeAIs,
+  private loadSidebarBadges(): void {
+    import('../network/ApiClient').then(({ ApiClient }) => {
+      ApiClient.get<{ rankTier: string; rankColor: string; level?: number }>('/user/rank')
+        .then((rank) => {
+          const sidebarLevel = this.container.querySelector('#sidebar-level') as HTMLElement;
+          if (sidebarLevel && rank.level) {
+            sidebarLevel.textContent = `Lvl ${rank.level}`;
+          }
+          const sidebarRank = this.container.querySelector('#sidebar-rank') as HTMLElement;
+          if (sidebarRank && rank.rankTier) {
+            sidebarRank.textContent = rank.rankTier;
+            sidebarRank.style.color = rank.rankColor;
+          }
+        })
+        .catch(() => {});
     });
   }
 
-  private generateRoomName(): string {
-    const adjectives = [
-      'Explosive',
-      'Chaotic',
-      'Blazing',
-      'Fiery',
-      'Reckless',
-      'Volatile',
-      'Scorched',
-      'Molten',
-      'Infernal',
-      'Savage',
-    ];
-    const nouns = [
-      'Arena',
-      'Warzone',
-      'Blitz',
-      'Showdown',
-      'Brawl',
-      'Mayhem',
-      'Rumble',
-      'Frenzy',
-      'Clash',
-      'Carnage',
-    ];
-    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    return `${adj} ${noun}`;
+  private updateGamepadContext(): void {
+    const gpNav = UIGamepadNavigator.getInstance();
+    gpNav.popContext('lobby');
+    gpNav.pushContext({
+      id: 'lobby',
+      elements: () => [
+        ...this.container.querySelectorAll<HTMLElement>('.sidebar-nav-item'),
+        ...this.container.querySelectorAll<HTMLElement>(
+          '.main-body input, .main-body select, .main-body textarea, .main-body button, .main-body .btn, .main-body .room-card, .main-body .admin-tab, .main-body .tab-item',
+        ),
+        ...this.container.querySelectorAll<HTMLElement>('.main-header .btn'),
+      ],
+      onBack: () => {
+        if (this.activeViewId !== 'rooms') {
+          this.navigateTo('rooms');
+        }
+      },
+    });
   }
 }

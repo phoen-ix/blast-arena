@@ -29,10 +29,6 @@ interface CampaignWorld {
   levels: CampaignLevel[];
 }
 
-interface CampaignData {
-  worlds: CampaignWorld[];
-}
-
 export class CampaignUI {
   private container: HTMLElement;
   private notifications: NotificationUI;
@@ -41,12 +37,9 @@ export class CampaignUI {
   private expandedWorldId: number | null = null;
   private selectedLevelId: number | null = null;
   private worlds: CampaignWorld[] = [];
+  private embedded = false;
 
-  constructor(
-    socketClient: SocketClient,
-    notifications: NotificationUI,
-    onClose: () => void,
-  ) {
+  constructor(socketClient: SocketClient, notifications: NotificationUI, onClose: () => void) {
     this.socketClient = socketClient;
     this.notifications = notifications;
     this.onClose = onClose;
@@ -79,9 +72,21 @@ export class CampaignUI {
     this.container.remove();
   }
 
+  async renderEmbedded(container: HTMLElement): Promise<void> {
+    this.embedded = true;
+    this.container = container;
+    await this.loadCampaignData();
+    this.renderContent();
+    this.pushGamepadContext();
+  }
+
   destroy(): void {
     UIGamepadNavigator.getInstance().popContext('campaign');
-    this.container.remove();
+    this.container.innerHTML = '';
+    this.embedded = false;
+    this.worlds = [];
+    this.expandedWorldId = null;
+    this.selectedLevelId = null;
   }
 
   private async loadCampaignData(): Promise<void> {
@@ -158,8 +163,17 @@ export class CampaignUI {
     header.appendChild(backBtn);
     this.container.appendChild(header);
 
+    this.renderContent();
+  }
+
+  private renderContent(): void {
+    // Remove any existing content area (preserve header if present)
+    const existingContent = this.container.querySelector('[data-campaign-content]');
+    if (existingContent) existingContent.remove();
+
     // Content area
     const content = document.createElement('div');
+    content.setAttribute('data-campaign-content', 'true');
     content.style.cssText = `
       flex: 1;
       overflow-y: auto;
@@ -437,9 +451,8 @@ export class CampaignUI {
 
       if (level.stars > 0) {
         const starsEl = document.createElement('span');
-        starsEl.style.cssText = 'font-size:13px;color:#ffdd44;letter-spacing:1px;';
-        starsEl.textContent =
-          '\u2605'.repeat(level.stars) + '\u2606'.repeat(3 - level.stars);
+        starsEl.style.cssText = 'font-size:13px;color:var(--warning);letter-spacing:1px;';
+        starsEl.textContent = '\u2605'.repeat(level.stars) + '\u2606'.repeat(3 - level.stars);
         nameRow.appendChild(starsEl);
       }
 
@@ -485,11 +498,7 @@ export class CampaignUI {
     const statsArea = document.createElement('div');
     statsArea.style.cssText = 'display:flex;gap:10px;align-items:center;';
 
-    const enemyBadge = this.createStatBadge(
-      `${level.enemyCount}`,
-      'enemies',
-      'var(--danger)',
-    );
+    const enemyBadge = this.createStatBadge(`${level.enemyCount}`, 'enemies', 'var(--danger)');
     const livesBadge = this.createStatBadge(
       `${level.lives}`,
       level.lives === 1 ? 'life' : 'lives',
@@ -499,9 +508,7 @@ export class CampaignUI {
     const timerMins = Math.floor(level.timeLimit / 60);
     const timerSecs = level.timeLimit % 60;
     const timerStr =
-      timerSecs > 0
-        ? `${timerMins}:${timerSecs.toString().padStart(2, '0')}`
-        : `${timerMins}m`;
+      timerSecs > 0 ? `${timerMins}:${timerSecs.toString().padStart(2, '0')}` : `${timerMins}m`;
     const timerBadge = this.createStatBadge(timerStr, 'time', 'var(--warning)');
 
     statsArea.appendChild(enemyBadge);
@@ -538,7 +545,11 @@ export class CampaignUI {
         } else {
           this.selectedLevelId = level.id;
         }
-        this.render();
+        if (this.embedded) {
+          this.renderContent();
+        } else {
+          this.render();
+        }
       });
     }
 
@@ -623,8 +634,7 @@ export class CampaignUI {
         registry.set('campaignEnemyTypes', enemyTypesResp.enemyTypes || []);
 
         // Transition to GameScene + HUDScene
-        const activeScene =
-          game.scene.getScene('LobbyScene') || game.scene.getScene('MenuScene');
+        const activeScene = game.scene.getScene('LobbyScene') || game.scene.getScene('MenuScene');
         if (activeScene) {
           activeScene.scene.start('GameScene');
           activeScene.scene.launch('HUDScene');

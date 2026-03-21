@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SocketClient } from '../network/SocketClient';
 import { ApiClient } from '../network/ApiClient';
 import { EloResult, AchievementUnlockEvent, XpUpdateResult } from '@blast-arena/shared';
+import { themeManager } from '../themes/ThemeManager';
 
 const DEADZONE = 0.3;
 
@@ -108,6 +109,8 @@ export class GameOverScene extends Phaser.Scene {
       socketClient.off('rematch:triggered' as any, rematchTriggeredHandler as any);
     });
 
+    const colors = themeManager.getCanvasColors();
+
     this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
 
     // Campaign results
@@ -119,7 +122,7 @@ export class GameOverScene extends Phaser.Scene {
     const gameText = this.add
       .text(0, 45, 'GAME ', {
         fontSize: '42px',
-        color: '#ffffff',
+        color: colors.textHex,
         fontFamily: 'Chakra Petch, sans-serif',
         fontStyle: 'bold',
       })
@@ -127,7 +130,7 @@ export class GameOverScene extends Phaser.Scene {
     const overText = this.add
       .text(0, 45, 'OVER', {
         fontSize: '42px',
-        color: '#ff6b35',
+        color: colors.primaryHex,
         fontFamily: 'Chakra Petch, sans-serif',
         fontStyle: 'bold',
       })
@@ -141,7 +144,7 @@ export class GameOverScene extends Phaser.Scene {
       this.add
         .text(width / 2, 85, data.reason, {
           fontSize: '16px',
-          color: '#8888a0',
+          color: colors.textDimHex,
           fontFamily: 'DM Sans, sans-serif',
         })
         .setOrigin(0.5);
@@ -151,7 +154,7 @@ export class GameOverScene extends Phaser.Scene {
     const voteBtn = this.add
       .text(width / 2 - 100, height - 40, '[ Vote Rematch ]', {
         fontSize: '20px',
-        color: '#ffffff',
+        color: colors.textHex,
         fontFamily: 'Chakra Petch, sans-serif',
         fontStyle: 'bold',
       })
@@ -159,20 +162,24 @@ export class GameOverScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     this.voteButton = voteBtn;
 
-    voteBtn.on('pointerover', () => voteBtn.setColor(this.hasVoted ? '#44ff88' : '#cccccc'));
-    voteBtn.on('pointerout', () => voteBtn.setColor(this.hasVoted ? '#00e676' : '#ffffff'));
+    voteBtn.on('pointerover', () =>
+      voteBtn.setColor(this.hasVoted ? colors.successHoverHex : '#cccccc'),
+    );
+    voteBtn.on('pointerout', () =>
+      voteBtn.setColor(this.hasVoted ? colors.successHex : colors.textHex),
+    );
     voteBtn.on('pointerdown', () => {
       this.hasVoted = !this.hasVoted;
       socketClient.emit('rematch:vote' as any, { vote: this.hasVoted }, () => {});
       voteBtn.setText(this.hasVoted ? '[ Rematch ✓ ]' : '[ Vote Rematch ]');
-      voteBtn.setColor(this.hasVoted ? '#00e676' : '#ffffff');
+      voteBtn.setColor(this.hasVoted ? colors.successHex : colors.textHex);
     });
 
     // Vote tally text
     this.voteTallyText = this.add
       .text(width / 2, height - 15, '', {
         fontSize: '13px',
-        color: '#8888a0',
+        color: colors.textDimHex,
         fontFamily: 'DM Sans, sans-serif',
       })
       .setOrigin(0.5);
@@ -181,15 +188,15 @@ export class GameOverScene extends Phaser.Scene {
     const backBtn = this.add
       .text(width / 2 + 100, height - 40, '[ Back to Lobby ]', {
         fontSize: '20px',
-        color: '#ff6b35',
+        color: colors.primaryHex,
         fontFamily: 'Chakra Petch, sans-serif',
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
-    backBtn.on('pointerover', () => backBtn.setColor('#ff8555'));
-    backBtn.on('pointerout', () => backBtn.setColor('#ff6b35'));
+    backBtn.on('pointerover', () => backBtn.setColor(colors.primaryHoverHex));
+    backBtn.on('pointerout', () => backBtn.setColor(colors.primaryHex));
     backBtn.on('pointerdown', () => {
       socketClient.emit('room:leave' as any);
       this.registry.remove('currentRoom');
@@ -197,8 +204,8 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     this.buttons = [voteBtn, backBtn];
-    this.baseColors = ['#ffffff', '#ff6b35'];
-    this.highlightColors = ['#cccccc', '#ff8555'];
+    this.baseColors = [colors.textHex, colors.primaryHex];
+    this.highlightColors = ['#cccccc', colors.primaryHoverHex];
 
     // Underline graphic for gamepad selection
     this.underline = this.add.graphics();
@@ -227,7 +234,7 @@ export class GameOverScene extends Phaser.Scene {
       // Header
       const hs = {
         fontSize: '13px',
-        color: '#505068',
+        color: colors.textMutedHex,
         fontFamily: 'Chakra Petch, sans-serif',
         fontStyle: 'bold',
       } as Phaser.Types.GameObjects.Text.TextStyle;
@@ -263,7 +270,10 @@ export class GameOverScene extends Phaser.Scene {
             .setOrigin(0.5);
         }
         this.add
-          .text(colScore, y, `${kills}`, { fontSize: '16px', color: dead ? '#555' : '#fff' })
+          .text(colScore, y, `${kills}`, {
+            fontSize: '16px',
+            color: dead ? '#555' : colors.textHex,
+          })
           .setOrigin(0.5);
 
         // Track position for Elo display (skip bots)
@@ -274,9 +284,15 @@ export class GameOverScene extends Phaser.Scene {
     }
   }
 
-  private createCampaignGameOver(width: number, height: number, data: any, socketClient: any): void {
+  private createCampaignGameOver(
+    width: number,
+    height: number,
+    data: any,
+    socketClient: any,
+  ): void {
+    const colors = themeManager.getCanvasColors();
     const success = data.success;
-    const titleColor = success ? '#00e676' : '#ff3355';
+    const titleColor = success ? colors.successHex : colors.dangerHex;
     const titleText = success ? 'LEVEL COMPLETE!' : 'LEVEL FAILED';
 
     this.add
@@ -306,7 +322,7 @@ export class GameOverScene extends Phaser.Scene {
       this.add
         .text(width / 2, 145, `Time: ${mins}:${secs.toString().padStart(2, '0')}`, {
           fontSize: '18px',
-          color: '#8888a0',
+          color: colors.textDimHex,
           fontFamily: 'DM Sans, sans-serif',
         })
         .setOrigin(0.5);
@@ -316,20 +332,20 @@ export class GameOverScene extends Phaser.Scene {
         const nextBtn = this.add
           .text(width / 2 - 120, height - 40, '[ Next Level ]', {
             fontSize: '20px',
-            color: '#00e676',
+            color: colors.successHex,
             fontFamily: 'Chakra Petch, sans-serif',
             fontStyle: 'bold',
           })
           .setOrigin(0.5)
           .setInteractive({ useHandCursor: true });
-        nextBtn.on('pointerover', () => nextBtn.setColor('#44ff88'));
-        nextBtn.on('pointerout', () => nextBtn.setColor('#00e676'));
+        nextBtn.on('pointerover', () => nextBtn.setColor(colors.successHoverHex));
+        nextBtn.on('pointerout', () => nextBtn.setColor(colors.successHex));
         nextBtn.on('pointerdown', () => {
           this.startCampaignLevel(data.nextLevelId, socketClient);
         });
         this.buttons.push(nextBtn);
-        this.baseColors.push('#00e676');
-        this.highlightColors.push('#44ff88');
+        this.baseColors.push(colors.successHex);
+        this.highlightColors.push(colors.successHoverHex);
       }
     } else {
       // Reason
@@ -337,7 +353,7 @@ export class GameOverScene extends Phaser.Scene {
         this.add
           .text(width / 2, 100, data.reason, {
             fontSize: '18px',
-            color: '#8888a0',
+            color: colors.textDimHex,
             fontFamily: 'DM Sans, sans-serif',
           })
           .setOrigin(0.5);
@@ -348,14 +364,14 @@ export class GameOverScene extends Phaser.Scene {
     const retryBtn = this.add
       .text(width / 2, height - 40, '[ Retry ]', {
         fontSize: '20px',
-        color: '#ffffff',
+        color: colors.textHex,
         fontFamily: 'Chakra Petch, sans-serif',
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     retryBtn.on('pointerover', () => retryBtn.setColor('#cccccc'));
-    retryBtn.on('pointerout', () => retryBtn.setColor('#ffffff'));
+    retryBtn.on('pointerout', () => retryBtn.setColor(colors.textHex));
     retryBtn.on('pointerdown', () => {
       if (data?.campaignResult) {
         this.startCampaignLevel(data.levelId, socketClient);
@@ -368,14 +384,14 @@ export class GameOverScene extends Phaser.Scene {
     const backBtn = this.add
       .text(width / 2 + 120, height - 40, '[ Campaign ]', {
         fontSize: '20px',
-        color: '#ff6b35',
+        color: colors.primaryHex,
         fontFamily: 'Chakra Petch, sans-serif',
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
-    backBtn.on('pointerover', () => backBtn.setColor('#ff8555'));
-    backBtn.on('pointerout', () => backBtn.setColor('#ff6b35'));
+    backBtn.on('pointerover', () => backBtn.setColor(colors.primaryHoverHex));
+    backBtn.on('pointerout', () => backBtn.setColor(colors.primaryHex));
     backBtn.on('pointerdown', () => {
       this.registry.remove('campaignMode');
       this.registry.set('openCampaign', true);
@@ -383,8 +399,8 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     this.buttons = [retryBtn, backBtn];
-    this.baseColors = ['#ffffff', '#ff6b35'];
-    this.highlightColors = ['#cccccc', '#ff8555'];
+    this.baseColors = [colors.textHex, colors.primaryHex];
+    this.highlightColors = ['#cccccc', colors.primaryHoverHex];
     this.underline = this.add.graphics();
   }
 
@@ -444,41 +460,44 @@ export class GameOverScene extends Phaser.Scene {
 
   private startCampaignLevel(levelId: number, socketClient: SocketClient): void {
     // Fetch enemy types, then emit campaign:start and transition directly to GameScene
-    ApiClient.get<any>('/campaign/enemy-types').then((enemyTypesResp) => {
-      const gameStartHandler = (data: any) => {
-        socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
-
-        const registry = this.registry;
-        registry.set('campaignMode', true);
-        registry.set('initialGameState', data.state.gameState);
-        registry.set('campaignEnemyTypes', enemyTypesResp.enemyTypes || []);
-
-        this.scene.start('GameScene');
-        this.scene.launch('HUDScene');
-      };
-      socketClient.on('campaign:gameStart' as any, gameStartHandler as any);
-
-      socketClient.emit('campaign:start' as any, { levelId }, (response: any) => {
-        if (response && response.error) {
+    ApiClient.get<any>('/campaign/enemy-types')
+      .then((enemyTypesResp) => {
+        const gameStartHandler = (data: any) => {
           socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
-          this.registry.remove('campaignMode');
-          this.scene.start('LobbyScene');
-        }
+
+          const registry = this.registry;
+          registry.set('campaignMode', true);
+          registry.set('initialGameState', data.state.gameState);
+          registry.set('campaignEnemyTypes', enemyTypesResp.enemyTypes || []);
+
+          this.scene.start('GameScene');
+          this.scene.launch('HUDScene');
+        };
+        socketClient.on('campaign:gameStart' as any, gameStartHandler as any);
+
+        socketClient.emit('campaign:start' as any, { levelId }, (response: any) => {
+          if (response && response.error) {
+            socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
+            this.registry.remove('campaignMode');
+            this.scene.start('LobbyScene');
+          }
+        });
+      })
+      .catch(() => {
+        this.registry.remove('campaignMode');
+        this.scene.start('LobbyScene');
       });
-    }).catch(() => {
-      this.registry.remove('campaignMode');
-      this.scene.start('LobbyScene');
-    });
   }
 
   private showEloResults(results: EloResult[]): void {
+    const colors = themeManager.getCanvasColors();
     for (const result of results) {
       const y = this.eloPlacementData.get(result.userId);
       if (y === undefined) continue;
 
       const delta = result.delta;
       const sign = delta >= 0 ? '+' : '';
-      const color = delta >= 0 ? '#00e676' : '#ff3355';
+      const color = delta >= 0 ? colors.successHex : colors.dangerHex;
       const text = this.add
         .text(this.eloColX, y, `${sign}${delta}`, {
           fontSize: '15px',
@@ -502,6 +521,7 @@ export class GameOverScene extends Phaser.Scene {
 
   private showAchievementUnlock(data: AchievementUnlockEvent): void {
     const width = this.cameras.main.width;
+    const colors = themeManager.getCanvasColors();
 
     for (let i = 0; i < data.achievements.length; i++) {
       const achievement = data.achievements[i];
@@ -514,7 +534,7 @@ export class GameOverScene extends Phaser.Scene {
           color: '#ffdd44',
           fontFamily: 'Chakra Petch, sans-serif',
           fontStyle: 'bold',
-          backgroundColor: '#1a1a2e',
+          backgroundColor: colors.bgSurfaceHex,
           padding: { x: 12, y: 6 },
         })
         .setOrigin(0.5)
@@ -547,6 +567,7 @@ export class GameOverScene extends Phaser.Scene {
 
   private showXpResults(results: XpUpdateResult[]): void {
     const width = this.cameras.main.width;
+    const colors = themeManager.getCanvasColors();
 
     for (const result of results) {
       const y = this.eloPlacementData.get(result.userId);
@@ -579,7 +600,7 @@ export class GameOverScene extends Phaser.Scene {
             color: '#ffdd44',
             fontFamily: 'Chakra Petch, sans-serif',
             fontStyle: 'bold',
-            backgroundColor: '#1a1a2e',
+            backgroundColor: colors.bgSurfaceHex,
             padding: { x: 16, y: 8 },
           })
           .setOrigin(0.5)
@@ -635,7 +656,8 @@ export class GameOverScene extends Phaser.Scene {
     // Draw underline
     if (this.underline) {
       this.underline.clear();
-      const color = this.selectedIndex === 0 ? 0x00e676 : 0xff6b35;
+      const c = themeManager.getCanvasColors();
+      const color = this.selectedIndex === 0 ? c.success : c.primary;
       this.underline.lineStyle(2, color, 0.8);
       const halfW = btn.width / 2;
       this.underline.lineBetween(btn.x - halfW, btn.y + 14, btn.x + halfW, btn.y + 14);

@@ -2,9 +2,19 @@ import { AuthManager } from '../network/AuthManager';
 import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
 import { escapeHtml } from '../utils/html';
-import { getErrorMessage, Cosmetic, CosmeticType, EquippedCosmetics } from '@blast-arena/shared';
+import {
+  getErrorMessage,
+  Cosmetic,
+  CosmeticType,
+  EquippedCosmetics,
+  THEME_IDS,
+  THEME_NAMES,
+} from '@blast-arena/shared';
+import type { ThemeId } from '@blast-arena/shared';
 import { getSettings, saveSettings, VisualSettings } from '../game/Settings';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
+import { themeManager } from '../themes/ThemeManager';
+import { THEME_DEFINITIONS } from '../themes/definitions';
 
 interface Tab {
   id: string;
@@ -36,7 +46,8 @@ export class SettingsUI {
     this.onClose = onClose;
     this.container = document.createElement('div');
     this.container.className = 'admin-container';
-    this.activeTabId = initialTab && this.tabs.some((t) => t.id === initialTab) ? initialTab : 'account';
+    this.activeTabId =
+      initialTab && this.tabs.some((t) => t.id === initialTab) ? initialTab : 'account';
   }
 
   async show(): Promise<void> {
@@ -56,7 +67,7 @@ export class SettingsUI {
   private async render(): Promise<void> {
     this.container.innerHTML = `
       <div class="admin-header">
-        <h1 style="color:var(--primary);margin:0;">Settings</h1>
+        <h1>Settings</h1>
         <button class="btn btn-secondary" id="settings-ui-close">Back to Lobby</button>
       </div>
       <div class="admin-tabs" id="settings-tab-bar">
@@ -130,7 +141,7 @@ export class SettingsUI {
     try {
       profile = await ApiClient.get('/user/profile');
     } catch (err: unknown) {
-      this.contentEl.innerHTML = `<div style="color:var(--danger);padding:20px;">Failed to load profile: ${escapeHtml(getErrorMessage(err))}</div>`;
+      this.contentEl.innerHTML = `<div class="error-banner">Failed to load profile: ${escapeHtml(getErrorMessage(err))}</div>`;
       return;
     }
 
@@ -138,58 +149,53 @@ export class SettingsUI {
     const isAdmin = user?.role === 'admin';
 
     this.contentEl.innerHTML = `
-      <div style="max-width:500px;">
-        <div style="margin-bottom:24px;">
-          <h3 style="color:var(--text);font-family:var(--font-display);font-weight:700;margin-bottom:16px;">Profile</h3>
+      <div class="settings-panel">
+        <div class="content-section">
+          <h3 class="settings-section-title">Profile</h3>
           <div class="form-group">
             <label>Username</label>
-            <input type="text" id="acct-username" value="${escapeHtml(profile.username)}" maxlength="20"
-              style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;">
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Letters, numbers, underscores, hyphens. 3-20 characters.</div>
+            <input type="text" class="input" id="acct-username" value="${escapeHtml(profile.username)}" maxlength="20">
+            <div class="settings-hint">Letters, numbers, underscores, hyphens. 3-20 characters.</div>
           </div>
-          <div id="acct-profile-status" style="margin:8px 0;"></div>
+          <div id="acct-profile-status" class="settings-status"></div>
           <button class="btn btn-primary" id="acct-save-profile">Save Username</button>
         </div>
 
-        <hr style="border-color:var(--border);margin:20px 0;">
+        <hr class="settings-separator">
 
-        <div style="margin-bottom:24px;">
-          <h3 style="color:var(--text);font-family:var(--font-display);font-weight:700;margin-bottom:16px;">Email</h3>
-          <div style="color:var(--text-dim);font-size:13px;margin-bottom:10px;">
-            Current: <strong style="color:var(--text);">${escapeHtml(profile.email)}</strong>
-            ${profile.emailVerified ? '<span style="color:var(--success);margin-left:6px;">verified</span>' : '<span style="color:var(--warning);margin-left:6px;">unverified</span>'}
+        <div class="content-section">
+          <h3 class="settings-section-title">Email</h3>
+          <div class="settings-current-value">
+            Current: <strong>${escapeHtml(profile.email)}</strong>
+            ${profile.emailVerified ? '<span class="text-success ml-1">verified</span>' : '<span class="text-warning ml-1">unverified</span>'}
           </div>
           ${
             !isAdmin && profile.pendingEmail
               ? `
-            <div style="color:var(--warning);font-size:13px;margin-bottom:12px;padding:10px;background:var(--warning-dim);border:1px solid var(--warning);border-radius:8px;">
+            <div class="settings-pending-banner">
               Pending change to <strong>${escapeHtml(profile.pendingEmail)}</strong> — check that inbox for the confirmation link.
-              <button class="btn btn-secondary" id="acct-cancel-email" style="margin-left:8px;padding:2px 8px;font-size:11px;">Cancel</button>
+              <button class="btn btn-secondary btn-sm ml-2" id="acct-cancel-email">Cancel</button>
             </div>
           `
               : ''
           }
           <div class="form-group">
-            <input type="email" id="acct-new-email" placeholder="New email address" maxlength="255"
-              style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;">
+            <input type="email" class="input" id="acct-new-email" placeholder="New email address" maxlength="255">
           </div>
-          <div id="acct-email-status" style="margin:8px 0;"></div>
+          <div id="acct-email-status" class="settings-status"></div>
           <button class="btn btn-primary" id="acct-change-email">${isAdmin ? 'Change Email' : 'Send Confirmation'}</button>
         </div>
 
-        <hr style="border-color:var(--border);margin:20px 0;">
+        <hr class="settings-separator">
 
-        <div style="margin-bottom:24px;">
-          <h3 style="color:var(--text);font-family:var(--font-display);font-weight:700;margin-bottom:16px;">Change Password</h3>
-          <div class="form-group" style="display:flex;flex-direction:column;gap:10px;">
-            <input type="password" id="acct-current-password" placeholder="Current password" autocomplete="current-password"
-              style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;">
-            <input type="password" id="acct-new-password" placeholder="New password (min 8 characters)" autocomplete="new-password"
-              style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;">
-            <input type="password" id="acct-confirm-password" placeholder="Confirm new password" autocomplete="new-password"
-              style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;">
+        <div class="content-section">
+          <h3 class="settings-section-title">Change Password</h3>
+          <div class="form-group settings-field-stack">
+            <input type="password" class="input" id="acct-current-password" placeholder="Current password" autocomplete="current-password">
+            <input type="password" class="input" id="acct-new-password" placeholder="New password (min 8 characters)" autocomplete="new-password">
+            <input type="password" class="input" id="acct-confirm-password" placeholder="Confirm new password" autocomplete="new-password">
           </div>
-          <div id="acct-password-status" style="margin:8px 0;"></div>
+          <div id="acct-password-status" class="settings-status"></div>
           <button class="btn btn-primary" id="acct-change-password">Change Password</button>
         </div>
       </div>
@@ -198,10 +204,12 @@ export class SettingsUI {
     // Save username
     this.contentEl.querySelector('#acct-save-profile')!.addEventListener('click', async () => {
       const statusEl = this.contentEl!.querySelector('#acct-profile-status')!;
-      const newUsername = (this.contentEl!.querySelector('#acct-username') as HTMLInputElement).value.trim();
+      const newUsername = (
+        this.contentEl!.querySelector('#acct-username') as HTMLInputElement
+      ).value.trim();
 
       if (!newUsername) {
-        statusEl.innerHTML = '<span style="color:var(--danger);">Username cannot be empty.</span>';
+        statusEl.innerHTML = '<span class="text-danger">Username cannot be empty.</span>';
         return;
       }
 
@@ -209,7 +217,7 @@ export class SettingsUI {
       if (newUsername !== profile.username) updates.username = newUsername;
 
       if (Object.keys(updates).length === 0) {
-        statusEl.innerHTML = '<span style="color:var(--text-dim);">No changes to save.</span>';
+        statusEl.innerHTML = '<span class="text-dim">No changes to save.</span>';
         return;
       }
 
@@ -217,63 +225,75 @@ export class SettingsUI {
         const updated: any = await ApiClient.put('/user/profile', updates);
         profile = updated;
         this.authManager.updateUser({ username: updated.username });
-        statusEl.innerHTML = '<span style="color:var(--success);">Profile updated!</span>';
+        statusEl.innerHTML = '<span class="text-success">Profile updated!</span>';
       } catch (err: unknown) {
-        statusEl.innerHTML = `<span style="color:var(--danger);">${escapeHtml(getErrorMessage(err))}</span>`;
+        statusEl.innerHTML = `<span class="text-danger">${escapeHtml(getErrorMessage(err))}</span>`;
       }
     });
 
     // Change email
     this.contentEl.querySelector('#acct-change-email')!.addEventListener('click', async () => {
       const statusEl = this.contentEl!.querySelector('#acct-email-status')!;
-      const newEmail = (this.contentEl!.querySelector('#acct-new-email') as HTMLInputElement).value.trim();
+      const newEmail = (
+        this.contentEl!.querySelector('#acct-new-email') as HTMLInputElement
+      ).value.trim();
 
       if (!newEmail) {
-        statusEl.innerHTML = '<span style="color:var(--danger);">Enter a new email address.</span>';
+        statusEl.innerHTML = '<span class="text-danger">Enter a new email address.</span>';
         return;
       }
       if (newEmail === profile.email) {
-        statusEl.innerHTML = '<span style="color:var(--text-dim);">That\'s already your current email.</span>';
+        statusEl.innerHTML = '<span class="text-dim">That\'s already your current email.</span>';
         return;
       }
 
       try {
         const result: any = await ApiClient.post('/user/email', { email: newEmail });
-        statusEl.innerHTML = `<span style="color:var(--success);">${escapeHtml(result.message)}</span>`;
+        statusEl.innerHTML = `<span class="text-success">${escapeHtml(result.message)}</span>`;
         (this.contentEl!.querySelector('#acct-new-email') as HTMLInputElement).value = '';
       } catch (err: unknown) {
-        statusEl.innerHTML = `<span style="color:var(--danger);">${escapeHtml(getErrorMessage(err))}</span>`;
+        statusEl.innerHTML = `<span class="text-danger">${escapeHtml(getErrorMessage(err))}</span>`;
       }
     });
 
     // Change password
     this.contentEl.querySelector('#acct-change-password')!.addEventListener('click', async () => {
       const statusEl = this.contentEl!.querySelector('#acct-password-status')!;
-      const currentPassword = (this.contentEl!.querySelector('#acct-current-password') as HTMLInputElement).value;
-      const newPassword = (this.contentEl!.querySelector('#acct-new-password') as HTMLInputElement).value;
-      const confirmPassword = (this.contentEl!.querySelector('#acct-confirm-password') as HTMLInputElement).value;
+      const currentPassword = (
+        this.contentEl!.querySelector('#acct-current-password') as HTMLInputElement
+      ).value;
+      const newPassword = (this.contentEl!.querySelector('#acct-new-password') as HTMLInputElement)
+        .value;
+      const confirmPassword = (
+        this.contentEl!.querySelector('#acct-confirm-password') as HTMLInputElement
+      ).value;
 
       if (!currentPassword || !newPassword) {
-        statusEl.innerHTML = '<span style="color:var(--danger);">Please fill in both password fields.</span>';
+        statusEl.innerHTML =
+          '<span class="text-danger">Please fill in both password fields.</span>';
         return;
       }
       if (newPassword.length < 8) {
-        statusEl.innerHTML = '<span style="color:var(--danger);">New password must be at least 8 characters.</span>';
+        statusEl.innerHTML =
+          '<span class="text-danger">New password must be at least 8 characters.</span>';
         return;
       }
       if (newPassword !== confirmPassword) {
-        statusEl.innerHTML = '<span style="color:var(--danger);">New passwords do not match.</span>';
+        statusEl.innerHTML = '<span class="text-danger">New passwords do not match.</span>';
         return;
       }
 
       try {
-        const result: any = await ApiClient.post('/user/password', { currentPassword, newPassword });
-        statusEl.innerHTML = `<span style="color:var(--success);">${escapeHtml(result.message)}</span>`;
+        const result: any = await ApiClient.post('/user/password', {
+          currentPassword,
+          newPassword,
+        });
+        statusEl.innerHTML = `<span class="text-success">${escapeHtml(result.message)}</span>`;
         (this.contentEl!.querySelector('#acct-current-password') as HTMLInputElement).value = '';
         (this.contentEl!.querySelector('#acct-new-password') as HTMLInputElement).value = '';
         (this.contentEl!.querySelector('#acct-confirm-password') as HTMLInputElement).value = '';
       } catch (err: unknown) {
-        statusEl.innerHTML = `<span style="color:var(--danger);">${escapeHtml(getErrorMessage(err))}</span>`;
+        statusEl.innerHTML = `<span class="text-danger">${escapeHtml(getErrorMessage(err))}</span>`;
       }
     });
 
@@ -298,43 +318,83 @@ export class SettingsUI {
   private renderPreferencesTab(): void {
     if (!this.contentEl) return;
     const settings = getSettings();
+    const currentTheme = themeManager.getTheme();
 
     this.contentEl.innerHTML = `
-      <div style="max-width:500px;">
-        <h3 style="color:var(--text);font-family:var(--font-display);font-weight:700;margin-bottom:20px;">Visual Settings</h3>
-        <div style="display:flex;flex-direction:column;gap:14px;">
-          <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:background var(--transition);">
-            <input type="checkbox" name="animations" ${settings.animations ? 'checked' : ''}
-              style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;">
-            <div>
-              <div style="font-weight:600;font-size:14px;color:var(--text);">Animations</div>
-              <div style="font-size:12px;color:var(--text-muted);">Sprite movement tweens and transitions</div>
+      <div class="settings-panel wide">
+        <h3 class="content-section-title">Theme</h3>
+        <div class="theme-picker" id="theme-picker">
+          ${THEME_IDS.map((id) => {
+            const def = THEME_DEFINITIONS[id];
+            return `
+              <button class="theme-swatch ${id === currentTheme ? 'active' : ''}" data-theme="${id}">
+                <div class="theme-swatch-colors">
+                  <div class="theme-swatch-dot" style="background:${def.css.primary}"></div>
+                  <div class="theme-swatch-dot" style="background:${def.css.accent}"></div>
+                  <div class="theme-swatch-dot" style="background:${def.css.bgSurface}"></div>
+                </div>
+                <div class="theme-swatch-name">${THEME_NAMES[id]}</div>
+              </button>
+            `;
+          }).join('')}
+        </div>
+
+        <h3 class="content-section-title mt-6">Visual Settings</h3>
+        <div class="settings-toggle-list">
+          <div class="setting-row">
+            <label class="toggle-switch">
+              <input type="checkbox" name="animations" ${settings.animations ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="setting-row-info">
+              <div class="setting-row-label">Animations</div>
+              <div class="setting-row-desc">Sprite movement tweens and transitions</div>
             </div>
-          </label>
-          <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:background var(--transition);">
-            <input type="checkbox" name="screenShake" ${settings.screenShake ? 'checked' : ''}
-              style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;">
-            <div>
-              <div style="font-weight:600;font-size:14px;color:var(--text);">Screen Shake</div>
-              <div style="font-size:12px;color:var(--text-muted);">Camera shake on explosions</div>
+          </div>
+          <div class="setting-row">
+            <label class="toggle-switch">
+              <input type="checkbox" name="screenShake" ${settings.screenShake ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="setting-row-info">
+              <div class="setting-row-label">Screen Shake</div>
+              <div class="setting-row-desc">Camera shake on explosions</div>
             </div>
-          </label>
-          <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:background var(--transition);">
-            <input type="checkbox" name="particles" ${settings.particles ? 'checked' : ''}
-              style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;">
-            <div>
-              <div style="font-weight:600;font-size:14px;color:var(--text);">Particles</div>
-              <div style="font-size:12px;color:var(--text-muted);">Fire, smoke, debris, and spark effects</div>
+          </div>
+          <div class="setting-row">
+            <label class="toggle-switch">
+              <input type="checkbox" name="particles" ${settings.particles ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="setting-row-info">
+              <div class="setting-row-label">Particles</div>
+              <div class="setting-row-desc">Fire, smoke, debris, and spark effects</div>
             </div>
-          </label>
+          </div>
         </div>
       </div>
     `;
 
+    // Theme picker clicks
+    this.contentEl.querySelector('#theme-picker')!.addEventListener('click', (e: Event) => {
+      const btn = (e.target as HTMLElement).closest('.theme-swatch') as HTMLElement;
+      if (!btn) return;
+      const id = btn.dataset.theme as ThemeId;
+      if (!id) return;
+      themeManager.setTheme(id);
+      // Update active states
+      this.contentEl!.querySelectorAll('.theme-swatch').forEach((s) =>
+        s.classList.remove('active'),
+      );
+      btn.classList.add('active');
+    });
+
+    // Visual settings checkboxes
     this.contentEl.addEventListener('change', (e: Event) => {
       const target = e.target as HTMLInputElement;
       if (!target || target.type !== 'checkbox') return;
       const key = target.name as keyof VisualSettings;
+      if (!(key in getSettings())) return;
       const current = getSettings();
       (current as any)[key] = target.checked;
       saveSettings(current);
@@ -348,32 +408,30 @@ export class SettingsUI {
     try {
       profile = await ApiClient.get('/user/profile');
     } catch (err: unknown) {
-      this.contentEl.innerHTML = `<div style="color:var(--danger);padding:20px;">Failed to load profile: ${escapeHtml(getErrorMessage(err))}</div>`;
+      this.contentEl.innerHTML = `<div class="error-banner">Failed to load profile: ${escapeHtml(getErrorMessage(err))}</div>`;
       return;
     }
 
     this.contentEl.innerHTML = `
-      <div style="max-width:500px;">
-        <h3 style="color:var(--text);font-family:var(--font-display);font-weight:700;margin-bottom:20px;">Privacy Settings</h3>
-        <div style="display:flex;flex-direction:column;gap:14px;">
-          <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;">
-            <input type="checkbox" id="privacy-public-profile" ${profile.isProfilePublic ? 'checked' : ''}
-              style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;">
+      <div class="settings-panel">
+        <h3 class="settings-section-title">Privacy Settings</h3>
+        <div class="settings-toggle-list">
+          <label class="privacy-option">
+            <input type="checkbox" id="privacy-public-profile" ${profile.isProfilePublic ? 'checked' : ''}>
             <div>
-              <div style="font-weight:600;font-size:14px;color:var(--text);">Public Profile</div>
-              <div style="font-size:12px;color:var(--text-muted);">Allow other players to view your stats, rank, and achievements</div>
+              <div class="privacy-option-label">Public Profile</div>
+              <div class="privacy-option-desc">Allow other players to view your stats, rank, and achievements</div>
             </div>
           </label>
-          <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;">
-            <input type="checkbox" id="privacy-accept-friends" ${profile.acceptFriendRequests ? 'checked' : ''}
-              style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;">
+          <label class="privacy-option">
+            <input type="checkbox" id="privacy-accept-friends" ${profile.acceptFriendRequests ? 'checked' : ''}>
             <div>
-              <div style="font-weight:600;font-size:14px;color:var(--text);">Accept Friend Requests</div>
-              <div style="font-size:12px;color:var(--text-muted);">Allow other players to send you friend requests</div>
+              <div class="privacy-option-label">Accept Friend Requests</div>
+              <div class="privacy-option-desc">Allow other players to send you friend requests</div>
             </div>
           </label>
         </div>
-        <div id="privacy-status" style="margin-top:12px;"></div>
+        <div id="privacy-status" class="settings-status mt-3"></div>
       </div>
     `;
 
@@ -381,10 +439,12 @@ export class SettingsUI {
       const statusEl = this.contentEl!.querySelector('#privacy-status')!;
       try {
         await ApiClient.put('/user/privacy', { [field]: value });
-        statusEl.innerHTML = '<span style="color:var(--success);">Saved!</span>';
-        setTimeout(() => { statusEl.innerHTML = ''; }, 2000);
+        statusEl.innerHTML = '<span class="text-success">Saved!</span>';
+        setTimeout(() => {
+          statusEl.innerHTML = '';
+        }, 2000);
       } catch (err: unknown) {
-        statusEl.innerHTML = `<span style="color:var(--danger);">${escapeHtml(getErrorMessage(err))}</span>`;
+        statusEl.innerHTML = `<span class="text-danger">${escapeHtml(getErrorMessage(err))}</span>`;
       }
     };
 
@@ -401,7 +461,12 @@ export class SettingsUI {
 
     let allCosmetics: Cosmetic[] = [];
     let myCosmetics: Cosmetic[] = [];
-    let equipped: EquippedCosmetics = { colorId: null, eyesId: null, trailId: null, bombSkinId: null };
+    let equipped: EquippedCosmetics = {
+      colorId: null,
+      eyesId: null,
+      trailId: null,
+      bombSkinId: null,
+    };
 
     try {
       const [allResp, mineResp, equippedResp] = await Promise.all([
@@ -413,7 +478,7 @@ export class SettingsUI {
       myCosmetics = mineResp.cosmetics;
       equipped = equippedResp;
     } catch (err: unknown) {
-      this.contentEl.innerHTML = `<div style="color:var(--danger);padding:20px;">Failed to load cosmetics: ${escapeHtml(getErrorMessage(err))}</div>`;
+      this.contentEl.innerHTML = `<div class="error-banner">Failed to load cosmetics: ${escapeHtml(getErrorMessage(err))}</div>`;
       return;
     }
 
@@ -425,31 +490,30 @@ export class SettingsUI {
       { key: 'bombSkinId', type: 'bomb_skin', label: 'Bomb Skin' },
     ];
 
-    const renderSlot = (slot: typeof slots[0]) => {
+    const renderSlot = (slot: (typeof slots)[0]) => {
       const items = allCosmetics.filter((c) => c.type === slot.type);
       const equippedId = equipped[slot.key];
 
       return `
-        <div style="margin-bottom:24px;">
-          <h4 style="color:var(--text);font-family:var(--font-display);font-weight:700;margin-bottom:10px;">${slot.label}</h4>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            <button class="cosmetic-item ${equippedId === null ? 'equipped' : ''}" data-slot="${slot.type}" data-cosmetic-id="null"
-              style="padding:8px 12px;border-radius:var(--radius-sm);border:2px solid ${equippedId === null ? 'var(--primary)' : 'var(--border)'};background:var(--bg-surface);color:var(--text);cursor:pointer;font-size:12px;">
+        <div class="cosmetic-slot">
+          <h4 class="cosmetic-slot-title">${slot.label}</h4>
+          <div class="cosmetic-grid">
+            <button class="cosmetic-item ${equippedId === null ? 'equipped' : ''}" data-slot="${slot.type}" data-cosmetic-id="null">
               None
             </button>
             ${items
               .map((c) => {
                 const owned = ownedIds.has(c.id);
                 const isEquipped = equippedId === c.id;
-                const preview = c.type === 'color' && c.config.hex
-                  ? `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${typeof c.config.hex === 'string' ? '#' + (c.config.hex as string).replace('0x', '') : '#fff'};vertical-align:middle;margin-right:4px;"></span>`
-                  : '';
+                const preview =
+                  c.type === 'color' && c.config.hex
+                    ? `<span class="cosmetic-color-dot" style="background:${typeof c.config.hex === 'string' ? '#' + (c.config.hex as string).replace('0x', '') : '#fff'}"></span>`
+                    : '';
                 return `
                   <button class="cosmetic-item ${isEquipped ? 'equipped' : ''}" data-slot="${slot.type}" data-cosmetic-id="${c.id}"
-                    ${!owned ? 'disabled' : ''}
-                    style="padding:8px 12px;border-radius:var(--radius-sm);border:2px solid ${isEquipped ? 'var(--primary)' : 'var(--border)'};background:${owned ? 'var(--bg-surface)' : 'var(--bg-deep)'};color:${owned ? 'var(--text)' : 'var(--text-muted)'};cursor:${owned ? 'pointer' : 'not-allowed'};font-size:12px;opacity:${owned ? '1' : '0.5'};">
+                    ${!owned ? 'disabled' : ''}>
                     ${preview}${escapeHtml(c.name)}
-                    ${!owned ? '<span style="font-size:10px;color:var(--text-muted);display:block;">Locked</span>' : ''}
+                    ${!owned ? '<span class="locked-label">Locked</span>' : ''}
                   </button>`;
               })
               .join('')}
@@ -459,10 +523,10 @@ export class SettingsUI {
     };
 
     this.contentEl.innerHTML = `
-      <div style="max-width:600px;">
-        <h3 style="color:var(--text);font-family:var(--font-display);font-weight:700;margin-bottom:20px;">Cosmetics</h3>
+      <div class="settings-panel wide">
+        <h3 class="settings-section-title">Cosmetics</h3>
         ${slots.map(renderSlot).join('')}
-        <div id="cosmetics-status" style="margin-top:8px;"></div>
+        <div id="cosmetics-status" class="settings-status"></div>
       </div>
     `;
 
@@ -474,16 +538,53 @@ export class SettingsUI {
 
         const statusEl = this.contentEl!.querySelector('#cosmetics-status')!;
         try {
-          const newEquipped = await ApiClient.put<EquippedCosmetics>('/cosmetics/equip', { slot, cosmeticId });
+          const newEquipped = await ApiClient.put<EquippedCosmetics>('/cosmetics/equip', {
+            slot,
+            cosmeticId,
+          });
           equipped = newEquipped;
           // Re-render to update visual state
           await this.renderCosmeticsTab();
           this.notifications.success('Cosmetic updated');
         } catch (err: unknown) {
-          statusEl.innerHTML = `<span style="color:var(--danger);">${escapeHtml(getErrorMessage(err))}</span>`;
+          statusEl.innerHTML = `<span class="text-danger">${escapeHtml(getErrorMessage(err))}</span>`;
         }
       });
     });
+  }
+
+  async renderEmbedded(container: HTMLElement): Promise<void> {
+    this.container = container;
+
+    this.container.innerHTML = `
+      <div class="view-content">
+        <div class="admin-tabs" id="settings-tab-bar">
+          ${this.tabs
+            .map(
+              (t) => `
+            <button class="admin-tab ${t.id === this.activeTabId ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>
+          `,
+            )
+            .join('')}
+        </div>
+        <div class="admin-tab-content" id="settings-tab-content"></div>
+      </div>
+    `;
+
+    this.container.querySelector('#settings-tab-bar')!.addEventListener('click', (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.dataset.tab && target.dataset.tab !== this.activeTabId) {
+        this.switchTab(target.dataset.tab);
+      }
+    });
+
+    this.contentEl = this.container.querySelector('#settings-tab-content');
+    await this.renderActiveTab();
+    this.pushGamepadContext();
+  }
+
+  destroy(): void {
+    UIGamepadNavigator.getInstance().popContext('settings-ui');
   }
 
   private pushGamepadContext(): void {

@@ -111,11 +111,14 @@ export class SimulationsTab {
     this.viewMode = 'list';
 
     try {
-      const batches = await ApiClient.get<SimulationBatchStatus[]>('/admin/simulations');
+      const resp = await ApiClient.get<{ batches: SimulationBatchStatus[]; total: number }>(
+        '/admin/simulations',
+      );
+      const batches = resp.batches ?? [];
 
       this.container.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 style="color:var(--text);margin:0;">Bot Simulations</h3>
+        <div class="sim-section-header">
+          <h3>Bot Simulations</h3>
           <button class="btn btn-primary" id="sim-new-batch">New Simulation</button>
         </div>
         <table class="admin-table">
@@ -133,7 +136,7 @@ export class SimulationsTab {
           </thead>
           <tbody>
             ${batches.map((b) => this.renderBatchRow(b)).join('')}
-            ${batches.length === 0 ? '<tr><td colspan="8" style="text-align:center;color:var(--text-dim);">No simulations yet</td></tr>' : ''}
+            ${batches.length === 0 ? '<tr><td colspan="8" class="sim-empty-row">No simulations yet</td></tr>' : ''}
           </tbody>
         </table>
       `;
@@ -145,24 +148,23 @@ export class SimulationsTab {
       this.container.addEventListener('click', this.handleListClick);
     } catch {
       if (this.container) {
-        this.container.innerHTML =
-          '<div style="color:var(--danger);">Failed to load simulations</div>';
+        this.container.innerHTML = '<div class="sim-error">Failed to load simulations</div>';
       }
     }
   }
 
   private renderBatchRow(b: SimulationBatchStatus): string {
     const pct = b.totalGames > 0 ? Math.round((b.gamesCompleted / b.totalGames) * 100) : 0;
-    const statusColor =
+    const statusClass =
       b.status === 'queued'
-        ? 'var(--info)'
+        ? 'text-info'
         : b.status === 'running'
-          ? 'var(--accent)'
+          ? 'text-accent'
           : b.status === 'completed'
-            ? 'var(--success)'
+            ? 'text-success'
             : b.status === 'cancelled'
-              ? 'var(--warning)'
-              : 'var(--danger)';
+              ? 'text-warning'
+              : 'text-danger';
     const modeLabel = GAME_MODES[b.config.gameMode]?.name || b.config.gameMode;
 
     return `
@@ -172,13 +174,13 @@ export class SimulationsTab {
         <td>${escapeHtml(b.config.botDifficulty)}</td>
         <td>${b.config.mapWidth}x${b.config.mapHeight}</td>
         <td>
-          <div style="display:flex;align-items:center;gap:8px;">
+          <div class="sim-games-cell">
             <span>${b.gamesCompleted}/${b.totalGames}</span>
             ${
               b.status === 'running'
                 ? `
-              <div style="flex:1;max-width:80px;height:6px;background:var(--bg-card);border-radius:3px;overflow:hidden;">
-                <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;transition:width 0.3s;"></div>
+              <div class="sim-progress-mini">
+                <div class="sim-progress-fill" style="width:${pct}%;"></div>
               </div>
             `
                 : ''
@@ -186,8 +188,8 @@ export class SimulationsTab {
           </div>
         </td>
         <td>${b.config.speed === 'fast' ? 'Fast' : 'Real-time'}</td>
-        <td><span style="color:${statusColor};font-weight:600;text-transform:capitalize;">${b.status === 'queued' ? `Queued (#${b.queuePosition})` : b.status}</span></td>
-        <td style="display:flex;gap:4px;">
+        <td><span class="sim-status ${statusClass}">${b.status === 'queued' ? `Queued (#${b.queuePosition})` : b.status}</span></td>
+        <td class="sim-td-actions">
           ${
             b.status === 'queued'
               ? `<button class="btn-warn btn-sm" data-action="dequeue" data-batch="${escapeHtml(b.batchId)}">Remove</button>`
@@ -344,8 +346,7 @@ export class SimulationsTab {
       registry.set('replayData', replayData);
 
       // Start GameScene and HUDScene
-      const activeScene =
-        game.scene.getScene('LobbyScene') || game.scene.getScene('MenuScene');
+      const activeScene = game.scene.getScene('LobbyScene') || game.scene.getScene('MenuScene');
       if (activeScene) {
         activeScene.scene.start('GameScene');
         activeScene.scene.launch('HUDScene');
@@ -392,34 +393,41 @@ export class SimulationsTab {
     }
     const winEntries = Object.entries(winCounts).sort((a, b) => b[1] - a[1]);
 
+    const detailStatusClass =
+      status.status === 'running'
+        ? 'text-accent'
+        : status.status === 'completed'
+          ? 'text-success'
+          : 'text-warning';
+
     this.container.innerHTML = `
-      <div style="margin-bottom:16px;">
+      <div class="sim-back-row">
         <button class="btn btn-secondary btn-sm" id="sim-back-to-list">Back to List</button>
       </div>
 
-      <div style="background:var(--bg-card);border-radius:8px;padding:16px;margin-bottom:16px;border:1px solid var(--border);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <h3 style="color:var(--text);margin:0;">${escapeHtml(modeLabel)} Simulation</h3>
-          <span style="color:${status.status === 'running' ? 'var(--accent)' : status.status === 'completed' ? 'var(--success)' : 'var(--warning)'};font-weight:600;text-transform:capitalize;">${status.status}</span>
+      <div class="sim-info-card">
+        <div class="sim-detail-header">
+          <h3>${escapeHtml(modeLabel)} Simulation</h3>
+          <span class="sim-status ${detailStatusClass}">${status.status}</span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;font-size:13px;color:var(--text-dim);">
-          <div>Bots: <strong style="color:var(--text);">${status.config.botCount} (${status.config.botDifficulty})</strong></div>
-          <div>Map: <strong style="color:var(--text);">${status.config.mapWidth}x${status.config.mapHeight}</strong></div>
-          <div>Time: <strong style="color:var(--text);">${Math.floor(status.config.roundTime / 60)}m</strong></div>
-          <div>Speed: <strong style="color:var(--text);">${status.config.speed === 'fast' ? 'Fast' : 'Real-time'}</strong></div>
-          <div>Verbosity: <strong style="color:var(--text);">${status.config.logVerbosity}</strong></div>
+        <div class="sim-info-grid">
+          <div>Bots: <strong>${status.config.botCount} (${status.config.botDifficulty})</strong></div>
+          <div>Map: <strong>${status.config.mapWidth}x${status.config.mapHeight}</strong></div>
+          <div>Time: <strong>${Math.floor(status.config.roundTime / 60)}m</strong></div>
+          <div>Speed: <strong>${status.config.speed === 'fast' ? 'Fast' : 'Real-time'}</strong></div>
+          <div>Verbosity: <strong>${status.config.logVerbosity}</strong></div>
         </div>
-        <div style="margin-top:12px;">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:14px;color:var(--text);">${status.gamesCompleted}/${status.totalGames} games (${pct}%)</span>
-            <div style="flex:1;height:8px;background:var(--bg-deep);border-radius:4px;overflow:hidden;">
-              <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:4px;transition:width 0.3s;"></div>
+        <div class="sim-progress-section">
+          <div class="sim-progress-row">
+            <span class="sim-progress-label">${status.gamesCompleted}/${status.totalGames} games (${pct}%)</span>
+            <div class="sim-progress-track">
+              <div class="sim-progress-fill" style="width:${pct}%;"></div>
             </div>
           </div>
           ${
             status.status === 'running' && status.currentGameTick !== null
               ? `
-            <div style="font-size:12px;color:var(--text-dim);margin-top:4px;">
+            <div class="sim-tick-info">
               Current game: tick ${status.currentGameTick}/${status.currentGameMaxTicks || '?'}
             </div>
           `
@@ -429,7 +437,7 @@ export class SimulationsTab {
         ${
           status.status === 'running'
             ? `
-          <div style="margin-top:12px;display:flex;gap:8px;">
+          <div class="sim-action-row">
             ${status.config.speed === 'realtime' ? `<button class="btn btn-secondary btn-sm" id="sim-detail-spectate">Spectate Current Game</button>` : ''}
             <button class="btn-warn btn-sm" id="sim-detail-cancel">Cancel Batch</button>
           </div>
@@ -441,15 +449,15 @@ export class SimulationsTab {
       ${
         winEntries.length > 0
           ? `
-        <div style="background:var(--bg-card);border-radius:8px;padding:16px;margin-bottom:16px;border:1px solid var(--border);">
-          <h4 style="color:var(--text);margin:0 0 8px 0;">Win Distribution</h4>
-          <div style="display:flex;flex-wrap:wrap;gap:12px;">
+        <div class="sim-info-card">
+          <h4>Win Distribution</h4>
+          <div class="sim-win-chips">
             ${winEntries
               .map(
                 ([name, count]) => `
-              <div style="background:var(--bg-hover);padding:6px 12px;border-radius:6px;">
-                <span style="color:var(--primary);font-weight:600;">${escapeHtml(name)}</span>
-                <span style="color:var(--text-dim);margin-left:4px;">${count} wins</span>
+              <div class="sim-win-chip">
+                <span class="sim-win-chip-name">${escapeHtml(name)}</span>
+                <span class="sim-win-chip-count">${count} wins</span>
               </div>
             `,
               )
@@ -531,17 +539,15 @@ export class SimulationsTab {
       return this.detailSortAsc ? ' ↑' : ' ↓';
     };
 
-    const thStyle = 'cursor:pointer;user-select:none;';
-
     return `
       <table class="admin-table" id="sim-results-table">
         <thead>
           <tr>
-            <th style="${thStyle}" data-sort="gameIndex">#${sortIcon('gameIndex')}</th>
-            <th style="${thStyle}" data-sort="winner">Winner${sortIcon('winner')}</th>
-            <th style="${thStyle}" data-sort="duration">Duration${sortIcon('duration')}</th>
-            <th style="${thStyle}" data-sort="kills">Kill Leader${sortIcon('kills')}</th>
-            <th style="${thStyle}" data-sort="reason">Reason${sortIcon('reason')}</th>
+            <th class="sortable-th" data-sort="gameIndex">#${sortIcon('gameIndex')}</th>
+            <th class="sortable-th" data-sort="winner">Winner${sortIcon('winner')}</th>
+            <th class="sortable-th" data-sort="duration">Duration${sortIcon('duration')}</th>
+            <th class="sortable-th" data-sort="kills">Kill Leader${sortIcon('kills')}</th>
+            <th class="sortable-th" data-sort="reason">Reason${sortIcon('reason')}</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -554,24 +560,24 @@ export class SimulationsTab {
               return `
               <tr>
                 <td>${r.gameIndex + 1}</td>
-                <td style="color:var(--primary);font-weight:600;">${r.winnerName ? escapeHtml(r.winnerName) : '<span style="color:var(--text-dim);">Draw</span>'}</td>
+                <td class="sim-winner-cell">${r.winnerName ? escapeHtml(r.winnerName) : '<span class="text-dim">Draw</span>'}</td>
                 <td>${mins}:${String(secs).padStart(2, '0')}</td>
                 <td>${killLeader ? `${escapeHtml(killLeader.name)} (${killLeader.kills})` : '-'}</td>
-                <td style="color:var(--text-dim);font-size:12px;">${escapeHtml(r.finishReason)}</td>
+                <td class="sim-reason-cell">${escapeHtml(r.finishReason)}</td>
                 <td>${r.hasReplay ? `<button class="btn btn-secondary btn-sm" data-action="watch-replay" data-game-index="${r.gameIndex}">Replay</button>` : ''}</td>
               </tr>
             `;
             })
             .join('')}
-          ${sorted.length === 0 ? '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);">No results yet</td></tr>' : ''}
+          ${sorted.length === 0 ? '<tr><td colspan="6" class="sim-empty-row">No results yet</td></tr>' : ''}
         </tbody>
       </table>
       ${
         totalPages > 1
           ? `
-        <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:12px;">
+        <div class="sim-pagination">
           <button class="btn btn-secondary btn-sm" id="sim-page-prev" ${this.detailPage <= 1 ? 'disabled' : ''}>Prev</button>
-          <span style="color:var(--text-dim);font-size:13px;">Page ${this.detailPage} of ${totalPages} (${sorted.length} results)</span>
+          <span class="sim-pagination-info">Page ${this.detailPage} of ${totalPages} (${sorted.length} results)</span>
           <button class="btn btn-secondary btn-sm" id="sim-page-next" ${this.detailPage >= totalPages ? 'disabled' : ''}>Next</button>
         </div>
       `
@@ -668,11 +674,11 @@ export class SimulationsTab {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-      <div class="modal" style="width:760px;max-width:95vw;padding:24px 28px;">
+      <div class="modal sim-modal">
         <h2>New Simulation Batch</h2>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-          <div class="form-group" style="margin-bottom:0;">
+        <div class="sim-modal-grid">
+          <div class="form-group mb-0">
             <label>Game Mode</label>
             <select id="sim-mode">
               <option value="ffa">Free for All</option>
@@ -683,7 +689,7 @@ export class SimulationsTab {
               <option value="king_of_the_hill">King of the Hill</option>
             </select>
           </div>
-          <div class="form-group" style="margin-bottom:0;">
+          <div class="form-group mb-0">
             <label>Bot Count</label>
             <select id="sim-bot-count">
               <option value="2">2 Bots</option>
@@ -695,7 +701,7 @@ export class SimulationsTab {
               <option value="8">8 Bots</option>
             </select>
           </div>
-          <div class="form-group" style="margin-bottom:0;">
+          <div class="form-group mb-0">
             <label>Bot Difficulty</label>
             <select id="sim-difficulty">
               <option value="easy">Easy</option>
@@ -703,15 +709,19 @@ export class SimulationsTab {
               <option value="hard">Hard</option>
             </select>
           </div>
-          ${activeAIs.length > 1 ? `
-          <div class="form-group" style="margin-bottom:0;">
+          ${
+            activeAIs.length > 1
+              ? `
+          <div class="form-group mb-0">
             <label>Bot AI</label>
             <select id="sim-bot-ai">
               ${activeAIs.map((ai) => `<option value="${ai.id}"${ai.isBuiltin ? ' selected' : ''}>${escapeHtml(ai.name)}</option>`).join('')}
             </select>
           </div>
-          ` : ''}
-          <div class="form-group" style="margin-bottom:0;">
+          `
+              : ''
+          }
+          <div class="form-group mb-0">
             <label>Map Size</label>
             <select id="sim-map-size">
               <option value="21">21x21 (Small)</option>
@@ -721,7 +731,7 @@ export class SimulationsTab {
               <option value="61">61x61 (Massive)</option>
             </select>
           </div>
-          <div class="form-group" style="margin-bottom:0;">
+          <div class="form-group mb-0">
             <label>Match Time</label>
             <select id="sim-round-time">
               <option value="60">1 min</option>
@@ -731,7 +741,7 @@ export class SimulationsTab {
               <option value="600">10 min</option>
             </select>
           </div>
-          <div class="form-group" style="margin-bottom:0;">
+          <div class="form-group mb-0">
             <label>Wall Density</label>
             <select id="sim-wall-density">
               <option value="0.3">Low (30%)</option>
@@ -740,7 +750,7 @@ export class SimulationsTab {
               <option value="0.8">Very High (80%)</option>
             </select>
           </div>
-          <div class="form-group" style="margin-bottom:0;">
+          <div class="form-group mb-0">
             <label>Power-Up Rate</label>
             <select id="sim-powerup-rate">
               <option value="0">None (0%)</option>
@@ -750,11 +760,11 @@ export class SimulationsTab {
               <option value="0.8">Very High (80%)</option>
             </select>
           </div>
-          <div class="form-group" style="margin-bottom:0;">
+          <div class="form-group mb-0">
             <label>Total Games</label>
-            <input type="number" id="sim-total-games" value="10" min="1" max="1000" style="width:100%;">
+            <input type="number" id="sim-total-games" value="10" min="1" max="1000" class="w-full">
           </div>
-          <div class="form-group" style="margin-bottom:0;">
+          <div class="form-group mb-0">
             <label>Speed</label>
             <select id="sim-speed">
               <option value="fast" selected>Fast (max speed)</option>
@@ -763,8 +773,8 @@ export class SimulationsTab {
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;">
-          <div class="form-group" style="margin-bottom:0;">
+        <div class="sim-modal-grid mt-sm">
+          <div class="form-group mb-0">
             <label>Log Verbosity</label>
             <select id="sim-verbosity">
               <option value="normal" selected>Normal</option>
@@ -774,32 +784,32 @@ export class SimulationsTab {
           </div>
         </div>
 
-        <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:6px;color:var(--text-dim);cursor:pointer;">
+        <div class="sim-checkbox-row">
+          <label class="sim-checkbox-label">
             <input type="checkbox" id="sim-reinforced"> Reinforced Walls
           </label>
-          <label style="display:flex;align-items:center;gap:6px;color:var(--text-dim);cursor:pointer;">
+          <label class="sim-checkbox-label">
             <input type="checkbox" id="sim-map-events"> Map Events
           </label>
-          <label style="display:flex;align-items:center;gap:6px;color:var(--text-dim);cursor:pointer;">
+          <label class="sim-checkbox-label">
             <input type="checkbox" id="sim-hazard-tiles"> Hazard Tiles
           </label>
-          <label style="display:flex;align-items:center;gap:6px;color:var(--text-dim);cursor:pointer;" id="sim-ff-label">
+          <label class="sim-checkbox-label" id="sim-ff-label">
             <input type="checkbox" id="sim-friendly-fire" checked> Friendly Fire
           </label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-            <input type="checkbox" id="sim-record-replays" checked style="accent-color:var(--accent);">
-            <span style="color:var(--accent);font-weight:600;">Record Replays</span>
+          <label class="sim-checkbox-label accent-label">
+            <input type="checkbox" id="sim-record-replays" checked>
+            <span>Record Replays</span>
           </label>
         </div>
 
-        <div style="margin-top:12px;">
-          <label style="color:var(--text-dim);font-size:13px;">Power-Ups</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+        <div class="sim-powerup-section">
+          <label>Power-Ups</label>
+          <div class="sim-powerup-chips">
             ${allPowerUps
               .map(
                 (pu) => `
-              <label style="display:flex;align-items:center;gap:4px;color:var(--text-dim);cursor:pointer;font-size:13px;">
+              <label class="sim-powerup-label">
                 <input type="checkbox" class="sim-powerup-check" value="${pu.type}" checked>
                 ${pu.name}
               </label>
@@ -809,7 +819,7 @@ export class SimulationsTab {
           </div>
         </div>
 
-        <div class="modal-actions" style="margin-top:20px;">
+        <div class="modal-actions sim-modal-actions">
           <button class="btn btn-secondary" id="sim-config-cancel">Cancel</button>
           <button class="btn btn-primary" id="sim-config-start">Start Batch</button>
         </div>
@@ -872,7 +882,8 @@ export class SimulationsTab {
         speed,
         logVerbosity: (modal.querySelector('#sim-verbosity') as HTMLSelectElement).value as any,
         recordReplays: (modal.querySelector('#sim-record-replays') as HTMLInputElement).checked,
-        botAiId: (modal.querySelector('#sim-bot-ai') as HTMLSelectElement | null)?.value || undefined,
+        botAiId:
+          (modal.querySelector('#sim-bot-ai') as HTMLSelectElement | null)?.value || undefined,
       };
 
       // Validate bot count for Teams mode (minimum 4)

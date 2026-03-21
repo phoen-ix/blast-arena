@@ -1,7 +1,13 @@
 import { SocketClient } from '../network/SocketClient';
 import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
-import { DirectMessage, DMConversation, ChatMode, UserRole, DM_MAX_LENGTH } from '@blast-arena/shared';
+import {
+  DirectMessage,
+  DMConversation,
+  ChatMode,
+  UserRole,
+  DM_MAX_LENGTH,
+} from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
 
 export class DMPanel {
@@ -36,7 +42,7 @@ export class DMPanel {
     this.userId = userId;
     this.userRole = userRole;
     this.container = document.createElement('div');
-    this.applyContainerStyles();
+    this.container.className = 'slide-panel dm-panel';
 
     this.dmReceiveHandler = (message: DirectMessage) => {
       this.handleDMReceive(message);
@@ -57,24 +63,6 @@ export class DMPanel {
     this.loadDMMode();
   }
 
-  private applyContainerStyles(): void {
-    Object.assign(this.container.style, {
-      position: 'fixed',
-      top: '0',
-      right: '-380px',
-      width: '380px',
-      height: '100%',
-      zIndex: '201',
-      background: 'var(--bg-card)',
-      borderLeft: '1px solid var(--border)',
-      display: 'flex',
-      flexDirection: 'column',
-      transition: 'right 0.3s ease',
-      fontFamily: "'DM Sans', sans-serif",
-      boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.4)',
-    });
-  }
-
   private async loadDMMode(): Promise<void> {
     try {
       const resp = await ApiClient.get<{ mode: ChatMode }>('/admin/settings/dm_mode');
@@ -88,8 +76,7 @@ export class DMPanel {
     if (this.dmMode === 'everyone') return true;
     if (this.dmMode === 'disabled') return false;
     if (this.dmMode === 'admin_only') return this.userRole === 'admin';
-    if (this.dmMode === 'staff')
-      return this.userRole === 'admin' || this.userRole === 'moderator';
+    if (this.dmMode === 'staff') return this.userRole === 'admin' || this.userRole === 'moderator';
     return false;
   }
 
@@ -171,12 +158,12 @@ export class DMPanel {
 
   close(): void {
     this.isOpen = false;
-    this.container.style.right = '-380px';
+    this.container.classList.remove('open');
   }
 
   openConversation(userId: number, username: string): void {
     this.isOpen = true;
-    this.container.style.right = '0';
+    this.container.classList.add('open');
     this.activeConversation = { userId, username };
     this.messages = [];
     this.renderCurrentView();
@@ -189,7 +176,7 @@ export class DMPanel {
 
   private open(): void {
     this.isOpen = true;
-    this.container.style.right = '0';
+    this.container.classList.add('open');
     if (!this.activeConversation) {
       this.loadConversations();
     }
@@ -224,35 +211,22 @@ export class DMPanel {
 
     // Header
     const header = document.createElement('div');
-    Object.assign(header.style, {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '16px 16px 12px',
-      borderBottom: '1px solid var(--border)',
-      flexShrink: '0',
-    });
+    header.className = 'panel-header';
     header.innerHTML = `
-      <h3 style="margin:0;font-family:'Chakra Petch',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:0.5px;">Messages</h3>
-      <button style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;padding:0 4px;line-height:1;">&times;</button>
+      <h3 class="panel-header-title">Messages</h3>
+      <button class="panel-header-close">&times;</button>
     `;
     header.querySelector('button')!.addEventListener('click', () => this.close());
     this.container.appendChild(header);
 
     // List
     const list = document.createElement('div');
-    Object.assign(list.style, {
-      flex: '1',
-      overflowY: 'auto',
-      overflowX: 'hidden',
-    });
+    list.className = 'dm-list';
 
     if (this.loadingConversations) {
-      list.innerHTML =
-        '<div style="text-align:center;padding:40px 16px;color:var(--text-muted);font-size:13px;">Loading...</div>';
+      list.innerHTML = '<div class="dm-empty">Loading...</div>';
     } else if (this.conversations.length === 0) {
-      list.innerHTML =
-        '<div style="text-align:center;padding:40px 16px;color:var(--text-muted);font-size:13px;">No conversations yet</div>';
+      list.innerHTML = '<div class="dm-empty">No conversations yet</div>';
     } else {
       this.conversations.forEach((conv) => {
         const item = this.createConversationItem(conv);
@@ -281,78 +255,38 @@ export class DMPanel {
 
   private createConversationItem(conv: DMConversation): HTMLElement {
     const item = document.createElement('div');
-    Object.assign(item.style, {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      padding: '12px 16px',
-      cursor: 'pointer',
-      transition: 'background 0.15s ease',
-      borderBottom: '1px solid var(--border)',
-    });
-    item.addEventListener('mouseenter', () => {
-      item.style.background = 'var(--bg-hover)';
-    });
-    item.addEventListener('mouseleave', () => {
-      item.style.background = 'transparent';
-    });
+    item.className = 'dm-conv-item';
 
-    const colors = ['#ff6b35', '#448aff', '#00e676', '#ffaa22', '#bb44ff', '#00d4aa'];
+    const colors = [
+      'var(--primary)',
+      'var(--info)',
+      'var(--success)',
+      'var(--warning)',
+      '#bb44ff',
+      'var(--accent)',
+    ];
     const color = colors[conv.userId % colors.length];
 
     // Avatar
     const avatar = document.createElement('div');
-    Object.assign(avatar.style, {
-      width: '40px',
-      height: '40px',
-      borderRadius: '50%',
-      background: color,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontWeight: '700',
-      fontSize: '16px',
-      color: '#fff',
-      flexShrink: '0',
-      fontFamily: "'Chakra Petch', sans-serif",
-    });
+    avatar.className = 'dm-avatar';
+    avatar.style.background = color;
     avatar.textContent = conv.username.charAt(0).toUpperCase();
     item.appendChild(avatar);
 
     // Info
     const info = document.createElement('div');
-    Object.assign(info.style, {
-      flex: '1',
-      minWidth: '0',
-      overflow: 'hidden',
-    });
+    info.className = 'dm-conv-info';
 
     const nameRow = document.createElement('div');
-    Object.assign(nameRow.style, {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: '2px',
-    });
+    nameRow.className = 'dm-conv-name-row';
 
     const name = document.createElement('span');
-    Object.assign(name.style, {
-      fontWeight: '600',
-      fontSize: '13px',
-      color: 'var(--text)',
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-    });
+    name.className = 'dm-conv-name';
     name.textContent = conv.username;
 
     const time = document.createElement('span');
-    Object.assign(time.style, {
-      fontSize: '11px',
-      color: 'var(--text-dim)',
-      flexShrink: '0',
-      marginLeft: '8px',
-    });
+    time.className = 'dm-conv-time';
     time.textContent = this.formatTimeAgo(conv.lastMessageAt);
 
     nameRow.appendChild(name);
@@ -360,14 +294,7 @@ export class DMPanel {
     info.appendChild(nameRow);
 
     const preview = document.createElement('div');
-    Object.assign(preview.style, {
-      fontSize: '12px',
-      color: 'var(--text-muted)',
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      maxWidth: '220px',
-    });
+    preview.className = 'dm-conv-preview';
     preview.textContent =
       conv.lastMessage.length > 50 ? conv.lastMessage.slice(0, 50) + '...' : conv.lastMessage;
     info.appendChild(preview);
@@ -377,17 +304,7 @@ export class DMPanel {
     // Unread badge
     if (conv.unreadCount > 0) {
       const badge = document.createElement('span');
-      Object.assign(badge.style, {
-        background: 'var(--primary)',
-        color: '#fff',
-        borderRadius: '10px',
-        padding: '2px 7px',
-        fontSize: '11px',
-        fontWeight: '700',
-        minWidth: '18px',
-        textAlign: 'center',
-        flexShrink: '0',
-      });
+      badge.className = 'dm-unread-badge';
       badge.textContent = conv.unreadCount > 99 ? '99+' : String(conv.unreadCount);
       item.appendChild(badge);
     }
@@ -428,25 +345,10 @@ export class DMPanel {
 
     // Header
     const header = document.createElement('div');
-    Object.assign(header.style, {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      padding: '12px 16px',
-      borderBottom: '1px solid var(--border)',
-      flexShrink: '0',
-    });
+    header.className = 'panel-header';
 
     const backBtn = document.createElement('button');
-    Object.assign(backBtn.style, {
-      background: 'none',
-      border: 'none',
-      color: 'var(--text-muted)',
-      cursor: 'pointer',
-      fontSize: '18px',
-      padding: '0 4px',
-      lineHeight: '1',
-    });
+    backBtn.className = 'dm-panel-back';
     backBtn.innerHTML = '&#8592;';
     backBtn.addEventListener('click', () => {
       this.activeConversation = null;
@@ -456,29 +358,12 @@ export class DMPanel {
     header.appendChild(backBtn);
 
     const headerName = document.createElement('span');
-    Object.assign(headerName.style, {
-      flex: '1',
-      fontFamily: "'Chakra Petch', sans-serif",
-      fontWeight: '700',
-      fontSize: '15px',
-      color: 'var(--text)',
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-    });
+    headerName.className = 'panel-header-title dm-conv-title';
     headerName.textContent = this.activeConversation.username;
     header.appendChild(headerName);
 
     const closeBtn = document.createElement('button');
-    Object.assign(closeBtn.style, {
-      background: 'none',
-      border: 'none',
-      color: 'var(--text-muted)',
-      cursor: 'pointer',
-      fontSize: '20px',
-      padding: '0 4px',
-      lineHeight: '1',
-    });
+    closeBtn.className = 'panel-header-close';
     closeBtn.innerHTML = '&times;';
     closeBtn.addEventListener('click', () => this.close());
     header.appendChild(closeBtn);
@@ -488,15 +373,7 @@ export class DMPanel {
     // Messages area
     const messagesArea = document.createElement('div');
     messagesArea.setAttribute('data-dm-messages', '');
-    Object.assign(messagesArea.style, {
-      flex: '1',
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      padding: '12px 16px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '6px',
-    });
+    messagesArea.className = 'dm-messages';
     this.container.appendChild(messagesArea);
 
     this.renderMessages();
@@ -504,51 +381,17 @@ export class DMPanel {
     // Input area (only if allowed to send)
     if (this.canSend()) {
       const inputArea = document.createElement('div');
-      Object.assign(inputArea.style, {
-        display: 'flex',
-        gap: '8px',
-        padding: '12px 16px',
-        borderTop: '1px solid var(--border)',
-        flexShrink: '0',
-      });
+      inputArea.className = 'dm-input-area';
 
       const input = document.createElement('input');
       input.type = 'text';
       input.placeholder = 'Type a message...';
       input.maxLength = DM_MAX_LENGTH;
-      Object.assign(input.style, {
-        flex: '1',
-        background: 'var(--bg-input)',
-        border: '1px solid var(--border)',
-        borderRadius: '6px',
-        padding: '8px 12px',
-        color: 'var(--text)',
-        fontSize: '13px',
-        outline: 'none',
-        fontFamily: "'DM Sans', sans-serif",
-      });
+      input.className = 'dm-input';
 
       const sendBtn = document.createElement('button');
-      Object.assign(sendBtn.style, {
-        background: 'var(--primary)',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '6px',
-        padding: '8px 16px',
-        fontSize: '12px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        fontFamily: "'Chakra Petch', sans-serif",
-        letterSpacing: '0.5px',
-        transition: 'opacity 0.15s ease',
-      });
+      sendBtn.className = 'dm-send-btn';
       sendBtn.textContent = 'Send';
-      sendBtn.addEventListener('mouseenter', () => {
-        sendBtn.style.opacity = '0.85';
-      });
-      sendBtn.addEventListener('mouseleave', () => {
-        sendBtn.style.opacity = '1';
-      });
 
       const sendMessage = () => {
         const text = input.value.trim();
@@ -591,14 +434,7 @@ export class DMPanel {
       requestAnimationFrame(() => input.focus());
     } else if (this.dmMode === 'disabled') {
       const disabledNotice = document.createElement('div');
-      Object.assign(disabledNotice.style, {
-        padding: '12px 16px',
-        borderTop: '1px solid var(--border)',
-        textAlign: 'center',
-        color: 'var(--text-dim)',
-        fontSize: '12px',
-        flexShrink: '0',
-      });
+      disabledNotice.className = 'dm-disabled-notice';
       disabledNotice.textContent = 'Direct messages are disabled';
       this.container.appendChild(disabledNotice);
     }
@@ -611,33 +447,27 @@ export class DMPanel {
     if (!messagesEl) return;
 
     if (this.loadingMessages) {
-      messagesEl.innerHTML =
-        '<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">Loading...</div>';
+      messagesEl.innerHTML = '<div class="dm-empty">Loading...</div>';
       return;
     }
 
     if (this.messages.length === 0) {
-      messagesEl.innerHTML =
-        '<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">No messages yet. Say hello!</div>';
+      messagesEl.innerHTML = '<div class="dm-empty">No messages yet. Say hello!</div>';
       return;
     }
 
     messagesEl.innerHTML = this.messages
       .map((msg) => {
         const isSent = msg.senderId === this.userId;
-        const align = isSent ? 'flex-end' : 'flex-start';
-        const bg = isSent ? 'var(--accent)' : 'var(--bg-elevated)';
-        const textColor = isSent ? '#fff' : 'var(--text)';
+        const direction = isSent ? 'sent' : 'received';
         const timeStr = this.formatMessageTime(msg.createdAt);
         const readIndicator =
-          isSent && msg.readAt
-            ? '<span style="font-size:10px;color:rgba(255,255,255,0.6);margin-left:4px;">&#10003;&#10003;</span>'
-            : '';
+          isSent && msg.readAt ? '<span class="dm-msg-read">&#10003;&#10003;</span>' : '';
 
         return `
-          <div style="display:flex;flex-direction:column;align-items:${align};max-width:85%;">
-            <div style="background:${bg};color:${textColor};padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4;word-break:break-word;">${escapeHtml(msg.message)}</div>
-            <div style="font-size:10px;color:var(--text-dim);margin-top:2px;padding:0 4px;">${timeStr}${readIndicator}</div>
+          <div class="dm-msg-row ${direction}">
+            <div class="dm-msg-bubble">${escapeHtml(msg.message)}</div>
+            <div class="dm-msg-time">${timeStr}${readIndicator}</div>
           </div>
         `;
       })

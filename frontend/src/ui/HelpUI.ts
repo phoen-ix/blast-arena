@@ -114,7 +114,7 @@ export class HelpUI {
   private async render(): Promise<void> {
     this.container.innerHTML = `
       <div class="admin-header">
-        <h1 style="color:var(--primary);margin:0;">Help</h1>
+        <h1>Help</h1>
         <button class="btn btn-secondary" id="help-ui-close">Back to Lobby</button>
       </div>
       <div class="admin-tabs" id="help-tab-bar">
@@ -203,7 +203,7 @@ export class HelpUI {
         <div class="help-row"><span class="help-key">A</span> Place bomb</div>
         <div class="help-row"><span class="help-key">B</span> Detonate remote bombs</div>
         <div class="help-row"><span class="help-key">LB</span> / <span class="help-key">RB</span> Cycle spectate target (when dead)</div>
-        <div class="help-heading" style="margin-top:14px;">Menu Navigation</div>
+        <div class="help-heading help-heading-spaced">Menu Navigation</div>
         <div class="help-row"><span class="help-key">D-Pad</span> / <span class="help-key">Left Stick</span> Navigate menus</div>
         <div class="help-row"><span class="help-key">A</span> Confirm / Select</div>
         <div class="help-row"><span class="help-key">B</span> Back / Close</div>
@@ -248,15 +248,14 @@ export class HelpUI {
 
       const emoji = POWERUP_EMOJI_MAP[type] || '?';
       const canvas = renderPowerUpCanvas(def.color, emoji, 48);
-      canvas.style.cssText =
-        'width:48px;height:48px;flex-shrink:0;border-radius:8px;image-rendering:pixelated;';
+      canvas.className = 'help-powerup-icon';
       row.appendChild(canvas);
 
       const info = document.createElement('div');
-      info.style.cssText = 'flex:1;min-width:0;';
+      info.className = 'help-powerup-info';
       info.innerHTML = `
-        <div style="font-weight:700;font-size:14px;color:${def.color};margin-bottom:2px;font-family:var(--font-display);">${def.name}</div>
-        <div style="font-size:13px;color:#d0d0d8;line-height:1.5;">${POWERUP_DETAILS[type] || def.description}</div>
+        <div class="help-powerup-name" style="color:${def.color}">${def.name}</div>
+        <div class="help-powerup-desc">${POWERUP_DETAILS[type] || def.description}</div>
       `;
       row.appendChild(info);
 
@@ -301,24 +300,24 @@ export class HelpUI {
       <div class="help-section">
         <div class="help-heading">Dynamic Map Events</div>
         <div class="help-tip">Optional — toggled when creating a room. Adds random chaos to keep matches exciting.</div>
-        <div class="help-row" style="margin-bottom:8px;">
-          <b style="color:var(--danger)">Meteor Strikes</b> — Random tiles are targeted every 30–45 seconds. A warning reticle appears on the ground for 2 seconds before impact. Meteors destroy walls and kill players in the blast zone.
+        <div class="help-row help-row-spaced">
+          <b class="text-danger">Meteor Strikes</b> — Random tiles are targeted every 30–45 seconds. A warning reticle appears on the ground for 2 seconds before impact. Meteors destroy walls and kill players in the blast zone.
         </div>
         <div class="help-row">
-          <b style="color:var(--success)">Power-Up Rain</b> — Every 60 seconds, power-ups drop across random open tiles on the map. A great way to gear up mid-game.
+          <b class="text-success">Power-Up Rain</b> — Every 60 seconds, power-ups drop across random open tiles on the map. A great way to gear up mid-game.
         </div>
       </div>
 
       <div class="help-section">
         <div class="help-heading">Hazard Tiles</div>
         <div class="help-tip">Optional — toggled when creating a room. Placed in fixed positions on the map.</div>
-        <div class="help-row" style="margin-bottom:8px;">
-          <span class="help-tile" style="background:radial-gradient(circle, rgba(68,170,255,0.5) 30%, rgba(68,170,255,0.15) 70%, #2a2a3e 100%);"></span>
-          <span class="help-tile" style="background:radial-gradient(circle, rgba(255,136,68,0.5) 30%, rgba(255,136,68,0.15) 70%, #2a2a3e 100%);"></span>
+        <div class="help-row help-row-spaced">
+          <span class="help-tile help-tile-teleporter-a"></span>
+          <span class="help-tile help-tile-teleporter-b"></span>
           <b>Teleporters</b> — Glowing pads in blue/orange pairs. Step on one to instantly warp to the other. Use them for surprise attacks or quick escapes.
         </div>
         <div class="help-row">
-          <span class="help-tile" style="background:#3a3a4e;color:#88aacc;font-size:14px;line-height:22px;">▸▸▸</span>
+          <span class="help-tile help-tile-conveyor">▸▸▸</span>
           <b>Conveyor Belts</b> — Dark tiles with directional arrows. Automatically push you in the arrow direction when you step on them. Can be used strategically or can trap you in danger.
         </div>
       </div>
@@ -332,7 +331,7 @@ export class HelpUI {
       (doc) => `
       <details class="help-guide-section" data-doc="${doc.filename}">
         <summary>${doc.title}</summary>
-        <div class="help-markdown"><div style="color:var(--text-muted);padding:20px;text-align:center;">Loading...</div></div>
+        <div class="help-markdown"><div class="help-status">Loading...</div></div>
       </details>
     `,
     ).join('');
@@ -347,15 +346,14 @@ export class HelpUI {
       } catch {
         const content = sections[i]?.querySelector('.help-markdown');
         if (content) {
-          content.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;">Failed to load ${doc.title}. <button class="btn btn-ghost" style="margin-left:8px;" data-retry="${i}">Retry</button></div>`;
+          content.innerHTML = `<div class="help-status-error">Failed to load ${doc.title}. <button class="btn btn-ghost" data-retry="${i}">Retry</button></div>`;
           content.querySelector(`[data-retry="${i}"]`)?.addEventListener('click', async () => {
-            content.innerHTML =
-              '<div style="color:var(--text-muted);padding:20px;text-align:center;">Loading...</div>';
+            content.innerHTML = '<div class="help-status">Loading...</div>';
             try {
               const html = await this.fetchAndParseDoc(`/api/docs/${doc.filename}`, true);
               content.innerHTML = html;
             } catch {
-              content.innerHTML = `<div style="color:var(--danger);padding:20px;">Failed to load.</div>`;
+              content.innerHTML = '<div class="help-status-error">Failed to load.</div>';
             }
           });
         }
@@ -368,15 +366,14 @@ export class HelpUI {
   private async renderLevelEditorTab(): Promise<void> {
     if (!this.contentEl) return;
 
-    this.contentEl.innerHTML =
-      '<div style="color:var(--text-muted);padding:20px;text-align:center;">Loading...</div>';
+    this.contentEl.innerHTML = '<div class="help-status">Loading...</div>';
 
     try {
       const html = await this.fetchAndParseDoc('/api/docs/campaign.md');
       this.contentEl.innerHTML = `<div class="help-markdown">${html}</div>`;
     } catch {
       this.contentEl.innerHTML =
-        '<div style="color:var(--danger);padding:20px;text-align:center;">Failed to load Level Editor documentation.</div>';
+        '<div class="help-status-error">Failed to load Level Editor documentation.</div>';
     }
   }
 
@@ -387,7 +384,7 @@ export class HelpUI {
       (doc) => `
       <details class="help-guide-section" data-doc="${doc.filename}">
         <summary>${doc.title}</summary>
-        <div class="help-markdown"><div style="color:var(--text-muted);padding:20px;text-align:center;">Loading...</div></div>
+        <div class="help-markdown"><div class="help-status">Loading...</div></div>
       </details>
     `,
     ).join('');
@@ -408,7 +405,7 @@ export class HelpUI {
       } catch {
         const el = sections[i]?.querySelector('.help-markdown');
         if (el) {
-          el.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;">Failed to load ${doc.title}.</div>`;
+          el.innerHTML = `<div class="help-status-error">Failed to load ${doc.title}.</div>`;
         }
       }
     });
@@ -437,6 +434,39 @@ export class HelpUI {
 
   private escapeForPre(text: string): string {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async renderEmbedded(container: HTMLElement): Promise<void> {
+    this.container = container;
+    this.container.innerHTML = `
+      <div class="view-content">
+        <div class="admin-tabs" id="help-tab-bar">
+          ${this.tabs
+            .map(
+              (t) =>
+                `<button class="admin-tab ${t.id === this.activeTabId ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>`,
+            )
+            .join('')}
+        </div>
+        <div class="admin-tab-content" id="help-tab-content"></div>
+      </div>
+    `;
+
+    this.container.querySelector('#help-tab-bar')!.addEventListener('click', (e: Event) => {
+      const target = e.target as HTMLElement;
+      const tabId = target.getAttribute('data-tab');
+      if (tabId && tabId !== this.activeTabId) {
+        this.switchTab(tabId);
+      }
+    });
+
+    this.contentEl = this.container.querySelector('#help-tab-content');
+    await this.renderActiveTab();
+    this.pushGamepadContext();
+  }
+
+  destroy(): void {
+    UIGamepadNavigator.getInstance().popContext('help-ui');
   }
 
   private pushGamepadContext(): void {

@@ -3,6 +3,7 @@ import { AuthManager } from '../network/AuthManager';
 import { SocketClient } from '../network/SocketClient';
 import { AuthUI } from '../ui/AuthUI';
 import { NotificationUI } from '../ui/NotificationUI';
+import { themeManager } from '../themes/ThemeManager';
 
 export class MenuScene extends Phaser.Scene {
   private authManager!: AuthManager;
@@ -33,8 +34,9 @@ export class MenuScene extends Phaser.Scene {
       fontFamily: 'Chakra Petch, sans-serif',
       fontStyle: 'bold',
     };
-    const blastText = this.add.text(0, 0, 'BLAST ', { ...titleStyle, color: '#eae8e4' });
-    const arenaText = this.add.text(0, 0, 'ARENA', { ...titleStyle, color: '#ff6b35' });
+    const colors = themeManager.getCanvasColors();
+    const blastText = this.add.text(0, 0, 'BLAST ', { ...titleStyle, color: colors.textHex });
+    const arenaText = this.add.text(0, 0, 'ARENA', { ...titleStyle, color: colors.primaryHex });
     const totalWidth = blastText.width + arenaText.width;
     blastText.setPosition(width / 2 - totalWidth / 2, height / 2 - 60 - blastText.height / 2);
     arenaText.setPosition(blastText.x + blastText.width, blastText.y);
@@ -42,7 +44,7 @@ export class MenuScene extends Phaser.Scene {
     this.add
       .text(width / 2, height / 2, 'Multiplayer Explosive Combat', {
         fontSize: '16px',
-        color: '#8888a0',
+        color: colors.textDimHex,
         fontFamily: 'DM Sans, sans-serif',
       })
       .setOrigin(0.5);
@@ -50,7 +52,7 @@ export class MenuScene extends Phaser.Scene {
     this.add
       .text(width / 2, height / 2 + 60, 'Connecting...', {
         fontSize: '14px',
-        color: '#505068',
+        color: colors.textMutedHex,
         fontFamily: 'DM Sans, sans-serif',
       })
       .setOrigin(0.5);

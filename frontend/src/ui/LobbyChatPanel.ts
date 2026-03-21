@@ -97,42 +97,13 @@ export class LobbyChatPanel {
   }
 
   private render(): void {
-    Object.assign(this.container.style, {
-      position: 'fixed',
-      bottom: '16px',
-      left: '16px',
-      zIndex: '150',
-      width: '320px',
-      display: 'flex',
-      flexDirection: 'column',
-      borderRadius: 'var(--radius-lg)',
-      overflow: 'hidden',
-      border: '1px solid var(--border)',
-      background: 'var(--bg-surface)',
-      boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-    });
-
+    this.container.className = 'lobby-chat';
     this.container.innerHTML = '';
 
     // Toggle button
     const toggle = document.createElement('button');
-    Object.assign(toggle.style, {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      width: '100%',
-      padding: '10px 14px',
-      background: 'var(--bg-elevated)',
-      border: 'none',
-      borderBottom: this.expanded ? '1px solid var(--border)' : 'none',
-      color: 'var(--text)',
-      fontFamily: "'Chakra Petch', sans-serif",
-      fontSize: '13px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      letterSpacing: '0.5px',
-    });
-    toggle.innerHTML = `<span>Lobby Chat</span><span style="font-size:10px;color:var(--text-muted);transition:transform 0.2s;">${this.expanded ? '\u25BC' : '\u25B2'}</span>`;
+    toggle.className = 'lobby-chat-toggle' + (this.expanded ? ' expanded' : '');
+    toggle.innerHTML = `<span>Lobby Chat</span><span class="lobby-chat-arrow">${this.expanded ? '\u25BC' : '\u25B2'}</span>`;
     toggle.addEventListener('click', () => {
       this.expanded = !this.expanded;
       this.render();
@@ -151,24 +122,11 @@ export class LobbyChatPanel {
 
     // Chat body
     const body = document.createElement('div');
-    Object.assign(body.style, {
-      display: 'flex',
-      flexDirection: 'column',
-      background: 'var(--bg-deep)',
-    });
+    body.className = 'lobby-chat-body';
 
     // Messages area
     const messagesArea = document.createElement('div');
-    Object.assign(messagesArea.style, {
-      height: '220px',
-      overflowY: 'auto',
-      padding: '8px 10px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '4px',
-      scrollbarWidth: 'thin',
-      scrollbarColor: 'var(--bg-hover) transparent',
-    });
+    messagesArea.className = 'lobby-chat-messages';
     this.messagesEl = messagesArea;
     body.appendChild(messagesArea);
     this.renderMessages();
@@ -176,41 +134,18 @@ export class LobbyChatPanel {
     // Input area (only if canChat)
     if (this.canChat()) {
       const inputRow = document.createElement('div');
-      Object.assign(inputRow.style, {
-        display: 'flex',
-        gap: '6px',
-        padding: '8px 10px',
-        borderTop: '1px solid var(--border)',
-        background: 'var(--bg-surface)',
-      });
+      inputRow.className = 'lobby-chat-input-row';
 
       const input = document.createElement('input');
       input.type = 'text';
       input.placeholder = 'Type a message...';
       input.maxLength = LOBBY_CHAT_MAX_LENGTH;
-      Object.assign(input.style, {
-        flex: '1',
-        padding: '7px 10px',
-        background: 'var(--bg-deep)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-sm)',
-        color: 'var(--text)',
-        fontSize: '12px',
-        fontFamily: "'DM Sans', sans-serif",
-        outline: 'none',
-      });
+      input.className = 'lobby-chat-input';
       this.inputEl = input;
 
       const sendBtn = document.createElement('button');
       sendBtn.textContent = 'Send';
-      sendBtn.className = 'btn btn-primary';
-      Object.assign(sendBtn.style, {
-        padding: '7px 14px',
-        fontSize: '12px',
-        fontWeight: '600',
-        borderRadius: 'var(--radius-sm)',
-        whiteSpace: 'nowrap',
-      });
+      sendBtn.className = 'btn btn-primary lobby-chat-send';
 
       const send = () => {
         const msg = input.value.trim();
@@ -237,14 +172,14 @@ export class LobbyChatPanel {
     if (!this.messagesEl) return;
 
     if (this.messages.length === 0) {
-      this.messagesEl.innerHTML = `<div style="color:var(--text-muted);font-size:11px;text-align:center;padding:16px 0;font-style:italic;">No messages yet</div>`;
+      this.messagesEl.innerHTML = `<div class="lobby-chat-empty">No messages yet</div>`;
       return;
     }
 
     this.messagesEl.innerHTML = this.messages
       .map((m) => {
         const nameColor = this.getRoleColor(m.role);
-        return `<div style="font-size:12px;line-height:1.4;word-wrap:break-word;"><span style="color:${nameColor};font-weight:600;">${escapeHtml(m.fromUsername)}</span> <span style="color:var(--text-dim);">${escapeHtml(m.message)}</span></div>`;
+        return `<div class="lobby-chat-msg"><span class="lobby-chat-msg-name" style="color:${nameColor};">${escapeHtml(m.fromUsername)}</span> <span class="lobby-chat-msg-text">${escapeHtml(m.message)}</span></div>`;
       })
       .join('');
 

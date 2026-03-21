@@ -4,10 +4,7 @@ import { SocketClient } from '../network/SocketClient';
 import { NotificationUI } from '../ui/NotificationUI';
 import { LobbyUI } from '../ui/LobbyUI';
 import { RoomUI } from '../ui/RoomUI';
-import { CampaignUI } from '../ui/CampaignUI';
-import { AdminUI } from '../ui/AdminUI';
 import { Room } from '@blast-arena/shared';
-import { escapeHtml } from '../utils/html';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 
 export class LobbyScene extends Phaser.Scene {
@@ -88,24 +85,10 @@ export class LobbyScene extends Phaser.Scene {
       this.registry.remove('currentRoom');
     } else if (openCampaign) {
       this.registry.remove('currentRoom');
-      this.showLobby();
-      this.lobbyUI?.hide();
-      const campaignUI = new CampaignUI(this.socketClient, this.notifications, () => {
-        this.showLobby();
-      });
-      campaignUI.show();
+      this.showLobby('campaign');
     } else if (returnToAdmin) {
       this.registry.remove('currentRoom');
-      this.showLobby();
-      this.lobbyUI?.hide();
-      const adminUI = new AdminUI(
-        this.socketClient,
-        this.authManager,
-        this.notifications,
-        () => this.showLobby(),
-        returnToAdmin,
-      );
-      adminUI.show();
+      this.showLobby('admin', { initialTab: returnToAdmin });
     } else {
       this.registry.remove('currentRoom');
       this.showLobby();
@@ -169,7 +152,7 @@ export class LobbyScene extends Phaser.Scene {
     this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e);
   }
 
-  private showLobby(): void {
+  private showLobby(initialView?: string, viewOptions?: Record<string, any>): void {
     this.roomUI?.hide();
     this.roomUI = null;
 
@@ -179,7 +162,7 @@ export class LobbyScene extends Phaser.Scene {
       this.notifications,
       (room: Room) => this.onJoinRoom(room),
     );
-    this.lobbyUI.show();
+    this.lobbyUI.show(initialView, viewOptions);
   }
 
   private onJoinRoom(room: Room): void {

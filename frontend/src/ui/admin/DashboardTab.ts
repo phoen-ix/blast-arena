@@ -9,7 +9,10 @@ import {
   POWERUP_DEFINITIONS,
   BotAIEntry,
   ChatMode,
+  THEME_IDS,
+  THEME_NAMES,
 } from '@blast-arena/shared';
+import type { ThemeId } from '@blast-arena/shared';
 
 const ALL_POWER_UPS = Object.values(POWERUP_DEFINITIONS);
 
@@ -29,6 +32,7 @@ export class DashboardTab {
   private emoteMode: ChatMode = 'everyone';
   private spectatorChatMode: ChatMode = 'everyone';
   private xpMultiplier: number = 1;
+  private defaultTheme: ThemeId = 'inferno';
 
   constructor(notifications: NotificationUI) {
     this.notifications = notifications;
@@ -53,7 +57,20 @@ export class DashboardTab {
 
   private async loadSettings(): Promise<void> {
     try {
-      const [recResp, regResp, chatResp, lobbyResp, dmResp, emoteResp, specChatResp, xpResp, gameResp, simResp, aiResp] = await Promise.all([
+      const [
+        recResp,
+        regResp,
+        chatResp,
+        lobbyResp,
+        dmResp,
+        emoteResp,
+        specChatResp,
+        xpResp,
+        themeResp,
+        gameResp,
+        simResp,
+        aiResp,
+      ] = await Promise.all([
         ApiClient.get<{ enabled: boolean }>('/admin/settings/recordings_enabled'),
         ApiClient.get<{ enabled: boolean }>('/admin/settings/registration_enabled'),
         ApiClient.get<{ mode: ChatMode }>('/admin/settings/party_chat_mode'),
@@ -62,6 +79,7 @@ export class DashboardTab {
         ApiClient.get<{ mode: ChatMode }>('/admin/settings/emote_mode'),
         ApiClient.get<{ mode: ChatMode }>('/admin/settings/spectator_chat_mode'),
         ApiClient.get<{ multiplier: number }>('/admin/settings/xp_multiplier'),
+        ApiClient.get<{ theme: string }>('/admin/settings/default_theme'),
         ApiClient.get<{ defaults: GameDefaults }>('/admin/settings/game_defaults'),
         ApiClient.get<{ defaults: SimulationDefaults }>('/admin/settings/simulation_defaults'),
         ApiClient.get<{ ais: BotAIEntry[] }>('/admin/ai/active'),
@@ -74,6 +92,7 @@ export class DashboardTab {
       this.emoteMode = emoteResp.mode ?? 'everyone';
       this.spectatorChatMode = specChatResp.mode ?? 'everyone';
       this.xpMultiplier = xpResp.multiplier ?? 1;
+      this.defaultTheme = (themeResp.theme as ThemeId) || 'inferno';
       this.gameDefaults = gameResp.defaults ?? {};
       this.simulationDefaults = simResp.defaults ?? {};
       this.activeAIs = aiResp.ais ?? [];
@@ -82,7 +101,9 @@ export class DashboardTab {
     }
     // Email settings are admin-only; fetch separately to handle non-admin gracefully
     try {
-      const emailResp = await ApiClient.get<{ settings: EmailSettings }>('/admin/settings/email_settings');
+      const emailResp = await ApiClient.get<{ settings: EmailSettings }>(
+        '/admin/settings/email_settings',
+      );
       this.emailSettings = emailResp.settings ?? {};
     } catch {
       // Non-admin or fetch failure — leave as empty
@@ -98,81 +119,87 @@ export class DashboardTab {
 
     const card = document.createElement('div');
     card.id = 'server-settings-card';
-    card.style.cssText = 'margin-top:20px;';
+    card.className = 'settings-card';
     card.innerHTML = `
-      <h3 style="color:var(--text);font-size:15px;margin-bottom:12px;font-weight:600;">Server Settings</h3>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;padding:14px 18px;
-        background:var(--bg-card);border:1px solid var(--border);border-radius:8px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
-            <input type="checkbox" id="toggle-recordings" ${this.recordingsEnabled ? 'checked' : ''} style="accent-color:var(--accent);width:16px;height:16px;">
-            <span style="color:var(--text);font-weight:600;">Match Recordings</span>
+      <h3>Server Settings</h3>
+      <div class="settings-grid">
+        <div class="setting-item">
+          <label class="setting-item-checkbox">
+            <input type="checkbox" id="toggle-recordings" ${this.recordingsEnabled ? 'checked' : ''}>
+            <span class="setting-item-label">Match Recordings</span>
           </label>
-          <span style="color:var(--text-dim);font-size:12px;">Enable replay recording for all new games</span>
+          <span class="setting-item-desc">Enable replay recording for all new games</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
-            <input type="checkbox" id="toggle-registration" ${this.registrationEnabled ? 'checked' : ''} style="accent-color:var(--accent);width:16px;height:16px;">
-            <span style="color:var(--text);font-weight:600;">User Registration</span>
+        <div class="setting-item">
+          <label class="setting-item-checkbox">
+            <input type="checkbox" id="toggle-registration" ${this.registrationEnabled ? 'checked' : ''}>
+            <span class="setting-item-label">User Registration</span>
           </label>
-          <span style="color:var(--text-dim);font-size:12px;">Allow new users to create accounts</span>
+          <span class="setting-item-desc">Allow new users to create accounts</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:var(--text);font-weight:600;font-size:14px;">Party Chat</span>
-          <select id="select-chat-mode" style="background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:12px;">
+        <div class="setting-item">
+          <span class="setting-item-label">Party Chat</span>
+          <select id="select-chat-mode" class="admin-select">
             <option value="everyone" ${this.chatMode === 'everyone' ? 'selected' : ''}>Everyone</option>
             <option value="staff" ${this.chatMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
             <option value="admin_only" ${this.chatMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
             <option value="disabled" ${this.chatMode === 'disabled' ? 'selected' : ''}>Disabled</option>
           </select>
-          <span style="color:var(--text-dim);font-size:12px;">Who can use party chat</span>
+          <span class="setting-item-desc">Who can use party chat</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:var(--text);font-weight:600;font-size:14px;">Lobby Chat</span>
-          <select id="select-lobby-chat-mode" style="background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:12px;">
+        <div class="setting-item">
+          <span class="setting-item-label">Lobby Chat</span>
+          <select id="select-lobby-chat-mode" class="admin-select">
             <option value="everyone" ${this.lobbyChatMode === 'everyone' ? 'selected' : ''}>Everyone</option>
             <option value="staff" ${this.lobbyChatMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
             <option value="admin_only" ${this.lobbyChatMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
             <option value="disabled" ${this.lobbyChatMode === 'disabled' ? 'selected' : ''}>Disabled</option>
           </select>
-          <span style="color:var(--text-dim);font-size:12px;">Global lobby chat</span>
+          <span class="setting-item-desc">Global lobby chat</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:var(--text);font-weight:600;font-size:14px;">Direct Messages</span>
-          <select id="select-dm-mode" style="background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:12px;">
+        <div class="setting-item">
+          <span class="setting-item-label">Direct Messages</span>
+          <select id="select-dm-mode" class="admin-select">
             <option value="everyone" ${this.dmMode === 'everyone' ? 'selected' : ''}>Everyone</option>
             <option value="staff" ${this.dmMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
             <option value="admin_only" ${this.dmMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
             <option value="disabled" ${this.dmMode === 'disabled' ? 'selected' : ''}>Disabled</option>
           </select>
-          <span style="color:var(--text-dim);font-size:12px;">Friend-to-friend messaging</span>
+          <span class="setting-item-desc">Friend-to-friend messaging</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:var(--text);font-weight:600;font-size:14px;">In-Game Emotes</span>
-          <select id="select-emote-mode" style="background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:12px;">
+        <div class="setting-item">
+          <span class="setting-item-label">In-Game Emotes</span>
+          <select id="select-emote-mode" class="admin-select">
             <option value="everyone" ${this.emoteMode === 'everyone' ? 'selected' : ''}>Everyone</option>
             <option value="staff" ${this.emoteMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
             <option value="admin_only" ${this.emoteMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
             <option value="disabled" ${this.emoteMode === 'disabled' ? 'selected' : ''}>Disabled</option>
           </select>
-          <span style="color:var(--text-dim);font-size:12px;">Quick emotes during games</span>
+          <span class="setting-item-desc">Quick emotes during games</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:var(--text);font-weight:600;font-size:14px;">Spectator Chat</span>
-          <select id="select-spectator-chat-mode" style="background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:12px;">
+        <div class="setting-item">
+          <span class="setting-item-label">Spectator Chat</span>
+          <select id="select-spectator-chat-mode" class="admin-select">
             <option value="everyone" ${this.spectatorChatMode === 'everyone' ? 'selected' : ''}>Everyone</option>
             <option value="staff" ${this.spectatorChatMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
             <option value="admin_only" ${this.spectatorChatMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
             <option value="disabled" ${this.spectatorChatMode === 'disabled' ? 'selected' : ''}>Disabled</option>
           </select>
-          <span style="color:var(--text-dim);font-size:12px;">Dead player chat during games</span>
+          <span class="setting-item-desc">Dead player chat during games</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:var(--text);font-weight:600;font-size:14px;">XP Multiplier</span>
+        <div class="setting-item">
+          <span class="setting-item-label">XP Multiplier</span>
           <input id="input-xp-multiplier" type="number" min="0" max="10" step="0.1" value="${this.xpMultiplier}"
-            style="background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:12px;width:60px;">
-          <button id="btn-save-xp-multiplier" style="background:var(--primary);color:white;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">Save</button>
-          <span style="color:var(--text-dim);font-size:12px;">XP earned per match (default: 1.0)</span>
+            class="admin-select" style="width:60px;">
+          <button id="btn-save-xp-multiplier" class="btn btn-primary btn-sm">Save</button>
+          <span class="setting-item-desc">XP earned per match (default: 1.0)</span>
+        </div>
+        <div class="setting-item">
+          <span class="setting-item-label">Default Theme</span>
+          <select id="select-default-theme" class="admin-select">
+            ${THEME_IDS.map((id) => `<option value="${id}" ${this.defaultTheme === id ? 'selected' : ''}>${THEME_NAMES[id]}</option>`).join('')}
+          </select>
+          <span class="setting-item-desc">Theme for users without a preference</span>
         </div>
       </div>
 
@@ -226,10 +253,30 @@ export class DashboardTab {
       }
     });
 
-    this.attachChatModeListener(card, '#select-lobby-chat-mode', 'lobby_chat_mode', 'Lobby chat', (m) => { this.lobbyChatMode = m; });
-    this.attachChatModeListener(card, '#select-dm-mode', 'dm_mode', 'Direct messages', (m) => { this.dmMode = m; });
-    this.attachChatModeListener(card, '#select-emote-mode', 'emote_mode', 'In-game emotes', (m) => { this.emoteMode = m; });
-    this.attachChatModeListener(card, '#select-spectator-chat-mode', 'spectator_chat_mode', 'Spectator chat', (m) => { this.spectatorChatMode = m; });
+    this.attachChatModeListener(
+      card,
+      '#select-lobby-chat-mode',
+      'lobby_chat_mode',
+      'Lobby chat',
+      (m) => {
+        this.lobbyChatMode = m;
+      },
+    );
+    this.attachChatModeListener(card, '#select-dm-mode', 'dm_mode', 'Direct messages', (m) => {
+      this.dmMode = m;
+    });
+    this.attachChatModeListener(card, '#select-emote-mode', 'emote_mode', 'In-game emotes', (m) => {
+      this.emoteMode = m;
+    });
+    this.attachChatModeListener(
+      card,
+      '#select-spectator-chat-mode',
+      'spectator_chat_mode',
+      'Spectator chat',
+      (m) => {
+        this.spectatorChatMode = m;
+      },
+    );
 
     // XP multiplier save
     const xpSaveBtn = card.querySelector('#btn-save-xp-multiplier');
@@ -246,6 +293,18 @@ export class DashboardTab {
         this.notifications.success(`XP multiplier set to ${val}`);
       } catch {
         this.notifications.error('Failed to update XP multiplier');
+      }
+    });
+
+    const themeSelect = card.querySelector('#select-default-theme') as HTMLSelectElement;
+    themeSelect?.addEventListener('change', async () => {
+      const val = themeSelect.value;
+      try {
+        await ApiClient.put('/admin/settings/default_theme', { theme: val });
+        this.defaultTheme = val as ThemeId;
+        this.notifications.success(`Default theme set to ${THEME_NAMES[val as ThemeId]}`);
+      } catch {
+        this.notifications.error('Failed to update default theme');
       }
     });
 
@@ -270,7 +329,10 @@ export class DashboardTab {
         await ApiClient.put(`/admin/settings/${settingKey}`, { mode });
         onSuccess(mode);
         const labels: Record<ChatMode, string> = {
-          everyone: 'Everyone', staff: 'Staff Only', admin_only: 'Admin Only', disabled: 'Disabled',
+          everyone: 'Everyone',
+          staff: 'Staff Only',
+          admin_only: 'Admin Only',
+          disabled: 'Disabled',
         };
         this.notifications.success(`${label} set to: ${labels[mode]}`);
       } catch {
@@ -284,58 +346,52 @@ export class DashboardTab {
     const s = this.emailSettings;
     const configured = !!s.smtpHost;
     const statusDot = configured
-      ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);margin-right:6px;" title="SMTP configured"></span>'
-      : '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);margin-right:6px;" title="SMTP not configured"></span>';
-
-    const inputStyle = 'width:100%;background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;';
+      ? '<span class="status-indicator active" title="SMTP configured"></span>'
+      : '<span class="status-indicator inactive" title="SMTP not configured"></span>';
 
     return `
-      <div style="margin-top:12px;">
-        <button id="email-toggle" style="background:none;border:1px solid var(--border);border-radius:6px;
-          padding:8px 14px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;width:100%;
-          text-align:left;display:flex;justify-content:space-between;align-items:center;">
+      <div class="collapsible-section">
+        <button id="email-toggle" class="collapsible-toggle">
           <span>${statusDot}Email / SMTP Settings</span>
-          <span id="email-arrow" style="transition:transform 0.2s;">&#9654;</span>
+          <span id="email-arrow" class="collapsible-arrow">&#9654;</span>
         </button>
-        <div id="email-body" style="display:none;padding:14px 18px;margin-top:4px;
-          background:var(--bg-card);border:1px solid var(--border);border-radius:8px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label style="font-size:11px;color:var(--text-dim);">SMTP Host</label>
-              <input type="text" id="email-smtpHost" value="${escapeAttr(s.smtpHost ?? '')}" placeholder="smtp.example.com" style="${inputStyle}">
+        <div id="email-body" class="collapsible-body">
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label>SMTP Host</label>
+              <input type="text" id="email-smtpHost" value="${escapeAttr(s.smtpHost ?? '')}" placeholder="smtp.example.com">
             </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label style="font-size:11px;color:var(--text-dim);">SMTP Port</label>
-              <input type="number" id="email-smtpPort" value="${s.smtpPort ?? ''}" placeholder="587" min="1" max="65535" style="${inputStyle}">
+            <div class="form-group">
+              <label>SMTP Port</label>
+              <input type="number" id="email-smtpPort" value="${s.smtpPort ?? ''}" placeholder="587" min="1" max="65535">
             </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label style="font-size:11px;color:var(--text-dim);">SMTP User</label>
-              <input type="text" id="email-smtpUser" value="${escapeAttr(s.smtpUser ?? '')}" placeholder="user@example.com" style="${inputStyle}">
+            <div class="form-group">
+              <label>SMTP User</label>
+              <input type="text" id="email-smtpUser" value="${escapeAttr(s.smtpUser ?? '')}" placeholder="user@example.com">
             </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label style="font-size:11px;color:var(--text-dim);">SMTP Password</label>
-              <div style="position:relative;">
-                <input type="password" id="email-smtpPassword" value="${escapeAttr(s.smtpPassword ?? '')}" placeholder="No password set" style="${inputStyle}padding-right:30px;">
-                <button id="email-togglePw" type="button" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
-                  background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:11px;padding:2px 4px;">Show</button>
+            <div class="form-group">
+              <label>SMTP Password</label>
+              <div class="pw-field">
+                <input type="password" id="email-smtpPassword" value="${escapeAttr(s.smtpPassword ?? '')}" placeholder="No password set">
+                <button id="email-togglePw" type="button" class="pw-toggle">Show</button>
               </div>
             </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label style="font-size:11px;color:var(--text-dim);">From Email</label>
-              <input type="text" id="email-fromEmail" value="${escapeAttr(s.fromEmail ?? '')}" placeholder="noreply@example.com" style="${inputStyle}">
+            <div class="form-group">
+              <label>From Email</label>
+              <input type="text" id="email-fromEmail" value="${escapeAttr(s.fromEmail ?? '')}" placeholder="noreply@example.com">
             </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label style="font-size:11px;color:var(--text-dim);">From Name</label>
-              <input type="text" id="email-fromName" value="${escapeAttr(s.fromName ?? '')}" placeholder="BlastArena" style="${inputStyle}">
+            <div class="form-group">
+              <label>From Name</label>
+              <input type="text" id="email-fromName" value="${escapeAttr(s.fromName ?? '')}" placeholder="BlastArena">
             </div>
           </div>
 
-          <div style="display:flex;gap:8px;margin-top:14px;align-items:center;">
-            <button id="email-save" class="btn btn-primary" style="font-size:12px;padding:6px 16px;">Save</button>
-            <button id="email-reset" class="btn btn-secondary" style="font-size:12px;padding:6px 16px;">Reset to Defaults</button>
-            <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
-              <input type="email" id="email-testAddr" placeholder="test@example.com" style="${inputStyle}width:180px;">
-              <button id="email-test" class="btn btn-secondary" style="font-size:12px;padding:6px 16px;white-space:nowrap;">Send Test</button>
+          <div class="flex-row mt-md">
+            <button id="email-save" class="btn btn-primary btn-sm">Save</button>
+            <button id="email-reset" class="btn btn-secondary btn-sm">Reset to Defaults</button>
+            <div class="flex-row ml-auto flex-gap-sm">
+              <input type="email" id="email-testAddr" placeholder="test@example.com" class="admin-select" style="width:180px;">
+              <button id="email-test" class="btn btn-secondary btn-sm nowrap">Send Test</button>
             </div>
           </div>
         </div>
@@ -350,9 +406,9 @@ export class DashboardTab {
     if (!toggle || !body) return;
 
     toggle.addEventListener('click', () => {
-      const open = body.style.display === 'none';
-      body.style.display = open ? 'block' : 'none';
-      arrow.style.transform = open ? 'rotate(90deg)' : '';
+      const isHidden = getComputedStyle(body).display === 'none';
+      body.style.display = isHidden ? 'block' : 'none';
+      arrow.style.transform = isHidden ? 'rotate(90deg)' : '';
     });
 
     // Show/hide password
@@ -384,7 +440,9 @@ export class DashboardTab {
         await ApiClient.put('/admin/settings/email_settings', settings);
         this.notifications.success('Email settings saved');
         // Reload to get masked password back
-        const resp = await ApiClient.get<{ settings: EmailSettings }>('/admin/settings/email_settings');
+        const resp = await ApiClient.get<{ settings: EmailSettings }>(
+          '/admin/settings/email_settings',
+        );
         this.emailSettings = resp.settings ?? {};
         this.renderSettingsCard();
       } catch {
@@ -397,7 +455,9 @@ export class DashboardTab {
       try {
         await ApiClient.put('/admin/settings/email_settings', {});
         this.notifications.success('Email settings reset to .env defaults');
-        const resp = await ApiClient.get<{ settings: EmailSettings }>('/admin/settings/email_settings');
+        const resp = await ApiClient.get<{ settings: EmailSettings }>(
+          '/admin/settings/email_settings',
+        );
         this.emailSettings = resp.settings ?? {};
         this.renderSettingsCard();
       } catch {
@@ -429,25 +489,31 @@ export class DashboardTab {
     const hasOverrides = Object.keys(defaults).length > 0;
 
     return `
-      <div style="margin-top:12px;">
-        <button id="${prefix}-toggle" style="background:none;border:1px solid var(--border);border-radius:6px;
-          padding:8px 14px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;width:100%;
-          text-align:left;display:flex;justify-content:space-between;align-items:center;">
-          <span>${title} ${hasOverrides ? `<span style="color:var(--accent);font-size:11px;">(${Object.keys(defaults).length} overrides)</span>` : ''}</span>
-          <span id="${prefix}-arrow" style="transition:transform 0.2s;">&#9654;</span>
+      <div class="collapsible-section">
+        <button id="${prefix}-toggle" class="collapsible-toggle">
+          <span>${title} ${hasOverrides ? `<span class="override-badge">(${Object.keys(defaults).length} overrides)</span>` : ''}</span>
+          <span id="${prefix}-arrow" class="collapsible-arrow">&#9654;</span>
         </button>
-        <div id="${prefix}-body" style="display:none;padding:14px 18px;margin-top:4px;
-          background:var(--bg-card);border:1px solid var(--border);border-radius:8px;">
+        <div id="${prefix}-body" class="collapsible-body">
           ${this.renderDefaultsForm(prefix, defaults, type, this.activeAIs)}
         </div>
       </div>
     `;
   }
 
-  private renderDefaultsForm(prefix: string, defaults: SimulationDefaults, type: 'game' | 'simulation', activeAIs: BotAIEntry[] = []): string {
-    const sel = (id: string, options: { value: string; label: string }[], current?: string | number) => {
+  private renderDefaultsForm(
+    prefix: string,
+    defaults: SimulationDefaults,
+    type: 'game' | 'simulation',
+    activeAIs: BotAIEntry[] = [],
+  ): string {
+    const sel = (
+      id: string,
+      options: { value: string; label: string }[],
+      current?: string | number,
+    ) => {
       const val = current !== undefined ? String(current) : '';
-      return `<select id="${id}" style="width:100%;background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;">
+      return `<select id="${id}" class="admin-select w-full">
         <option value="">— Default —</option>
         ${options.map((o) => `<option value="${o.value}" ${val === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
       </select>`;
@@ -456,10 +522,10 @@ export class DashboardTab {
     const chk = (id: string, label: string, color: string, value?: boolean) => {
       const checked = value === true ? 'checked' : '';
       const indeterminate = value === undefined;
-      return `<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
+      return `<label class="option-label">
         <input type="checkbox" id="${id}" ${checked} ${indeterminate ? 'data-indeterminate="true"' : ''} style="accent-color:${color};">
         <span style="color:${color};font-weight:600;">${label}</span>
-        ${indeterminate ? '<span style="color:var(--text-muted);font-size:10px;">(default)</span>' : ''}
+        ${indeterminate ? '<span class="default-indicator">(default)</span>' : ''}
       </label>`;
     };
 
@@ -473,20 +539,31 @@ export class DashboardTab {
     ];
     const maxPlayersOpts = [2, 4, 6, 8].map((n) => ({ value: String(n), label: String(n) }));
     const roundTimeOpts = [
-      { value: '60', label: '1 min' }, { value: '120', label: '2 min' },
-      { value: '180', label: '3 min' }, { value: '300', label: '5 min' }, { value: '600', label: '10 min' },
+      { value: '60', label: '1 min' },
+      { value: '120', label: '2 min' },
+      { value: '180', label: '3 min' },
+      { value: '300', label: '5 min' },
+      { value: '600', label: '10 min' },
     ];
     const mapSizeOpts = [
-      { value: '21', label: '21x21' }, { value: '31', label: '31x31' },
-      { value: '39', label: '39x39' }, { value: '51', label: '51x51' }, { value: '61', label: '61x61' },
+      { value: '21', label: '21x21' },
+      { value: '31', label: '31x31' },
+      { value: '39', label: '39x39' },
+      { value: '51', label: '51x51' },
+      { value: '61', label: '61x61' },
     ];
     const wallDensityOpts = [
-      { value: '0.3', label: '30%' }, { value: '0.5', label: '50%' },
-      { value: '0.65', label: '65%' }, { value: '0.8', label: '80%' },
+      { value: '0.3', label: '30%' },
+      { value: '0.5', label: '50%' },
+      { value: '0.65', label: '65%' },
+      { value: '0.8', label: '80%' },
     ];
     const powerUpRateOpts = [
-      { value: '0', label: 'None' }, { value: '0.15', label: '15%' },
-      { value: '0.3', label: '30%' }, { value: '0.5', label: '50%' }, { value: '0.8', label: '80%' },
+      { value: '0', label: 'None' },
+      { value: '0.15', label: '15%' },
+      { value: '0.3', label: '30%' },
+      { value: '0.5', label: '50%' },
+      { value: '0.8', label: '80%' },
     ];
     const minBots = type === 'simulation' ? 2 : 0;
     const maxBots = type === 'simulation' ? 8 : 7;
@@ -495,26 +572,35 @@ export class DashboardTab {
       return { value: String(n), label: n === 0 ? 'None' : `${n}` };
     });
     const botDiffOpts = [
-      { value: 'easy', label: 'Easy' }, { value: 'normal', label: 'Normal' }, { value: 'hard', label: 'Hard' },
+      { value: 'easy', label: 'Easy' },
+      { value: 'normal', label: 'Normal' },
+      { value: 'hard', label: 'Hard' },
     ];
 
     let simExtra = '';
     if (type === 'simulation') {
       const sd = defaults as SimulationDefaults;
-      const speedOpts = [{ value: 'fast', label: 'Fast' }, { value: 'realtime', label: 'Real-time' }];
-      const verbOpts = [{ value: 'normal', label: 'Normal' }, { value: 'detailed', label: 'Detailed' }, { value: 'full', label: 'Full' }];
+      const speedOpts = [
+        { value: 'fast', label: 'Fast' },
+        { value: 'realtime', label: 'Real-time' },
+      ];
+      const verbOpts = [
+        { value: 'normal', label: 'Normal' },
+        { value: 'detailed', label: 'Detailed' },
+        { value: 'full', label: 'Full' },
+      ];
       simExtra = `
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Total Games</label>
+        <div class="form-group">
+          <label>Total Games</label>
           <input type="number" id="${prefix}-totalGames" value="${sd.totalGames ?? ''}" min="1" max="1000" placeholder="Default (10)"
-            style="width:100%;background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;">
+            class="admin-select w-full">
         </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Speed</label>
+        <div class="form-group">
+          <label>Speed</label>
           ${sel(`${prefix}-speed`, speedOpts, sd.speed)}
         </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Log Verbosity</label>
+        <div class="form-group">
+          <label>Log Verbosity</label>
           ${sel(`${prefix}-logVerbosity`, verbOpts, sd.logVerbosity)}
         </div>
       `;
@@ -523,47 +609,59 @@ export class DashboardTab {
     const enabledSet = defaults.enabledPowerUps ? new Set(defaults.enabledPowerUps) : null;
 
     return `
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Game Mode</label>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Game Mode</label>
           ${sel(`${prefix}-gameMode`, gameModes, defaults.gameMode)}
         </div>
-        ${type === 'game' ? `<div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Max Players</label>
+        ${
+          type === 'game'
+            ? `<div class="form-group">
+          <label>Max Players</label>
           ${sel(`${prefix}-maxPlayers`, maxPlayersOpts, defaults.maxPlayers)}
-        </div>` : ''}
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Match Time</label>
+        </div>`
+            : ''
+        }
+        <div class="form-group">
+          <label>Match Time</label>
           ${sel(`${prefix}-roundTime`, roundTimeOpts, defaults.roundTime)}
         </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Map Size</label>
+        <div class="form-group">
+          <label>Map Size</label>
           ${sel(`${prefix}-mapWidth`, mapSizeOpts, defaults.mapWidth)}
         </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Wall Density</label>
+        <div class="form-group">
+          <label>Wall Density</label>
           ${sel(`${prefix}-wallDensity`, wallDensityOpts, defaults.wallDensity)}
         </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Power-Up Rate</label>
+        <div class="form-group">
+          <label>Power-Up Rate</label>
           ${sel(`${prefix}-powerUpDropRate`, powerUpRateOpts, defaults.powerUpDropRate)}
         </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Bots</label>
+        <div class="form-group">
+          <label>Bots</label>
           ${sel(`${prefix}-botCount`, botCountOpts, defaults.botCount)}
         </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Bot Difficulty</label>
+        <div class="form-group">
+          <label>Bot Difficulty</label>
           ${sel(`${prefix}-botDifficulty`, botDiffOpts, defaults.botDifficulty)}
         </div>
-        ${activeAIs.length > 1 ? `<div class="form-group" style="margin-bottom:0;">
-          <label style="font-size:11px;color:var(--text-dim);">Bot AI</label>
-          ${sel(`${prefix}-botAiId`, activeAIs.map((ai) => ({ value: ai.id, label: ai.name })), defaults.botAiId)}
-        </div>` : ''}
+        ${
+          activeAIs.length > 1
+            ? `<div class="form-group">
+          <label>Bot AI</label>
+          ${sel(
+            `${prefix}-botAiId`,
+            activeAIs.map((ai) => ({ value: ai.id, label: ai.name })),
+            defaults.botAiId,
+          )}
+        </div>`
+            : ''
+        }
         ${simExtra}
       </div>
 
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
+      <div class="flex-wrap mt-sm">
         ${chk(`${prefix}-reinforcedWalls`, 'Reinforced Walls', '#b8884d', defaults.reinforcedWalls)}
         ${chk(`${prefix}-enableMapEvents`, 'Map Events', 'var(--warning)', defaults.enableMapEvents)}
         ${chk(`${prefix}-hazardTiles`, 'Hazard Tiles', 'var(--info)', defaults.hazardTiles)}
@@ -571,13 +669,13 @@ export class DashboardTab {
         ${type === 'simulation' ? chk(`${prefix}-recordReplays`, 'Record Replays', 'var(--accent)', (defaults as SimulationDefaults).recordReplays) : ''}
       </div>
 
-      <div style="margin-top:10px;">
-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;font-weight:600;">Power-Ups</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      <div class="mt-sm">
+        <div class="subsection-label">Power-Ups</div>
+        <div class="flex-wrap flex-gap-sm">
           ${ALL_POWER_UPS.map((pu) => {
             const checked = enabledSet ? enabledSet.has(pu.type) : true;
             const indeterminate = enabledSet === null;
-            return `<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;">
+            return `<label class="option-label-sm">
               <input type="checkbox" class="${prefix}-powerup-check" value="${pu.type}" ${checked ? 'checked' : ''} ${indeterminate ? 'data-indeterminate="true"' : ''}
                 style="accent-color:${pu.color};">
               <span style="color:${pu.color};font-weight:600;">${pu.name}</span>
@@ -586,25 +684,26 @@ export class DashboardTab {
         </div>
       </div>
 
-      <div style="display:flex;gap:8px;margin-top:14px;">
-        <button id="${prefix}-save" class="btn btn-primary" style="font-size:12px;padding:6px 16px;">Save</button>
-        <button id="${prefix}-reset" class="btn btn-secondary" style="font-size:12px;padding:6px 16px;">Reset to Defaults</button>
+      <div class="flex-row mt-md">
+        <button id="${prefix}-save" class="btn btn-primary btn-sm">Save</button>
+        <button id="${prefix}-reset" class="btn btn-secondary btn-sm">Reset to Defaults</button>
       </div>
     `;
   }
 
   private attachDefaultsListeners(card: HTMLElement, type: 'game' | 'simulation'): void {
     const prefix = type === 'game' ? 'gd' : 'sd';
-    const endpoint = type === 'game' ? '/admin/settings/game_defaults' : '/admin/settings/simulation_defaults';
+    const endpoint =
+      type === 'game' ? '/admin/settings/game_defaults' : '/admin/settings/simulation_defaults';
 
     // Toggle expand/collapse
     const toggle = card.querySelector(`#${prefix}-toggle`) as HTMLElement;
     const body = card.querySelector(`#${prefix}-body`) as HTMLElement;
     const arrow = card.querySelector(`#${prefix}-arrow`) as HTMLElement;
     toggle.addEventListener('click', () => {
-      const open = body.style.display === 'none';
-      body.style.display = open ? 'block' : 'none';
-      arrow.style.transform = open ? 'rotate(90deg)' : '';
+      const isHidden = getComputedStyle(body).display === 'none';
+      body.style.display = isHidden ? 'block' : 'none';
+      arrow.style.transform = isHidden ? 'rotate(90deg)' : '';
     });
 
     // Save
@@ -642,19 +741,17 @@ export class DashboardTab {
     });
   }
 
-  private collectDefaults(card: HTMLElement, prefix: string, type: 'game' | 'simulation'): SimulationDefaults {
+  private collectDefaults(
+    card: HTMLElement,
+    prefix: string,
+    type: 'game' | 'simulation',
+  ): SimulationDefaults {
     const defaults: SimulationDefaults = {};
 
     const getSelect = (field: string) => {
       const el = card.querySelector(`#${prefix}-${field}`) as HTMLSelectElement | null;
       return el?.value || '';
     };
-    const getCheckbox = (field: string): boolean | undefined => {
-      const el = card.querySelector(`#${prefix}-${field}`) as HTMLInputElement | null;
-      if (!el) return undefined;
-      return el.checked;
-    };
-
     const gameMode = getSelect('gameMode');
     if (gameMode) defaults.gameMode = gameMode as GameDefaults['gameMode'];
 
@@ -683,7 +780,12 @@ export class DashboardTab {
     if (botAiId) defaults.botAiId = botAiId;
 
     // Checkboxes: only include if not at indeterminate (data-indeterminate means "use default")
-    const boolFields = ['reinforcedWalls', 'enableMapEvents', 'hazardTiles', 'friendlyFire'] as const;
+    const boolFields = [
+      'reinforcedWalls',
+      'enableMapEvents',
+      'hazardTiles',
+      'friendlyFire',
+    ] as const;
     for (const field of boolFields) {
       const el = card.querySelector(`#${prefix}-${field}`) as HTMLInputElement | null;
       if (el && !el.dataset.indeterminate) {
@@ -694,7 +796,9 @@ export class DashboardTab {
     // Power-ups: only include if any are unchecked (i.e. user made a deliberate choice)
     const checks = card.querySelectorAll(`.${prefix}-powerup-check`);
     const allChecked = Array.from(checks).every((c) => (c as HTMLInputElement).checked);
-    const hasIndeterminate = Array.from(checks).some((c) => (c as HTMLInputElement).dataset.indeterminate);
+    const hasIndeterminate = Array.from(checks).some(
+      (c) => (c as HTMLInputElement).dataset.indeterminate,
+    );
     if (!allChecked || !hasIndeterminate) {
       defaults.enabledPowerUps = Array.from(checks)
         .filter((c) => (c as HTMLInputElement).checked)

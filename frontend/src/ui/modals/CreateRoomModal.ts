@@ -1,6 +1,12 @@
 import { SocketClient } from '../../network/SocketClient';
 import { NotificationUI } from '../NotificationUI';
-import { PowerUpType, POWERUP_DEFINITIONS, Room, GameDefaults, BotAIEntry } from '@blast-arena/shared';
+import {
+  PowerUpType,
+  POWERUP_DEFINITIONS,
+  Room,
+  GameDefaults,
+  BotAIEntry,
+} from '@blast-arena/shared';
 import { UIGamepadNavigator } from '../../game/UIGamepadNavigator';
 
 export interface CreateRoomModalDeps {
@@ -20,15 +26,15 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.innerHTML = `
-    <div class="modal" style="width:760px;max-width:95vw;padding:24px 28px;">
+    <div class="modal" style="width:760px;max-width:95vw;">
       <h2>Create Room</h2>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-        <div class="form-group" style="margin-bottom:0;">
+      <div class="form-grid">
+        <div class="form-group">
           <label>Room Name</label>
           <input type="text" id="room-name" placeholder="My Arena" maxlength="30">
         </div>
-        <div class="form-group" style="margin-bottom:0;">
+        <div class="form-group">
           <label>Game Mode</label>
           <select id="room-mode">
             <option value="ffa">Free for All</option>
@@ -39,7 +45,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <option value="king_of_the_hill">King of the Hill</option>
           </select>
         </div>
-        <div class="form-group" style="margin-bottom:0;">
+        <div class="form-group">
           <label>Max Players</label>
           <select id="room-max-players">
             <option value="2">2</option>
@@ -48,7 +54,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <option value="8">8</option>
           </select>
         </div>
-        <div class="form-group" style="margin-bottom:0;">
+        <div class="form-group">
           <label>Match Time</label>
           <select id="room-round-time">
             <option value="60">1 min</option>
@@ -58,7 +64,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <option value="600">10 min</option>
           </select>
         </div>
-        <div class="form-group" style="margin-bottom:0;">
+        <div class="form-group">
           <label>Map Size</label>
           <select id="room-map-size">
             <option value="21">21x21 (Small)</option>
@@ -68,7 +74,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <option value="61">61x61 (Massive)</option>
           </select>
         </div>
-        <div class="form-group" style="margin-bottom:0;">
+        <div class="form-group">
           <label>Wall Density</label>
           <select id="room-wall-density">
             <option value="0.3">Low (30%)</option>
@@ -77,7 +83,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <option value="0.8">Very High (80%)</option>
           </select>
         </div>
-        <div class="form-group" style="margin-bottom:0;">
+        <div class="form-group">
           <label>Power-Up Rate</label>
           <select id="room-powerup-rate">
             <option value="0">None (0%)</option>
@@ -87,7 +93,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <option value="0.8">Very High (80%)</option>
           </select>
         </div>
-        <div class="form-group" style="margin-bottom:0;">
+        <div class="form-group">
           <label>Bots</label>
           <select id="room-bots">
             <option value="0" selected>None</option>
@@ -100,7 +106,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <option value="7">7 Bots</option>
           </select>
         </div>
-        <div class="form-group" style="margin-bottom:0;" id="bot-difficulty-row">
+        <div class="form-group" id="bot-difficulty-row">
           <label>Bot Difficulty</label>
           <select id="room-bot-difficulty" disabled>
             <option value="easy">Easy</option>
@@ -108,60 +114,60 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <option value="hard">Hard</option>
           </select>
         </div>
-        ${(deps.activeAIs && deps.activeAIs.length > 1) ? `
-        <div class="form-group" style="margin-bottom:0;" id="bot-ai-row">
+        ${
+          deps.activeAIs && deps.activeAIs.length > 1
+            ? `
+        <div class="form-group" id="bot-ai-row">
           <label>Bot AI</label>
           <select id="room-bot-ai" disabled>
             ${deps.activeAIs.map((ai) => `<option value="${ai.id}"${ai.isBuiltin ? ' selected' : ''}>${ai.name}</option>`).join('')}
           </select>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
 
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center;">
-        <span style="color:var(--text-dim);font-size:12px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;margin-right:4px;">Options</span>
-        <label style="display:flex;align-items:center;gap:5px;padding:5px 10px;
-          background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;">
-          <input type="checkbox" id="room-reinforced-walls" style="accent-color:#886633;">
-          <span style="color:#b8884d;font-weight:600;">Reinforced Walls</span>
+      <div class="option-chips" style="margin-top:var(--sp-3);">
+        <span class="settings-title" style="margin-bottom:0;margin-right:var(--sp-1);">Options</span>
+        <label class="option-chip">
+          <input type="checkbox" id="room-reinforced-walls" style="accent-color:var(--warning);">
+          <span style="color:var(--warning);">Reinforced Walls</span>
         </label>
-        <label style="display:flex;align-items:center;gap:5px;padding:5px 10px;
-          background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;">
+        <label class="option-chip">
           <input type="checkbox" id="room-map-events" style="accent-color:var(--warning);">
-          <span style="color:var(--warning);font-weight:600;">Map Events</span>
+          <span style="color:var(--warning);">Map Events</span>
         </label>
-        <label style="display:flex;align-items:center;gap:5px;padding:5px 10px;
-          background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;">
+        <label class="option-chip">
           <input type="checkbox" id="room-hazard-tiles" style="accent-color:var(--info);">
-          <span style="color:var(--info);font-weight:600;">Hazard Tiles</span>
+          <span style="color:var(--info);">Hazard Tiles</span>
         </label>
-        ${deps.recordingsEnabled ? `<label style="display:flex;align-items:center;gap:5px;padding:5px 10px;
-          background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;">
+        ${
+          deps.recordingsEnabled
+            ? `<label class="option-chip">
           <input type="checkbox" id="room-record-game" checked style="accent-color:var(--accent);">
-          <span style="color:var(--accent);font-weight:600;">Record Game</span>
-        </label>` : ''}
+          <span style="color:var(--accent);">Record Game</span>
+        </label>`
+            : ''
+        }
         <span id="friendly-fire-row" style="display:none;">
-          <label style="display:flex;align-items:center;gap:5px;padding:5px 10px;
-            background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;">
+          <label class="option-chip">
             <input type="checkbox" id="room-friendly-fire" checked style="accent-color:var(--danger);">
-            <span style="color:var(--danger);font-weight:600;">Friendly Fire</span>
+            <span style="color:var(--danger);">Friendly Fire</span>
           </label>
         </span>
       </div>
 
-      <div style="margin-top:12px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <span style="color:var(--text-dim);font-size:12px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Power-Ups</span>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      <div style="margin-top:var(--sp-3);">
+        <div class="settings-title">Power-Ups</div>
+        <div class="option-chips">
           ${allPowerUps
             .map(
               (pu) => `
-            <label style="display:flex;align-items:center;gap:5px;padding:4px 9px;
-              background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;">
+            <label class="option-chip">
               <input type="checkbox" class="powerup-check" value="${pu.type}" checked
                 style="accent-color:${pu.color};">
-              <span style="color:${pu.color};font-weight:600;">${pu.name}</span>
+              <span style="color:${pu.color};">${pu.name}</span>
             </label>
           `,
             )
@@ -169,7 +175,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
         </div>
       </div>
 
-      <div class="modal-actions" style="margin-top:16px;">
+      <div class="modal-actions">
         <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
         <button class="btn btn-primary" id="modal-create">Create</button>
       </div>
@@ -265,7 +271,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
     const enableMapEvents = (modal.querySelector('#room-map-events') as HTMLInputElement).checked;
     const hazardTiles = (modal.querySelector('#room-hazard-tiles') as HTMLInputElement).checked;
     const recordGame = deps.recordingsEnabled
-      ? (modal.querySelector('#room-record-game') as HTMLInputElement)?.checked ?? true
+      ? ((modal.querySelector('#room-record-game') as HTMLInputElement)?.checked ?? true)
       : false;
 
     socketClient.emit(

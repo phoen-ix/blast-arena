@@ -1,14 +1,16 @@
-import { SocketClient } from '../network/SocketClient';
-import { NotificationUI } from './NotificationUI';
+import { ILobbyView, ViewDeps } from './types';
+import { ApiClient } from '../../network/ApiClient';
 import { Friend, FriendRequest, ActivityStatus } from '@blast-arena/shared';
-import { escapeHtml } from '../utils/html';
+import { escapeHtml } from '../../utils/html';
 
-export class FriendsPanel {
-  private container: HTMLElement;
-  private socketClient: SocketClient;
-  private notifications: NotificationUI;
-  private onMessageFriend?: (userId: number, username: string) => void;
-  private isOpen = false;
+export class FriendsView implements ILobbyView {
+  readonly viewId = 'friends';
+  readonly title = 'Friends';
+
+  private deps: ViewDeps;
+  private container: HTMLElement | null = null;
+  private onMessageFriend: (userId: number, username: string) => void;
+
   private activeTab: 'friends' | 'requests' | 'blocked' = 'friends';
   private friends: Friend[] = [];
   private incoming: FriendRequest[] = [];
@@ -16,49 +18,61 @@ export class FriendsPanel {
   private blocked: { userId: number; username: string }[] = [];
   private searchResults: { id: number; username: string }[] = [];
 
-  // Socket handler references for cleanup
+  // Socket handler references
   private friendUpdateHandler: any;
   private friendRequestHandler: any;
   private friendRemovedHandler: any;
   private friendOnlineHandler: any;
   private friendOfflineHandler: any;
 
-  constructor(
-    socketClient: SocketClient,
-    notifications: NotificationUI,
-    onMessageFriend?: (userId: number, username: string) => void,
-  ) {
-    this.socketClient = socketClient;
-    this.notifications = notifications;
+  constructor(deps: ViewDeps, onMessageFriend: (userId: number, username: string) => void) {
+    this.deps = deps;
     this.onMessageFriend = onMessageFriend;
-    this.container = document.createElement('div');
-    this.container.className = 'slide-panel friends-panel';
     this.setupSocketListeners();
   }
 
+  async render(container: HTMLElement): Promise<void> {
+    this.container = container;
+    this.renderContent();
+    this.loadFriends();
+    this.loadBlocked();
+  }
+
+  destroy(): void {
+    this.container = null;
+    const sc = this.deps.socketClient;
+    sc.off('friend:update' as any, this.friendUpdateHandler);
+    sc.off('friend:requestReceived' as any, this.friendRequestHandler);
+    sc.off('friend:removed' as any, this.friendRemovedHandler);
+    sc.off('friend:online' as any, this.friendOnlineHandler);
+    sc.off('friend:offline' as any, this.friendOfflineHandler);
+  }
+
   private setupSocketListeners(): void {
+    const sc = this.deps.socketClient;
+
     this.friendUpdateHandler = (data: any) => {
       this.friends = data.friends;
       this.incoming = data.incoming;
       this.outgoing = data.outgoing;
       this.renderContent();
     };
-    this.socketClient.on('friend:update' as any, this.friendUpdateHandler);
+    sc.on('friend:update' as any, this.friendUpdateHandler);
 
     this.friendRequestHandler = (data: FriendRequest) => {
       if (!this.incoming.some((r) => r.fromUserId === data.fromUserId)) {
         this.incoming.push(data);
       }
       this.renderContent();
-      this.notifications.info(`${data.fromUsername} sent you a friend request`);
+      this.deps.notifications.info(`${data.fromUsername} sent you a friend request`);
     };
-    this.socketClient.on('friend:requestReceived' as any, this.friendRequestHandler);
+    sc.on('friend:requestReceived' as any, this.friendRequestHandler);
 
     this.friendRemovedHandler = (data: { userId: number }) => {
       this.friends = this.friends.filter((f) => f.userId !== data.userId);
       this.renderContent();
     };
-    this.socketClient.on('friend:removed' as any, this.friendRemovedHandler);
+    sc.on('friend:removed' as any, this.friendRemovedHandler);
 
     this.friendOnlineHandler = (data: { userId: number; activity: ActivityStatus }) => {
       const friend = this.friends.find((f) => f.userId === data.userId);
@@ -67,7 +81,7 @@ export class FriendsPanel {
         this.renderContent();
       }
     };
-    this.socketClient.on('friend:online' as any, this.friendOnlineHandler);
+    sc.on('friend:online' as any, this.friendOnlineHandler);
 
     this.friendOfflineHandler = (data: { userId: number }) => {
       const friend = this.friends.find((f) => f.userId === data.userId);
@@ -76,41 +90,11 @@ export class FriendsPanel {
         this.renderContent();
       }
     };
-    this.socketClient.on('friend:offline' as any, this.friendOfflineHandler);
-  }
-
-  mount(): void {
-    const uiOverlay = document.getElementById('ui-overlay');
-    if (uiOverlay && !uiOverlay.contains(this.container)) {
-      uiOverlay.appendChild(this.container);
-    }
-    this.renderContent();
-  }
-
-  toggle(): void {
-    this.isOpen = !this.isOpen;
-    this.container.classList.toggle('open', this.isOpen);
-    if (this.isOpen) {
-      this.loadFriends();
-    }
-  }
-
-  close(): void {
-    this.isOpen = false;
-    this.container.classList.remove('open');
-  }
-
-  destroy(): void {
-    this.socketClient.off('friend:update' as any, this.friendUpdateHandler);
-    this.socketClient.off('friend:requestReceived' as any, this.friendRequestHandler);
-    this.socketClient.off('friend:removed' as any, this.friendRemovedHandler);
-    this.socketClient.off('friend:online' as any, this.friendOnlineHandler);
-    this.socketClient.off('friend:offline' as any, this.friendOfflineHandler);
-    this.container.remove();
+    sc.on('friend:offline' as any, this.friendOfflineHandler);
   }
 
   private loadFriends(): void {
-    this.socketClient.emit(
+    this.deps.socketClient.emit(
       'friend:list' as any,
       ((response: any) => {
         if (response.success) {
@@ -123,39 +107,45 @@ export class FriendsPanel {
     );
   }
 
+  private loadBlocked(): void {
+    ApiClient.get<{ blocked: { userId: number; username: string }[] }>('/friends/blocked')
+      .then((res) => {
+        this.blocked = res.blocked;
+        if (this.activeTab === 'blocked') this.renderContent();
+      })
+      .catch(() => {});
+  }
+
   private renderContent(): void {
+    if (!this.container) return;
     const incomingCount = this.incoming.length;
 
     this.container.innerHTML = `
-      <div class="panel-header">
-        <span class="panel-header-title">Friends</span>
-        <button class="panel-header-close">&times;</button>
-      </div>
-      <div class="tab-bar compact">
-        <button class="tab-item ${this.activeTab === 'friends' ? 'active' : ''}" data-tab="friends">
-          Friends (${this.friends.length})
-        </button>
-        <button class="tab-item ${this.activeTab === 'requests' ? 'active' : ''}" data-tab="requests">
-          Requests${incomingCount > 0 ? `<span class="badge">${incomingCount}</span>` : ''}
-        </button>
-        <button class="tab-item ${this.activeTab === 'blocked' ? 'active' : ''}" data-tab="blocked">
-          Blocked
-        </button>
-      </div>
-      <div class="friends-search">
-        <input type="text" id="friend-search-input" placeholder="Search username..." maxlength="20">
-        <button class="btn btn-primary" id="friend-search-btn">Add</button>
-      </div>
-      <div class="friends-list" id="friends-list-content">
-        ${this.renderActiveTab()}
+      <div class="friends-page">
+        <div class="friends-page-header">
+          <div class="tab-bar">
+            <button class="tab-item ${this.activeTab === 'friends' ? 'active' : ''}" data-tab="friends">
+              Friends (${this.friends.length})
+            </button>
+            <button class="tab-item ${this.activeTab === 'requests' ? 'active' : ''}" data-tab="requests">
+              Requests${incomingCount > 0 ? ` <span class="badge">${incomingCount}</span>` : ''}
+            </button>
+            <button class="tab-item ${this.activeTab === 'blocked' ? 'active' : ''}" data-tab="blocked">
+              Blocked (${this.blocked.length})
+            </button>
+          </div>
+          <div class="friends-search-bar">
+            <input type="text" class="input" id="friend-search-input" placeholder="Search by username..." maxlength="20">
+            <button class="btn btn-primary" id="friend-search-btn">Add Friend</button>
+          </div>
+        </div>
+        <div class="friends-grid" id="friends-list-content">
+          ${this.renderActiveTab()}
+        </div>
       </div>
     `;
 
-    // Event listeners
-    this.container
-      .querySelector('.panel-header-close')!
-      .addEventListener('click', () => this.close());
-
+    // Tab switching
     this.container.querySelectorAll('.tab-item').forEach((tab) => {
       tab.addEventListener('click', () => {
         this.activeTab = tab.getAttribute('data-tab') as any;
@@ -164,6 +154,7 @@ export class FriendsPanel {
       });
     });
 
+    // Search
     const searchInput = this.container.querySelector('#friend-search-input') as HTMLInputElement;
     const searchBtn = this.container.querySelector('#friend-search-btn')!;
     searchBtn.addEventListener('click', () => this.handleSearch(searchInput.value));
@@ -175,9 +166,7 @@ export class FriendsPanel {
   }
 
   private renderActiveTab(): string {
-    if (this.searchResults.length > 0) {
-      return this.renderSearchResults();
-    }
+    if (this.searchResults.length > 0) return this.renderSearchResults();
 
     switch (this.activeTab) {
       case 'friends':
@@ -185,7 +174,7 @@ export class FriendsPanel {
       case 'requests':
         return this.renderRequests();
       case 'blocked':
-        return this.renderBlocked();
+        return this.renderBlockedList();
     }
   }
 
@@ -194,7 +183,6 @@ export class FriendsPanel {
       return '<div class="friends-empty">No friends yet. Search for players to add!</div>';
     }
 
-    // Sort: online first, then alphabetical
     const sorted = [...this.friends].sort((a, b) => {
       const aOnline = a.activity !== 'offline' ? 0 : 1;
       const bOnline = b.activity !== 'offline' ? 0 : 1;
@@ -218,20 +206,20 @@ export class FriendsPanel {
         const color = avatarColors[f.userId % avatarColors.length];
 
         return `
-          <div class="friend-item" data-user-id="${f.userId}">
-            <div class="friend-avatar" style="background:${color}${isOnline ? '' : '80'};">
+          <div class="friend-card" data-user-id="${f.userId}">
+            <div class="friend-card-avatar" style="background:${color}${isOnline ? '' : '80'};">
               ${escapeHtml(f.username.charAt(0).toUpperCase())}
               <span class="status-dot ${f.activity}"></span>
             </div>
-            <div class="friend-info">
-              <div class="friend-name${!isOnline ? ' offline' : ''}">${escapeHtml(f.username)}</div>
-              <div class="friend-activity ${isOnline ? (f.activity === 'in_game' || f.activity === 'in_campaign' ? 'in-game' : 'active') : ''}">${activityLabel}</div>
+            <div class="friend-card-info">
+              <div class="friend-card-name${!isOnline ? ' offline' : ''}">${escapeHtml(f.username)}</div>
+              <div class="friend-card-activity ${isOnline ? (f.activity === 'in_game' || f.activity === 'in_campaign' ? 'in-game' : 'active') : ''}">${activityLabel}</div>
             </div>
-            <div class="friend-actions">
-              ${f.activity === 'in_lobby' && f.roomCode ? `<button class="btn btn-primary friend-join-btn" data-room="${escapeHtml(f.roomCode || '')}">Join</button>` : ''}
-              <button class="btn btn-ghost friend-msg-btn" data-user-id="${f.userId}" data-username="${escapeHtml(f.username)}">Msg</button>
-              <button class="btn btn-ghost friend-invite-btn" data-user-id="${f.userId}">Invite</button>
-              <button class="btn btn-ghost btn-danger-text friend-remove-btn" data-friend-id="${f.userId}">X</button>
+            <div class="friend-card-actions">
+              ${f.activity === 'in_lobby' && f.roomCode ? `<button class="btn btn-primary btn-sm friend-join-btn" data-room="${escapeHtml(f.roomCode || '')}">Join</button>` : ''}
+              <button class="btn btn-ghost btn-sm friend-msg-btn" data-user-id="${f.userId}" data-username="${escapeHtml(f.username)}">Msg</button>
+              <button class="btn btn-ghost btn-sm friend-invite-btn" data-user-id="${f.userId}">Invite</button>
+              <button class="btn btn-ghost btn-sm btn-danger-text friend-remove-btn" data-friend-id="${f.userId}">Remove</button>
             </div>
           </div>
         `;
@@ -247,15 +235,15 @@ export class FriendsPanel {
       html += this.incoming
         .map(
           (r) => `
-          <div class="friend-item">
-            <div class="friend-avatar avatar-accent">${escapeHtml(r.fromUsername.charAt(0).toUpperCase())}</div>
-            <div class="friend-info">
-              <div class="friend-name">${escapeHtml(r.fromUsername)}</div>
-              <div class="friend-activity">Wants to be friends</div>
+          <div class="friend-card">
+            <div class="friend-card-avatar" style="background:var(--accent);">${escapeHtml(r.fromUsername.charAt(0).toUpperCase())}</div>
+            <div class="friend-card-info">
+              <div class="friend-card-name">${escapeHtml(r.fromUsername)}</div>
+              <div class="friend-card-activity">Wants to be friends</div>
             </div>
-            <div class="friend-actions">
-              <button class="btn btn-primary friend-accept-btn" data-from-id="${r.fromUserId}">Accept</button>
-              <button class="btn btn-ghost btn-danger-text friend-decline-btn" data-from-id="${r.fromUserId}">Decline</button>
+            <div class="friend-card-actions">
+              <button class="btn btn-primary btn-sm friend-accept-btn" data-from-id="${r.fromUserId}">Accept</button>
+              <button class="btn btn-ghost btn-sm btn-danger-text friend-decline-btn" data-from-id="${r.fromUserId}">Decline</button>
             </div>
           </div>
         `,
@@ -264,18 +252,18 @@ export class FriendsPanel {
     }
 
     if (this.outgoing.length > 0) {
-      html += '<div class="friends-section-label spaced">Outgoing</div>';
+      html += '<div class="friends-section-label" style="margin-top:var(--sp-4);">Outgoing</div>';
       html += this.outgoing
         .map(
           (r) => `
-          <div class="friend-item">
-            <div class="friend-avatar avatar-muted">${escapeHtml(r.fromUsername.charAt(0).toUpperCase())}</div>
-            <div class="friend-info">
-              <div class="friend-name">${escapeHtml(r.fromUsername)}</div>
-              <div class="friend-activity">Pending</div>
+          <div class="friend-card">
+            <div class="friend-card-avatar" style="background:var(--text-muted);">${escapeHtml(r.fromUsername.charAt(0).toUpperCase())}</div>
+            <div class="friend-card-info">
+              <div class="friend-card-name">${escapeHtml(r.fromUsername)}</div>
+              <div class="friend-card-activity">Pending</div>
             </div>
-            <div class="friend-actions">
-              <button class="btn btn-ghost btn-danger-text friend-cancel-btn" data-to-id="${r.fromUserId}">Cancel</button>
+            <div class="friend-card-actions">
+              <button class="btn btn-ghost btn-sm btn-danger-text friend-cancel-btn" data-to-id="${r.fromUserId}">Cancel</button>
             </div>
           </div>
         `,
@@ -290,7 +278,7 @@ export class FriendsPanel {
     return html;
   }
 
-  private renderBlocked(): string {
+  private renderBlockedList(): string {
     if (this.blocked.length === 0) {
       return '<div class="friends-empty">No blocked users</div>';
     }
@@ -298,13 +286,13 @@ export class FriendsPanel {
     return this.blocked
       .map(
         (b) => `
-        <div class="friend-item">
-          <div class="friend-avatar avatar-danger">${escapeHtml(b.username.charAt(0).toUpperCase())}</div>
-          <div class="friend-info">
-            <div class="friend-name">${escapeHtml(b.username)}</div>
+        <div class="friend-card">
+          <div class="friend-card-avatar" style="background:var(--danger);">${escapeHtml(b.username.charAt(0).toUpperCase())}</div>
+          <div class="friend-card-info">
+            <div class="friend-card-name">${escapeHtml(b.username)}</div>
           </div>
-          <div class="friend-actions">
-            <button class="btn btn-ghost friend-unblock-btn" data-user-id="${b.userId}">Unblock</button>
+          <div class="friend-card-actions">
+            <button class="btn btn-ghost btn-sm friend-unblock-btn" data-user-id="${b.userId}">Unblock</button>
           </div>
         </div>
       `,
@@ -316,13 +304,13 @@ export class FriendsPanel {
     return this.searchResults
       .map(
         (u) => `
-        <div class="friend-item">
-          <div class="friend-avatar avatar-info">${escapeHtml(u.username.charAt(0).toUpperCase())}</div>
-          <div class="friend-info">
-            <div class="friend-name">${escapeHtml(u.username)}</div>
+        <div class="friend-card">
+          <div class="friend-card-avatar" style="background:var(--info);">${escapeHtml(u.username.charAt(0).toUpperCase())}</div>
+          <div class="friend-card-info">
+            <div class="friend-card-name">${escapeHtml(u.username)}</div>
           </div>
-          <div class="friend-actions">
-            <button class="btn btn-primary friend-add-btn" data-username="${escapeHtml(u.username)}">Add</button>
+          <div class="friend-card-actions">
+            <button class="btn btn-primary btn-sm friend-add-btn" data-username="${escapeHtml(u.username)}">Add Friend</button>
           </div>
         </div>
       `,
@@ -339,60 +327,62 @@ export class FriendsPanel {
     }
 
     try {
-      const { ApiClient } = await import('../network/ApiClient');
       const result = await ApiClient.post<{ users: { id: number; username: string }[] }>(
         '/friends/search',
         { query: trimmed },
       );
       this.searchResults = result.users;
-      const listEl = this.container.querySelector('#friends-list-content');
+      const listEl = this.container?.querySelector('#friends-list-content');
       if (listEl) {
         listEl.innerHTML = this.renderSearchResults();
         this.attachActionListeners();
       }
     } catch {
-      this.notifications.error('Search failed');
+      this.deps.notifications.error('Search failed');
     }
   }
 
   private attachActionListeners(): void {
+    if (!this.container) return;
+    const sc = this.deps.socketClient;
+
     // Add friend
     this.container.querySelectorAll('.friend-add-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const username = btn.getAttribute('data-username')!;
-        this.socketClient.emit('friend:request' as any, { username }, ((res: any) => {
+        sc.emit('friend:request' as any, { username }, ((res: any) => {
           if (res.success) {
-            this.notifications.success(`Friend request sent to ${username}`);
+            this.deps.notifications.success(`Friend request sent to ${username}`);
             this.searchResults = [];
             this.loadFriends();
           } else {
-            this.notifications.error(res.error || 'Failed to send request');
+            this.deps.notifications.error(res.error || 'Failed to send request');
           }
         }) as any);
       });
     });
 
-    // Accept request
+    // Accept
     this.container.querySelectorAll('.friend-accept-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const fromUserId = parseInt(btn.getAttribute('data-from-id')!);
-        this.socketClient.emit('friend:accept' as any, { fromUserId }, ((res: any) => {
+        sc.emit('friend:accept' as any, { fromUserId }, ((res: any) => {
           if (res.success) {
-            this.notifications.success('Friend request accepted');
+            this.deps.notifications.success('Friend request accepted');
             this.incoming = this.incoming.filter((r) => r.fromUserId !== fromUserId);
             this.loadFriends();
           } else {
-            this.notifications.error(res.error || 'Failed');
+            this.deps.notifications.error(res.error || 'Failed');
           }
         }) as any);
       });
     });
 
-    // Decline request
+    // Decline
     this.container.querySelectorAll('.friend-decline-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const fromUserId = parseInt(btn.getAttribute('data-from-id')!);
-        this.socketClient.emit('friend:decline' as any, { fromUserId }, ((res: any) => {
+        sc.emit('friend:decline' as any, { fromUserId }, ((res: any) => {
           if (res.success) {
             this.incoming = this.incoming.filter((r) => r.fromUserId !== fromUserId);
             this.renderContent();
@@ -401,11 +391,11 @@ export class FriendsPanel {
       });
     });
 
-    // Cancel outgoing request
+    // Cancel outgoing
     this.container.querySelectorAll('.friend-cancel-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const toUserId = parseInt(btn.getAttribute('data-to-id')!);
-        this.socketClient.emit('friend:cancel' as any, { toUserId }, ((res: any) => {
+        sc.emit('friend:cancel' as any, { toUserId }, ((res: any) => {
           if (res.success) {
             this.outgoing = this.outgoing.filter((r) => r.fromUserId !== toUserId);
             this.renderContent();
@@ -418,7 +408,7 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-remove-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const friendId = parseInt(btn.getAttribute('data-friend-id')!);
-        this.socketClient.emit('friend:remove' as any, { friendId }, ((res: any) => {
+        sc.emit('friend:remove' as any, { friendId }, ((res: any) => {
           if (res.success) {
             this.friends = this.friends.filter((f) => f.userId !== friendId);
             this.renderContent();
@@ -431,7 +421,7 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-unblock-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const userId = parseInt(btn.getAttribute('data-user-id')!);
-        this.socketClient.emit('friend:unblock' as any, { userId }, ((res: any) => {
+        sc.emit('friend:unblock' as any, { userId }, ((res: any) => {
           if (res.success) {
             this.blocked = this.blocked.filter((b) => b.userId !== userId);
             this.renderContent();
@@ -444,11 +434,9 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-join-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const roomCode = btn.getAttribute('data-room')!;
-        this.socketClient.emit('room:join' as any, { code: roomCode }, ((res: any) => {
-          if (res.success) {
-            this.close();
-          } else {
-            this.notifications.error(res.error || 'Failed to join');
+        sc.emit('room:join' as any, { code: roomCode }, ((res: any) => {
+          if (!res.success) {
+            this.deps.notifications.error(res.error || 'Failed to join');
           }
         }) as any);
       });
@@ -459,21 +447,19 @@ export class FriendsPanel {
       btn.addEventListener('click', () => {
         const userId = parseInt(btn.getAttribute('data-user-id')!);
         const username = btn.getAttribute('data-username')!;
-        if (this.onMessageFriend) {
-          this.onMessageFriend(userId, username);
-        }
+        this.onMessageFriend(userId, username);
       });
     });
 
-    // Invite to room
+    // Invite
     this.container.querySelectorAll('.friend-invite-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const targetUserId = parseInt(btn.getAttribute('data-user-id')!);
-        this.socketClient.emit('invite:room' as any, { userId: targetUserId }, ((res: any) => {
+        sc.emit('invite:room' as any, { userId: targetUserId }, ((res: any) => {
           if (res.success) {
-            this.notifications.success('Invite sent');
+            this.deps.notifications.success('Invite sent');
           } else {
-            this.notifications.error(res.error || 'Failed to invite');
+            this.deps.notifications.error(res.error || 'Failed to invite');
           }
         }) as any);
       });
@@ -493,17 +479,5 @@ export class FriendsPanel {
       default:
         return 'Offline';
     }
-  }
-
-  /** Load blocked list (for blocked tab) */
-  loadBlocked(): void {
-    import('../network/ApiClient').then(({ ApiClient }) => {
-      ApiClient.get<{ blocked: { userId: number; username: string }[] }>('/friends/blocked')
-        .then((res) => {
-          this.blocked = res.blocked;
-          if (this.activeTab === 'blocked') this.renderContent();
-        })
-        .catch(() => {});
-    });
   }
 }
