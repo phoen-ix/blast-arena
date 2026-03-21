@@ -104,7 +104,7 @@ All actions audit-logged. See [docs/admin-and-systems.md](docs/admin-and-systems
 
 ## Social Features
 
-- **Theme System**: 5 color themes (Inferno, Arctic, Toxic, Crimson, Midnight). User selects in Settings > Preferences; admin sets global default in Dashboard. Themes affect all UI and Phaser canvas colors.
+- **Theme System**: 11 color themes — 5 dark (Inferno, Arctic, Toxic, Crimson, Midnight), 3 vivid light (Daylight, Sakura, Sand), 3 pastel light (Frost, Blossom, Dune). User selects in Settings > Preferences; admin sets global default in Dashboard. Themes affect all UI and Phaser canvas colors.
 - **Sidebar Navigation**: Persistent collapsible left sidebar with "ear" toggle tab. All lobby views (Rooms, Friends, Messages, Party, Leaderboard, Settings, Help, Admin, Campaign, Create Room, Profile) render inline in the main content area — no overlays or slide-out panels.
 - **Friends**: Full-page view with tabs (Friends/Requests/Blocked), search, friend cards with online status indicators.
 - **Online Presence**: See friends' real-time status (online, in lobby, in game, in campaign). Presence tracked via Redis with 120s TTL.
