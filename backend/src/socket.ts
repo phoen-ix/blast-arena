@@ -987,6 +987,30 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
         game.start();
 
+        // Load cosmetics for human players in campaign
+        const humanCosmeticIds = userIds.filter((id) => id > 0);
+        if (humanCosmeticIds.length > 0) {
+          try {
+            const cosmeticsService = await import('./services/cosmetics');
+            const cosmeticsMap = await cosmeticsService.getPlayerCosmeticsForGame(humanCosmeticIds);
+            for (const [uid, cosData] of cosmeticsMap) {
+              const player = game.getPlayer(uid);
+              if (player) player.cosmetics = cosData;
+            }
+          } catch {
+            /* cosmetics are non-critical */
+          }
+        }
+
+        // Apply guest P2 color as cosmetic
+        if (data.localCoopMode && data.localP2?.guestColor !== undefined && userIds.length > 1) {
+          const p2Id = userIds[1];
+          if (p2Id < 0) {
+            const player = game.getPlayer(p2Id);
+            if (player) player.cosmetics = { colorHex: data.localP2.guestColor };
+          }
+        }
+
         // Update presence for all real players
         for (const uid of userIds) {
           if (uid > 0) {

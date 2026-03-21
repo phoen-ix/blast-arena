@@ -74,7 +74,7 @@ export interface ClientToServerEvents {
       levelId: number;
       coopMode?: boolean;
       localCoopMode?: boolean;
-      localP2?: { userId?: number; username: string };
+      localP2?: { userId?: number; username: string; guestColor?: number };
     },
     callback: (response: { success: boolean; error?: string }) => void,
   ) => void;

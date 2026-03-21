@@ -1,11 +1,13 @@
 import { ApiClient } from '../network/ApiClient';
 import { SocketClient } from '../network/SocketClient';
+import { AuthManager } from '../network/AuthManager';
 import { NotificationUI } from './NotificationUI';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { PartyBar } from './PartyBar';
 import { escapeHtml } from '../utils/html';
 import { getErrorMessage } from '@blast-arena/shared';
 import { showLocalCoopModal } from './modals/LocalCoopModal';
+import { LocalCoopP2Identity } from '../game/LocalCoopInput';
 import game from '../main';
 
 interface CampaignLevel {
@@ -35,6 +37,7 @@ export class CampaignUI {
   private container: HTMLElement;
   private notifications: NotificationUI;
   private socketClient: SocketClient;
+  private authManager: AuthManager;
   private onClose: () => void;
   private partyBar: PartyBar | null;
   private expandedWorldId: number | null = null;
@@ -47,11 +50,13 @@ export class CampaignUI {
     notifications: NotificationUI,
     onClose: () => void,
     partyBar?: PartyBar,
+    authManager?: AuthManager,
   ) {
     this.socketClient = socketClient;
     this.notifications = notifications;
     this.onClose = onClose;
     this.partyBar = partyBar ?? null;
+    this.authManager = authManager ?? ({} as AuthManager);
     this.container = document.createElement('div');
     this.container.style.cssText = `
       position: absolute;
@@ -660,11 +665,15 @@ export class CampaignUI {
     showLocalCoopModal(
       (config) => {
         game.registry.set('localCoopConfig', config);
+        if (config.p2Identity) {
+          game.registry.set('localCoopP2Identity', config.p2Identity);
+        }
         this.startLevel(levelId, false, true);
       },
       () => {
         /* cancel — do nothing */
       },
+      this.authManager,
     );
   }
 
@@ -714,7 +723,15 @@ export class CampaignUI {
         startData.coopMode = true;
       } else if (localCoopMode) {
         startData.localCoopMode = true;
-        startData.localP2 = { username: 'Player 2' };
+        const p2Id = game.registry.get('localCoopP2Identity') as LocalCoopP2Identity | undefined;
+        if (p2Id?.mode === 'loggedIn' && p2Id.loggedInUserId) {
+          startData.localP2 = { userId: p2Id.loggedInUserId, username: p2Id.loggedInUsername };
+        } else {
+          startData.localP2 = {
+            username: p2Id?.guestName || 'Player 2',
+            guestColor: p2Id?.guestColor,
+          };
+        }
       }
 
       // Emit campaign:start socket event

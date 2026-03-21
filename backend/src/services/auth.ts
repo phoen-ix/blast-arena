@@ -24,6 +24,33 @@ function generateAccessToken(payload: AuthPayload): string {
   } as jwt.SignOptions);
 }
 
+export function generateLocalCoopToken(
+  userId: number,
+  username: string,
+  durationHours: number,
+): string {
+  const config = getConfig();
+  const expiresIn = durationHours > 0 ? `${durationHours}h` : '24h';
+  return jwt.sign({ userId, username, purpose: 'local-coop-p2' }, config.JWT_SECRET, {
+    expiresIn,
+  } as jwt.SignOptions);
+}
+
+export function verifyLocalCoopToken(token: string): { userId: number; username: string } | null {
+  try {
+    const config = getConfig();
+    const decoded = jwt.verify(token, config.JWT_SECRET) as {
+      userId: number;
+      username: string;
+      purpose?: string;
+    };
+    if (decoded.purpose !== 'local-coop-p2') return null;
+    return { userId: decoded.userId, username: decoded.username };
+  } catch {
+    return null;
+  }
+}
+
 function parseExpiresIn(expiresIn: string): number {
   const match = expiresIn.match(/^(\d+)(s|m|h|d)$/);
   if (!match) return 7 * 24 * 60 * 60 * 1000; // default 7 days
@@ -84,10 +111,7 @@ export async function register(
   return { user, accessToken };
 }
 
-export async function login(
-  username: string,
-  password: string,
-): Promise<{ auth: AuthResponse; refreshToken: string }> {
+export async function verifyCredentials(username: string, password: string): Promise<PublicUser> {
   const rows = await query<UserRow[]>(
     'SELECT id, username, email, password_hash, role, is_deactivated, email_verified FROM users WHERE username = ?',
     [username],
@@ -108,14 +132,22 @@ export async function login(
     throw new AppError('Invalid username or password', 401, 'INVALID_CREDENTIALS');
   }
 
-  // Update last login
-  await execute('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+  return toPublicUser(user);
+}
 
-  const publicUser = toPublicUser(user);
+export async function login(
+  username: string,
+  password: string,
+): Promise<{ auth: AuthResponse; refreshToken: string }> {
+  const publicUser = await verifyCredentials(username, password);
+
+  // Update last login
+  await execute('UPDATE users SET last_login = NOW() WHERE id = ?', [publicUser.id]);
+
   const accessToken = generateAccessToken({
-    userId: user.id,
-    username: user.username,
-    role: user.role as UserRole,
+    userId: publicUser.id,
+    username: publicUser.username,
+    role: publicUser.role,
   });
 
   // Create refresh token
@@ -126,7 +158,7 @@ export async function login(
   const expiresAt = new Date(Date.now() + expiresMs);
 
   await execute('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)', [
-    user.id,
+    publicUser.id,
     refreshHash,
     expiresAt,
   ]);

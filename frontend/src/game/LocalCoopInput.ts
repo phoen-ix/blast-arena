@@ -8,10 +8,19 @@ export interface LocalPlayerInput {
 export type ControlPreset = 'wasd' | 'arrows' | 'numpad' | 'gamepad1' | 'gamepad2';
 export type CameraMode = 'shared' | 'split-h' | 'split-v';
 
+export interface LocalCoopP2Identity {
+  mode: 'guest' | 'loggedIn';
+  guestName: string;
+  guestColor: number;
+  loggedInUserId?: number;
+  loggedInUsername?: string;
+}
+
 export interface LocalCoopConfig {
   p1Controls: ControlPreset;
   p2Controls: ControlPreset;
   cameraMode: CameraMode;
+  p2Identity?: LocalCoopP2Identity;
 }
 
 export const CONTROL_PRESET_LABELS: Record<ControlPreset, string> = {
@@ -34,7 +43,36 @@ export const DEFAULT_LOCAL_COOP_CONFIG: LocalCoopConfig = {
   cameraMode: 'shared',
 };
 
+export const DEFAULT_P2_GUEST_COLOR = 0x44aaff; // blue
+
 const STORAGE_KEY = 'blast-arena-local-coop-controls';
+const P2_IDENTITY_KEY = 'blast-arena-local-coop-p2';
+
+export function loadP2Identity(): LocalCoopP2Identity {
+  try {
+    const raw = localStorage.getItem(P2_IDENTITY_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        mode: 'guest',
+        guestName: parsed.guestName || 'Player 2',
+        guestColor:
+          typeof parsed.guestColor === 'number' ? parsed.guestColor : DEFAULT_P2_GUEST_COLOR,
+      };
+    }
+  } catch {
+    /* ignore */
+  }
+  return { mode: 'guest', guestName: 'Player 2', guestColor: DEFAULT_P2_GUEST_COLOR };
+}
+
+export function saveP2Identity(identity: LocalCoopP2Identity): void {
+  // Only persist guest name/color (not login credentials)
+  localStorage.setItem(
+    P2_IDENTITY_KEY,
+    JSON.stringify({ guestName: identity.guestName, guestColor: identity.guestColor }),
+  );
+}
 
 export function loadLocalCoopConfig(): LocalCoopConfig {
   try {

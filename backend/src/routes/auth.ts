@@ -4,12 +4,19 @@ import { validate } from '../middleware/validation';
 import { authMiddleware } from '../middleware/auth';
 import { rateLimiter } from '../middleware/rateLimiter';
 import * as authService from '../services/auth';
+import * as cosmeticsService from '../services/cosmetics';
 import { isRegistrationEnabled } from '../services/settings';
 import { getConfig } from '../config';
+import { query } from '../db/connection';
+import { UserRow } from '../db/types';
 import {
-  validateUsername, validatePassword, validateEmail,
-  USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH,
-  PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH,
+  validateUsername,
+  validatePassword,
+  validateEmail,
+  USERNAME_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_MAX_LENGTH,
 } from '@blast-arena/shared';
 
 const router = Router();
@@ -34,7 +41,8 @@ const resetPasswordSchema = z.object({
   password: z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH),
 });
 
-router.post('/auth/register',
+router.post(
+  '/auth/register',
   rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 3 }),
   validate(registerSchema),
   async (req, res, next) => {
@@ -59,10 +67,11 @@ router.post('/auth/register',
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
-router.post('/auth/login',
+router.post(
+  '/auth/login',
   rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 10 }),
   validate(loginSchema),
   async (req, res, next) => {
@@ -84,7 +93,7 @@ router.post('/auth/login',
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 router.post('/auth/logout', authMiddleware, async (req, res, next) => {
@@ -108,7 +117,8 @@ router.post('/auth/refresh', async (req, res, next) => {
       return res.status(401).json({ error: 'No refresh token', code: 'NO_REFRESH_TOKEN' });
     }
 
-    const { auth, refreshToken: newRefreshToken } = await authService.refreshAccessToken(refreshToken);
+    const { auth, refreshToken: newRefreshToken } =
+      await authService.refreshAccessToken(refreshToken);
 
     const config = getConfig();
     res.cookie('refreshToken', newRefreshToken, {
@@ -125,18 +135,21 @@ router.post('/auth/refresh', async (req, res, next) => {
   }
 });
 
-router.get('/auth/verify-email/:token',
+router.get(
+  '/auth/verify-email/:token',
   rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 10 }),
   async (req, res, next) => {
-  try {
-    await authService.verifyEmail(req.params.token);
-    res.json({ message: 'Email verified successfully' });
-  } catch (err) {
-    next(err);
-  }
-});
+    try {
+      await authService.verifyEmail(req.params.token);
+      res.json({ message: 'Email verified successfully' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
-router.post('/auth/forgot-password',
+router.post(
+  '/auth/forgot-password',
   rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 3 }),
   validate(forgotPasswordSchema),
   async (req, res, next) => {
@@ -146,10 +159,11 @@ router.post('/auth/forgot-password',
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
-router.post('/auth/reset-password',
+router.post(
+  '/auth/reset-password',
   rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 5 }),
   validate(resetPasswordSchema),
   async (req, res, next) => {
@@ -159,7 +173,103 @@ router.post('/auth/reset-password',
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
+
+// --- Local Co-Op P2 Auth (isolated cookie) ---
+
+const VALID_DURATIONS = [0, 1, 6, 12, 24];
+const LOCAL_COOP_COOKIE = 'localCoopP2';
+const LOCAL_COOP_COOKIE_PATH = '/api/local-coop';
+
+const localCoopLoginSchema = z.object({
+  username: z.string().min(1).max(USERNAME_MAX_LENGTH),
+  password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
+  duration: z.number().refine((v) => VALID_DURATIONS.includes(v), {
+    message: 'Duration must be 0, 1, 6, 12, or 24 hours',
+  }),
+});
+
+router.post(
+  '/local-coop/login',
+  rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 10 }),
+  authMiddleware,
+  validate(localCoopLoginSchema),
+  async (req, res, next) => {
+    try {
+      const { username, password, duration } = req.body;
+      const p2User = await authService.verifyCredentials(username, password);
+
+      if (p2User.id === req.user!.userId) {
+        return res.status(400).json({ error: 'Cannot log in as yourself' });
+      }
+
+      const token = authService.generateLocalCoopToken(p2User.id, p2User.username, duration);
+      const config = getConfig();
+
+      const cookieOptions: {
+        httpOnly: boolean;
+        secure: boolean;
+        sameSite: 'strict';
+        path: string;
+        maxAge?: number;
+      } = {
+        httpOnly: true,
+        secure: config.APP_URL.startsWith('https'),
+        sameSite: 'strict',
+        path: LOCAL_COOP_COOKIE_PATH,
+      };
+
+      if (duration > 0) {
+        cookieOptions.maxAge = duration * 60 * 60 * 1000;
+      }
+
+      res.cookie(LOCAL_COOP_COOKIE, token, cookieOptions);
+
+      const cosmeticsMap = await cosmeticsService.getPlayerCosmeticsForGame([p2User.id]);
+      const cosmetics = cosmeticsMap.get(p2User.id) || {};
+
+      res.json({ user: { id: p2User.id, username: p2User.username }, cosmetics });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get('/local-coop/session', async (req, res, next) => {
+  try {
+    const token = req.cookies?.[LOCAL_COOP_COOKIE];
+    if (!token) {
+      return res.status(401).json({ error: 'No session' });
+    }
+
+    const decoded = authService.verifyLocalCoopToken(token);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+
+    const rows = await query<UserRow[]>(
+      'SELECT id, username, is_deactivated FROM users WHERE id = ?',
+      [decoded.userId],
+    );
+
+    if (rows.length === 0 || rows[0].is_deactivated) {
+      res.clearCookie(LOCAL_COOP_COOKIE, { path: LOCAL_COOP_COOKIE_PATH });
+      return res.status(401).json({ error: 'User not found or deactivated' });
+    }
+
+    const cosmeticsMap = await cosmeticsService.getPlayerCosmeticsForGame([decoded.userId]);
+    const cosmetics = cosmeticsMap.get(decoded.userId) || {};
+
+    res.json({ user: { id: rows[0].id, username: rows[0].username }, cosmetics });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/local-coop/logout', (_req, res) => {
+  res.clearCookie(LOCAL_COOP_COOKIE, { path: LOCAL_COOP_COOKIE_PATH });
+  res.json({ message: 'Logged out' });
+});
 
 export default router;

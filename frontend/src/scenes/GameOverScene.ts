@@ -3,6 +3,7 @@ import { SocketClient } from '../network/SocketClient';
 import { ApiClient } from '../network/ApiClient';
 import { EloResult, AchievementUnlockEvent, XpUpdateResult } from '@blast-arena/shared';
 import { themeManager } from '../themes/ThemeManager';
+import { LocalCoopP2Identity } from '../game/LocalCoopInput';
 
 const DEADZONE = 0.3;
 
@@ -516,7 +517,15 @@ export class GameOverScene extends Phaser.Scene {
           startData.coopMode = true;
         } else if (isLocalCoopMode) {
           startData.localCoopMode = true;
-          startData.localP2 = { username: 'Player 2' };
+          const p2Id = this.registry.get('localCoopP2Identity') as LocalCoopP2Identity | undefined;
+          if (p2Id?.mode === 'loggedIn' && p2Id.loggedInUserId) {
+            startData.localP2 = { userId: p2Id.loggedInUserId, username: p2Id.loggedInUsername };
+          } else {
+            startData.localP2 = {
+              username: p2Id?.guestName || 'Player 2',
+              guestColor: p2Id?.guestColor,
+            };
+          }
         }
 
         socketClient.emit('campaign:start' as any, startData, (response: any) => {
