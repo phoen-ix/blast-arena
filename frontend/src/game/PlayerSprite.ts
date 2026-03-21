@@ -260,6 +260,11 @@ export class PlayerSpriteRenderer {
         : `player_${colorIndex}_${player.direction}`;
       if (sprite.texture.key !== dirTexture && this.scene.textures.exists(dirTexture)) {
         sprite.setTexture(dirTexture);
+        // setTexture resets display size — reapply for buddy's smaller sprite
+        if (player.id === this.buddyPlayerId) {
+          const buddySize = (TILE_SIZE - 4) * (this.buddySizePercent / 100);
+          sprite.setDisplaySize(buddySize, buddySize);
+        }
       }
 
       // Trail particles for cosmetic trails
