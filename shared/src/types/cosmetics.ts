@@ -1,6 +1,6 @@
 export type CosmeticType = 'color' | 'eyes' | 'trail' | 'bomb_skin';
 export type CosmeticRarity = 'common' | 'rare' | 'epic' | 'legendary';
-export type CosmeticUnlockType = 'achievement' | 'campaign_stars' | 'default';
+export type CosmeticUnlockType = 'achievement' | 'campaign_stars' | 'level_milestone' | 'default';
 
 export interface Cosmetic {
   id: number;

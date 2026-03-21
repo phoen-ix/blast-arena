@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameState, PlayerState, CampaignGameState } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
+import { SpectatorChat } from '../game/SpectatorChat';
 
 export class HUDScene extends Phaser.Scene {
   private hudContainer!: HTMLElement;
@@ -39,6 +40,8 @@ export class HUDScene extends Phaser.Scene {
   private campaignHudEl: HTMLElement | null = null;
   private lastCampaignLives: number = -1;
   private lastCampaignEnemyCount: number = -1;
+  private spectatorChat: SpectatorChat | null = null;
+  private spectatorChatMounted: boolean = false;
 
   constructor() {
     super({ key: 'HUDScene' });
@@ -227,6 +230,15 @@ export class HUDScene extends Phaser.Scene {
     const me = state.players.find((p) => p.id === this.localPlayerId);
     if (!this.localPlayerDead && me && !me.alive) {
       this.localPlayerDead = true;
+      // Mount spectator chat when player dies (not campaign/replay/sim)
+      if (
+        !this.campaignMode &&
+        !this.spectatorChatMounted &&
+        !this.registry.get('replayMode') &&
+        !this.registry.get('simulationSpectate')
+      ) {
+        this.mountSpectatorChat();
+      }
     } else if (this.localPlayerDead && this.campaignMode && me && me.alive) {
       this.localPlayerDead = false;
     }
@@ -414,6 +426,21 @@ export class HUDScene extends Phaser.Scene {
     }
   }
 
+  private mountSpectatorChat(): void {
+    const socketClient = this.registry.get('socketClient');
+    const authManager = this.registry.get('authManager');
+    if (!socketClient || !authManager) return;
+    const user = authManager.getUser();
+    if (!user) return;
+
+    this.spectatorChat = new SpectatorChat(socketClient, user.id, user.role);
+    const uiOverlay = document.getElementById('ui-overlay');
+    if (uiOverlay) {
+      this.spectatorChat.mount(uiOverlay);
+      this.spectatorChatMounted = true;
+    }
+  }
+
   shutdown(): void {
     if (this.boundClickHandler) {
       this.playerListEl?.removeEventListener('mousedown', this.boundClickHandler);
@@ -427,6 +454,11 @@ export class HUDScene extends Phaser.Scene {
     if (this.playerDiedHandler && this.socketClient) {
       this.socketClient.off('game:playerDied', this.playerDiedHandler);
       this.playerDiedHandler = null;
+    }
+    if (this.spectatorChat) {
+      this.spectatorChat.destroy();
+      this.spectatorChat = null;
+      this.spectatorChatMounted = false;
     }
     this.hudContainer?.remove();
     this.statsEl?.remove();

@@ -7,6 +7,7 @@ import { Friend, FriendRequest, Party, PartyInvite, PartyChatMessage, LobbyChatM
 import { EmoteId } from '../constants/emotes';
 import { EloResult } from './leaderboard';
 import { AchievementUnlockEvent } from './achievements';
+import { XpUpdateResult } from '../constants/xp';
 
 // Client -> Server events
 export interface ClientToServerEvents {
@@ -141,6 +142,15 @@ export interface ClientToServerEvents {
   // In-game emotes
   'game:emote': (data: { emoteId: EmoteId }) => void;
 
+  // Spectator chat
+  'game:spectatorChat': (data: { message: string }) => void;
+
+  // Rematch voting
+  'rematch:vote': (
+    data: { vote: boolean },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+
   // Room invites
   'invite:room': (
     data: { userId: number },
@@ -252,9 +262,27 @@ export interface ServerToClientEvents {
   // Room invites
   'invite:room': (invite: PartyInvite) => void;
 
-  // Elo & Achievements
+  // In-game spectator chat
+  'game:spectatorChat': (data: {
+    fromUserId: number;
+    fromUsername: string;
+    role: UserRole;
+    message: string;
+    timestamp: number;
+  }) => void;
+
+  // Elo, XP & Achievements
   'game:eloUpdate': (results: EloResult[]) => void;
+  'game:xpUpdate': (results: XpUpdateResult[]) => void;
   'achievement:unlocked': (data: AchievementUnlockEvent) => void;
+
+  // Rematch voting
+  'rematch:update': (data: {
+    votes: { userId: number; username: string; vote: boolean }[];
+    threshold: number;
+    totalPlayers: number;
+  }) => void;
+  'rematch:triggered': () => void;
 }
 
 // Inter-server events (if scaling later)

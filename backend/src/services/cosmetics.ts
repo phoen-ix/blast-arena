@@ -274,6 +274,31 @@ export async function unlockDefaultCosmetics(userId: number): Promise<void> {
   );
 }
 
+export async function checkLevelMilestoneUnlocks(userId: number, level: number): Promise<number[]> {
+  const rows = await query<CosmeticRow[]>(
+    `SELECT c.id, c.unlock_requirement FROM cosmetics c
+     LEFT JOIN user_cosmetics uc ON uc.cosmetic_id = c.id AND uc.user_id = ?
+     WHERE c.unlock_type = 'level_milestone' AND c.is_active = TRUE AND uc.cosmetic_id IS NULL`,
+    [userId],
+  );
+  const unlocked: number[] = [];
+  for (const row of rows) {
+    try {
+      const req =
+        typeof row.unlock_requirement === 'string'
+          ? JSON.parse(row.unlock_requirement)
+          : row.unlock_requirement;
+      if (req && typeof req.level === 'number' && level >= req.level) {
+        await unlockCosmetic(userId, row.id);
+        unlocked.push(row.id);
+      }
+    } catch {
+      // Skip invalid requirement
+    }
+  }
+  return unlocked;
+}
+
 export async function checkCampaignStarUnlocks(userId: number, totalStars: number): Promise<number[]> {
   interface UnlockableRow extends RowDataPacket {
     id: number;

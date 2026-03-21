@@ -74,3 +74,16 @@ export interface AchievementImportConflict {
   existingId?: number;
   existingName?: string;
 }
+
+export interface AchievementProgress {
+  achievementId: number;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  conditionType: AchievementConditionType;
+  current: number;
+  threshold: number;
+  unlocked: boolean;
+  unlockedAt: string | null;
+}

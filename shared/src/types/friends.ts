@@ -88,3 +88,4 @@ export const MAX_PENDING_INVITES = 5;
 export const PARTY_CHAT_MAX_LENGTH = 200;
 export const LOBBY_CHAT_MAX_LENGTH = 200;
 export const DM_MAX_LENGTH = 500;
+export const SPECTATOR_CHAT_MAX_LENGTH = 200;

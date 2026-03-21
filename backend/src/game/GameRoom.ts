@@ -8,7 +8,7 @@ import {
   InterServerEvents,
   SocketData,
 } from '@blast-arena/shared';
-import { GAME_MODES, MAX_SPEED } from '@blast-arena/shared';
+import { GAME_MODES, MAX_SPEED, calculateXpGained, getLevelForXp, getXpForLevel, getXpToNextLevel, XpUpdateResult } from '@blast-arena/shared';
 
 type TypedServer = Server<
   ClientToServerEvents,
@@ -18,11 +18,12 @@ type TypedServer = Server<
 >;
 import { GameStateManager } from './GameState';
 import { GameLoop } from './GameLoop';
-import { execute } from '../db/connection';
+import { execute, query } from '../db/connection';
 import { logger } from '../utils/logger';
 import { GameLogger } from '../utils/gameLogger';
 import { ReplayRecorder } from '../utils/replayRecorder';
 import * as lobbyService from '../services/lobby';
+import * as settingsService from '../services/settings';
 import * as cosmeticsService from '../services/cosmetics';
 import * as eloService from '../services/elo';
 import * as achievementsService from '../services/achievements';
@@ -473,6 +474,55 @@ export class GameRoom {
             }
           }
         }
+
+        // --- XP & Level ---
+        try {
+          const xpMultiplier = parseFloat(await settingsService.getSetting('xp_multiplier') ?? '1');
+          const xpResults: XpUpdateResult[] = [];
+
+          for (const p of placements) {
+            if (p.isBot || p.userId < 0) continue;
+
+            const [statsRow] = await query<any[]>('SELECT total_xp, level FROM user_stats WHERE user_id = ?', [p.userId]);
+            const currentXp = statsRow?.total_xp ?? 0;
+            const oldLevel = statsRow?.level ?? 1;
+
+            const player = this.gameState.players.get(p.userId);
+            const xpGained = calculateXpGained({
+              kills: p.kills,
+              bombsPlaced: player?.bombsPlaced ?? 0,
+              powerupsCollected: player?.powerupsCollected ?? 0,
+              placement: p.placement,
+              isWinner: p.userId === state.winnerId,
+            }, xpMultiplier);
+
+            const newTotalXp = currentXp + xpGained;
+            const newLevel = getLevelForXp(newTotalXp);
+
+            await execute('UPDATE user_stats SET total_xp = ?, level = ? WHERE user_id = ?',
+              [newTotalXp, newLevel, p.userId]);
+
+            if (newLevel > oldLevel) {
+              await cosmeticsService.checkLevelMilestoneUnlocks(p.userId, newLevel);
+            }
+
+            xpResults.push({
+              userId: p.userId,
+              xpGained,
+              totalXp: newTotalXp,
+              oldLevel,
+              newLevel,
+              xpForNextLevel: getXpToNextLevel(newLevel),
+              xpProgress: newTotalXp - getXpForLevel(newLevel),
+            });
+          }
+
+          if (xpResults.length > 0) {
+            this.io.to(`room:${this.code}`).emit('game:xpUpdate' as any, xpResults);
+          }
+        } catch (xpErr) {
+          logger.error({ err: xpErr }, 'Failed to process XP');
+        }
       } catch (err) {
         logger.error({ err }, 'Failed to save match results');
       }
@@ -488,5 +538,10 @@ export class GameRoom {
 
   isRunning(): boolean {
     return this.gameLoop.isRunning();
+  }
+
+  isPlayerAlive(playerId: number): boolean {
+    const player = this.gameState.players.get(playerId);
+    return player?.alive ?? false;
   }
 }

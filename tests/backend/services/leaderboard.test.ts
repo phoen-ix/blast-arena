@@ -213,6 +213,8 @@ describe('Leaderboard Service', () => {
       matches_played: 50,
       total_wins: 30,
       total_kills: 100,
+      total_xp: 0,
+      level: 1,
       ...overrides,
     });
 
@@ -370,6 +372,8 @@ describe('Leaderboard Service', () => {
       peak_elo: 1500,
       win_streak: 3,
       best_win_streak: 8,
+      total_xp: 0,
+      level: 1,
       ...overrides,
     });
 
@@ -398,6 +402,8 @@ describe('Leaderboard Service', () => {
         peakElo: 1500,
         winStreak: 3,
         bestWinStreak: 8,
+        level: 1,
+        totalXp: 0,
       });
       expect(result!.rankTier).toContain('Gold');
       expect(result!.rankColor).toBe('#ffd700');

@@ -73,17 +73,21 @@ Admins can upload custom AI implementations as TypeScript files. See [docs/bot-a
 
 ## Leaderboard & Ranking
 
-Elo-based competitive ranking across all game modes. Standard Elo formula with adaptive K-factor. Seasonal system with admin-defined dates, history archiving, and hard/soft resets. Six rank tiers (Bronze through Champion) with optional sub-tiers (I/II/III) — all admin-configurable. Public leaderboard page with season filtering and clickable profiles. Rank badge displayed next to usernames in lobby. Elo deltas shown on game-over screen.
+Elo-based competitive ranking across all game modes. Standard Elo formula with adaptive K-factor. Seasonal system with admin-defined dates, history archiving, and hard/soft resets. Six rank tiers (Bronze through Champion) with optional sub-tiers (I/II/III) — all admin-configurable. Public leaderboard page with season filtering and clickable profiles. Rank and level badges displayed next to usernames in lobby. Elo deltas and XP gains shown on game-over screen.
+
+## Player XP & Levels
+
+XP-based leveling system separate from Elo. Earn XP from kills, bomb placements, power-up collection, match completion, and placement bonuses. Level curve: each level requires progressively more XP. Level milestones can unlock exclusive cosmetics. Admin-configurable XP multiplier. Level displayed on leaderboard, profiles, lobby, and game-over screen with progress bar.
 
 ## Achievements & Cosmetics
 
-Admin-configurable achievement system with four condition types: cumulative stats, per-game feats, mode-specific milestones, and campaign progress. Ships with a default pack of 47 achievements and 25 cosmetic rewards across combat, victory, dedication, mode mastery, and campaign categories. Achievements can reward cosmetics. Four cosmetic types: player colors, eye styles, movement trails, and bomb skins. Unlocked via achievements or campaign stars, equipped in settings. Cosmetics visible to all players in-game (custom textures generated on-demand). Export/import achievements and cosmetics as JSON (single or bundled) for sharing between instances. Public profiles show rank, season history, achievements, and equipped cosmetics with a privacy toggle.
+Admin-configurable achievement system with four condition types: cumulative stats, per-game feats, mode-specific milestones, and campaign progress. Ships with a default pack of 47 achievements and 25 cosmetic rewards across combat, victory, dedication, mode mastery, and campaign categories. Achievement progress tracking with progress bars on profiles (own profile only). Achievements can reward cosmetics. Four cosmetic types: player colors, eye styles, movement trails, and bomb skins. Unlocked via achievements, campaign stars, level milestones, or by default. Export/import achievements and cosmetics as JSON. Public profiles show rank, level, season history, achievements, and equipped cosmetics with a privacy toggle.
 
 ## Admin Panel
 
 | Tab | Access | Key Features |
 |-----|--------|-------------|
-| Dashboard | Admin | Stats, server settings (recordings, registration, email/SMTP, chat modes), game/simulation defaults |
+| Dashboard | Admin | Stats, server settings (recordings, registration, email/SMTP, chat modes, XP multiplier), game/simulation defaults |
 | Users | Staff | Search, roles, deactivate, delete, password reset |
 | Matches | Staff | History, per-player stats, replay viewer, delete |
 | Rooms | Staff | Live rooms, spectate, kick, force close |
@@ -106,7 +110,9 @@ All actions audit-logged. See [docs/admin-and-systems.md](docs/admin-and-systems
 - **Lobby Chat**: Global ephemeral chat for all connected lobby users. Collapsible panel bottom-left.
 - **Direct Messages**: Persistent messages between friends. Conversation list with unread badges, real-time delivery, read receipts. Accessible via "Messages" button or "Msg" on any friend.
 - **In-Game Emotes**: 6 predefined quick phrases (GG, Help!, Nice!, Oops, Taunt, Thanks) — keys 1-6 during gameplay. Floating bubbles above player sprites with 3s cooldown.
-- **Admin Chat Controls**: All chat features (party chat, lobby chat, DMs, emotes) individually configurable: everyone (default), staff only, admin only, or fully disabled.
+- **Spectator Chat**: Dead players can text chat during live games. Collapsible panel bottom-left, role-colored usernames, 3/sec rate limit.
+- **Rematch Voting**: After game over, players vote for rematch. >50% triggers auto-restart with same settings. 30s timeout. Replaces manual "Play Again" flow.
+- **Admin Chat Controls**: All chat features (party chat, lobby chat, DMs, emotes, spectator chat) individually configurable: everyone (default), staff only, admin only, or fully disabled.
 
 ## Game Replays
 
@@ -181,7 +187,7 @@ blast-arena/
 ## Testing & Linting
 
 ```bash
-npm test                    # Run all test suites (1817 tests)
+npm test                    # Run all test suites (1846 tests)
 npm run lint                # ESLint across all workspaces
 npm run format:check        # Prettier format check
 ```

@@ -1,7 +1,8 @@
 import { NotificationUI } from './NotificationUI';
 import { ApiClient } from '../network/ApiClient';
 import { escapeHtml } from '../utils/html';
-import type { PublicProfile } from '@blast-arena/shared';
+import type { PublicProfile, AchievementProgress } from '@blast-arena/shared';
+import { getErrorMessage } from '@blast-arena/shared';
 
 export class ProfilePanel {
   private container: HTMLElement;
@@ -39,6 +40,8 @@ export class ProfilePanel {
     try {
       const profile = await ApiClient.get<PublicProfile>(`/user/${userId}/public`);
       this.container.innerHTML = this.renderProfile(profile);
+      // Load achievement progress for own profile
+      this.loadAchievementProgress();
     } catch {
       this.container.innerHTML = this.renderPrivate();
     }
@@ -85,6 +88,7 @@ export class ProfilePanel {
         ${this.renderStats(p, kd, playtime)}
         ${this.renderSeasonHistory(p)}
         ${this.renderAchievements(p)}
+        <div id="profile-progress-container"></div>
         ${this.renderCosmetics(p)}
         ${this.renderActions(p)}
       </div>`;
@@ -109,15 +113,38 @@ export class ProfilePanel {
   }
 
   private renderRank(p: PublicProfile): string {
+    const level = (p.stats as any).level ?? 1;
+    const totalXp = (p.stats as any).totalXp ?? 0;
+    // Calculate XP progress — level N requires N*100 XP to advance
+    const xpForLevel = ((level * (level - 1)) / 2) * 100;
+    const xpToNext = level * 100;
+    const xpProgress = totalXp - xpForLevel;
+    const pct = xpToNext > 0 ? Math.min(100, Math.round((xpProgress / xpToNext) * 100)) : 0;
+
     return `
-      <div style="background:var(--bg-card);border-radius:10px;padding:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Rank</div>
-          <div style="font-size:16px;font-weight:700;color:${p.rankColor};font-family:var(--font-display);">${escapeHtml(p.rankTier)}</div>
+      <div style="background:var(--bg-card);border-radius:10px;padding:14px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Rank</div>
+            <div style="font-size:16px;font-weight:700;color:${p.rankColor};font-family:var(--font-display);">${escapeHtml(p.rankTier)}</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Level</div>
+            <div style="font-size:22px;font-weight:700;color:var(--primary);font-family:var(--font-display);">${level}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:22px;font-weight:700;color:var(--text);font-family:var(--font-display);">${p.stats.eloRating}</div>
+            <div style="font-size:11px;color:var(--text-muted);">Peak: ${p.stats.peakElo}</div>
+          </div>
         </div>
-        <div style="text-align:right;">
-          <div style="font-size:22px;font-weight:700;color:var(--text);font-family:var(--font-display);">${p.stats.eloRating}</div>
-          <div style="font-size:11px;color:var(--text-muted);">Peak: ${p.stats.peakElo}</div>
+        <div style="margin-top:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:3px;">
+            <span>XP: ${xpProgress}/${xpToNext}</span>
+            <span>${pct}%</span>
+          </div>
+          <div style="height:4px;background:var(--bg-surface);border-radius:2px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, var(--primary), var(--accent));border-radius:2px;transition:width 0.3s;"></div>
+          </div>
         </div>
       </div>`;
   }
@@ -231,6 +258,46 @@ export class ProfilePanel {
       (btn as HTMLButtonElement).style.opacity = '0.6';
       this.notifications.success(`Friend request sent to ${username}`);
     });
+  }
+
+  private async loadAchievementProgress(): Promise<void> {
+    const progressContainer = this.container.querySelector('#profile-progress-container');
+    if (!progressContainer) return;
+
+    try {
+      const res = await ApiClient.get<{ progress: AchievementProgress[] }>('/achievements/progress');
+      const locked = res.progress.filter((p) => !p.unlocked && p.threshold > 0);
+      if (locked.length === 0) return;
+
+      // Sort by completion percentage descending
+      locked.sort((a, b) => b.current / b.threshold - a.current / a.threshold);
+
+      const items = locked
+        .slice(0, 12)
+        .map((p) => {
+          const pct = Math.min(100, Math.round((p.current / p.threshold) * 100));
+          return `
+          <div style="padding:8px 10px;background:var(--bg-deep);border-radius:8px;" title="${escapeHtml(p.description)}">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span style="font-size:16px;flex-shrink:0;">${p.icon || '\u2B50'}</span>
+              <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${escapeHtml(p.name)}</span>
+              <span style="font-size:11px;color:var(--text-muted);flex-shrink:0;">${p.current}/${p.threshold}</span>
+            </div>
+            <div style="height:4px;background:var(--bg-surface);border-radius:2px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, var(--primary), var(--accent));border-radius:2px;"></div>
+            </div>
+          </div>`;
+        })
+        .join('');
+
+      progressContainer.innerHTML = `
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">
+          In Progress (${locked.length})
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:16px;">${items}</div>`;
+    } catch {
+      // Silently skip — progress is optional
+    }
   }
 
   private formatPlaytime(totalMatches: number): string {

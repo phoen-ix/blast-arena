@@ -64,6 +64,8 @@ interface LeaderboardRow extends RowDataPacket {
   matches_played: number;
   total_wins: number;
   total_kills: number;
+  total_xp: number;
+  level: number;
 }
 
 export async function getLeaderboard(opts: {
@@ -85,7 +87,8 @@ export async function getLeaderboard(opts: {
     const [dataRows, countRows] = await Promise.all([
       query<LeaderboardRow[]>(
         `SELECT se.user_id, u.username, se.elo_rating, se.peak_elo, se.matches_played,
-                COALESCE(us.total_wins, 0) as total_wins, COALESCE(us.total_kills, 0) as total_kills
+                COALESCE(us.total_wins, 0) as total_wins, COALESCE(us.total_kills, 0) as total_kills,
+                COALESCE(us.total_xp, 0) as total_xp, COALESCE(us.level, 1) as level
          FROM season_elo se
          JOIN users u ON u.id = se.user_id
          LEFT JOIN user_stats us ON us.user_id = se.user_id
@@ -112,7 +115,8 @@ export async function getLeaderboard(opts: {
       const [dataRows, countRows] = await Promise.all([
         query<LeaderboardRow[]>(
           `SELECT se.user_id, u.username, se.elo_rating, se.peak_elo, se.matches_played,
-                  COALESCE(us.total_wins, 0) as total_wins, COALESCE(us.total_kills, 0) as total_kills
+                  COALESCE(us.total_wins, 0) as total_wins, COALESCE(us.total_kills, 0) as total_kills,
+                  COALESCE(us.total_xp, 0) as total_xp, COALESCE(us.level, 1) as level
            FROM season_elo se
            JOIN users u ON u.id = se.user_id
            LEFT JOIN user_stats us ON us.user_id = se.user_id
@@ -135,7 +139,8 @@ export async function getLeaderboard(opts: {
         query<LeaderboardRow[]>(
           `SELECT us.user_id, u.username, us.elo_rating, us.peak_elo,
                   us.total_matches as matches_played,
-                  COALESCE(us.total_wins, 0) as total_wins, COALESCE(us.total_kills, 0) as total_kills
+                  COALESCE(us.total_wins, 0) as total_wins, COALESCE(us.total_kills, 0) as total_kills,
+                  COALESCE(us.total_xp, 0) as total_xp, COALESCE(us.level, 1) as level
            FROM user_stats us
            JOIN users u ON u.id = us.user_id
            WHERE u.is_deactivated = 0 AND u.is_profile_public = 1
@@ -167,6 +172,8 @@ export async function getLeaderboard(opts: {
       totalKills: row.total_kills,
       rankTier: rank.name,
       rankColor: rank.color,
+      level: row.level || 1,
+      totalXp: row.total_xp || 0,
     };
   });
 
@@ -183,7 +190,9 @@ export async function getPublicProfile(userId: number): Promise<PublicProfile | 
             COALESCE(us.elo_rating, 1000) as elo_rating,
             COALESCE(us.peak_elo, 1000) as peak_elo,
             COALESCE(us.win_streak, 0) as win_streak,
-            COALESCE(us.best_win_streak, 0) as best_win_streak
+            COALESCE(us.best_win_streak, 0) as best_win_streak,
+            COALESCE(us.total_xp, 0) as total_xp,
+            COALESCE(us.level, 1) as level
      FROM users u
      LEFT JOIN user_stats us ON us.user_id = u.id
      WHERE u.id = ? AND u.is_deactivated = 0`,
@@ -218,6 +227,8 @@ export async function getPublicProfile(userId: number): Promise<PublicProfile | 
       peakElo: row.peak_elo,
       winStreak: row.win_streak,
       bestWinStreak: row.best_win_streak,
+      level: row.level || 1,
+      totalXp: row.total_xp || 0,
     },
     rankTier: rank.name,
     rankColor: rank.color,
@@ -239,14 +250,18 @@ export async function getUserRank(userId: number): Promise<{
   rankTier: string;
   rankColor: string;
   seasonElo: number | null;
+  level: number;
+  totalXp: number;
 }> {
   interface EloRow extends RowDataPacket {
     elo_rating: number;
     peak_elo: number;
+    level: number;
+    total_xp: number;
   }
 
   const rows = await query<EloRow[]>(
-    'SELECT elo_rating, peak_elo FROM user_stats WHERE user_id = ?',
+    'SELECT elo_rating, peak_elo, level, total_xp FROM user_stats WHERE user_id = ?',
     [userId],
   );
 
@@ -267,5 +282,8 @@ export async function getUserRank(userId: number): Promise<{
     if (seRows.length > 0) seasonElo = seRows[0].elo_rating;
   }
 
-  return { eloRating: elo, peakElo, rankTier: rank.name, rankColor: rank.color, seasonElo };
+  const level = rows.length > 0 ? rows[0].level || 1 : 1;
+  const totalXp = rows.length > 0 ? rows[0].total_xp || 0 : 0;
+
+  return { eloRating: elo, peakElo, rankTier: rank.name, rankColor: rank.color, seasonElo, level, totalXp };
 }

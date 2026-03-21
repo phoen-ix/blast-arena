@@ -59,6 +59,8 @@ export interface UserProfileRow extends RowDataPacket {
   best_win_streak: number | null;
   elo_rating: number | null;
   peak_elo: number | null;
+  total_xp: number | null;
+  level: number | null;
   is_profile_public: boolean;
   accept_friend_requests: boolean;
 }
@@ -304,6 +306,8 @@ export interface PublicProfileRow extends RowDataPacket {
   peak_elo: number;
   win_streak: number;
   best_win_streak: number;
+  total_xp: number;
+  level: number;
 }
 
 /** Cosmetic row */

@@ -35,6 +35,8 @@ export interface LeaderboardEntry {
   matchesPlayed: number;
   totalWins: number;
   totalKills: number;
+  level: number;
+  totalXp: number;
   rankTier: string;
   rankColor: string;
 }
@@ -61,6 +63,8 @@ export interface PublicProfile {
     peakElo: number;
     winStreak: number;
     bestWinStreak: number;
+    level: number;
+    totalXp: number;
   };
   rankTier: string;
   rankColor: string;

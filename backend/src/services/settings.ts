@@ -103,6 +103,14 @@ export async function getEmoteMode(): Promise<ChatMode> {
   return 'everyone';
 }
 
+export async function getSpectatorChatMode(): Promise<ChatMode> {
+  const value = await getSetting('spectator_chat_mode');
+  if (value && VALID_CHAT_MODES.includes(value as ChatMode)) {
+    return value as ChatMode;
+  }
+  return 'everyone';
+}
+
 export async function getRankConfig(): Promise<RankConfig> {
   const value = await getSetting('rank_tiers');
   if (!value) return DEFAULT_RANK_CONFIG;

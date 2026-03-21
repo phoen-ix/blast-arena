@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SocketClient } from '../network/SocketClient';
 import { ApiClient } from '../network/ApiClient';
-import { EloResult, AchievementUnlockEvent } from '@blast-arena/shared';
+import { EloResult, AchievementUnlockEvent, XpUpdateResult } from '@blast-arena/shared';
 
 const DEADZONE = 0.3;
 
@@ -16,7 +16,11 @@ export class GameOverScene extends Phaser.Scene {
   private underline: Phaser.GameObjects.Graphics | null = null;
   private eloPlacementData: Map<number, number> = new Map(); // userId -> y position
   private eloColX = 0;
+  private xpColX = 0;
   private achievementToasts: Phaser.GameObjects.Text[] = [];
+  private hasVoted = false;
+  private voteButton: Phaser.GameObjects.Text | null = null;
+  private voteTallyText: Phaser.GameObjects.Text | null = null;
 
   constructor() {
     super({ key: 'GameOverScene' });
@@ -33,7 +37,11 @@ export class GameOverScene extends Phaser.Scene {
     this.underline = null;
     this.eloPlacementData = new Map();
     this.eloColX = 0;
+    this.xpColX = 0;
     this.achievementToasts = [];
+    this.hasVoted = false;
+    this.voteButton = null;
+    this.voteTallyText = null;
 
     // Clear any leftover DOM overlays (countdown, HUD)
     const uiOverlay = document.getElementById('ui-overlay');
@@ -65,16 +73,39 @@ export class GameOverScene extends Phaser.Scene {
     };
     socketClient.on('game:eloUpdate' as any, eloHandler as any);
 
+    // Listen for XP update results
+    const xpHandler = (results: XpUpdateResult[]) => {
+      socketClient.off('game:xpUpdate' as any, xpHandler as any);
+      this.showXpResults(results);
+    };
+    socketClient.on('game:xpUpdate' as any, xpHandler as any);
+
     // Listen for achievement unlocks
     const achievementHandler = (data: AchievementUnlockEvent) => {
       this.showAchievementUnlock(data);
     };
     socketClient.on('achievement:unlocked' as any, achievementHandler as any);
 
+    // Listen for rematch vote updates
+    const rematchUpdateHandler = (data: any) => {
+      this.updateRematchUI(data);
+    };
+    socketClient.on('rematch:update' as any, rematchUpdateHandler as any);
+
+    // Listen for rematch triggered (auto-restart)
+    const rematchTriggeredHandler = () => {
+      socketClient.off('room:state' as any, roomStateHandler as any);
+      // The room:state 'waiting' event will follow — navigate on that
+    };
+    socketClient.on('rematch:triggered' as any, rematchTriggeredHandler as any);
+
     this.events.on('shutdown', () => {
       socketClient.off('room:state' as any, roomStateHandler as any);
       socketClient.off('game:eloUpdate' as any, eloHandler as any);
+      socketClient.off('game:xpUpdate' as any, xpHandler as any);
       socketClient.off('achievement:unlocked' as any, achievementHandler as any);
+      socketClient.off('rematch:update' as any, rematchUpdateHandler as any);
+      socketClient.off('rematch:triggered' as any, rematchTriggeredHandler as any);
     });
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
@@ -116,9 +147,9 @@ export class GameOverScene extends Phaser.Scene {
         .setOrigin(0.5);
     }
 
-    // Play Again button
-    const playAgainBtn = this.add
-      .text(width / 2 - 100, height - 40, '[ Play Again ]', {
+    // Vote Rematch button
+    const voteBtn = this.add
+      .text(width / 2 - 100, height - 40, '[ Vote Rematch ]', {
         fontSize: '20px',
         color: '#ffffff',
         fontFamily: 'Chakra Petch, sans-serif',
@@ -126,18 +157,25 @@ export class GameOverScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
+    this.voteButton = voteBtn;
 
-    playAgainBtn.on('pointerover', () => playAgainBtn.setColor('#cccccc'));
-    playAgainBtn.on('pointerout', () => playAgainBtn.setColor('#ffffff'));
-    playAgainBtn.on('pointerdown', () => {
-      socketClient.off('room:state' as any, roomStateHandler as any);
-      socketClient.emit('room:restart', (response: any) => {
-        if (response.success && response.room) {
-          this.registry.set('currentRoom', response.room);
-          this.scene.start('LobbyScene');
-        }
-      });
+    voteBtn.on('pointerover', () => voteBtn.setColor(this.hasVoted ? '#44ff88' : '#cccccc'));
+    voteBtn.on('pointerout', () => voteBtn.setColor(this.hasVoted ? '#00e676' : '#ffffff'));
+    voteBtn.on('pointerdown', () => {
+      this.hasVoted = !this.hasVoted;
+      socketClient.emit('rematch:vote' as any, { vote: this.hasVoted }, () => {});
+      voteBtn.setText(this.hasVoted ? '[ Rematch ✓ ]' : '[ Vote Rematch ]');
+      voteBtn.setColor(this.hasVoted ? '#00e676' : '#ffffff');
     });
+
+    // Vote tally text
+    this.voteTallyText = this.add
+      .text(width / 2, height - 15, '', {
+        fontSize: '13px',
+        color: '#8888a0',
+        fontFamily: 'DM Sans, sans-serif',
+      })
+      .setOrigin(0.5);
 
     // Back to lobby button
     const backBtn = this.add
@@ -158,7 +196,7 @@ export class GameOverScene extends Phaser.Scene {
       this.scene.start('LobbyScene');
     });
 
-    this.buttons = [playAgainBtn, backBtn];
+    this.buttons = [voteBtn, backBtn];
     this.baseColors = ['#ffffff', '#ff6b35'];
     this.highlightColors = ['#cccccc', '#ff8555'];
 
@@ -178,11 +216,13 @@ export class GameOverScene extends Phaser.Scene {
       const teamNames = ['Red', 'Blue'];
 
       // Column layout
-      const colName = width * 0.28;
-      const colTeam = isTeamMode ? width * 0.5 : -1;
-      const colScore = isTeamMode ? width * 0.63 : width * 0.58;
-      const colElo = isTeamMode ? width * 0.78 : width * 0.75;
+      const colName = width * 0.22;
+      const colTeam = isTeamMode ? width * 0.42 : -1;
+      const colScore = isTeamMode ? width * 0.55 : width * 0.45;
+      const colElo = isTeamMode ? width * 0.68 : width * 0.6;
+      const colXp = isTeamMode ? width * 0.82 : width * 0.78;
       this.eloColX = colElo;
+      this.xpColX = colXp;
 
       // Header
       const hs = {
@@ -195,6 +235,7 @@ export class GameOverScene extends Phaser.Scene {
       if (isTeamMode) this.add.text(colTeam, 115, 'TEAM', hs).setOrigin(0.5);
       this.add.text(colScore, 115, 'SCORE', hs).setOrigin(0.5);
       this.add.text(colElo, 115, 'ELO', hs).setOrigin(0.5);
+      this.add.text(colXp, 115, 'XP', hs).setOrigin(0.5);
 
       list.forEach((p: any, i: number) => {
         const y = startY + i * spacing;
@@ -502,6 +543,83 @@ export class GameOverScene extends Phaser.Scene {
         },
       });
     }
+  }
+
+  private showXpResults(results: XpUpdateResult[]): void {
+    const width = this.cameras.main.width;
+
+    for (const result of results) {
+      const y = this.eloPlacementData.get(result.userId);
+      if (y === undefined) continue;
+
+      const text = this.add
+        .text(this.xpColX, y, `+${result.xpGained}`, {
+          fontSize: '15px',
+          color: '#ffdd44',
+          fontFamily: 'DM Sans, sans-serif',
+          fontStyle: 'bold',
+        })
+        .setOrigin(0.5)
+        .setAlpha(0);
+
+      this.tweens.add({
+        targets: text,
+        alpha: 1,
+        y: y - 2,
+        duration: 400,
+        ease: 'Power2',
+        delay: 200,
+      });
+
+      // Level up toast
+      if (result.newLevel > result.oldLevel) {
+        const lvlToast = this.add
+          .text(width / 2, 0, `LEVEL UP! → Level ${result.newLevel}`, {
+            fontSize: '18px',
+            color: '#ffdd44',
+            fontFamily: 'Chakra Petch, sans-serif',
+            fontStyle: 'bold',
+            backgroundColor: '#1a1a2e',
+            padding: { x: 16, y: 8 },
+          })
+          .setOrigin(0.5)
+          .setAlpha(0)
+          .setDepth(25);
+
+        // Find a free toast slot
+        const toastY = 20 + this.achievementToasts.length * 40;
+        this.achievementToasts.push(lvlToast);
+
+        this.tweens.add({
+          targets: lvlToast,
+          alpha: 1,
+          y: toastY + 15,
+          duration: 500,
+          ease: 'Back.easeOut',
+          delay: 500,
+          onComplete: () => {
+            this.tweens.add({
+              targets: lvlToast,
+              alpha: 0,
+              y: lvlToast.y - 10,
+              duration: 800,
+              delay: 3000,
+              ease: 'Power2',
+            });
+          },
+        });
+      }
+    }
+  }
+
+  private updateRematchUI(data: {
+    votes: { userId: number; username: string; vote: boolean }[];
+    threshold: number;
+    totalPlayers: number;
+  }): void {
+    if (!this.voteTallyText) return;
+    const yesCount = data.votes.filter((v) => v.vote).length;
+    this.voteTallyText.setText(`${yesCount}/${data.totalPlayers} voted rematch`);
   }
 
   private updateButtonHighlight(): void {

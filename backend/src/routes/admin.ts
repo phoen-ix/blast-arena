@@ -141,6 +141,26 @@ router.get('/admin/settings/emote_mode', async (_req, res, next) => {
   }
 });
 
+// Public: get spectator chat mode (no auth required, needed by SpectatorChat)
+router.get('/admin/settings/spectator_chat_mode', async (_req, res, next) => {
+  try {
+    const mode = await settingsService.getSpectatorChatMode();
+    res.json({ mode });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Public: get XP multiplier (no auth required)
+router.get('/admin/settings/xp_multiplier', async (_req, res, next) => {
+  try {
+    const value = await settingsService.getSetting('xp_multiplier');
+    res.json({ multiplier: parseFloat(value ?? '1') });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // All other admin routes require auth + staff role (admin or moderator)
 router.use(authMiddleware, staffMiddleware);
 
@@ -278,6 +298,49 @@ router.put(
       const io = getIO();
       io.emit('admin:settingsChanged' as any, { key: 'emote_mode', value: req.body.mode });
       res.json({ message: 'Setting updated' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.put(
+  '/admin/settings/spectator_chat_mode',
+  adminOnlyMiddleware,
+  validate(chatModeSchema),
+  async (req, res, next) => {
+    try {
+      await settingsService.setSetting('spectator_chat_mode', req.body.mode);
+      await execute(
+        'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+        [req.user!.userId, 'update_setting', 'setting', 0, JSON.stringify({ key: 'spectator_chat_mode', value: req.body.mode })],
+      );
+      const io = getIO();
+      io.emit('admin:settingsChanged' as any, { key: 'spectator_chat_mode', value: req.body.mode });
+      res.json({ message: 'Setting updated' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.put(
+  '/admin/settings/xp_multiplier',
+  adminOnlyMiddleware,
+  async (req, res, next) => {
+    try {
+      const multiplier = parseFloat(req.body.multiplier);
+      if (isNaN(multiplier) || multiplier < 0 || multiplier > 10) {
+        return res.status(400).json({ error: 'Multiplier must be between 0 and 10' });
+      }
+      await settingsService.setSetting('xp_multiplier', String(multiplier));
+      await execute(
+        'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+        [req.user!.userId, 'update_setting', 'setting', 0, JSON.stringify({ key: 'xp_multiplier', value: multiplier })],
+      );
+      const io = getIO();
+      io.emit('admin:settingsChanged' as any, { key: 'xp_multiplier', value: multiplier });
+      res.json({ message: 'XP multiplier updated' });
     } catch (err) {
       next(err);
     }

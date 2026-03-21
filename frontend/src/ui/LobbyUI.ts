@@ -102,6 +102,7 @@ export class LobbyUI {
         <h1><span>BLAST</span>ARENA</h1>
         <div style="display:flex;gap:10px;align-items:center;">
           <span style="color:var(--text-dim);font-size:13px;">Welcome, <strong style="color:var(--text);">${escapeHtml(user?.username ?? '')}</strong></span>
+          <span id="level-badge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:var(--bg-elevated);color:var(--primary);display:none;"></span>
           <span id="rank-badge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;display:none;"></span>
           ${user?.role === 'admin' || user?.role === 'moderator' ? '<button class="btn btn-ghost" id="admin-btn">Admin</button>' : ''}
           <button class="btn btn-primary" id="create-room-btn">+ New Room</button>
@@ -181,14 +182,19 @@ export class LobbyUI {
       });
     }
 
-    // Load rank badge
-    ApiClient.get<{ rankTier: string; rankColor: string }>('/user/rank').then((rank) => {
+    // Load rank badge and level
+    ApiClient.get<{ rankTier: string; rankColor: string; level?: number }>('/user/rank').then((rank) => {
       const badge = this.container.querySelector('#rank-badge') as HTMLElement;
       if (badge && rank.rankTier) {
         badge.style.display = 'inline-block';
         badge.style.background = rank.rankColor;
         badge.style.color = '#fff';
         badge.textContent = rank.rankTier;
+      }
+      const levelBadge = this.container.querySelector('#level-badge') as HTMLElement;
+      if (levelBadge && rank.level) {
+        levelBadge.style.display = 'inline-block';
+        levelBadge.textContent = `Lvl ${rank.level}`;
       }
     }).catch(() => { /* ignore rank load failure */ });
   }

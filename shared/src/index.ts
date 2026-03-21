@@ -17,6 +17,7 @@ export * from './constants/powerups';
 export * from './constants/modes';
 export * from './constants/campaign';
 export * from './constants/emotes';
+export * from './constants/xp';
 export * from './utils/grid';
 export * from './utils/validation';
 export * from './utils/error';

@@ -6,7 +6,7 @@ import { logger } from './utils/logger';
 import * as lobbyService from './services/lobby';
 import { RoomManager } from './game/RoomManager';
 import { setRegistry, getSimulationManager, getCampaignGameManager } from './game/registry';
-import { createRateLimiters } from './utils/socketRateLimit';
+import { createRateLimiters, createSocketRateLimiter } from './utils/socketRateLimit';
 import {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -32,6 +32,13 @@ type TypedServer = Server<
 
 // Per-player emote cooldown (3 seconds)
 const emoteLastUsed = new Map<number, number>();
+
+// Rematch vote tracking per room
+const rematchVotes = new Map<string, {
+  votes: Map<number, { username: string; vote: boolean }>;
+  humanPlayerIds: Set<number>;
+  timeout: ReturnType<typeof setTimeout>;
+}>();
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -234,6 +241,27 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         io.to(`room:${roomCode}`).emit('room:playerLeft', socket.data.userId);
         io.to(`room:${roomCode}`).emit('room:state', room);
       }
+
+      // Clean up rematch votes for the leaving player
+      for (const [code, voteState] of rematchVotes) {
+        if (voteState.votes.has(socket.data.userId)) {
+          voteState.votes.delete(socket.data.userId);
+          voteState.humanPlayerIds.delete(socket.data.userId);
+          if (voteState.humanPlayerIds.size === 0) {
+            clearTimeout(voteState.timeout);
+            rematchVotes.delete(code);
+          } else {
+            const threshold = Math.floor(voteState.humanPlayerIds.size / 2) + 1;
+            const votesArray = [...voteState.votes.entries()].map(([userId, v]) => ({
+              userId, username: v.username, vote: v.vote,
+            }));
+            io.to(`room:${code}`).emit('rematch:update' as any, {
+              votes: votesArray, threshold, totalPlayers: voteState.humanPlayerIds.size,
+            });
+          }
+        }
+      }
+
       broadcastRoomList();
     });
 
@@ -326,6 +354,13 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         return;
       }
 
+      // Clear any pending rematch votes
+      const existingVotes = rematchVotes.get(roomCode);
+      if (existingVotes) {
+        clearTimeout(existingVotes.timeout);
+        rematchVotes.delete(roomCode);
+      }
+
       // Clean up finished game room
       roomManager.removeRoom(roomCode);
 
@@ -339,6 +374,73 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
       callback({ success: true, room });
       broadcastRoomList();
+    });
+
+    // Rematch voting
+    socket.on('rematch:vote', async (data, callback) => {
+      const roomCode = await lobbyService.getPlayerRoom(socket.data.userId);
+      if (!roomCode) return callback({ success: false, error: 'Not in a room' });
+
+      const room = await lobbyService.getRoom(roomCode);
+      if (!room) return callback({ success: false, error: 'Room not found' });
+      if (room.status !== 'finished') return callback({ success: false, error: 'Game not finished' });
+
+      // Initialize vote tracking if needed
+      if (!rematchVotes.has(roomCode)) {
+        const humanPlayerIds = new Set(room.players.map(p => p.user.id));
+        const timeout = setTimeout(() => {
+          rematchVotes.delete(roomCode);
+          io.to(`room:${roomCode}`).emit('rematch:update' as any, {
+            votes: [],
+            threshold: Math.floor(humanPlayerIds.size / 2) + 1,
+            totalPlayers: humanPlayerIds.size,
+          });
+        }, 30000);
+        rematchVotes.set(roomCode, { votes: new Map(), humanPlayerIds, timeout });
+      }
+
+      const voteState = rematchVotes.get(roomCode)!;
+      if (!voteState.humanPlayerIds.has(socket.data.userId)) {
+        return callback({ success: false, error: 'Not a player in this game' });
+      }
+
+      voteState.votes.set(socket.data.userId, {
+        username: socket.data.username,
+        vote: data.vote,
+      });
+
+      const threshold = Math.floor(voteState.humanPlayerIds.size / 2) + 1;
+      const yesVotes = [...voteState.votes.values()].filter(v => v.vote).length;
+
+      const votesArray = [...voteState.votes.entries()].map(([userId, v]) => ({
+        userId,
+        username: v.username,
+        vote: v.vote,
+      }));
+
+      io.to(`room:${roomCode}`).emit('rematch:update' as any, {
+        votes: votesArray,
+        threshold,
+        totalPlayers: voteState.humanPlayerIds.size,
+      });
+
+      callback({ success: true });
+
+      // Check if threshold met
+      if (yesVotes >= threshold) {
+        clearTimeout(voteState.timeout);
+        rematchVotes.delete(roomCode);
+
+        // Same restart logic as room:restart
+        roomManager.removeRoom(roomCode);
+        room.status = 'waiting';
+        room.players.forEach(p => (p.ready = false));
+        await lobbyService.updateRoom(roomCode, room);
+
+        io.to(`room:${roomCode}`).emit('rematch:triggered' as any);
+        io.to(`room:${roomCode}`).emit('room:state', room);
+        broadcastRoomList();
+      }
     });
 
     // Set player team (host only, teams mode)
@@ -443,6 +545,37 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       io.to(`room:${roomCode}`).emit('game:emote', {
         playerId: socket.data.userId,
         emoteId: data.emoteId as any,
+      });
+    });
+
+    // Spectator chat
+    const spectatorChatLimiter = createSocketRateLimiter(3);
+
+    socket.on('game:spectatorChat', async (data) => {
+      const roomCode = socket.data.activeRoomCode;
+      if (!roomCode) return;
+      if (!data || typeof data.message !== 'string') return;
+
+      const message = data.message.trim().slice(0, 200);
+      if (!message) return;
+
+      const mode = await settingsService.getSpectatorChatMode();
+      if (mode === 'disabled') return;
+      if (mode === 'admin_only' && socket.data.role !== 'admin') return;
+      if (mode === 'staff' && socket.data.role !== 'admin' && socket.data.role !== 'moderator') return;
+
+      if (!spectatorChatLimiter.isAllowed(socket.id)) return;
+
+      // Verify sender is dead or is admin spectator
+      const gameRoom = roomManager.getRoom(roomCode);
+      if (gameRoom && gameRoom.isPlayerAlive(socket.data.userId)) return;
+
+      io.to(`room:${roomCode}`).emit('game:spectatorChat' as any, {
+        fromUserId: socket.data.userId,
+        fromUsername: socket.data.username,
+        role: socket.data.role,
+        message,
+        timestamp: Date.now(),
       });
     });
 
@@ -800,6 +933,26 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       cleanupDMLimiters(socket.id);
       emoteLastUsed.delete(socket.data.userId);
       socket.data.activeRoomCode = undefined;
+
+      // Clean up rematch votes for the disconnecting player
+      for (const [code, voteState] of rematchVotes) {
+        if (voteState.votes.has(socket.data.userId)) {
+          voteState.votes.delete(socket.data.userId);
+          voteState.humanPlayerIds.delete(socket.data.userId);
+          if (voteState.humanPlayerIds.size === 0) {
+            clearTimeout(voteState.timeout);
+            rematchVotes.delete(code);
+          } else {
+            const threshold = Math.floor(voteState.humanPlayerIds.size / 2) + 1;
+            const votesArray = [...voteState.votes.entries()].map(([userId, v]) => ({
+              userId, username: v.username, vote: v.vote,
+            }));
+            io.to(`room:${code}`).emit('rematch:update' as any, {
+              votes: votesArray, threshold, totalPlayers: voteState.humanPlayerIds.size,
+            });
+          }
+        }
+      }
 
       // Remove presence and notify friends offline
       presenceService.removePresence(socket.data.userId).catch(() => {});

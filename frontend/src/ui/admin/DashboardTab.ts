@@ -27,6 +27,8 @@ export class DashboardTab {
   private lobbyChatMode: ChatMode = 'everyone';
   private dmMode: ChatMode = 'everyone';
   private emoteMode: ChatMode = 'everyone';
+  private spectatorChatMode: ChatMode = 'everyone';
+  private xpMultiplier: number = 1;
 
   constructor(notifications: NotificationUI) {
     this.notifications = notifications;
@@ -51,13 +53,15 @@ export class DashboardTab {
 
   private async loadSettings(): Promise<void> {
     try {
-      const [recResp, regResp, chatResp, lobbyResp, dmResp, emoteResp, gameResp, simResp, aiResp] = await Promise.all([
+      const [recResp, regResp, chatResp, lobbyResp, dmResp, emoteResp, specChatResp, xpResp, gameResp, simResp, aiResp] = await Promise.all([
         ApiClient.get<{ enabled: boolean }>('/admin/settings/recordings_enabled'),
         ApiClient.get<{ enabled: boolean }>('/admin/settings/registration_enabled'),
         ApiClient.get<{ mode: ChatMode }>('/admin/settings/party_chat_mode'),
         ApiClient.get<{ mode: ChatMode }>('/admin/settings/lobby_chat_mode'),
         ApiClient.get<{ mode: ChatMode }>('/admin/settings/dm_mode'),
         ApiClient.get<{ mode: ChatMode }>('/admin/settings/emote_mode'),
+        ApiClient.get<{ mode: ChatMode }>('/admin/settings/spectator_chat_mode'),
+        ApiClient.get<{ multiplier: number }>('/admin/settings/xp_multiplier'),
         ApiClient.get<{ defaults: GameDefaults }>('/admin/settings/game_defaults'),
         ApiClient.get<{ defaults: SimulationDefaults }>('/admin/settings/simulation_defaults'),
         ApiClient.get<{ ais: BotAIEntry[] }>('/admin/ai/active'),
@@ -68,6 +72,8 @@ export class DashboardTab {
       this.lobbyChatMode = lobbyResp.mode ?? 'everyone';
       this.dmMode = dmResp.mode ?? 'everyone';
       this.emoteMode = emoteResp.mode ?? 'everyone';
+      this.spectatorChatMode = specChatResp.mode ?? 'everyone';
+      this.xpMultiplier = xpResp.multiplier ?? 1;
       this.gameDefaults = gameResp.defaults ?? {};
       this.simulationDefaults = simResp.defaults ?? {};
       this.activeAIs = aiResp.ais ?? [];
@@ -151,6 +157,23 @@ export class DashboardTab {
           </select>
           <span style="color:var(--text-dim);font-size:12px;">Quick emotes during games</span>
         </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:var(--text);font-weight:600;font-size:14px;">Spectator Chat</span>
+          <select id="select-spectator-chat-mode" style="background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:12px;">
+            <option value="everyone" ${this.spectatorChatMode === 'everyone' ? 'selected' : ''}>Everyone</option>
+            <option value="staff" ${this.spectatorChatMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
+            <option value="admin_only" ${this.spectatorChatMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
+            <option value="disabled" ${this.spectatorChatMode === 'disabled' ? 'selected' : ''}>Disabled</option>
+          </select>
+          <span style="color:var(--text-dim);font-size:12px;">Dead player chat during games</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:var(--text);font-weight:600;font-size:14px;">XP Multiplier</span>
+          <input id="input-xp-multiplier" type="number" min="0" max="10" step="0.1" value="${this.xpMultiplier}"
+            style="background:var(--bg-deep);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:12px;width:60px;">
+          <button id="btn-save-xp-multiplier" style="background:var(--primary);color:white;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">Save</button>
+          <span style="color:var(--text-dim);font-size:12px;">XP earned per match (default: 1.0)</span>
+        </div>
       </div>
 
       ${this.renderEmailSettingsSection()}
@@ -206,6 +229,25 @@ export class DashboardTab {
     this.attachChatModeListener(card, '#select-lobby-chat-mode', 'lobby_chat_mode', 'Lobby chat', (m) => { this.lobbyChatMode = m; });
     this.attachChatModeListener(card, '#select-dm-mode', 'dm_mode', 'Direct messages', (m) => { this.dmMode = m; });
     this.attachChatModeListener(card, '#select-emote-mode', 'emote_mode', 'In-game emotes', (m) => { this.emoteMode = m; });
+    this.attachChatModeListener(card, '#select-spectator-chat-mode', 'spectator_chat_mode', 'Spectator chat', (m) => { this.spectatorChatMode = m; });
+
+    // XP multiplier save
+    const xpSaveBtn = card.querySelector('#btn-save-xp-multiplier');
+    const xpInput = card.querySelector('#input-xp-multiplier') as HTMLInputElement;
+    xpSaveBtn?.addEventListener('click', async () => {
+      const val = parseFloat(xpInput.value);
+      if (isNaN(val) || val < 0 || val > 10) {
+        this.notifications.error('Multiplier must be between 0 and 10');
+        return;
+      }
+      try {
+        await ApiClient.put('/admin/settings/xp_multiplier', { multiplier: val });
+        this.xpMultiplier = val;
+        this.notifications.success(`XP multiplier set to ${val}`);
+      } catch {
+        this.notifications.error('Failed to update XP multiplier');
+      }
+    });
 
     this.attachEmailSettingsListeners(card);
     this.attachDefaultsListeners(card, 'game');

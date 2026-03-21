@@ -12,6 +12,7 @@ export async function getUserProfile(userId: number) {
             s.total_matches, s.total_wins, s.total_kills, s.total_deaths,
             s.total_bombs, s.total_powerups, s.total_playtime,
             s.win_streak, s.best_win_streak, s.elo_rating, s.peak_elo,
+            s.total_xp, s.level,
             u.is_profile_public, u.accept_friend_requests
      FROM users u
      LEFT JOIN user_stats s ON s.user_id = u.id
@@ -44,6 +45,8 @@ export async function getUserProfile(userId: number) {
       bestWinStreak: row.best_win_streak || 0,
       eloRating: row.elo_rating || 1000,
       peakElo: row.peak_elo || 1000,
+      totalXp: row.total_xp || 0,
+      level: row.level || 1,
     },
     isProfilePublic: row.is_profile_public ?? true,
     acceptFriendRequests: row.accept_friend_requests ?? true,

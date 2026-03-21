@@ -3,6 +3,7 @@ import {
   Achievement,
   AchievementConditionType,
   AchievementRewardType,
+  AchievementProgress,
   AchievementUnlockEvent,
   GameAchievementData,
   UserAchievement,
@@ -415,4 +416,162 @@ export async function evaluateAfterCampaign(
   await cosmeticsService.checkCampaignStarUnlocks(userId, totalStars);
 
   return { achievements: newlyUnlocked, rewards };
+}
+
+export async function getAchievementProgress(userId: number): Promise<AchievementProgress[]> {
+  const achievements = await getAllAchievements(true);
+  const userAchievements = await getUserAchievements(userId);
+  const unlockedMap = new Map<number, string>();
+  for (const ua of userAchievements) {
+    if (ua.unlockedAt) unlockedMap.set(ua.achievementId, ua.unlockedAt);
+  }
+
+  // Fetch user stats once
+  interface ProgressStatsRow extends RowDataPacket {
+    [key: string]: any;
+  }
+  const statsRows = await query<ProgressStatsRow[]>(
+    'SELECT * FROM user_stats WHERE user_id = ?',
+    [userId],
+  );
+  const stats = statsRows[0] || {};
+
+  // Batch fetch per_game bests
+  interface BestRow extends RowDataPacket {
+    best_kills: number;
+    best_deaths: number;
+    best_bombs_placed: number;
+    best_powerups_collected: number;
+    best_survived_seconds: number;
+    best_placement: number;
+  }
+  const bestRows = await query<BestRow[]>(
+    `SELECT MAX(kills) as best_kills, MAX(deaths) as best_deaths,
+     MAX(bombs_placed) as best_bombs_placed, MAX(powerups_collected) as best_powerups_collected,
+     MAX(survived_seconds) as best_survived_seconds, MIN(placement) as best_placement
+     FROM match_players WHERE user_id = ?`,
+    [userId],
+  );
+  const bests = bestRows[0] || {};
+
+  const results: AchievementProgress[] = [];
+
+  for (const a of achievements) {
+    const config = a.conditionConfig;
+    const threshold = (config.threshold as number) ?? 0;
+    let current = 0;
+    const unlocked = unlockedMap.has(a.id);
+
+    if (unlocked) {
+      current = threshold;
+    } else {
+      switch (a.conditionType) {
+        case 'cumulative': {
+          const stat = config.stat as string;
+          current = stats[stat] ?? 0;
+          break;
+        }
+        case 'per_game': {
+          const stat = config.stat as string;
+          const colMap: Record<string, string> = {
+            kills: 'best_kills',
+            deaths: 'best_deaths',
+            bombs_placed: 'best_bombs_placed',
+            powerups_collected: 'best_powerups_collected',
+            survived_seconds: 'best_survived_seconds',
+            placement: 'best_placement',
+            self_kills: 'best_kills', // approximate
+            is_winner: 'best_placement', // placement 1 = winner
+            player_count: 'best_kills', // not meaningful for progress
+          };
+          const col = colMap[stat];
+          if (col) {
+            current = (bests as any)[col] ?? 0;
+          }
+          // For is_winner, convert placement to boolean-like
+          if (stat === 'is_winner') {
+            current = current === 1 ? 1 : 0;
+          }
+          break;
+        }
+        case 'mode_specific': {
+          const mode = config.mode as string;
+          const modeStat = config.stat as string;
+          if (modeStat === 'wins') {
+            interface CR extends RowDataPacket {
+              total: number;
+            }
+            const [row] = await query<CR[]>(
+              `SELECT COUNT(*) as total FROM matches m
+               JOIN match_players mp ON mp.match_id = m.id
+               WHERE mp.user_id = ? AND m.game_mode = ? AND mp.placement = 1`,
+              [userId, mode],
+            );
+            current = row?.total ?? 0;
+          } else if (modeStat === 'matches') {
+            interface CR extends RowDataPacket {
+              total: number;
+            }
+            const [row] = await query<CR[]>(
+              `SELECT COUNT(*) as total FROM matches m
+               JOIN match_players mp ON mp.match_id = m.id
+               WHERE mp.user_id = ? AND m.game_mode = ?`,
+              [userId, mode],
+            );
+            current = row?.total ?? 0;
+          } else if (modeStat === 'kills') {
+            interface SR extends RowDataPacket {
+              total: number;
+            }
+            const [row] = await query<SR[]>(
+              `SELECT COALESCE(SUM(mp.kills), 0) as total FROM matches m
+               JOIN match_players mp ON mp.match_id = m.id
+               WHERE mp.user_id = ? AND m.game_mode = ?`,
+              [userId, mode],
+            );
+            current = row?.total ?? 0;
+          }
+          break;
+        }
+        case 'campaign': {
+          const subType = config.subType as string;
+          if (subType === 'total_stars') {
+            interface CR extends RowDataPacket {
+              total_stars: number;
+            }
+            const [row] = await query<CR[]>(
+              'SELECT total_stars FROM campaign_user_state WHERE user_id = ?',
+              [userId],
+            );
+            current = row?.total_stars ?? 0;
+          } else if (subType === 'levels_completed') {
+            interface CR extends RowDataPacket {
+              total: number;
+            }
+            const [row] = await query<CR[]>(
+              'SELECT COUNT(*) as total FROM campaign_progress WHERE user_id = ? AND completed = TRUE',
+              [userId],
+            );
+            current = row?.total ?? 0;
+          }
+          break;
+        }
+      }
+    }
+
+    results.push({
+      achievementId: a.id,
+      name: a.name,
+      description: a.description,
+      icon: a.icon,
+      category: a.category,
+      conditionType: a.conditionType,
+      current: Math.min(current, threshold),
+      threshold,
+      unlocked,
+      unlockedAt: unlockedMap.get(a.id) ?? null,
+    });
+  }
+
+  return results;
 }

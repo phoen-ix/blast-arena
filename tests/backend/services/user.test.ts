@@ -75,6 +75,8 @@ describe('user service', () => {
         best_win_streak: 7,
         elo_rating: 1250,
         peak_elo: 1300,
+        total_xp: 0,
+        level: 1,
         is_profile_public: true,
         accept_friend_requests: true,
       };
@@ -102,6 +104,8 @@ describe('user service', () => {
           bestWinStreak: 7,
           eloRating: 1250,
           peakElo: 1300,
+          totalXp: 0,
+          level: 1,
         },
         isProfilePublic: true,
         acceptFriendRequests: true,
@@ -145,6 +149,8 @@ describe('user service', () => {
         bestWinStreak: 0,
         eloRating: 1000,
         peakElo: 1000,
+        totalXp: 0,
+        level: 1,
       });
     });
 

@@ -145,12 +145,13 @@ export class LeaderboardUI {
       <table class="admin-table">
         <thead>
           <tr>
-            <th style="width:60px;">#</th>
+            <th style="width:50px;">#</th>
             <th>Player</th>
-            <th style="width:80px;">Elo</th>
-            <th style="width:120px;">Rank</th>
-            <th style="width:70px;">Wins</th>
-            <th style="width:70px;">Kills</th>
+            <th style="width:60px;">Lvl</th>
+            <th style="width:70px;">Elo</th>
+            <th style="width:110px;">Rank</th>
+            <th style="width:60px;">Wins</th>
+            <th style="width:60px;">Kills</th>
           </tr>
         </thead>
         <tbody>
@@ -169,6 +170,7 @@ export class LeaderboardUI {
         <td>
           <span data-user-id="${entry.userId}" style="color:var(--accent);cursor:pointer;font-weight:600;">${escapeHtml(entry.username)}</span>
         </td>
+        <td><span style="background:var(--bg-elevated);color:var(--text);padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;">${entry.level}</span></td>
         <td style="font-weight:600;">${entry.eloRating}</td>
         <td>${rankBadge}</td>
         <td>${entry.totalWins}</td>

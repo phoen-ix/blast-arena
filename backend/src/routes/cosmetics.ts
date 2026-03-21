@@ -74,4 +74,14 @@ router.get('/achievements/mine', authMiddleware, async (req, res, next) => {
   }
 });
 
+// Auth: achievement progress for current user
+router.get('/achievements/progress', authMiddleware, async (req, res, next) => {
+  try {
+    const progress = await achievementsService.getAchievementProgress(req.user!.userId);
+    res.json({ progress });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
