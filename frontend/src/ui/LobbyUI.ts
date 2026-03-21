@@ -277,7 +277,7 @@ export class LobbyUI {
 
           <div class="sidebar-section-label">Progress</div>
           <button class="sidebar-nav-item" id="nav-leaderboard">
-            <span class="nav-icon">&#9813;</span>
+            <span class="nav-icon">&#9818;</span>
             <span class="nav-label">Leaderboard</span>
           </button>
 
@@ -315,7 +315,7 @@ export class LobbyUI {
             </div>
           </div>
           <button class="sidebar-nav-item" id="nav-logout">
-            <span class="nav-icon">&#9211;</span>
+            <span class="nav-icon">&#9109;</span>
             <span class="nav-label">Logout</span>
           </button>
         </div>
