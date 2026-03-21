@@ -3295,30 +3295,6 @@
     }
 
     /* Watermark */
-    .main-body::before {
-      content: 'BLASTARENA';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-family: var(--font-display);
-      font-weight: 700;
-      font-size: 8vw;
-      letter-spacing: 12px;
-      text-transform: uppercase;
-      /* Two-tone: BLAST in white, ARENA in primary via gradient */
-      background: linear-gradient(90deg, var(--text) 0%, var(--text) 50%, var(--primary) 50%, var(--primary) 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      opacity: 0.025;
-      filter: blur(4px);
-      pointer-events: none;
-      z-index: 0;
-      white-space: nowrap;
-      user-select: none;
-    }
-
     .main-body > * {
       position: relative;
       z-index: 1;
