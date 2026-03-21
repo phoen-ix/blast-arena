@@ -58,7 +58,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
   - `EffectSystem.ts` — screen shake, debris particles, collection popups via socket events
   - `CountdownOverlay.ts` — animated "3, 2, 1, GO!" countdown
   - `GamepadManager.ts` — gamepad input polling with deadzone, D-pad/stick, just-pressed tracking
-  - `Settings.ts` — per-user visual settings (animations, shake, particles) in localStorage
+  - `Settings.ts` — per-user visual settings (animations, shake, particles, lobbyChat) in localStorage
   - `EnemySprite.ts` / `EnemyTextureGenerator.ts` — campaign enemy rendering (see [docs/campaign.md](docs/campaign.md))
 - **Procedural textures**: All sprites generated in `BootScene.generateTextures()` — no external image assets. Player textures: 4 directional variants with eyes per color. Power-up textures: Canvas2D emoji icons (💣🔥⚡🛡️👢💥📡🧨) on rounded-rect backgrounds. Enemy textures on-demand via `EnemyTextureGenerator.ts`
 - **Particle textures**: `particle_fire`, `particle_smoke`, `particle_spark`, `particle_debris`, `particle_star`, `particle_shield` generated in BootScene
@@ -161,7 +161,7 @@ Social features for the lobby: friend list, online presence, party grouping, and
 - **FriendsPanel** (`frontend/src/ui/FriendsPanel.ts`): Three tabs: Friends (sorted online-first), Requests (incoming+outgoing), Blocked. Search bar with username prefix lookup. Live-updates via socket events. Supports `renderEmbedded()` for inline view rendering.
 - **PartyBar** (`frontend/src/ui/PartyBar.ts`): Persistent bar at top of `.main-content` when in party. Member chips, chat toggle (hidden when chat disabled for user's role), leave button. Chat window is in-memory ephemeral messages. Fetches `party_chat_mode` on init and listens for `admin:settingsChanged` to update in real-time.
 - **Invite toasts**: Action toasts with Accept/Decline buttons, 30s auto-dismiss. Triggered by `party:invite` and `invite:room` socket events.
-- **LobbyChatPanel** (`frontend/src/ui/LobbyChatPanel.ts`): Fixed collapsible panel bottom-right (z-index 150, 380px wide). Uses `.lobby-chat` CSS classes. Broadcasts to all users. Role-colored names. Checks `lobby_chat_mode` setting.
+- **LobbyChatPanel** (`frontend/src/ui/LobbyChatPanel.ts`): Fixed collapsible panel bottom-right (z-index 150, 380px wide). Uses `.lobby-chat` CSS classes. Broadcasts to all users. Role-colored names. Checks `lobby_chat_mode` admin setting and `lobbyChat` user setting (Settings > Preferences > Chat). User toggle dispatches `lobbychat-toggle` window event; LobbyUI listens to refresh panel visibility.
 - **DMPanel** (`frontend/src/ui/DMPanel.ts`): Two views: conversation list with unread badges, active conversation with message history. Real-time via `dm:receive`/`dm:read` socket events. Supports `renderEmbedded()` for inline view rendering.
 - **EmoteBubbleRenderer** (`frontend/src/game/EmoteBubble.ts`): Phaser composed renderer. Floating text bubbles above players with tween animations (float up + fade out). Follows player positions.
 - LobbyUI: Friends, Messages, Party in sidebar nav (Social section). PartyBar and LobbyChatPanel mounted with lobby.

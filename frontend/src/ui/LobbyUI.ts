@@ -18,6 +18,7 @@ export class LobbyUI {
   private notifications: NotificationUI;
   private onJoinRoom: (room: Room) => void;
   private roomListHandler: ((rooms: RoomListItem[]) => void) | null = null;
+  private lobbyChatToggleHandler: (() => void) | null = null;
   private partyBar: PartyBar;
   private lobbyChatPanel: LobbyChatPanel;
   private sidebarCollapsed = false;
@@ -73,6 +74,10 @@ export class LobbyUI {
     }
     this.lobbyChatPanel.mount(this.container);
 
+    // Listen for lobby chat user-setting toggle
+    this.lobbyChatToggleHandler = () => this.lobbyChatPanel.refreshVisibility();
+    window.addEventListener('lobbychat-toggle', this.lobbyChatToggleHandler);
+
     // Navigate to initial view
     this.navigateTo(this.initialView || 'rooms', this.initialViewOptions || undefined);
 
@@ -91,6 +96,10 @@ export class LobbyUI {
     if (this.roomListHandler) {
       this.socketClient.off('room:list' as any, this.roomListHandler as any);
       this.roomListHandler = null;
+    }
+    if (this.lobbyChatToggleHandler) {
+      window.removeEventListener('lobbychat-toggle', this.lobbyChatToggleHandler);
+      this.lobbyChatToggleHandler = null;
     }
     UIGamepadNavigator.getInstance().popContext('lobby');
     this.lobbyChatPanel.unmount();

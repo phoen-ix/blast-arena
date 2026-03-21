@@ -372,6 +372,20 @@ export class SettingsUI {
             </div>
           </div>
         </div>
+
+        <h3 class="content-section-title mt-6">Chat</h3>
+        <div class="settings-toggle-list">
+          <div class="setting-row">
+            <label class="toggle-switch">
+              <input type="checkbox" name="lobbyChat" ${settings.lobbyChat ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="setting-row-info">
+              <div class="setting-row-label">Lobby Chat</div>
+              <div class="setting-row-desc">Show the lobby chat panel in the bottom-right corner</div>
+            </div>
+          </div>
+        </div>
       </div>
     `;
 
@@ -398,6 +412,9 @@ export class SettingsUI {
       const current = getSettings();
       (current as any)[key] = target.checked;
       saveSettings(current);
+      if (key === 'lobbyChat') {
+        window.dispatchEvent(new CustomEvent('lobbychat-toggle'));
+      }
     });
   }
 

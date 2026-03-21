@@ -3,6 +3,7 @@ import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
 import { LobbyChatMessage, ChatMode, UserRole, LOBBY_CHAT_MAX_LENGTH } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
+import { getSettings } from '../game/Settings';
 
 export class LobbyChatPanel {
   private container: HTMLElement;
@@ -60,6 +61,11 @@ export class LobbyChatPanel {
     this.render();
   }
 
+  /** Re-check user setting and show/hide accordingly */
+  refreshVisibility(): void {
+    this.render();
+  }
+
   unmount(): void {
     this.container.remove();
   }
@@ -99,6 +105,15 @@ export class LobbyChatPanel {
   private render(): void {
     this.container.className = 'lobby-chat';
     this.container.innerHTML = '';
+
+    // User-level disable
+    if (!getSettings().lobbyChat) {
+      this.container.style.display = 'none';
+      this.messagesEl = null;
+      this.inputEl = null;
+      return;
+    }
+    this.container.style.display = '';
 
     // Toggle button
     const toggle = document.createElement('button');

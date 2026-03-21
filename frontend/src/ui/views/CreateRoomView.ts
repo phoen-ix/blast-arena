@@ -221,11 +221,11 @@ export class CreateRoomView implements ILobbyView {
                 .join('')}
             </div>
           </div>
-        </div>
 
-        <div class="create-room-footer">
-          <button class="btn btn-ghost" id="cr-cancel">Cancel</button>
-          <button class="btn btn-primary" id="cr-submit">Create Room</button>
+          <div class="create-room-actions">
+            <button class="btn btn-ghost" id="cr-cancel">Cancel</button>
+            <button class="btn btn-primary" id="cr-submit">Create Room</button>
+          </div>
         </div>
       </div>
     `;
