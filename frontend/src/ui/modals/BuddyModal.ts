@@ -39,8 +39,18 @@ export function showBuddyModal(
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Buddy Mode');
 
+  const escHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      onCancel();
+    }
+  };
   function closeModal(): void {
+    document.removeEventListener('keydown', escHandler);
     UIGamepadNavigator.getInstance().popContext('buddy-modal');
     overlay.remove();
   }
@@ -226,6 +236,7 @@ export function showBuddyModal(
     const closeBtn = document.createElement('button');
     closeBtn.className = 'btn btn-ghost btn-sm';
     closeBtn.textContent = '\u2715';
+    closeBtn.setAttribute('aria-label', 'Close');
     closeBtn.style.cssText = 'font-size:18px;padding:4px 8px;';
     closeBtn.addEventListener('click', () => {
       closeModal();
@@ -355,6 +366,8 @@ export function showBuddyModal(
       },
     });
   }
+
+  document.addEventListener('keydown', escHandler);
 
   const uiOverlay = document.getElementById('ui-overlay');
   if (uiOverlay) {

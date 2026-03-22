@@ -37,13 +37,17 @@ export class FriendsPanel {
   }
 
   private setupSocketListeners(): void {
-    this.friendUpdateHandler = (data: any) => {
+    this.friendUpdateHandler = (data: {
+      friends: Friend[];
+      incoming: FriendRequest[];
+      outgoing: FriendRequest[];
+    }) => {
       this.friends = data.friends;
       this.incoming = data.incoming;
       this.outgoing = data.outgoing;
       this.renderContent();
     };
-    this.socketClient.on('friend:update' as any, this.friendUpdateHandler);
+    this.socketClient.on('friend:update', this.friendUpdateHandler);
 
     this.friendRequestHandler = (data: FriendRequest) => {
       if (!this.incoming.some((r) => r.fromUserId === data.fromUserId)) {
@@ -52,13 +56,13 @@ export class FriendsPanel {
       this.renderContent();
       this.notifications.info(`${data.fromUsername} sent you a friend request`);
     };
-    this.socketClient.on('friend:requestReceived' as any, this.friendRequestHandler);
+    this.socketClient.on('friend:requestReceived', this.friendRequestHandler);
 
     this.friendRemovedHandler = (data: { userId: number }) => {
       this.friends = this.friends.filter((f) => f.userId !== data.userId);
       this.renderContent();
     };
-    this.socketClient.on('friend:removed' as any, this.friendRemovedHandler);
+    this.socketClient.on('friend:removed', this.friendRemovedHandler);
 
     this.friendOnlineHandler = (data: { userId: number; activity: ActivityStatus }) => {
       const friend = this.friends.find((f) => f.userId === data.userId);
@@ -67,7 +71,7 @@ export class FriendsPanel {
         this.renderContent();
       }
     };
-    this.socketClient.on('friend:online' as any, this.friendOnlineHandler);
+    this.socketClient.on('friend:online', this.friendOnlineHandler);
 
     this.friendOfflineHandler = (data: { userId: number }) => {
       const friend = this.friends.find((f) => f.userId === data.userId);
@@ -76,7 +80,7 @@ export class FriendsPanel {
         this.renderContent();
       }
     };
-    this.socketClient.on('friend:offline' as any, this.friendOfflineHandler);
+    this.socketClient.on('friend:offline', this.friendOfflineHandler);
   }
 
   mount(): void {
@@ -101,26 +105,23 @@ export class FriendsPanel {
   }
 
   destroy(): void {
-    this.socketClient.off('friend:update' as any, this.friendUpdateHandler);
-    this.socketClient.off('friend:requestReceived' as any, this.friendRequestHandler);
-    this.socketClient.off('friend:removed' as any, this.friendRemovedHandler);
-    this.socketClient.off('friend:online' as any, this.friendOnlineHandler);
-    this.socketClient.off('friend:offline' as any, this.friendOfflineHandler);
+    this.socketClient.off('friend:update', this.friendUpdateHandler);
+    this.socketClient.off('friend:requestReceived', this.friendRequestHandler);
+    this.socketClient.off('friend:removed', this.friendRemovedHandler);
+    this.socketClient.off('friend:online', this.friendOnlineHandler);
+    this.socketClient.off('friend:offline', this.friendOfflineHandler);
     this.container.remove();
   }
 
   private loadFriends(): void {
-    this.socketClient.emit(
-      'friend:list' as any,
-      ((response: any) => {
-        if (response.success) {
-          this.friends = response.friends || [];
-          this.incoming = response.incoming || [];
-          this.outgoing = response.outgoing || [];
-          this.renderContent();
-        }
-      }) as any,
-    );
+    this.socketClient.emit('friend:list', (response) => {
+      if (response.success) {
+        this.friends = response.friends || [];
+        this.incoming = response.incoming || [];
+        this.outgoing = response.outgoing || [];
+        this.renderContent();
+      }
+    });
   }
 
   private renderContent(): void {
@@ -143,7 +144,7 @@ export class FriendsPanel {
         </button>
       </div>
       <div class="friends-search">
-        <input type="text" id="friend-search-input" placeholder="Search username..." maxlength="20">
+        <input type="text" id="friend-search-input" placeholder="Search username..." maxlength="20" aria-label="Search friends by username">
         <button class="btn btn-primary" id="friend-search-btn">Add</button>
       </div>
       <div class="friends-list" id="friends-list-content">
@@ -158,7 +159,7 @@ export class FriendsPanel {
 
     this.container.querySelectorAll('.tab-item').forEach((tab) => {
       tab.addEventListener('click', () => {
-        this.activeTab = tab.getAttribute('data-tab') as any;
+        this.activeTab = (tab.getAttribute('data-tab') as typeof this.activeTab) ?? 'friends';
         this.searchResults = [];
         this.renderContent();
       });
@@ -360,7 +361,7 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-add-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const username = btn.getAttribute('data-username')!;
-        this.socketClient.emit('friend:request' as any, { username }, ((res: any) => {
+        this.socketClient.emit('friend:request', { username }, (res) => {
           if (res.success) {
             this.notifications.success(`Friend request sent to ${username}`);
             this.searchResults = [];
@@ -368,7 +369,7 @@ export class FriendsPanel {
           } else {
             this.notifications.error(res.error || 'Failed to send request');
           }
-        }) as any);
+        });
       });
     });
 
@@ -376,7 +377,7 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-accept-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const fromUserId = parseInt(btn.getAttribute('data-from-id')!);
-        this.socketClient.emit('friend:accept' as any, { fromUserId }, ((res: any) => {
+        this.socketClient.emit('friend:accept', { fromUserId }, (res) => {
           if (res.success) {
             this.notifications.success('Friend request accepted');
             this.incoming = this.incoming.filter((r) => r.fromUserId !== fromUserId);
@@ -384,7 +385,7 @@ export class FriendsPanel {
           } else {
             this.notifications.error(res.error || 'Failed');
           }
-        }) as any);
+        });
       });
     });
 
@@ -392,12 +393,12 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-decline-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const fromUserId = parseInt(btn.getAttribute('data-from-id')!);
-        this.socketClient.emit('friend:decline' as any, { fromUserId }, ((res: any) => {
+        this.socketClient.emit('friend:decline', { fromUserId }, (res) => {
           if (res.success) {
             this.incoming = this.incoming.filter((r) => r.fromUserId !== fromUserId);
             this.renderContent();
           }
-        }) as any);
+        });
       });
     });
 
@@ -405,12 +406,12 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-cancel-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const toUserId = parseInt(btn.getAttribute('data-to-id')!);
-        this.socketClient.emit('friend:cancel' as any, { toUserId }, ((res: any) => {
+        this.socketClient.emit('friend:cancel', { toUserId }, (res) => {
           if (res.success) {
             this.outgoing = this.outgoing.filter((r) => r.fromUserId !== toUserId);
             this.renderContent();
           }
-        }) as any);
+        });
       });
     });
 
@@ -418,12 +419,12 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-remove-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const friendId = parseInt(btn.getAttribute('data-friend-id')!);
-        this.socketClient.emit('friend:remove' as any, { friendId }, ((res: any) => {
+        this.socketClient.emit('friend:remove', { friendId }, (res) => {
           if (res.success) {
             this.friends = this.friends.filter((f) => f.userId !== friendId);
             this.renderContent();
           }
-        }) as any);
+        });
       });
     });
 
@@ -431,12 +432,12 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-unblock-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const userId = parseInt(btn.getAttribute('data-user-id')!);
-        this.socketClient.emit('friend:unblock' as any, { userId }, ((res: any) => {
+        this.socketClient.emit('friend:unblock', { userId }, (res) => {
           if (res.success) {
             this.blocked = this.blocked.filter((b) => b.userId !== userId);
             this.renderContent();
           }
-        }) as any);
+        });
       });
     });
 
@@ -444,13 +445,13 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-join-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const roomCode = btn.getAttribute('data-room')!;
-        this.socketClient.emit('room:join' as any, { code: roomCode }, ((res: any) => {
+        this.socketClient.emit('room:join', { code: roomCode }, (res) => {
           if (res.success) {
             this.close();
           } else {
             this.notifications.error(res.error || 'Failed to join');
           }
-        }) as any);
+        });
       });
     });
 
@@ -469,13 +470,13 @@ export class FriendsPanel {
     this.container.querySelectorAll('.friend-invite-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const targetUserId = parseInt(btn.getAttribute('data-user-id')!);
-        this.socketClient.emit('invite:room' as any, { userId: targetUserId }, ((res: any) => {
+        this.socketClient.emit('invite:room', { userId: targetUserId }, (res) => {
           if (res.success) {
             this.notifications.success('Invite sent');
           } else {
             this.notifications.error(res.error || 'Failed to invite');
           }
-        }) as any);
+        });
       });
     });
   }

@@ -3,6 +3,15 @@ import { SOCKET_URL, API_URL } from '../config';
 import { ClientToServerEvents, ServerToClientEvents } from '@blast-arena/shared';
 import { AuthManager } from './AuthManager';
 
+/** Extract parameter types from an event handler function type */
+type EventParams<T> = T extends (...args: infer P) => void ? P : never;
+
+/** Union of all server-to-client event names */
+type ServerEventName = keyof ServerToClientEvents;
+
+/** Union of all client-to-server event names */
+type ClientEventName = keyof ClientToServerEvents;
+
 export class SocketClient {
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null;
   private authManager: AuthManager;
@@ -62,24 +71,31 @@ export class SocketClient {
     return this.socket?.connected ?? false;
   }
 
-  // Socket.io's overloaded method signatures don't work with generic wrappers,
-  // so we cast to a minimal interface. Event names and payloads are still typed at call sites.
-  /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-function-type */
-  emit(event: string, ...args: any[]): void {
+  // Typed wrappers around Socket.io methods. We use Function casts internally because
+  // Socket.io's heavily overloaded method signatures don't resolve through generic wrappers,
+  // but the public API is fully typed via ClientToServerEvents / ServerToClientEvents.
+  /* eslint-disable @typescript-eslint/no-unsafe-function-type */
+  emit<E extends ClientEventName>(event: E, ...args: EventParams<ClientToServerEvents[E]>): void {
     if (!this.socket) return;
     (this.socket.emit as Function).call(this.socket, event, ...args);
   }
 
-  on(event: string, handler: (...args: any[]) => void): void {
+  on<E extends ServerEventName>(
+    event: E,
+    handler: (...args: EventParams<ServerToClientEvents[E]>) => void,
+  ): void {
     if (!this.socket) return;
     (this.socket.on as Function).call(this.socket, event, handler);
   }
 
-  off(event: string, handler?: (...args: any[]) => void): void {
+  off<E extends ServerEventName>(
+    event: E,
+    handler?: (...args: EventParams<ServerToClientEvents[E]>) => void,
+  ): void {
     if (!this.socket) return;
     (this.socket.off as Function).call(this.socket, event, handler);
   }
-  /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-function-type */
+  /* eslint-enable @typescript-eslint/no-unsafe-function-type */
 
   /** Check if the server has been rebuilt since we last connected */
   private async checkBuild(): Promise<void> {

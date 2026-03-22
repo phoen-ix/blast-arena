@@ -555,6 +555,9 @@ export class CampaignTab {
     const isEdit = !!existing;
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', isEdit ? 'Edit World' : 'Create World');
 
     const themeOptions = THEME_OPTIONS.map(
       (t) =>
@@ -760,6 +763,9 @@ export class CampaignTab {
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', isEdit ? 'Edit Enemy Type' : 'Create Enemy Type');
 
     const bodyShapeOptions = ENEMY_BODY_SHAPES.map(
       (s) =>
@@ -1099,6 +1105,9 @@ export class CampaignTab {
   private showImportLevelModal(worldId: number): void {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Import Level');
 
     overlay.innerHTML = `
       <div class="camp-modal-body md">
@@ -1203,6 +1212,9 @@ export class CampaignTab {
   ): void {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Resolve Enemy Type Conflicts');
 
     const conflictRows = conflicts
       .map((c, i) => {
@@ -1314,13 +1326,16 @@ export class CampaignTab {
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', `Delete ${labels[entityType]}`);
 
     overlay.innerHTML = `
       <div class="camp-modal-body sm">
         <h3 class="camp-modal-title danger">Delete ${labels[entityType]}</h3>
         <p class="camp-delete-confirm-text">${warnings[entityType]} <strong>${escapeHtml(name)}</strong></p>
         <p class="camp-delete-confirm-hint">Type the name to confirm:</p>
-        <input type="text" id="camp-delete-confirm" class="admin-input w-full mb-md" placeholder="${escapeAttr(name)}">
+        <input type="text" id="camp-delete-confirm" class="admin-input w-full mb-md" placeholder="${escapeAttr(name)}" aria-label="Type name to confirm deletion">
         <div class="camp-modal-actions">
           <button class="btn btn-secondary" id="camp-delete-cancel">Cancel</button>
           <button class="btn btn-danger" id="camp-delete-submit" disabled>Delete</button>

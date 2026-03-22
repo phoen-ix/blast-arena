@@ -75,10 +75,12 @@ export async function register(
   email: string,
   password: string,
 ): Promise<AuthResponse> {
+  const normalizedEmail = email.toLowerCase();
+
   // Check existing user
   const existing = await query<IdRow[]>('SELECT id FROM users WHERE username = ? OR email = ?', [
     username,
-    email,
+    normalizedEmail,
   ]);
   if (existing.length > 0) {
     throw new AppError('Username or email already taken', 409, 'CONFLICT');
@@ -89,7 +91,7 @@ export async function register(
 
   const result = await execute(
     `INSERT INTO users (username, email, password_hash, email_verify_token) VALUES (?, ?, ?, ?)`,
-    [username, email, passwordHash, hashToken(verifyToken)],
+    [username, normalizedEmail, passwordHash, hashToken(verifyToken)],
   );
 
   // Create user_stats row
@@ -101,7 +103,7 @@ export async function register(
   });
 
   // Send verification email (non-blocking)
-  sendVerificationEmail(email, verifyToken).catch((err) => {
+  sendVerificationEmail(normalizedEmail, verifyToken).catch((err) => {
     logger.error({ err }, 'Failed to send verification email');
   });
 

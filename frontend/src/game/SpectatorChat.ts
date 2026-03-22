@@ -31,7 +31,7 @@ export class SpectatorChat {
   private inputEl: HTMLInputElement | null = null;
   private toggleBtn: HTMLElement | null = null;
   private chatHandler: ((data: SpectatorChatMessage) => void) | null = null;
-  private settingsHandler: ((data: { key: string; value: unknown }) => void) | null = null;
+  private settingsHandler: ((data: { key: string; value?: unknown }) => void) | null = null;
 
   constructor(socketClient: SocketClient, userId: number, userRole: string) {
     this.socketClient = socketClient;
@@ -60,11 +60,11 @@ export class SpectatorChat {
 
   destroy(): void {
     if (this.chatHandler) {
-      this.socketClient.off('game:spectatorChat' as any, this.chatHandler as any);
+      this.socketClient.off('game:spectatorChat', this.chatHandler);
       this.chatHandler = null;
     }
     if (this.settingsHandler) {
-      this.socketClient.off('admin:settingsChanged' as any, this.settingsHandler as any);
+      this.socketClient.off('admin:settingsChanged', this.settingsHandler);
       this.settingsHandler = null;
     }
     this.container?.remove();
@@ -83,15 +83,15 @@ export class SpectatorChat {
       }
       this.renderMessages();
     };
-    this.socketClient.on('game:spectatorChat' as any, this.chatHandler as any);
+    this.socketClient.on('game:spectatorChat', this.chatHandler);
 
-    this.settingsHandler = (data: { key: string; value: unknown }) => {
+    this.settingsHandler = (data: { key: string; value?: unknown }) => {
       if (data.key === 'spectator_chat_mode') {
         this.chatMode = data.value as ChatMode;
         this.render();
       }
     };
-    this.socketClient.on('admin:settingsChanged' as any, this.settingsHandler as any);
+    this.socketClient.on('admin:settingsChanged', this.settingsHandler);
   }
 
   private canChat(): boolean {
@@ -146,7 +146,9 @@ export class SpectatorChat {
         <div id="spec-chat-messages" style="
           height:160px;overflow-y:auto;padding:6px 8px;font-size:12px;
         "></div>
-        ${canSend ? `
+        ${
+          canSend
+            ? `
           <div style="padding:6px 8px;border-top:1px solid var(--border);display:flex;gap:4px;">
             <input id="spec-chat-input" type="text" maxlength="200" placeholder="Type a message..."
               style="flex:1;background:var(--bg-surface);border:1px solid var(--border);
@@ -157,7 +159,9 @@ export class SpectatorChat {
               border-radius:6px;cursor:pointer;font-size:12px;font-family:DM Sans,sans-serif;
             ">Send</button>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
 
@@ -176,7 +180,7 @@ export class SpectatorChat {
       const send = () => {
         const msg = this.inputEl?.value.trim();
         if (!msg) return;
-        this.socketClient.emit('game:spectatorChat' as any, { message: msg });
+        this.socketClient.emit('game:spectatorChat', { message: msg });
         if (this.inputEl) this.inputEl.value = '';
       };
 

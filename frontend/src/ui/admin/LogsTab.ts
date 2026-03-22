@@ -1,6 +1,6 @@
 import { ApiClient } from '../../network/ApiClient';
 import { NotificationUI } from '../NotificationUI';
-import { escapeHtml, escapeAttr } from '../../utils/html';
+import { escapeHtml } from '../../utils/html';
 
 export class LogsTab {
   private container: HTMLElement | null = null;
@@ -38,7 +38,7 @@ export class LogsTab {
       this.container.innerHTML = `
         <div class="admin-filters">
           <label style="color:var(--text-dim);font-size:13px;">Filter by action:</label>
-          <select id="action-filter">
+          <select id="action-filter" aria-label="Filter by action">
             <option value="">All</option>
             <option value="role_change" ${this.actionFilter === 'role_change' ? 'selected' : ''}>Role Change</option>
             <option value="deactivate" ${this.actionFilter === 'deactivate' ? 'selected' : ''}>Deactivate</option>

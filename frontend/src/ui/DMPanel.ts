@@ -29,7 +29,7 @@ export class DMPanel {
   // Socket handler references for cleanup
   private dmReceiveHandler: (message: DirectMessage) => void;
   private dmReadHandler: (data: { fromUserId: number; readAt: string }) => void;
-  private settingsChangedHandler: (data: { key: string; value: any }) => void;
+  private settingsChangedHandler: (data: { key: string; value?: unknown }) => void;
 
   constructor(
     socketClient: SocketClient,
@@ -52,7 +52,7 @@ export class DMPanel {
       this.handleDMRead(data);
     };
 
-    this.settingsChangedHandler = (data: { key: string; value: any }) => {
+    this.settingsChangedHandler = (data: { key: string; value?: unknown }) => {
       if (data.key === 'dm_mode') {
         this.dmMode = data.value as ChatMode;
         this.renderCurrentView();
@@ -81,9 +81,9 @@ export class DMPanel {
   }
 
   private setupSocketListeners(): void {
-    this.socketClient.on('dm:receive' as any, this.dmReceiveHandler);
-    this.socketClient.on('dm:read' as any, this.dmReadHandler);
-    this.socketClient.on('admin:settingsChanged' as any, this.settingsChangedHandler);
+    this.socketClient.on('dm:receive', this.dmReceiveHandler);
+    this.socketClient.on('dm:read', this.dmReadHandler);
+    this.socketClient.on('admin:settingsChanged', this.settingsChangedHandler);
   }
 
   private handleDMReceive(message: DirectMessage): void {
@@ -92,7 +92,7 @@ export class DMPanel {
       this.messages.push(message);
       this.renderMessages();
       this.scrollToBottom();
-      this.socketClient.emit('dm:read' as any, { fromUserId: message.senderId });
+      this.socketClient.emit('dm:read', { fromUserId: message.senderId });
     } else {
       // Update unread count in conversation list
       const conv = this.conversations.find((c) => c.userId === message.senderId);
@@ -142,9 +142,9 @@ export class DMPanel {
   }
 
   destroy(): void {
-    this.socketClient.off('dm:receive' as any, this.dmReceiveHandler);
-    this.socketClient.off('dm:read' as any, this.dmReadHandler);
-    this.socketClient.off('admin:settingsChanged' as any, this.settingsChangedHandler);
+    this.socketClient.off('dm:receive', this.dmReceiveHandler);
+    this.socketClient.off('dm:read', this.dmReadHandler);
+    this.socketClient.off('admin:settingsChanged', this.settingsChangedHandler);
     this.container.remove();
   }
 
@@ -168,7 +168,7 @@ export class DMPanel {
     this.messages = [];
     this.renderCurrentView();
     this.loadMessages(userId);
-    this.socketClient.emit('dm:read' as any, { fromUserId: userId });
+    this.socketClient.emit('dm:read', { fromUserId: userId });
     // Clear unread for this conversation
     const conv = this.conversations.find((c) => c.userId === userId);
     if (conv) conv.unreadCount = 0;
@@ -398,9 +398,9 @@ export class DMPanel {
         if (!text || !this.activeConversation) return;
 
         this.socketClient.emit(
-          'dm:send' as any,
+          'dm:send',
           { toUserId: this.activeConversation.userId, message: text },
-          ((res: any) => {
+          (res) => {
             if (res.success && res.message) {
               this.messages.push(res.message);
               this.renderMessages();
@@ -416,7 +416,7 @@ export class DMPanel {
             } else {
               this.notifications.error(res.error || 'Failed to send message');
             }
-          }) as any,
+          },
         );
         input.value = '';
       };

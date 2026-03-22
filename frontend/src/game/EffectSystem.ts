@@ -10,12 +10,14 @@ export class EffectSystem {
   private localPlayerAlive: boolean = true;
 
   private explosionHandler:
-    | ((data: { id: string; cells: { x: number; y: number }[]; ownerId: number }) => void)
+    | ((data: { cells: { x: number; y: number }[]; ownerId: number }) => void)
     | null = null;
   private playerDiedHandler:
     | ((data: { playerId: number; killerId: number | null }) => void)
     | null = null;
-  private powerupCollectedHandler: ((data: { id: string; playerId: number }) => void) | null = null;
+  private powerupCollectedHandler:
+    | ((data: { playerId: number; type: string; position: { x: number; y: number } }) => void)
+    | null = null;
 
   constructor(scene: Phaser.Scene, socketClient: SocketClient, localPlayerId: number) {
     this.scene = scene;
@@ -37,9 +39,9 @@ export class EffectSystem {
       // Power-up collection effects are handled in the renderer via state diff
     };
 
-    this.socketClient.on('game:explosion', this.explosionHandler as any);
-    this.socketClient.on('game:playerDied', this.playerDiedHandler as any);
-    this.socketClient.on('game:powerupCollected', this.powerupCollectedHandler as any);
+    this.socketClient.on('game:explosion', this.explosionHandler);
+    this.socketClient.on('game:playerDied', this.playerDiedHandler);
+    this.socketClient.on('game:powerupCollected', this.powerupCollectedHandler);
   }
 
   setLocalPlayerAlive(alive: boolean): void {
@@ -174,13 +176,13 @@ export class EffectSystem {
 
   destroy(): void {
     if (this.explosionHandler) {
-      this.socketClient.off('game:explosion', this.explosionHandler as any);
+      this.socketClient.off('game:explosion', this.explosionHandler);
     }
     if (this.playerDiedHandler) {
-      this.socketClient.off('game:playerDied', this.playerDiedHandler as any);
+      this.socketClient.off('game:playerDied', this.playerDiedHandler);
     }
     if (this.powerupCollectedHandler) {
-      this.socketClient.off('game:powerupCollected', this.powerupCollectedHandler as any);
+      this.socketClient.off('game:powerupCollected', this.powerupCollectedHandler);
     }
   }
 }

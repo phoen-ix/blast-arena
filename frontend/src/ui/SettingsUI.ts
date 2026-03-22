@@ -182,7 +182,7 @@ export class SettingsUI {
               : ''
           }
           <div class="form-group">
-            <input type="email" class="input" id="acct-new-email" placeholder="New email address" maxlength="255">
+            <input type="email" class="input" id="acct-new-email" placeholder="New email address" maxlength="255" aria-label="New email address">
           </div>
           <div id="acct-email-status" class="settings-status"></div>
           <button class="btn btn-primary" id="acct-change-email">${isAdmin ? 'Change Email' : 'Send Confirmation'}</button>
@@ -193,9 +193,9 @@ export class SettingsUI {
         <div class="content-section">
           <h3 class="settings-section-title">Change Password</h3>
           <div class="form-group settings-field-stack">
-            <input type="password" class="input" id="acct-current-password" placeholder="Current password" autocomplete="current-password">
-            <input type="password" class="input" id="acct-new-password" placeholder="New password (min 8 characters)" autocomplete="new-password">
-            <input type="password" class="input" id="acct-confirm-password" placeholder="Confirm new password" autocomplete="new-password">
+            <input type="password" class="input" id="acct-current-password" placeholder="Current password" autocomplete="current-password" aria-label="Current password">
+            <input type="password" class="input" id="acct-new-password" placeholder="New password (min 8 characters)" autocomplete="new-password" aria-label="New password">
+            <input type="password" class="input" id="acct-confirm-password" placeholder="Confirm new password" autocomplete="new-password" aria-label="Confirm new password">
           </div>
           <div id="acct-password-status" class="settings-status"></div>
           <button class="btn btn-primary" id="acct-change-password">Change Password</button>
@@ -345,7 +345,7 @@ export class SettingsUI {
         <div class="settings-toggle-list">
           <div class="setting-row">
             <label class="toggle-switch">
-              <input type="checkbox" name="animations" ${settings.animations ? 'checked' : ''}>
+              <input type="checkbox" name="animations" role="switch" aria-checked="${settings.animations ? 'true' : 'false'}" ${settings.animations ? 'checked' : ''}>
               <span class="toggle-slider"></span>
             </label>
             <div class="setting-row-info">
@@ -355,7 +355,7 @@ export class SettingsUI {
           </div>
           <div class="setting-row">
             <label class="toggle-switch">
-              <input type="checkbox" name="screenShake" ${settings.screenShake ? 'checked' : ''}>
+              <input type="checkbox" name="screenShake" role="switch" aria-checked="${settings.screenShake ? 'true' : 'false'}" ${settings.screenShake ? 'checked' : ''}>
               <span class="toggle-slider"></span>
             </label>
             <div class="setting-row-info">
@@ -365,7 +365,7 @@ export class SettingsUI {
           </div>
           <div class="setting-row">
             <label class="toggle-switch">
-              <input type="checkbox" name="particles" ${settings.particles ? 'checked' : ''}>
+              <input type="checkbox" name="particles" role="switch" aria-checked="${settings.particles ? 'true' : 'false'}" ${settings.particles ? 'checked' : ''}>
               <span class="toggle-slider"></span>
             </label>
             <div class="setting-row-info">
@@ -379,7 +379,7 @@ export class SettingsUI {
         <div class="settings-toggle-list">
           <div class="setting-row">
             <label class="toggle-switch">
-              <input type="checkbox" name="lobbyChat" ${settings.lobbyChat ? 'checked' : ''}>
+              <input type="checkbox" name="lobbyChat" role="switch" aria-checked="${settings.lobbyChat ? 'true' : 'false'}" ${settings.lobbyChat ? 'checked' : ''}>
               <span class="toggle-slider"></span>
             </label>
             <div class="setting-row-info">
@@ -436,6 +436,9 @@ export class SettingsUI {
       if (!(key in getSettings())) return;
       const current = getSettings();
       (current as any)[key] = target.checked;
+      if (target.hasAttribute('role') && target.getAttribute('role') === 'switch') {
+        target.setAttribute('aria-checked', String(target.checked));
+      }
       saveSettings(current);
       if (key === 'lobbyChat') {
         window.dispatchEvent(new CustomEvent('lobbychat-toggle'));

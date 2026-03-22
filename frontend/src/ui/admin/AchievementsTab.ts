@@ -255,6 +255,9 @@ export class AchievementsTab {
     const isEdit = !!existing;
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', isEdit ? 'Edit Achievement' : 'Create Achievement');
 
     const condCfg = existing?.conditionConfig || {};
     const currentCondType = existing?.conditionType || 'cumulative';
@@ -621,6 +624,9 @@ export class AchievementsTab {
     const isEdit = !!existing;
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', isEdit ? 'Edit Cosmetic' : 'Create Cosmetic');
 
     const currentType = existing?.type || 'color';
     const cfg = existing?.config || {};
@@ -899,6 +905,9 @@ export class AchievementsTab {
   private showImportAchievementsModal(): void {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Import Achievements');
 
     overlay.innerHTML = `
       <div class="modal" style="max-width:520px;">
@@ -1027,6 +1036,9 @@ export class AchievementsTab {
   ): void {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Resolve Cosmetic Conflicts');
 
     const rows = conflicts
       .map((c, i) => {
@@ -1149,13 +1161,16 @@ export class AchievementsTab {
   ): void {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', `Delete ${entity}`);
 
     overlay.innerHTML = `
       <div class="modal" style="max-width:420px;">
         <h2 class="text-danger">Delete ${escapeHtml(entity)}</h2>
         <p class="modal-desc" style="font-size:14px;">This will permanently delete <strong>${escapeHtml(name)}</strong>. This action cannot be undone.</p>
         <p class="modal-hint">Type the name to confirm:</p>
-        <input type="text" class="admin-input mt-label" id="del-confirm-input" placeholder="${escapeAttr(name)}">
+        <input type="text" class="admin-input mt-label" id="del-confirm-input" placeholder="${escapeAttr(name)}" aria-label="Type name to confirm deletion">
         <div class="modal-actions">
           <button class="btn btn-secondary" id="del-cancel">Cancel</button>
           <button class="btn-danger btn-confirm" id="del-confirm" style="opacity:0.5;" disabled>Delete</button>

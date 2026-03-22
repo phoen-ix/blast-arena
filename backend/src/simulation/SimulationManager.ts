@@ -143,9 +143,7 @@ export class SimulationManager {
     const memoryBatchIds = new Set([...this.runners.keys(), ...this.queue.map((e) => e.batchId)]);
     try {
       if (!fs.existsSync(SIM_LOG_DIR)) {
-        history.sort(
-          (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
-        );
+        history.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
         return { batches: history.slice((page - 1) * limit, page * limit), total: history.length };
       }
 
@@ -419,7 +417,7 @@ export class SimulationManager {
         config: e.config,
         queuedAt: e.queuedAt.toISOString(),
       }));
-      io.to('sim:admin').emit('sim:queueUpdate' as any, { queue: queueStatus });
+      io.to('sim:admin').emit('sim:queueUpdate', { queue: queueStatus });
     } catch {
       // IO not available yet
     }

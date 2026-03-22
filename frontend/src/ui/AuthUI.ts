@@ -109,11 +109,11 @@ export class AuthUI {
       <div class="auth-form">
         <h2><span>BLAST</span>ARENA</h2>
         <div class="form-group">
-          <label>Username</label>
+          <label for="login-username">Username</label>
           <input type="text" id="login-username" placeholder="Enter username" autocomplete="username">
         </div>
         <div class="form-group">
-          <label>Password</label>
+          <label for="login-password">Password</label>
           <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password">
         </div>
         <div class="form-error" id="login-error"></div>
@@ -164,11 +164,14 @@ export class AuthUI {
     }
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Imprint');
     overlay.innerHTML = `
       <div class="modal" style="max-width:600px;">
         <div class="modal-header">
           <h3>Imprint</h3>
-          <button class="modal-close">&times;</button>
+          <button class="modal-close" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body" style="white-space:pre-wrap;font-size:14px;line-height:1.6;max-height:60vh;overflow-y:auto;">${this.escapeHtml(text)}</div>
       </div>
@@ -194,15 +197,15 @@ export class AuthUI {
       <div class="auth-form">
         <h2>CREATE <span>ACCOUNT</span></h2>
         <div class="form-group">
-          <label>Username</label>
+          <label for="reg-username">Username</label>
           <input type="text" id="reg-username" placeholder="3-20 chars, letters/numbers/_/-" autocomplete="username">
         </div>
         <div class="form-group">
-          <label>Email</label>
+          <label for="reg-email">Email</label>
           <input type="email" id="reg-email" placeholder="your@email.com" autocomplete="email">
         </div>
         <div class="form-group">
-          <label>Password</label>
+          <label for="reg-password">Password</label>
           <input type="password" id="reg-password" placeholder="Min 8 characters" autocomplete="new-password">
         </div>
         <div class="form-error" id="reg-error"></div>
@@ -230,7 +233,7 @@ export class AuthUI {
       <div class="auth-form">
         <h2>RESET <span>PASSWORD</span></h2>
         <div class="form-group">
-          <label>Email</label>
+          <label for="forgot-email">Email</label>
           <input type="email" id="forgot-email" placeholder="your@email.com">
         </div>
         <div class="form-error" id="forgot-error"></div>

@@ -63,8 +63,18 @@ export function showLocalCoopModal(
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Local Co-Op Setup');
 
+  const escHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      onCancel();
+    }
+  };
   function closeModal(): void {
+    document.removeEventListener('keydown', escHandler);
     UIGamepadNavigator.getInstance().popContext('local-coop-modal');
     overlay.remove();
   }
@@ -160,6 +170,7 @@ export function showLocalCoopModal(
     const closeBtn = document.createElement('button');
     closeBtn.className = 'btn btn-ghost btn-sm';
     closeBtn.textContent = '\u2715';
+    closeBtn.setAttribute('aria-label', 'Close');
     closeBtn.style.cssText = 'font-size:18px;padding:4px 8px;';
     closeBtn.addEventListener('click', () => {
       closeModal();
@@ -407,6 +418,7 @@ export function showLocalCoopModal(
     usernameInput.type = 'text';
     usernameInput.className = 'input';
     usernameInput.placeholder = 'Username';
+    usernameInput.setAttribute('aria-label', 'Player 2 Username');
     usernameInput.style.cssText = 'padding:6px 10px;font-size:14px;';
     usernameInput.autocomplete = 'off';
     container.appendChild(usernameInput);
@@ -416,6 +428,7 @@ export function showLocalCoopModal(
     passwordInput.type = 'password';
     passwordInput.className = 'input';
     passwordInput.placeholder = 'Password';
+    passwordInput.setAttribute('aria-label', 'Player 2 Password');
     passwordInput.style.cssText = 'padding:6px 10px;font-size:14px;';
     passwordInput.autocomplete = 'off';
     container.appendChild(passwordInput);
@@ -426,6 +439,7 @@ export function showLocalCoopModal(
 
     const durationSelect = document.createElement('select');
     durationSelect.className = 'select';
+    durationSelect.setAttribute('aria-label', 'Login duration');
     durationSelect.style.cssText = 'padding:6px 8px;font-size:13px;flex:1;';
     for (const opt of DURATION_OPTIONS) {
       const option = document.createElement('option');
@@ -500,6 +514,7 @@ export function showLocalCoopModal(
       onCancel();
     }
   });
+  document.addEventListener('keydown', escHandler);
 
   // Check for existing P2 session cookie on modal open
   fetch('/api/local-coop/session', { credentials: 'include' })

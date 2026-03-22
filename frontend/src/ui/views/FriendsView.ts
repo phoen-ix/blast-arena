@@ -41,23 +41,27 @@ export class FriendsView implements ILobbyView {
   destroy(): void {
     this.container = null;
     const sc = this.deps.socketClient;
-    sc.off('friend:update' as any, this.friendUpdateHandler);
-    sc.off('friend:requestReceived' as any, this.friendRequestHandler);
-    sc.off('friend:removed' as any, this.friendRemovedHandler);
-    sc.off('friend:online' as any, this.friendOnlineHandler);
-    sc.off('friend:offline' as any, this.friendOfflineHandler);
+    sc.off('friend:update', this.friendUpdateHandler);
+    sc.off('friend:requestReceived', this.friendRequestHandler);
+    sc.off('friend:removed', this.friendRemovedHandler);
+    sc.off('friend:online', this.friendOnlineHandler);
+    sc.off('friend:offline', this.friendOfflineHandler);
   }
 
   private setupSocketListeners(): void {
     const sc = this.deps.socketClient;
 
-    this.friendUpdateHandler = (data: any) => {
+    this.friendUpdateHandler = (data: {
+      friends: Friend[];
+      incoming: FriendRequest[];
+      outgoing: FriendRequest[];
+    }) => {
       this.friends = data.friends;
       this.incoming = data.incoming;
       this.outgoing = data.outgoing;
       this.renderContent();
     };
-    sc.on('friend:update' as any, this.friendUpdateHandler);
+    sc.on('friend:update', this.friendUpdateHandler);
 
     this.friendRequestHandler = (data: FriendRequest) => {
       if (!this.incoming.some((r) => r.fromUserId === data.fromUserId)) {
@@ -66,13 +70,13 @@ export class FriendsView implements ILobbyView {
       this.renderContent();
       this.deps.notifications.info(`${data.fromUsername} sent you a friend request`);
     };
-    sc.on('friend:requestReceived' as any, this.friendRequestHandler);
+    sc.on('friend:requestReceived', this.friendRequestHandler);
 
     this.friendRemovedHandler = (data: { userId: number }) => {
       this.friends = this.friends.filter((f) => f.userId !== data.userId);
       this.renderContent();
     };
-    sc.on('friend:removed' as any, this.friendRemovedHandler);
+    sc.on('friend:removed', this.friendRemovedHandler);
 
     this.friendOnlineHandler = (data: { userId: number; activity: ActivityStatus }) => {
       const friend = this.friends.find((f) => f.userId === data.userId);
@@ -81,7 +85,7 @@ export class FriendsView implements ILobbyView {
         this.renderContent();
       }
     };
-    sc.on('friend:online' as any, this.friendOnlineHandler);
+    sc.on('friend:online', this.friendOnlineHandler);
 
     this.friendOfflineHandler = (data: { userId: number }) => {
       const friend = this.friends.find((f) => f.userId === data.userId);
@@ -90,21 +94,18 @@ export class FriendsView implements ILobbyView {
         this.renderContent();
       }
     };
-    sc.on('friend:offline' as any, this.friendOfflineHandler);
+    sc.on('friend:offline', this.friendOfflineHandler);
   }
 
   private loadFriends(): void {
-    this.deps.socketClient.emit(
-      'friend:list' as any,
-      ((response: any) => {
-        if (response.success) {
-          this.friends = response.friends || [];
-          this.incoming = response.incoming || [];
-          this.outgoing = response.outgoing || [];
-          this.renderContent();
-        }
-      }) as any,
-    );
+    this.deps.socketClient.emit('friend:list', (response) => {
+      if (response.success) {
+        this.friends = response.friends || [];
+        this.incoming = response.incoming || [];
+        this.outgoing = response.outgoing || [];
+        this.renderContent();
+      }
+    });
   }
 
   private loadBlocked(): void {
@@ -135,7 +136,7 @@ export class FriendsView implements ILobbyView {
             </button>
           </div>
           <div class="friends-search-bar">
-            <input type="text" class="input" id="friend-search-input" placeholder="Search by username..." maxlength="20">
+            <input type="text" class="input" id="friend-search-input" placeholder="Search by username..." maxlength="20" aria-label="Search friends by username">
             <button class="btn btn-primary" id="friend-search-btn">Add Friend</button>
           </div>
         </div>
@@ -148,7 +149,7 @@ export class FriendsView implements ILobbyView {
     // Tab switching
     this.container.querySelectorAll('.tab-item').forEach((tab) => {
       tab.addEventListener('click', () => {
-        this.activeTab = tab.getAttribute('data-tab') as any;
+        this.activeTab = (tab.getAttribute('data-tab') as typeof this.activeTab) ?? 'friends';
         this.searchResults = [];
         this.renderContent();
       });
@@ -350,7 +351,7 @@ export class FriendsView implements ILobbyView {
     this.container.querySelectorAll('.friend-add-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const username = btn.getAttribute('data-username')!;
-        sc.emit('friend:request' as any, { username }, ((res: any) => {
+        sc.emit('friend:request', { username }, (res) => {
           if (res.success) {
             this.deps.notifications.success(`Friend request sent to ${username}`);
             this.searchResults = [];
@@ -358,7 +359,7 @@ export class FriendsView implements ILobbyView {
           } else {
             this.deps.notifications.error(res.error || 'Failed to send request');
           }
-        }) as any);
+        });
       });
     });
 
@@ -366,7 +367,7 @@ export class FriendsView implements ILobbyView {
     this.container.querySelectorAll('.friend-accept-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const fromUserId = parseInt(btn.getAttribute('data-from-id')!);
-        sc.emit('friend:accept' as any, { fromUserId }, ((res: any) => {
+        sc.emit('friend:accept', { fromUserId }, (res) => {
           if (res.success) {
             this.deps.notifications.success('Friend request accepted');
             this.incoming = this.incoming.filter((r) => r.fromUserId !== fromUserId);
@@ -374,7 +375,7 @@ export class FriendsView implements ILobbyView {
           } else {
             this.deps.notifications.error(res.error || 'Failed');
           }
-        }) as any);
+        });
       });
     });
 
@@ -382,12 +383,12 @@ export class FriendsView implements ILobbyView {
     this.container.querySelectorAll('.friend-decline-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const fromUserId = parseInt(btn.getAttribute('data-from-id')!);
-        sc.emit('friend:decline' as any, { fromUserId }, ((res: any) => {
+        sc.emit('friend:decline', { fromUserId }, (res) => {
           if (res.success) {
             this.incoming = this.incoming.filter((r) => r.fromUserId !== fromUserId);
             this.renderContent();
           }
-        }) as any);
+        });
       });
     });
 
@@ -395,12 +396,12 @@ export class FriendsView implements ILobbyView {
     this.container.querySelectorAll('.friend-cancel-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const toUserId = parseInt(btn.getAttribute('data-to-id')!);
-        sc.emit('friend:cancel' as any, { toUserId }, ((res: any) => {
+        sc.emit('friend:cancel', { toUserId }, (res) => {
           if (res.success) {
             this.outgoing = this.outgoing.filter((r) => r.fromUserId !== toUserId);
             this.renderContent();
           }
-        }) as any);
+        });
       });
     });
 
@@ -408,12 +409,12 @@ export class FriendsView implements ILobbyView {
     this.container.querySelectorAll('.friend-remove-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const friendId = parseInt(btn.getAttribute('data-friend-id')!);
-        sc.emit('friend:remove' as any, { friendId }, ((res: any) => {
+        sc.emit('friend:remove', { friendId }, (res) => {
           if (res.success) {
             this.friends = this.friends.filter((f) => f.userId !== friendId);
             this.renderContent();
           }
-        }) as any);
+        });
       });
     });
 
@@ -421,12 +422,12 @@ export class FriendsView implements ILobbyView {
     this.container.querySelectorAll('.friend-unblock-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const userId = parseInt(btn.getAttribute('data-user-id')!);
-        sc.emit('friend:unblock' as any, { userId }, ((res: any) => {
+        sc.emit('friend:unblock', { userId }, (res) => {
           if (res.success) {
             this.blocked = this.blocked.filter((b) => b.userId !== userId);
             this.renderContent();
           }
-        }) as any);
+        });
       });
     });
 
@@ -434,11 +435,11 @@ export class FriendsView implements ILobbyView {
     this.container.querySelectorAll('.friend-join-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const roomCode = btn.getAttribute('data-room')!;
-        sc.emit('room:join' as any, { code: roomCode }, ((res: any) => {
+        sc.emit('room:join', { code: roomCode }, (res) => {
           if (!res.success) {
             this.deps.notifications.error(res.error || 'Failed to join');
           }
-        }) as any);
+        });
       });
     });
 
@@ -455,13 +456,13 @@ export class FriendsView implements ILobbyView {
     this.container.querySelectorAll('.friend-invite-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const targetUserId = parseInt(btn.getAttribute('data-user-id')!);
-        sc.emit('invite:room' as any, { userId: targetUserId }, ((res: any) => {
+        sc.emit('invite:room', { userId: targetUserId }, (res) => {
           if (res.success) {
             this.deps.notifications.success('Invite sent');
           } else {
             this.deps.notifications.error(res.error || 'Failed to invite');
           }
-        }) as any);
+        });
       });
     });
   }

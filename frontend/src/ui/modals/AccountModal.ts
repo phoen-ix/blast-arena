@@ -28,12 +28,15 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
 
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', 'Account Settings');
   modal.innerHTML = `
     <div class="modal" style="width:420px;">
       <h2>Account Settings</h2>
 
       <div class="form-group">
-        <label>Username</label>
+        <label for="acct-username">Username</label>
         <input type="text" id="acct-username" value="${escapeHtml(profile.username)}" maxlength="20">
         <div id="acct-username-hint" style="font-size:11px;color:var(--text-muted);margin-top:4px;">Letters, numbers, underscores, hyphens. 3-20 characters.</div>
       </div>
@@ -47,7 +50,7 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
       <hr style="border-color:var(--border);margin:16px 0;">
 
       <div class="form-group">
-        <label>Email Address</label>
+        <label for="acct-new-email">Email Address</label>
         <div style="color:var(--text-dim);font-size:13px;margin-bottom:6px;">
           Current: <strong style="color:var(--text);">${escapeHtml(profile.email)}</strong>
           ${profile.emailVerified ? '<span style="color:var(--success);margin-left:6px;">verified</span>' : '<span style="color:var(--warning);margin-left:6px;">unverified</span>'}
@@ -62,7 +65,7 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
         `
             : ''
         }
-        <input type="email" id="acct-new-email" placeholder="New email address" maxlength="255">
+        <input type="email" id="acct-new-email" placeholder="New email address" maxlength="255" aria-label="New email address">
       </div>
 
       <div id="acct-email-status" style="margin-bottom:12px;"></div>
@@ -75,9 +78,9 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
 
       <div class="form-group">
         <label>Change Password</label>
-        <input type="password" id="acct-current-password" placeholder="Current password" autocomplete="current-password" style="margin-bottom:8px;">
-        <input type="password" id="acct-new-password" placeholder="New password (min 8 characters)" autocomplete="new-password" style="margin-bottom:8px;">
-        <input type="password" id="acct-confirm-password" placeholder="Confirm new password" autocomplete="new-password">
+        <input type="password" id="acct-current-password" placeholder="Current password" autocomplete="current-password" aria-label="Current password" style="margin-bottom:8px;">
+        <input type="password" id="acct-new-password" placeholder="New password (min 8 characters)" autocomplete="new-password" aria-label="New password" style="margin-bottom:8px;">
+        <input type="password" id="acct-confirm-password" placeholder="Confirm new password" autocomplete="new-password" aria-label="Confirm new password">
       </div>
 
       <div id="acct-password-status" style="margin-bottom:12px;"></div>
@@ -154,16 +157,20 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
   // Change password
   modal.querySelector('#acct-change-password')!.addEventListener('click', async () => {
     const statusEl = modal.querySelector('#acct-password-status')!;
-    const currentPassword = (modal.querySelector('#acct-current-password') as HTMLInputElement).value;
+    const currentPassword = (modal.querySelector('#acct-current-password') as HTMLInputElement)
+      .value;
     const newPassword = (modal.querySelector('#acct-new-password') as HTMLInputElement).value;
-    const confirmPassword = (modal.querySelector('#acct-confirm-password') as HTMLInputElement).value;
+    const confirmPassword = (modal.querySelector('#acct-confirm-password') as HTMLInputElement)
+      .value;
 
     if (!currentPassword || !newPassword) {
-      statusEl.innerHTML = '<span style="color:var(--danger);">Please fill in both password fields.</span>';
+      statusEl.innerHTML =
+        '<span style="color:var(--danger);">Please fill in both password fields.</span>';
       return;
     }
     if (newPassword.length < 8) {
-      statusEl.innerHTML = '<span style="color:var(--danger);">New password must be at least 8 characters.</span>';
+      statusEl.innerHTML =
+        '<span style="color:var(--danger);">New password must be at least 8 characters.</span>';
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -197,7 +204,11 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
     });
   }
 
+  const escHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') closeModal();
+  };
   const closeModal = () => {
+    document.removeEventListener('keydown', escHandler);
     UIGamepadNavigator.getInstance().popContext('account-modal');
     modal.remove();
   };
@@ -206,6 +217,7 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
   });
+  document.addEventListener('keydown', escHandler);
 
   document.getElementById('ui-overlay')!.appendChild(modal);
 

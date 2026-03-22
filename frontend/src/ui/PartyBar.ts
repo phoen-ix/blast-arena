@@ -62,7 +62,8 @@ export class PartyBar {
     if (this.chatMode === 'everyone') return true;
     if (this.chatMode === 'disabled') return false;
     if (this.chatMode === 'admin_only') return this.currentUserRole === 'admin';
-    if (this.chatMode === 'staff') return this.currentUserRole === 'admin' || this.currentUserRole === 'moderator';
+    if (this.chatMode === 'staff')
+      return this.currentUserRole === 'admin' || this.currentUserRole === 'moderator';
     return false;
   }
 
@@ -73,13 +74,13 @@ export class PartyBar {
   }
 
   destroy(): void {
-    this.socketClient.off('party:state' as any, this.partyStateHandler);
-    this.socketClient.off('party:disbanded' as any, this.partyDisbandedHandler);
-    this.socketClient.off('party:chat' as any, this.partyChatHandler);
-    this.socketClient.off('party:invite' as any, this.partyInviteHandler);
-    this.socketClient.off('party:joinRoom' as any, this.partyJoinRoomHandler);
-    this.socketClient.off('invite:room' as any, this.roomInviteHandler);
-    this.socketClient.off('admin:settingsChanged' as any, this.settingsChangedHandler);
+    this.socketClient.off('party:state', this.partyStateHandler);
+    this.socketClient.off('party:disbanded', this.partyDisbandedHandler);
+    this.socketClient.off('party:chat', this.partyChatHandler);
+    this.socketClient.off('party:invite', this.partyInviteHandler);
+    this.socketClient.off('party:joinRoom', this.partyJoinRoomHandler);
+    this.socketClient.off('invite:room', this.roomInviteHandler);
+    this.socketClient.off('admin:settingsChanged', this.settingsChangedHandler);
     this.chatContainer?.remove();
     this.container.remove();
   }
@@ -93,7 +94,7 @@ export class PartyBar {
       this.party = party;
       this.render();
     };
-    this.socketClient.on('party:state' as any, this.partyStateHandler);
+    this.socketClient.on('party:state', this.partyStateHandler);
 
     this.partyDisbandedHandler = () => {
       this.party = null;
@@ -104,33 +105,33 @@ export class PartyBar {
       this.render();
       this.notifications.info('Party disbanded');
     };
-    this.socketClient.on('party:disbanded' as any, this.partyDisbandedHandler);
+    this.socketClient.on('party:disbanded', this.partyDisbandedHandler);
 
     this.partyChatHandler = (msg: PartyChatMessage) => {
       this.chatMessages.push(msg);
       if (this.chatMessages.length > 50) this.chatMessages.shift();
       this.renderChat();
     };
-    this.socketClient.on('party:chat' as any, this.partyChatHandler);
+    this.socketClient.on('party:chat', this.partyChatHandler);
 
     this.partyInviteHandler = (invite: PartyInvite) => {
       this.showInviteToast(invite);
     };
-    this.socketClient.on('party:invite' as any, this.partyInviteHandler);
+    this.socketClient.on('party:invite', this.partyInviteHandler);
 
     this.partyJoinRoomHandler = (data: { roomCode: string }) => {
       if (this.onJoinRoom) {
         this.onJoinRoom(data.roomCode);
       }
     };
-    this.socketClient.on('party:joinRoom' as any, this.partyJoinRoomHandler);
+    this.socketClient.on('party:joinRoom', this.partyJoinRoomHandler);
 
     this.roomInviteHandler = (invite: PartyInvite) => {
       this.showInviteToast(invite);
     };
-    this.socketClient.on('invite:room' as any, this.roomInviteHandler);
+    this.socketClient.on('invite:room', this.roomInviteHandler);
 
-    this.settingsChangedHandler = (data: { key: string; value: any }) => {
+    this.settingsChangedHandler = (data: { key: string; value?: unknown }) => {
       if (data.key === 'party_chat_mode') {
         this.chatMode = data.value as ChatMode;
         if (!this.canChat() && this.chatOpen) {
@@ -141,11 +142,11 @@ export class PartyBar {
         if (this.party) this.render();
       }
     };
-    this.socketClient.on('admin:settingsChanged' as any, this.settingsChangedHandler);
+    this.socketClient.on('admin:settingsChanged', this.settingsChangedHandler);
   }
 
   createParty(): void {
-    this.socketClient.emit('party:create' as any, ((response: any) => {
+    this.socketClient.emit('party:create', (response) => {
       if (response.success && response.party) {
         this.party = response.party;
         this.render();
@@ -153,7 +154,7 @@ export class PartyBar {
       } else {
         this.notifications.error(response.error || 'Failed to create party');
       }
-    }) as any);
+    });
   }
 
   private render(): void {
@@ -204,7 +205,7 @@ export class PartyBar {
     });
 
     this.container.querySelector('#party-leave-btn')!.addEventListener('click', () => {
-      this.socketClient.emit('party:leave' as any, ((res: any) => {
+      this.socketClient.emit('party:leave', (res) => {
         if (res.success) {
           this.party = null;
           this.chatMessages = [];
@@ -213,7 +214,7 @@ export class PartyBar {
           this.chatContainer = null;
           this.render();
         }
-      }) as any);
+      });
     });
   }
 
@@ -227,7 +228,7 @@ export class PartyBar {
     this.chatContainer.innerHTML = `
       <div class="party-chat-messages" id="party-chat-messages"></div>
       <div class="party-chat-input">
-        <input type="text" id="party-chat-input" placeholder="Type a message..." maxlength="200">
+        <input type="text" id="party-chat-input" placeholder="Type a message..." maxlength="200" aria-label="Party chat message">
         <button class="btn btn-primary" id="party-chat-send" style="padding:6px 12px;font-size:12px;">Send</button>
       </div>
     `;
@@ -243,7 +244,7 @@ export class PartyBar {
     const send = () => {
       const msg = input.value.trim();
       if (!msg) return;
-      this.socketClient.emit('party:chat' as any, { message: msg });
+      this.socketClient.emit('party:chat', { message: msg });
       input.value = '';
     };
 
@@ -299,16 +300,16 @@ export class PartyBar {
     toast.querySelector('.invite-accept')!.addEventListener('click', () => {
       clearTimeout(timer);
       if (invite.type === 'party') {
-        this.socketClient.emit('party:acceptInvite' as any, { inviteId: invite.inviteId }, ((res: any) => {
+        this.socketClient.emit('party:acceptInvite', { inviteId: invite.inviteId }, (res) => {
           if (res.success) {
             this.notifications.success('Joined party');
           } else {
             this.notifications.error(res.error || 'Failed to join party');
           }
-        }) as any);
+        });
       } else if (invite.type === 'room' && invite.roomCode) {
         // Decline the invite server-side (cleanup)
-        this.socketClient.emit('invite:acceptRoom' as any, { inviteId: invite.inviteId }, (() => {}) as any);
+        this.socketClient.emit('invite:acceptRoom', { inviteId: invite.inviteId }, () => {});
         // Trigger room join
         if (this.onJoinRoom) {
           this.onJoinRoom(invite.roomCode);
@@ -320,9 +321,9 @@ export class PartyBar {
     toast.querySelector('.invite-decline')!.addEventListener('click', () => {
       clearTimeout(timer);
       if (invite.type === 'party') {
-        this.socketClient.emit('party:declineInvite' as any, { inviteId: invite.inviteId });
+        this.socketClient.emit('party:declineInvite', { inviteId: invite.inviteId });
       } else {
-        this.socketClient.emit('invite:declineRoom' as any, { inviteId: invite.inviteId });
+        this.socketClient.emit('invite:declineRoom', { inviteId: invite.inviteId });
       }
       cleanup();
     });

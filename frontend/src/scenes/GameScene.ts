@@ -4,6 +4,7 @@ import { AuthManager } from '../network/AuthManager';
 import {
   GameState,
   CampaignGameState,
+  Direction,
   ReplayData,
   ReplayTickEvents,
   PlayerCosmeticData,
@@ -124,9 +125,9 @@ export class GameScene extends Phaser.Scene {
     const initialState: GameState = this.registry.get('initialGameState');
 
     // Clean up stale state from previous game
-    this.socketClient.off('game:state' as any);
-    this.socketClient.off('game:over' as any);
-    this.socketClient.off('game:emote' as any);
+    this.socketClient.off('game:state');
+    this.socketClient.off('game:over');
+    this.socketClient.off('game:emote');
     this.removeSpectatorListeners();
     if (this.emoteKeyHandler) {
       window.removeEventListener('keydown', this.emoteKeyHandler);
@@ -151,6 +152,7 @@ export class GameScene extends Phaser.Scene {
 
     this.pendingGamepadAction = null;
 
+    this.events.off('shutdown', this.shutdown, this);
     this.events.once('shutdown', this.shutdown, this);
     this.installSpectatorListeners();
     this.installMouseDragPan();
@@ -182,18 +184,15 @@ export class GameScene extends Phaser.Scene {
     this.emoteRenderer = new EmoteBubbleRenderer(this);
 
     // Listen for emotes from other players
-    this.socketClient.on(
-      'game:emote' as any,
-      ((data: { playerId: number; emoteId: EmoteId }) => {
-        if (!this.lastGameState || !this.emoteRenderer) return;
-        const player = this.lastGameState.players.find((p) => p.id === data.playerId);
-        if (player && player.alive) {
-          const px = player.position.x * TILE_SIZE + TILE_SIZE / 2;
-          const py = player.position.y * TILE_SIZE + TILE_SIZE / 2;
-          this.emoteRenderer.showEmote(data.playerId, data.emoteId, px, py);
-        }
-      }) as any,
-    );
+    this.socketClient.on('game:emote', (data) => {
+      if (!this.lastGameState || !this.emoteRenderer) return;
+      const player = this.lastGameState.players.find((p) => p.id === data.playerId);
+      if (player && player.alive) {
+        const px = player.position.x * TILE_SIZE + TILE_SIZE / 2;
+        const py = player.position.y * TILE_SIZE + TILE_SIZE / 2;
+        this.emoteRenderer.showEmote(data.playerId, data.emoteId, px, py);
+      }
+    });
 
     // Emote keys 1-6 (only when alive — spectator digit keys only fire when localPlayerDead)
     this.emoteKeyHandler = (e: KeyboardEvent) => {
@@ -203,7 +202,7 @@ export class GameScene extends Phaser.Scene {
       if (match) {
         const emoteId = (parseInt(match[1]) - 1) as EmoteId;
         if (EMOTES[emoteId]) {
-          this.socketClient.emit('game:emote' as any, { emoteId });
+          this.socketClient.emit('game:emote', { emoteId });
         }
       }
     };
@@ -273,46 +272,37 @@ export class GameScene extends Phaser.Scene {
     } else if (simSpectate) {
       // Simulation spectate mode: listen on sim:state, no input sending
       this.localPlayerDead = true; // Force spectator mode
-      this.socketClient.on(
-        'sim:state' as any,
-        ((data: { batchId: string; state: GameState }) => {
-          this.updateState(data.state);
-        }) as any,
-      );
+      this.socketClient.on('sim:state', (data) => {
+        this.updateState(data.state);
+      });
 
       // Handle game-to-game transitions within a batch
-      this.socketClient.on(
-        'sim:gameTransition' as any,
-        ((data: { batchId: string; gameIndex: number; totalGames: number; lastResult: any }) => {
-          // Wait for the next game's initial state, then restart the scene
-          const nextStateHandler = (stateData: { batchId: string; state: GameState }) => {
-            if (stateData.batchId !== data.batchId) return;
-            this.socketClient.off('sim:state' as any, nextStateHandler as any);
+      this.socketClient.on('sim:gameTransition', (data) => {
+        // Wait for the next game's initial state, then restart the scene
+        const nextStateHandler = (stateData: { batchId: string; state: GameState }) => {
+          if (stateData.batchId !== data.batchId) return;
+          this.socketClient.off('sim:state', nextStateHandler);
 
-            // Restart scene with new initial state
-            this.registry.set('initialGameState', stateData.state);
-            this.registry.set('simulationSpectate', { batchId: data.batchId });
-            this.scene.restart();
-          };
-          // Temporarily swap to the transition handler
-          this.socketClient.off('sim:state' as any);
-          this.socketClient.on('sim:state' as any, nextStateHandler as any);
-        }) as any,
-      );
+          // Restart scene with new initial state
+          this.registry.set('initialGameState', stateData.state);
+          this.registry.set('simulationSpectate', { batchId: data.batchId });
+          this.scene.restart();
+        };
+        // Temporarily swap to the transition handler
+        this.socketClient.off('sim:state');
+        this.socketClient.on('sim:state', nextStateHandler);
+      });
 
       // When the batch completes, return to lobby
-      this.socketClient.on(
-        'sim:completed' as any,
-        ((_data: { batchId: string }) => {
-          this.socketClient.off('sim:state' as any);
-          this.socketClient.off('sim:gameTransition' as any);
-          this.socketClient.off('sim:completed' as any);
-          this.socketClient.emit('sim:unspectate' as any, { batchId: simSpectate.batchId });
-          this.registry.remove('simulationSpectate');
-          this.scene.stop('HUDScene');
-          this.scene.start('LobbyScene');
-        }) as any,
-      );
+      this.socketClient.on('sim:completed', () => {
+        this.socketClient.off('sim:state');
+        this.socketClient.off('sim:gameTransition');
+        this.socketClient.off('sim:completed');
+        this.socketClient.emit('sim:unspectate', { batchId: simSpectate.batchId });
+        this.registry.remove('simulationSpectate');
+        this.scene.stop('HUDScene');
+        this.scene.start('LobbyScene');
+      });
     } else if (this.registry.get('campaignMode')) {
       // Campaign mode: listen on campaign-specific events
       this.campaignMode = true;
@@ -355,76 +345,60 @@ export class GameScene extends Phaser.Scene {
       }
       this.enemyRenderer = new EnemySpriteRenderer(this);
 
-      this.socketClient.on(
-        'campaign:state' as any,
-        ((state: CampaignGameState) => {
-          this.lastCampaignState = state;
-          this.updateState(state.gameState);
-          this.enemyRenderer?.update(state.enemies);
-        }) as any,
-      );
+      this.socketClient.on('campaign:state', (state) => {
+        this.lastCampaignState = state;
+        this.updateState(state.gameState);
+        this.enemyRenderer?.update(state.enemies);
+      });
 
-      this.socketClient.on(
-        'campaign:levelComplete' as any,
-        ((data: any) => {
-          this.registry.set('gameOverData', {
-            campaignResult: true,
-            success: true,
-            levelId: data.levelId,
-            timeSeconds: data.timeSeconds,
-            stars: data.stars,
-            nextLevelId: data.nextLevelId,
-          });
-          this.scene.stop('HUDScene');
-          this.scene.start('GameOverScene');
-        }) as any,
-      );
+      this.socketClient.on('campaign:levelComplete', (data) => {
+        this.registry.set('gameOverData', {
+          campaignResult: true,
+          success: true,
+          levelId: data.levelId,
+          timeSeconds: data.timeSeconds,
+          stars: data.stars,
+          nextLevelId: data.nextLevelId,
+        });
+        this.scene.stop('HUDScene');
+        this.scene.start('GameOverScene');
+      });
 
-      this.socketClient.on(
-        'campaign:gameOver' as any,
-        ((data: any) => {
-          this.registry.set('gameOverData', {
-            campaignResult: true,
-            success: false,
-            levelId: data.levelId,
-            reason: data.reason,
-          });
-          this.scene.stop('HUDScene');
-          this.scene.start('GameOverScene');
-        }) as any,
-      );
+      this.socketClient.on('campaign:gameOver', (data) => {
+        this.registry.set('gameOverData', {
+          campaignResult: true,
+          success: false,
+          levelId: data.levelId,
+          reason: data.reason,
+        });
+        this.scene.stop('HUDScene');
+        this.scene.start('GameOverScene');
+      });
 
       // Co-op specific listeners
       if (this.campaignCoopMode) {
-        this.socketClient.on(
-          'campaign:playerLockedIn' as any,
-          ((data: any) => {
-            // Visual indicator: pulse the locked player's sprite
-            const sprite = this.playerRenderer?.getSprite(data.playerId);
-            if (sprite) {
-              sprite.setTint(0x00ff88);
-              this.tweens.add({
-                targets: sprite,
-                alpha: { from: 1, to: 0.7 },
-                duration: 600,
-                yoyo: true,
-                repeat: -1,
-              });
-            }
-          }) as any,
-        );
+        this.socketClient.on('campaign:playerLockedIn', (data) => {
+          // Visual indicator: pulse the locked player's sprite
+          const sprite = this.playerRenderer?.getSprite(data.playerId);
+          if (sprite) {
+            sprite.setTint(0x00ff88);
+            this.tweens.add({
+              targets: sprite,
+              alpha: { from: 1, to: 0.7 },
+              duration: 600,
+              yoyo: true,
+              repeat: -1,
+            });
+          }
+        });
 
-        this.socketClient.on(
-          'campaign:partnerLeft' as any,
-          ((data: any) => {
-            const notifications = this.registry.get('notifications');
-            if (notifications) {
-              const reason =
-                data.reason === 'disconnected' ? 'Partner disconnected' : 'Partner left';
-              notifications.info(reason);
-            }
-          }) as any,
-        );
+        this.socketClient.on('campaign:partnerLeft', (data) => {
+          const notifications = this.registry.get('notifications');
+          if (notifications) {
+            const reason = data.reason === 'disconnected' ? 'Partner disconnected' : 'Partner left';
+            notifications.info(reason);
+          }
+        });
       }
 
       // Escape key to toggle pause menu
@@ -440,15 +414,15 @@ export class GameScene extends Phaser.Scene {
       };
       window.addEventListener('keydown', this.pauseKeyHandler);
     } else {
-      this.socketClient.on('game:state', ((state: GameState) => {
+      this.socketClient.on('game:state', (state) => {
         this.updateState(state);
-      }) as any);
+      });
 
-      this.socketClient.on('game:over', ((data: any) => {
+      this.socketClient.on('game:over', (data) => {
         this.registry.set('gameOverData', data);
         this.scene.stop('HUDScene');
         this.scene.start('GameOverScene');
-      }) as any);
+      });
     }
 
     // Camera setup
@@ -933,10 +907,10 @@ export class GameScene extends Phaser.Scene {
       if (p1.direction || p1.action) {
         this.lastInputTime = now;
         this.lastInputSeq++;
-        this.socketClient.emit('campaign:input' as any, {
+        this.socketClient.emit('campaign:input', {
           seq: this.lastInputSeq,
-          direction: p1.direction as any,
-          action: p1.action as any,
+          direction: p1.direction,
+          action: p1.action,
           tick: this.lastGameState?.tick || 0,
         });
       }
@@ -945,10 +919,10 @@ export class GameScene extends Phaser.Scene {
         const p2 = this.localCoopInput.pollP2();
         if (p2.direction || p2.action) {
           this.lastInputSeq++;
-          this.socketClient.emit('campaign:input' as any, {
+          this.socketClient.emit('campaign:input', {
             seq: this.lastInputSeq,
-            direction: p2.direction as any,
-            action: p2.action as any,
+            direction: p2.direction,
+            action: p2.action,
             tick: this.lastGameState?.tick || 0,
             playerId: this.localP2Id,
           });
@@ -968,8 +942,8 @@ export class GameScene extends Phaser.Scene {
     const now = Date.now();
     if (now - this.lastInputTime < TICK_MS) return;
 
-    let direction: string | null = null;
-    let action: string | null = null;
+    let direction: Direction | null = null;
+    let action: 'bomb' | 'detonate' | null = null;
 
     // Keyboard input
     if (this.cursors) {
@@ -994,12 +968,12 @@ export class GameScene extends Phaser.Scene {
       this.lastInputSeq++;
       const input = {
         seq: this.lastInputSeq,
-        direction: direction as any,
-        action: action as any,
+        direction,
+        action,
         tick: this.lastGameState?.tick || 0,
       };
       if (this.campaignMode) {
-        this.socketClient.emit('campaign:input' as any, input);
+        this.socketClient.emit('campaign:input', input);
       } else {
         this.socketClient.emit('game:input', input);
       }
@@ -1147,26 +1121,20 @@ export class GameScene extends Phaser.Scene {
   private pauseCampaign(): void {
     if (this.paused || !this.campaignMode) return;
     if (this.lastGameState?.status !== 'playing') return;
-    this.socketClient.emit(
-      'campaign:pause' as any,
-      ((res: any) => {
-        if (!res?.success) return;
-        this.paused = true;
-        this.showPauseOverlay();
-      }) as any,
-    );
+    this.socketClient.emit('campaign:pause', (res) => {
+      if (!res?.success) return;
+      this.paused = true;
+      this.showPauseOverlay();
+    });
   }
 
   private resumeCampaign(): void {
     if (!this.paused) return;
-    this.socketClient.emit(
-      'campaign:resume' as any,
-      ((res: any) => {
-        if (!res?.success) return;
-        this.paused = false;
-        this.hidePauseOverlay();
-      }) as any,
-    );
+    this.socketClient.emit('campaign:resume', (res) => {
+      if (!res?.success) return;
+      this.paused = false;
+      this.hidePauseOverlay();
+    });
   }
 
   private showPauseOverlay(): void {
@@ -1189,7 +1157,7 @@ export class GameScene extends Phaser.Scene {
     overlay.querySelector('#pause-exit')!.addEventListener('click', () => {
       this.paused = false;
       this.hidePauseOverlay();
-      this.socketClient.emit('campaign:quit' as any);
+      this.socketClient.emit('campaign:quit');
       this.registry.remove('campaignMode');
       this.registry.remove('campaignCoopMode');
       this.registry.remove('localCoopMode');
@@ -1210,17 +1178,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown(): void {
-    this.socketClient.off('game:state' as any);
-    this.socketClient.off('game:over' as any);
-    this.socketClient.off('sim:state' as any);
-    this.socketClient.off('sim:gameTransition' as any);
-    this.socketClient.off('sim:completed' as any);
-    this.socketClient.off('campaign:state' as any);
-    this.socketClient.off('campaign:levelComplete' as any);
-    this.socketClient.off('campaign:gameOver' as any);
-    this.socketClient.off('campaign:playerLockedIn' as any);
-    this.socketClient.off('campaign:partnerLeft' as any);
-    this.socketClient.off('game:emote' as any);
+    this.socketClient.off('game:state');
+    this.socketClient.off('game:over');
+    this.socketClient.off('sim:state');
+    this.socketClient.off('sim:gameTransition');
+    this.socketClient.off('sim:completed');
+    this.socketClient.off('campaign:state');
+    this.socketClient.off('campaign:levelComplete');
+    this.socketClient.off('campaign:gameOver');
+    this.socketClient.off('campaign:playerLockedIn');
+    this.socketClient.off('campaign:partnerLeft');
+    this.socketClient.off('game:emote');
     if (this.emoteKeyHandler) {
       window.removeEventListener('keydown', this.emoteKeyHandler);
       this.emoteKeyHandler = null;

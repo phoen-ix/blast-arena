@@ -24,10 +24,10 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Movement cooldown system (MOVE_COOLDOWN_BASE ticks, reduced by speed power-ups). Enemy speed uses divisor formula: `Math.round(MOVE_COOLDOWN_BASE / speed)` — speed 0.1 = 50 tick cooldown, speed 1 = 5 ticks, speed 5 = 1 tick
 - JWT (access token in memory) + httpOnly cookie (refresh token) auth
 - Cookie `secure` flag derived from APP_URL (not NODE_ENV) for HTTP/HTTPS compatibility
-- ApiClient 401 interceptor: auto-refreshes token and retries, but auth endpoints (login/register) use `skipAuthRetry` to pass 401 errors through directly — prevents logout side effects from corrupting session state
+- ApiClient 401 interceptor: auto-refreshes token and retries via `fetchWithAuth()` (single source of truth for retry logic), but auth endpoints (login/register) use `skipAuthRetry` to pass 401 errors through directly. Cached `refreshPromise` prevents concurrent 401s from triggering multiple refresh calls
 - Vite `allowedHosts` derived from `APP_URL` env var (hostname extracted at config load time), passed via docker-compose `environment`
 - Zod for request validation; `ApiClient` appends field-level `details` from validation errors to the error message
-- Redis room join uses atomic Lua script (`JOIN_ROOM_LUA`) to prevent race conditions exceeding maxPlayers
+- Redis room mutations use atomic Lua scripts to prevent race conditions: `JOIN_ROOM_LUA`, `LEAVE_ROOM_LUA`, `SET_READY_LUA`, `SET_TEAM_LUA`, `START_ROOM_LUA`. Named constant `ROOM_TTL_SECONDS = 3600`
 - `listRooms()` uses `SCAN` + `MGET` pipeline instead of blocking `KEYS` + sequential `GET`
 - All game constants in shared/src/constants/
 - Socket.io listeners use one-shot pattern for game:start to prevent leaks across scene transitions
@@ -132,7 +132,7 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 - `tickEvents` buffer on GameStateManager accumulates per-tick events for fine-grained socket emission in GameRoom
 - Chain reaction tile snapshot: tiles snapshotted before processing detonations so chained bombs use original wall layout
 - Shield has no time limit — lasts until consumed. After break, 10 ticks invulnerability. Extra pickups consumed but don't stack
-- Game start transitions instantly; room:start guard checks GameRoom existence and room status to prevent duplicate starts
+- Game start transitions instantly; `room:start` uses atomic `START_ROOM_LUA` script to prevent TOCTOU race (concurrent starts). Cosmetics are awaited before `game:start` broadcast to prevent visual flicker
 - "Back to Lobby" from game over clears currentRoom registry to prevent stale room UI
 - Play Again: room:restart resets to 'waiting'; other players auto-navigate via room:state listener
 
@@ -165,7 +165,10 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-system.md).
 
 ## Security, Connection Resilience & Docker
-See [docs/infrastructure.md](docs/infrastructure.md).
+- HTTP security headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (restrictive)
+- Email addresses normalized to lowercase on register and email change
+- Campaign JSON fields (`enemy_placements`, `powerup_placements`, `starting_powerups`) parsed via `safeJsonParse()` with fallback to empty arrays
+- See [docs/infrastructure.md](docs/infrastructure.md)
 
 ## Performance Optimizations
 See [docs/performance-and-internals.md](docs/performance-and-internals.md).
@@ -175,13 +178,16 @@ See [docs/performance-and-internals.md](docs/performance-and-internals.md).
 - Prettier with single quotes, trailing commas, 100 char width
 - Husky + lint-staged pre-commit hook runs ESLint `--fix` + Prettier on staged `.ts` files. `prepare` script uses `husky || true` to avoid failures in Docker builds
 - Socket rate limiting: `backend/src/utils/socketRateLimit.ts` — in-memory sliding window per socket ID + parallel per-IP rate limiters
-- All Socket.io server types fully parameterized — no `as any` casts on socket events
+- All Socket.io types fully parameterized on both server and client — no `as any` casts on socket events. `SocketClient` uses typed generics for `emit<E>`, `on<E>`, `off<E>`
 - DB row types in `backend/src/db/types.ts`; all service queries use typed `query<T>()` calls
 - `shared/src/utils/error.ts`: `getErrorMessage(err: unknown)` in all catch blocks
 - `backend/src/db/connection.ts`: `withTransaction<T>(fn)` helper
 - `GameStateManager` constructor takes a `GameConfig` object (not positional parameters)
 - `frontend/src/utils/html.ts`: shared `escapeHtml()` and `escapeAttr()` utilities
 - LobbyUI modals in `frontend/src/ui/modals/`, views in `frontend/src/ui/views/` — LobbyUI.ts is thin orchestrator
+- Modals: `role="dialog"`, `aria-modal="true"`, `aria-label`, Escape key closes, `for` attributes on `<label>` elements. Toggle switches use `role="switch"` + `aria-checked`
+- Graceful shutdown: room cleanup `setInterval` handle stored and cleared on SIGTERM/SIGINT
+- Presence update failures logged via `logger.warn` (not silently swallowed)
 
 ## Database Migrations
 - Forward migrations in `backend/src/db/migrations/*.sql`, numbered `NNN_description.sql`

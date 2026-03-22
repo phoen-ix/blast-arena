@@ -41,7 +41,7 @@ export class AnnouncementsTab {
         <h3>Broadcast Toast</h3>
         <p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">Send an ephemeral notification to all connected players. It will disappear after a few seconds.</p>
         <div style="display:flex;gap:12px;align-items:center;">
-          <input type="text" class="admin-input" id="toast-input" placeholder="Type toast message..." style="flex:1;min-width:0;">
+          <input type="text" class="admin-input" id="toast-input" placeholder="Type toast message..." aria-label="Toast message" style="flex:1;min-width:0;">
           <button class="btn btn-primary" id="toast-send">Send Toast</button>
         </div>
         <div id="toast-preview-area"></div>
@@ -67,7 +67,7 @@ export class AnnouncementsTab {
               : '<p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">No active banner.</p>'
           }
           <div style="display:flex;gap:12px;align-items:center;">
-            <input type="text" class="admin-input" id="banner-input" placeholder="Type banner message..." style="flex:1;min-width:0;">
+            <input type="text" class="admin-input" id="banner-input" placeholder="Type banner message..." aria-label="Banner message" style="flex:1;min-width:0;">
             <button class="btn btn-primary" id="banner-set">Set Banner</button>
           </div>
         </div>

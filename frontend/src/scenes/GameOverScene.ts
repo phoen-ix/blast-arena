@@ -1,7 +1,14 @@
 import Phaser from 'phaser';
 import { SocketClient } from '../network/SocketClient';
 import { ApiClient } from '../network/ApiClient';
-import { EloResult, AchievementUnlockEvent, XpUpdateResult } from '@blast-arena/shared';
+import {
+  EloResult,
+  AchievementUnlockEvent,
+  XpUpdateResult,
+  Room,
+  CampaignGameState,
+  CampaignLevelSummary,
+} from '@blast-arena/shared';
 import { themeManager } from '../themes/ThemeManager';
 import { LocalCoopP2Identity } from '../game/LocalCoopInput';
 
@@ -59,55 +66,59 @@ export class GameOverScene extends Phaser.Scene {
     const socketClient: SocketClient = this.registry.get('socketClient');
 
     // Listen for room restart (another player clicked Play Again)
-    const roomStateHandler = (room: any) => {
+    const roomStateHandler = (room: Room) => {
       if (room.status === 'waiting') {
-        socketClient.off('room:state' as any, roomStateHandler as any);
+        socketClient.off('room:state', roomStateHandler);
         this.registry.set('currentRoom', room);
         this.scene.start('LobbyScene');
       }
     };
-    socketClient.on('room:state' as any, roomStateHandler as any);
+    socketClient.on('room:state', roomStateHandler);
 
     // Listen for Elo update results
     const eloHandler = (results: EloResult[]) => {
-      socketClient.off('game:eloUpdate' as any, eloHandler as any);
+      socketClient.off('game:eloUpdate', eloHandler);
       this.showEloResults(results);
     };
-    socketClient.on('game:eloUpdate' as any, eloHandler as any);
+    socketClient.on('game:eloUpdate', eloHandler);
 
     // Listen for XP update results
     const xpHandler = (results: XpUpdateResult[]) => {
-      socketClient.off('game:xpUpdate' as any, xpHandler as any);
+      socketClient.off('game:xpUpdate', xpHandler);
       this.showXpResults(results);
     };
-    socketClient.on('game:xpUpdate' as any, xpHandler as any);
+    socketClient.on('game:xpUpdate', xpHandler);
 
     // Listen for achievement unlocks
     const achievementHandler = (data: AchievementUnlockEvent) => {
       this.showAchievementUnlock(data);
     };
-    socketClient.on('achievement:unlocked' as any, achievementHandler as any);
+    socketClient.on('achievement:unlocked', achievementHandler);
 
     // Listen for rematch vote updates
-    const rematchUpdateHandler = (data: any) => {
+    const rematchUpdateHandler = (data: {
+      votes: { userId: number; username: string; vote: boolean }[];
+      threshold: number;
+      totalPlayers: number;
+    }) => {
       this.updateRematchUI(data);
     };
-    socketClient.on('rematch:update' as any, rematchUpdateHandler as any);
+    socketClient.on('rematch:update', rematchUpdateHandler);
 
     // Listen for rematch triggered (auto-restart)
     const rematchTriggeredHandler = () => {
-      socketClient.off('room:state' as any, roomStateHandler as any);
+      socketClient.off('room:state', roomStateHandler);
       // The room:state 'waiting' event will follow — navigate on that
     };
-    socketClient.on('rematch:triggered' as any, rematchTriggeredHandler as any);
+    socketClient.on('rematch:triggered', rematchTriggeredHandler);
 
     this.events.on('shutdown', () => {
-      socketClient.off('room:state' as any, roomStateHandler as any);
-      socketClient.off('game:eloUpdate' as any, eloHandler as any);
-      socketClient.off('game:xpUpdate' as any, xpHandler as any);
-      socketClient.off('achievement:unlocked' as any, achievementHandler as any);
-      socketClient.off('rematch:update' as any, rematchUpdateHandler as any);
-      socketClient.off('rematch:triggered' as any, rematchTriggeredHandler as any);
+      socketClient.off('room:state', roomStateHandler);
+      socketClient.off('game:eloUpdate', eloHandler);
+      socketClient.off('game:xpUpdate', xpHandler);
+      socketClient.off('achievement:unlocked', achievementHandler);
+      socketClient.off('rematch:update', rematchUpdateHandler);
+      socketClient.off('rematch:triggered', rematchTriggeredHandler);
     });
 
     const colors = themeManager.getCanvasColors();
@@ -172,7 +183,10 @@ export class GameOverScene extends Phaser.Scene {
       actionBtn.on('pointerover', () => actionBtn.setColor('#cccccc'));
       actionBtn.on('pointerout', () => actionBtn.setColor(colors.textHex));
       actionBtn.on('pointerdown', () => {
-        socketClient.emit('room:restart' as any, () => {});
+        socketClient.emit('room:restart', (response) => {
+          // Response handled silently — room:state listener navigates on success
+          void response;
+        });
       });
 
       this.voteTallyText = this.add.text(0, 0, '').setVisible(false);
@@ -196,7 +210,7 @@ export class GameOverScene extends Phaser.Scene {
       );
       actionBtn.on('pointerdown', () => {
         this.hasVoted = !this.hasVoted;
-        socketClient.emit('rematch:vote' as any, { vote: this.hasVoted }, () => {});
+        socketClient.emit('rematch:vote', { vote: this.hasVoted }, () => {});
         actionBtn.setText(this.hasVoted ? '[ Rematch ✓ ]' : '[ Vote Rematch ]');
         actionBtn.setColor(this.hasVoted ? colors.successHex : colors.textHex);
       });
@@ -226,7 +240,7 @@ export class GameOverScene extends Phaser.Scene {
     backBtn.on('pointerover', () => backBtn.setColor(colors.primaryHoverHex));
     backBtn.on('pointerout', () => backBtn.setColor(colors.primaryHex));
     backBtn.on('pointerdown', () => {
-      socketClient.emit('room:leave' as any);
+      socketClient.emit('room:leave');
       this.registry.remove('currentRoom');
       this.scene.start('LobbyScene');
     });
@@ -496,8 +510,11 @@ export class GameOverScene extends Phaser.Scene {
     // Fetch enemy types, then emit campaign:start and transition directly to GameScene
     ApiClient.get<any>('/campaign/enemy-types')
       .then((enemyTypesResp) => {
-        const gameStartHandler = (data: any) => {
-          socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
+        const gameStartHandler = (data: {
+          state: CampaignGameState;
+          level: CampaignLevelSummary;
+        }) => {
+          socketClient.off('campaign:gameStart', gameStartHandler);
 
           const registry = this.registry;
           registry.set('campaignMode', true);
@@ -509,17 +526,26 @@ export class GameOverScene extends Phaser.Scene {
           this.scene.start('GameScene');
           this.scene.launch('HUDScene');
         };
-        socketClient.on('campaign:gameStart' as any, gameStartHandler as any);
+        socketClient.on('campaign:gameStart', gameStartHandler);
 
         // Build start data preserving co-op mode
-        const startData: any = { levelId };
+        const startData: {
+          levelId: number;
+          coopMode?: boolean;
+          localCoopMode?: boolean;
+          localP2?: { userId?: number; username: string; guestColor?: number };
+          buddyMode?: boolean;
+        } = { levelId };
         if (isCoopMode && !isLocalCoopMode) {
           startData.coopMode = true;
         } else if (isLocalCoopMode) {
           startData.localCoopMode = true;
           const p2Id = this.registry.get('localCoopP2Identity') as LocalCoopP2Identity | undefined;
           if (p2Id?.mode === 'loggedIn' && p2Id.loggedInUserId) {
-            startData.localP2 = { userId: p2Id.loggedInUserId, username: p2Id.loggedInUsername };
+            startData.localP2 = {
+              userId: p2Id.loggedInUserId,
+              username: p2Id.loggedInUsername || 'Player 2',
+            };
           } else {
             startData.localP2 = {
               username: p2Id?.guestName || 'Player 2',
@@ -528,9 +554,9 @@ export class GameOverScene extends Phaser.Scene {
           }
         }
 
-        socketClient.emit('campaign:start' as any, startData, (response: any) => {
+        socketClient.emit('campaign:start', startData, (response) => {
           if (response && response.error) {
-            socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
+            socketClient.off('campaign:gameStart', gameStartHandler);
             this.registry.remove('campaignMode');
             this.registry.remove('campaignCoopMode');
             this.registry.remove('localCoopMode');

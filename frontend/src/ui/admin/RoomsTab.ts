@@ -90,7 +90,7 @@ export class RoomsTab {
     if (!action || !code) return;
 
     if (action === 'spectate') {
-      this.socketClient.emit('admin:spectate' as any, { roomCode: code }, (res: any) => {
+      this.socketClient.emit('admin:spectate', { roomCode: code }, (res) => {
         if (res.success) {
           this.notifications.success(`Spectating room ${code}`);
         } else {
@@ -109,10 +109,13 @@ export class RoomsTab {
   private showMessageModal(code: string): void {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Send Message to Room');
     modal.innerHTML = `
       <div class="modal" style="max-width:400px;">
         <h2 style="margin-bottom:12px;">Send Message to Room</h2>
-        <input type="text" class="admin-input" id="room-message-input" placeholder="Type your message...">
+        <input type="text" class="admin-input" id="room-message-input" placeholder="Type your message..." aria-label="Room message">
         <div class="modal-actions" style="margin-top:16px;">
           <button class="btn btn-secondary" id="msg-cancel">Cancel</button>
           <button class="btn btn-primary" id="msg-send">Send</button>
@@ -128,7 +131,7 @@ export class RoomsTab {
     modal.querySelector('#msg-send')!.addEventListener('click', () => {
       const input = modal.querySelector('#room-message-input') as HTMLInputElement;
       if (input.value.trim()) {
-        this.socketClient.emit('admin:roomMessage' as any, {
+        this.socketClient.emit('admin:roomMessage', {
           roomCode: code,
           message: input.value.trim(),
         });
@@ -159,6 +162,9 @@ export class RoomsTab {
     // Let's ask for the player to kick by prompting.
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Kick Player');
     modal.innerHTML = `
       <div class="modal" style="max-width:400px;">
         <h2 style="margin-bottom:12px;">Kick Player from Room ${escapeHtml(code)}</h2>
@@ -186,24 +192,23 @@ export class RoomsTab {
         return;
       }
       modal.remove();
-      this.socketClient.emit(
-        'admin:kick' as any,
-        { roomCode: code, userId, reason },
-        (res: any) => {
-          if (res.success) {
-            this.notifications.success('Player kicked');
-            this.loadRooms();
-          } else {
-            this.notifications.error(res.error || 'Failed to kick');
-          }
-        },
-      );
+      this.socketClient.emit('admin:kick', { roomCode: code, userId, reason }, (res) => {
+        if (res.success) {
+          this.notifications.success('Player kicked');
+          this.loadRooms();
+        } else {
+          this.notifications.error(res.error || 'Failed to kick');
+        }
+      });
     });
   }
 
   private showCloseConfirmation(code: string): void {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Close Room');
     modal.innerHTML = `
       <div class="modal" style="max-width:380px;">
         <h2 style="margin-bottom:12px;color:var(--danger);">Close Room</h2>
@@ -222,7 +227,7 @@ export class RoomsTab {
     });
     modal.querySelector('#close-confirm')!.addEventListener('click', () => {
       modal.remove();
-      this.socketClient.emit('admin:closeRoom' as any, { roomCode: code }, (res: any) => {
+      this.socketClient.emit('admin:closeRoom', { roomCode: code }, (res) => {
         if (res.success) {
           this.notifications.success('Room closed');
           this.loadRooms();

@@ -25,17 +25,20 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
 
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', 'Create Room');
   modal.innerHTML = `
     <div class="modal" style="width:760px;max-width:95vw;">
       <h2>Create Room</h2>
 
       <div class="form-grid">
         <div class="form-group">
-          <label>Room Name</label>
+          <label for="room-name">Room Name</label>
           <input type="text" id="room-name" placeholder="My Arena" maxlength="30">
         </div>
         <div class="form-group">
-          <label>Game Mode</label>
+          <label for="room-mode">Game Mode</label>
           <select id="room-mode">
             <option value="ffa">Free for All</option>
             <option value="teams">Teams</option>
@@ -46,7 +49,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           </select>
         </div>
         <div class="form-group">
-          <label>Max Players</label>
+          <label for="room-max-players">Max Players</label>
           <select id="room-max-players">
             <option value="2">2</option>
             <option value="4" selected>4</option>
@@ -55,7 +58,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           </select>
         </div>
         <div class="form-group">
-          <label>Match Time</label>
+          <label for="room-round-time">Match Time</label>
           <select id="room-round-time">
             <option value="60">1 min</option>
             <option value="120">2 min</option>
@@ -65,7 +68,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           </select>
         </div>
         <div class="form-group">
-          <label>Map Size</label>
+          <label for="room-map-size">Map Size</label>
           <select id="room-map-size">
             <option value="21">21x21 (Small)</option>
             <option value="31" selected>31x31 (Normal)</option>
@@ -75,7 +78,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           </select>
         </div>
         <div class="form-group">
-          <label>Wall Density</label>
+          <label for="room-wall-density">Wall Density</label>
           <select id="room-wall-density">
             <option value="0.3">Low (30%)</option>
             <option value="0.5">Medium (50%)</option>
@@ -84,7 +87,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           </select>
         </div>
         <div class="form-group">
-          <label>Power-Up Rate</label>
+          <label for="room-powerup-rate">Power-Up Rate</label>
           <select id="room-powerup-rate">
             <option value="0">None (0%)</option>
             <option value="0.15">Low (15%)</option>
@@ -94,7 +97,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           </select>
         </div>
         <div class="form-group">
-          <label>Bots</label>
+          <label for="room-bots">Bots</label>
           <select id="room-bots">
             <option value="0" selected>None</option>
             <option value="1">1 Bot</option>
@@ -107,7 +110,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           </select>
         </div>
         <div class="form-group" id="bot-difficulty-row">
-          <label>Bot Difficulty</label>
+          <label for="room-bot-difficulty">Bot Difficulty</label>
           <select id="room-bot-difficulty" disabled>
             <option value="easy">Easy</option>
             <option value="normal" selected>Normal</option>
@@ -118,7 +121,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           deps.activeAIs && deps.activeAIs.length > 1
             ? `
         <div class="form-group" id="bot-ai-row">
-          <label>Bot AI</label>
+          <label for="room-bot-ai">Bot AI</label>
           <select id="room-bot-ai" disabled>
             ${deps.activeAIs.map((ai) => `<option value="${ai.id}"${ai.isBuiltin ? ' selected' : ''}>${ai.name}</option>`).join('')}
           </select>
@@ -225,7 +228,11 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
   botsSelect.addEventListener('change', updateBotDiffEnabled);
   updateBotDiffEnabled();
 
+  const escHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') closeModal();
+  };
   const closeModal = () => {
+    document.removeEventListener('keydown', escHandler);
     UIGamepadNavigator.getInstance().popContext('create-room-modal');
     modal.remove();
   };
@@ -312,6 +319,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
   });
+  document.addEventListener('keydown', escHandler);
   document.getElementById('ui-overlay')!.appendChild(modal);
 
   UIGamepadNavigator.getInstance().pushContext({

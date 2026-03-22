@@ -67,8 +67,9 @@ export async function updateUsername(userId: number, newUsername: string): Promi
 }
 
 export async function updateEmailDirect(userId: number, newEmail: string): Promise<void> {
+  const normalizedEmail = newEmail.toLowerCase();
   const existing = await query<IdRow[]>('SELECT id FROM users WHERE email = ? AND id != ?', [
-    newEmail,
+    normalizedEmail,
     userId,
   ]);
   if (existing.length > 0) {
@@ -77,14 +78,16 @@ export async function updateEmailDirect(userId: number, newEmail: string): Promi
 
   await execute(
     'UPDATE users SET email = ?, email_verified = TRUE, pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
-    [newEmail, userId],
+    [normalizedEmail, userId],
   );
 }
 
 export async function requestEmailChange(userId: number, newEmail: string): Promise<void> {
+  const normalizedEmail = newEmail.toLowerCase();
+
   // Check if the new email is already used by another user
   const existing = await query<IdRow[]>('SELECT id FROM users WHERE email = ? AND id != ?', [
-    newEmail,
+    normalizedEmail,
     userId,
   ]);
   if (existing.length > 0) {
@@ -94,7 +97,7 @@ export async function requestEmailChange(userId: number, newEmail: string): Prom
   // Also check if another user has this as a pending email (optional but prevents race)
   const pendingExisting = await query<IdRow[]>(
     'SELECT id FROM users WHERE pending_email = ? AND id != ?',
-    [newEmail, userId],
+    [normalizedEmail, userId],
   );
   if (pendingExisting.length > 0) {
     throw new AppError('Email is already in use', 409, 'CONFLICT');
@@ -105,11 +108,11 @@ export async function requestEmailChange(userId: number, newEmail: string): Prom
 
   await execute(
     'UPDATE users SET pending_email = ?, email_change_token = ?, email_change_expires = ? WHERE id = ?',
-    [newEmail, hashToken(token), expires, userId],
+    [normalizedEmail, hashToken(token), expires, userId],
   );
 
   // Send confirmation to the NEW email address
-  sendEmailChangeEmail(newEmail, token).catch((err) => {
+  sendEmailChangeEmail(normalizedEmail, token).catch((err) => {
     logger.error({ err }, 'Failed to send email change confirmation');
   });
 }
@@ -163,10 +166,7 @@ export async function changePassword(
   currentPassword: string,
   newPassword: string,
 ): Promise<void> {
-  const rows = await query<UserRow[]>(
-    'SELECT password_hash FROM users WHERE id = ?',
-    [userId],
-  );
+  const rows = await query<UserRow[]>('SELECT password_hash FROM users WHERE id = ?', [userId]);
 
   if (rows.length === 0) {
     throw new AppError('User not found', 404, 'NOT_FOUND');

@@ -65,7 +65,7 @@ export class LobbyUI {
         this.roomsView.updateRooms(rooms);
       }
     };
-    this.socketClient.on('room:list' as any, this.roomListHandler as any);
+    this.socketClient.on('room:list', this.roomListHandler);
 
     // Mount persistent UI
     const mainContent = this.container.querySelector('.main-content') as HTMLElement;
@@ -94,7 +94,7 @@ export class LobbyUI {
     this.activeView = null;
     this.roomsView = null;
     if (this.roomListHandler) {
-      this.socketClient.off('room:list' as any, this.roomListHandler as any);
+      this.socketClient.off('room:list', this.roomListHandler);
       this.roomListHandler = null;
     }
     if (this.lobbyChatToggleHandler) {

@@ -44,10 +44,10 @@ export class SimulationsTab {
     parent.appendChild(this.container);
 
     // Listen for simulation socket events
-    this.socketClient.on('sim:progress' as any, this.handleProgress);
-    this.socketClient.on('sim:gameResult' as any, this.handleGameResult);
-    this.socketClient.on('sim:completed' as any, this.handleCompleted);
-    this.socketClient.on('sim:queueUpdate' as any, this.handleQueueUpdate);
+    this.socketClient.on('sim:progress', this.handleProgress);
+    this.socketClient.on('sim:gameResult', this.handleGameResult);
+    this.socketClient.on('sim:completed', this.handleCompleted);
+    this.socketClient.on('sim:queueUpdate', this.handleQueueUpdate);
 
     await this.loadBatchList();
     this.refreshInterval = setInterval(() => {
@@ -60,10 +60,10 @@ export class SimulationsTab {
       clearInterval(this.refreshInterval);
       this.refreshInterval = null;
     }
-    this.socketClient.off('sim:progress' as any, this.handleProgress);
-    this.socketClient.off('sim:gameResult' as any, this.handleGameResult);
-    this.socketClient.off('sim:completed' as any, this.handleCompleted);
-    this.socketClient.off('sim:queueUpdate' as any, this.handleQueueUpdate);
+    this.socketClient.off('sim:progress', this.handleProgress);
+    this.socketClient.off('sim:gameResult', this.handleGameResult);
+    this.socketClient.off('sim:completed', this.handleCompleted);
+    this.socketClient.off('sim:queueUpdate', this.handleQueueUpdate);
     this.container?.remove();
     this.container = null;
     this.viewMode = 'list';
@@ -224,7 +224,7 @@ export class SimulationsTab {
     if (action === 'view') {
       await this.showBatchDetail(batchId);
     } else if (action === 'cancel') {
-      this.socketClient.emit('sim:cancel' as any, { batchId }, (res: any) => {
+      this.socketClient.emit('sim:cancel', { batchId }, (res) => {
         if (res.success) {
           this.notifications.success('Batch cancellation requested');
         } else {
@@ -234,7 +234,7 @@ export class SimulationsTab {
     } else if (action === 'spectate') {
       this.startSpectating(batchId);
     } else if (action === 'dequeue') {
-      this.socketClient.emit('sim:cancel' as any, { batchId }, (res: any) => {
+      this.socketClient.emit('sim:cancel', { batchId }, (res) => {
         if (res.success) {
           this.notifications.success('Simulation removed from queue');
           this.loadBatchList();
@@ -256,7 +256,7 @@ export class SimulationsTab {
   };
 
   private startSpectating(batchId: string): void {
-    this.socketClient.emit('sim:spectate' as any, { batchId }, (res: any) => {
+    this.socketClient.emit('sim:spectate', { batchId }, (res) => {
       if (!res.success) {
         this.notifications.error(res.error || 'Failed to spectate');
         return;
@@ -265,15 +265,15 @@ export class SimulationsTab {
       // Wait for the first sim:state to get the initial game state, then launch GameScene
       const stateHandler = (data: { batchId: string; state: GameState }) => {
         if (data.batchId !== batchId) return;
-        this.socketClient.off('sim:state' as any, stateHandler as any);
+        this.socketClient.off('sim:state', stateHandler);
 
         this.launchGameScene(batchId, data.state);
       };
-      this.socketClient.on('sim:state' as any, stateHandler as any);
+      this.socketClient.on('sim:state', stateHandler);
 
       // Timeout in case no state arrives (game between transitions)
       setTimeout(() => {
-        this.socketClient.off('sim:state' as any, stateHandler as any);
+        this.socketClient.off('sim:state', stateHandler);
       }, 5000);
     });
   }
@@ -488,7 +488,7 @@ export class SimulationsTab {
 
     this.container.querySelector('#sim-detail-cancel')?.addEventListener('click', () => {
       if (this.detailBatchId) {
-        this.socketClient.emit('sim:cancel' as any, { batchId: this.detailBatchId }, (res: any) => {
+        this.socketClient.emit('sim:cancel', { batchId: this.detailBatchId }, (res) => {
           if (res.success) {
             this.notifications.success('Batch cancellation requested');
           } else {
@@ -673,6 +673,9 @@ export class SimulationsTab {
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'New Simulation Batch');
     modal.innerHTML = `
       <div class="modal sim-modal">
         <h2>New Simulation Batch</h2>
@@ -897,13 +900,13 @@ export class SimulationsTab {
 
       modal.remove();
 
-      this.socketClient.emit('sim:start' as any, config, (res: any) => {
+      this.socketClient.emit('sim:start', config, (res) => {
         if (!res.success) {
           this.notifications.error(res.error || 'Failed to start simulation');
           return;
         }
 
-        const batchId = res.batchId;
+        const batchId = res.batchId!;
 
         if (res.queued) {
           this.notifications.success(

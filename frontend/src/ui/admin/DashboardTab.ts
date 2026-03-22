@@ -149,7 +149,7 @@ export class DashboardTab {
         </div>
         <div class="setting-item">
           <span class="setting-item-label">Party Chat</span>
-          <select id="select-chat-mode" class="admin-select">
+          <select id="select-chat-mode" class="admin-select" aria-label="Party Chat mode">
             <option value="everyone" ${this.chatMode === 'everyone' ? 'selected' : ''}>Everyone</option>
             <option value="staff" ${this.chatMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
             <option value="admin_only" ${this.chatMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
@@ -159,7 +159,7 @@ export class DashboardTab {
         </div>
         <div class="setting-item">
           <span class="setting-item-label">Lobby Chat</span>
-          <select id="select-lobby-chat-mode" class="admin-select">
+          <select id="select-lobby-chat-mode" class="admin-select" aria-label="Lobby Chat mode">
             <option value="everyone" ${this.lobbyChatMode === 'everyone' ? 'selected' : ''}>Everyone</option>
             <option value="staff" ${this.lobbyChatMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
             <option value="admin_only" ${this.lobbyChatMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
@@ -169,7 +169,7 @@ export class DashboardTab {
         </div>
         <div class="setting-item">
           <span class="setting-item-label">Direct Messages</span>
-          <select id="select-dm-mode" class="admin-select">
+          <select id="select-dm-mode" class="admin-select" aria-label="Direct Messages mode">
             <option value="everyone" ${this.dmMode === 'everyone' ? 'selected' : ''}>Everyone</option>
             <option value="staff" ${this.dmMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
             <option value="admin_only" ${this.dmMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
@@ -179,7 +179,7 @@ export class DashboardTab {
         </div>
         <div class="setting-item">
           <span class="setting-item-label">In-Game Emotes</span>
-          <select id="select-emote-mode" class="admin-select">
+          <select id="select-emote-mode" class="admin-select" aria-label="In-Game Emotes mode">
             <option value="everyone" ${this.emoteMode === 'everyone' ? 'selected' : ''}>Everyone</option>
             <option value="staff" ${this.emoteMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
             <option value="admin_only" ${this.emoteMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
@@ -189,7 +189,7 @@ export class DashboardTab {
         </div>
         <div class="setting-item">
           <span class="setting-item-label">Spectator Chat</span>
-          <select id="select-spectator-chat-mode" class="admin-select">
+          <select id="select-spectator-chat-mode" class="admin-select" aria-label="Spectator Chat mode">
             <option value="everyone" ${this.spectatorChatMode === 'everyone' ? 'selected' : ''}>Everyone</option>
             <option value="staff" ${this.spectatorChatMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
             <option value="admin_only" ${this.spectatorChatMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
@@ -200,13 +200,13 @@ export class DashboardTab {
         <div class="setting-item">
           <span class="setting-item-label">XP Multiplier</span>
           <input id="input-xp-multiplier" type="number" min="0" max="10" step="0.1" value="${this.xpMultiplier}"
-            class="admin-select" style="width:60px;">
+            class="admin-select" style="width:60px;" aria-label="XP Multiplier">
           <button id="btn-save-xp-multiplier" class="btn btn-primary btn-sm">Save</button>
           <span class="setting-item-desc">XP earned per match (default: 1.0)</span>
         </div>
         <div class="setting-item">
           <span class="setting-item-label">Default Theme</span>
-          <select id="select-default-theme" class="admin-select">
+          <select id="select-default-theme" class="admin-select" aria-label="Default Theme">
             ${THEME_IDS.map((id) => `<option value="${id}" ${this.defaultTheme === id ? 'selected' : ''}>${THEME_NAMES[id]}</option>`).join('')}
           </select>
           <span class="setting-item-desc">Theme for users without a preference</span>
@@ -227,7 +227,7 @@ export class DashboardTab {
         </div>
         <div class="setting-item" id="imprint-text-group" style="${this.displayImprint ? '' : 'display:none;'}">
           <span class="setting-item-label">Imprint Text</span>
-          <textarea id="input-imprint-text" class="admin-select" rows="4" style="width:100%;resize:vertical;font-family:var(--font-body);font-size:13px;padding:var(--sp-2) var(--sp-3);background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);">${escapeHtml(this.imprintText)}</textarea>
+          <textarea id="input-imprint-text" class="admin-select" rows="4" aria-label="Imprint Text" style="width:100%;resize:vertical;font-family:var(--font-body);font-size:13px;padding:var(--sp-2) var(--sp-3);background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);">${escapeHtml(this.imprintText)}</textarea>
           <button id="btn-save-imprint" class="btn btn-primary btn-sm" style="margin-top:var(--sp-2);">Save Imprint</button>
         </div>
       </div>

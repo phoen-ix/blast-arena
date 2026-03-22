@@ -14,6 +14,8 @@ import {
   SocketData,
   AuthPayload,
   PublicUser,
+  CampaignGameState,
+  getErrorMessage,
 } from '@blast-arena/shared';
 import {
   setupFriendHandlers,
@@ -39,7 +41,11 @@ type TypedServer = Server<
   SocketData
 >;
 
-// Per-player emote cooldown (3 seconds)
+const EMOTE_COOLDOWN_MS = 3000;
+const REMATCH_VOTE_TIMEOUT_MS = 30000;
+const ROOM_CLEANUP_INTERVAL_MS = 30000;
+
+// Per-player emote cooldown
 const emoteLastUsed = new Map<number, number>();
 
 // Rematch vote tracking per room
@@ -51,11 +57,6 @@ const rematchVotes = new Map<
     timeout: ReturnType<typeof setTimeout>;
   }
 >();
-
-function getErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  return String(err);
-}
 
 export function createSocketServer(httpServer: HttpServer): TypedServer {
   const allowedOrigin = new URL(getConfig().APP_URL).origin;
@@ -131,7 +132,9 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
     socket.join(`user:${socket.data.userId}`);
 
     // Set online presence and notify friends
-    presenceService.setPresence(socket.data.userId, 'in_lobby').catch(() => {});
+    presenceService.setPresence(socket.data.userId, 'in_lobby').catch((err) => {
+      logger.warn({ err: getErrorMessage(err) }, 'Presence update failed');
+    });
     notifyFriendsOnline(io, socket.data.userId, 'in_lobby');
 
     // Restore party membership if reconnecting
@@ -269,7 +272,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
               username: v.username,
               vote: v.vote,
             }));
-            io.to(`room:${code}`).emit('rematch:update' as any, {
+            io.to(`room:${code}`).emit('rematch:update', {
               votes: votesArray,
               threshold,
               totalPlayers: voteState.humanPlayerIds.size,
@@ -324,15 +327,21 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         return;
       }
 
-      // Prevent double-start (game already running or countdown in progress)
-      if (roomManager.getRoom(roomCode) || room.status !== 'waiting') {
+      // Prevent double-start — in-memory check for existing GameRoom
+      if (roomManager.getRoom(roomCode)) {
         socket.emit('error', { message: 'Game already starting' });
         return;
       }
 
       try {
-        await lobbyService.updateRoomStatus(roomCode, 'countdown');
-        await roomManager.createGame(room);
+        // Atomically set status from 'waiting' to 'countdown' via Lua script
+        const startedRoom = await lobbyService.startRoom(roomCode);
+        if (!startedRoom) {
+          socket.emit('error', { message: 'Game already starting' });
+          return;
+        }
+
+        await roomManager.createGame(startedRoom);
         logger.info({ roomCode, players: room.players.length }, 'Game started');
         broadcastRoomList();
 
@@ -343,7 +352,9 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
               roomCode,
               gameMode: room.config.gameMode,
             })
-            .catch(() => {});
+            .catch((err) => {
+              logger.warn({ err: getErrorMessage(err) }, 'Presence update failed');
+            });
           notifyFriendsOnline(io, player.user.id, 'in_game');
         }
       } catch (err) {
@@ -411,12 +422,12 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         );
         const timeout = setTimeout(() => {
           rematchVotes.delete(roomCode);
-          io.to(`room:${roomCode}`).emit('rematch:update' as any, {
+          io.to(`room:${roomCode}`).emit('rematch:update', {
             votes: [],
             threshold: Math.floor(humanPlayerIds.size / 2) + 1,
             totalPlayers: humanPlayerIds.size,
           });
-        }, 30000);
+        }, REMATCH_VOTE_TIMEOUT_MS);
         rematchVotes.set(roomCode, { votes: new Map(), humanPlayerIds, timeout });
       }
 
@@ -439,7 +450,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         vote: v.vote,
       }));
 
-      io.to(`room:${roomCode}`).emit('rematch:update' as any, {
+      io.to(`room:${roomCode}`).emit('rematch:update', {
         votes: votesArray,
         threshold,
         totalPlayers: voteState.humanPlayerIds.size,
@@ -458,7 +469,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         room.players.forEach((p) => (p.ready = false));
         await lobbyService.updateRoom(roomCode, room);
 
-        io.to(`room:${roomCode}`).emit('rematch:triggered' as any);
+        io.to(`room:${roomCode}`).emit('rematch:triggered');
         io.to(`room:${roomCode}`).emit('room:state', room);
         broadcastRoomList();
       }
@@ -561,12 +572,12 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
       const now = Date.now();
       const last = emoteLastUsed.get(socket.data.userId) ?? 0;
-      if (now - last < 3000) return;
+      if (now - last < EMOTE_COOLDOWN_MS) return;
       emoteLastUsed.set(socket.data.userId, now);
 
       io.to(`room:${roomCode}`).emit('game:emote', {
         playerId: socket.data.userId,
-        emoteId: data.emoteId as any,
+        emoteId: data.emoteId,
       });
     });
 
@@ -593,7 +604,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       const gameRoom = roomManager.getRoom(roomCode);
       if (gameRoom && gameRoom.isPlayerAlive(socket.data.userId)) return;
 
-      io.to(`room:${roomCode}`).emit('game:spectatorChat' as any, {
+      io.to(`room:${roomCode}`).emit('game:spectatorChat', {
         fromUserId: socket.data.userId,
         fromUsername: socket.data.username,
         role: socket.data.role,
@@ -872,8 +883,12 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         const nextLevelId = await campaignService.getNextLevel(level.id);
 
         // Emit helper: broadcast to campaign room (both players) or single socket
-        const emitToCampaign = (event: string, ...args: unknown[]) => {
-          io.to(campaignRoom).emit(event as any, ...args);
+        const campaignBroadcast = io.to(campaignRoom);
+        const emitToCampaign = <E extends keyof ServerToClientEvents>(
+          event: E,
+          ...args: Parameters<ServerToClientEvents[E]>
+        ) => {
+          (campaignBroadcast.emit as (...a: unknown[]) => void)(event, ...args);
         };
 
         const game = campaignManager.startLevel(
@@ -1036,23 +1051,26 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         // Update presence for all real players
         for (const uid of userIds) {
           if (uid > 0) {
-            presenceService.setPresence(uid, 'in_campaign').catch(() => {});
+            presenceService.setPresence(uid, 'in_campaign').catch((err) => {
+              logger.warn({ err: getErrorMessage(err) }, 'Presence update failed');
+            });
             notifyFriendsOnline(io, uid, 'in_campaign');
           }
         }
 
         // Build initial state
+        const campaignState: CampaignGameState = {
+          gameState: game.getGameState().toState(),
+          enemies: Array.from(game.getEnemies().values()).map((e) => e.toState()),
+          lives: game.getLives(),
+          maxLives: game.getMaxLives(),
+          levelId: level.id,
+          exitOpen: false,
+          coopMode: isCoopMode,
+          buddyMode: data.buddyMode || undefined,
+        };
         const initialState = {
-          state: {
-            gameState: game['gameState'].toState(),
-            enemies: Array.from(game['enemies'].values()).map((e) => e.toState()),
-            lives: game['lives'],
-            maxLives: game['maxLives'],
-            levelId: level.id,
-            exitOpen: false,
-            coopMode: isCoopMode,
-            buddyMode: data.buddyMode || undefined,
-          },
+          state: campaignState,
           level: levelSummary,
         };
 
@@ -1063,7 +1081,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         if (partnerSocket) {
           const enemyTypeConfigs = Array.from(enemyTypes.values());
           partnerSocket.emit('campaign:coopStart', {
-            state: initialState.state as any,
+            state: initialState.state,
             level: levelSummary,
             enemyTypes: enemyTypeConfigs,
           });
@@ -1164,7 +1182,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
               username: v.username,
               vote: v.vote,
             }));
-            io.to(`room:${code}`).emit('rematch:update' as any, {
+            io.to(`room:${code}`).emit('rematch:update', {
               votes: votesArray,
               threshold,
               totalPlayers: voteState.humanPlayerIds.size,
@@ -1174,7 +1192,9 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       }
 
       // Remove presence and notify friends offline
-      presenceService.removePresence(socket.data.userId).catch(() => {});
+      presenceService.removePresence(socket.data.userId).catch((err) => {
+        logger.warn({ err: getErrorMessage(err) }, 'Presence update failed');
+      });
       notifyFriendsOffline(io, socket.data.userId);
 
       // Handle party disconnect (leave/disband)
@@ -1217,9 +1237,16 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
   });
 
   // Periodic cleanup of finished game rooms
-  setInterval(() => {
+  const cleanupInterval = setInterval(() => {
     roomManager.cleanup();
-  }, 30000);
+  }, ROOM_CLEANUP_INTERVAL_MS);
+
+  // Clear cleanup interval on server shutdown
+  const shutdown = () => {
+    clearInterval(cleanupInterval);
+  };
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
 
   return io;
 }

@@ -295,6 +295,14 @@ export interface ServerToClientEvents {
     totalPlayers: number;
   }) => void;
   'rematch:triggered': () => void;
+
+  // Admin settings broadcast
+  'admin:settingsChanged': (data: { key: string; value?: unknown }) => void;
+
+  // Simulation queue updates
+  'sim:queueUpdate': (data: {
+    queue: { batchId: string; queuePosition: number; config: SimulationConfig; queuedAt: string }[];
+  }) => void;
 }
 
 // Inter-server events (if scaling later)

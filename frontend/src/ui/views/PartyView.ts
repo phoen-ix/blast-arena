@@ -51,10 +51,10 @@ export class PartyView implements ILobbyView {
   destroy(): void {
     this.container = null;
     const sc = this.deps.socketClient;
-    sc.off('party:state' as any, this.partyStateHandler);
-    sc.off('party:disbanded' as any, this.partyDisbandedHandler);
-    sc.off('party:chat' as any, this.partyChatHandler);
-    sc.off('admin:settingsChanged' as any, this.settingsChangedHandler);
+    sc.off('party:state', this.partyStateHandler);
+    sc.off('party:disbanded', this.partyDisbandedHandler);
+    sc.off('party:chat', this.partyChatHandler);
+    sc.off('admin:settingsChanged', this.settingsChangedHandler);
   }
 
   private setupSocketListeners(): void {
@@ -64,14 +64,14 @@ export class PartyView implements ILobbyView {
       this.party = party;
       this.renderView();
     };
-    sc.on('party:state' as any, this.partyStateHandler);
+    sc.on('party:state', this.partyStateHandler);
 
     this.partyDisbandedHandler = () => {
       this.party = null;
       this.chatMessages = [];
       this.renderView();
     };
-    sc.on('party:disbanded' as any, this.partyDisbandedHandler);
+    sc.on('party:disbanded', this.partyDisbandedHandler);
 
     this.partyChatHandler = (msg: PartyChatMessage) => {
       this.chatMessages.push(msg);
@@ -79,15 +79,15 @@ export class PartyView implements ILobbyView {
       this.renderChatMessages();
       this.scrollChatToBottom();
     };
-    sc.on('party:chat' as any, this.partyChatHandler);
+    sc.on('party:chat', this.partyChatHandler);
 
-    this.settingsChangedHandler = (data: { key: string; value: any }) => {
+    this.settingsChangedHandler = (data: { key: string; value?: unknown }) => {
       if (data.key === 'party_chat_mode') {
         this.chatMode = data.value as ChatMode;
         this.renderView();
       }
     };
-    sc.on('admin:settingsChanged' as any, this.settingsChangedHandler);
+    sc.on('admin:settingsChanged', this.settingsChangedHandler);
   }
 
   private async loadChatMode(): Promise<void> {
@@ -193,7 +193,7 @@ export class PartyView implements ILobbyView {
             <div class="party-page-chat-header">Party Chat</div>
             <div class="party-page-chat-messages" data-chat-messages></div>
             <div class="party-page-chat-input">
-              <input type="text" class="input" placeholder="Type a message..." maxlength="200" data-chat-input>
+              <input type="text" class="input" placeholder="Type a message..." maxlength="200" data-chat-input aria-label="Party chat message">
               <button class="btn btn-primary" data-chat-send>Send</button>
             </div>
           </div>
@@ -228,16 +228,13 @@ export class PartyView implements ILobbyView {
     const leaveBtn = this.container.querySelector('#party-page-leave');
     if (leaveBtn) {
       leaveBtn.addEventListener('click', () => {
-        this.deps.socketClient.emit(
-          'party:leave' as any,
-          ((res: any) => {
-            if (res.success) {
-              this.party = null;
-              this.chatMessages = [];
-              this.renderView();
-            }
-          }) as any,
-        );
+        this.deps.socketClient.emit('party:leave', (res) => {
+          if (res.success) {
+            this.party = null;
+            this.chatMessages = [];
+            this.renderView();
+          }
+        });
       });
     }
 
@@ -245,16 +242,13 @@ export class PartyView implements ILobbyView {
     const disbandBtn = this.container.querySelector('#party-page-disband');
     if (disbandBtn) {
       disbandBtn.addEventListener('click', () => {
-        this.deps.socketClient.emit(
-          'party:leave' as any,
-          ((res: any) => {
-            if (res.success) {
-              this.party = null;
-              this.chatMessages = [];
-              this.renderView();
-            }
-          }) as any,
-        );
+        this.deps.socketClient.emit('party:leave', (res) => {
+          if (res.success) {
+            this.party = null;
+            this.chatMessages = [];
+            this.renderView();
+          }
+        });
       });
     }
 
@@ -263,11 +257,11 @@ export class PartyView implements ILobbyView {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const userId = parseInt((btn as HTMLElement).dataset.kickId!);
-        this.deps.socketClient.emit('party:kick' as any, { userId }, ((res: any) => {
+        this.deps.socketClient.emit('party:kick', { userId }, (res) => {
           if (!res.success) {
             this.deps.notifications.error(res.error || 'Failed to kick member');
           }
-        }) as any);
+        });
       });
     });
 
@@ -278,7 +272,7 @@ export class PartyView implements ILobbyView {
       const send = () => {
         const msg = chatInput.value.trim();
         if (!msg) return;
-        this.deps.socketClient.emit('party:chat' as any, { message: msg });
+        this.deps.socketClient.emit('party:chat', { message: msg });
         chatInput.value = '';
       };
       chatSend.addEventListener('click', send);
@@ -339,11 +333,14 @@ export class PartyView implements ILobbyView {
     // Create modal overlay
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Invite Friend to Party');
     overlay.innerHTML = `
       <div class="modal" style="max-width:400px;">
         <div class="modal-header">
           <h3>Invite Friend to Party</h3>
-          <button class="modal-close">&times;</button>
+          <button class="modal-close" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body" style="max-height:300px;overflow-y:auto;padding:0;">
           ${available
@@ -371,17 +368,24 @@ export class PartyView implements ILobbyView {
 
     document.body.appendChild(overlay);
 
-    const close = () => overlay.remove();
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener('keydown', escHandler);
+    };
     overlay.querySelector('.modal-close')!.addEventListener('click', close);
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) close();
     });
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', escHandler);
 
     overlay.querySelectorAll('.party-invite-send').forEach((btn) => {
       btn.addEventListener('click', () => {
         const item = btn.closest('.party-invite-item') as HTMLElement;
         const userId = parseInt(item.dataset.inviteUserId!);
-        this.deps.socketClient.emit('party:invite' as any, { userId }, ((res: any) => {
+        this.deps.socketClient.emit('party:invite', { userId }, (res) => {
           if (res.success) {
             (btn as HTMLButtonElement).textContent = 'Sent';
             (btn as HTMLButtonElement).disabled = true;
@@ -389,7 +393,7 @@ export class PartyView implements ILobbyView {
           } else {
             this.deps.notifications.error(res.error || 'Failed to invite');
           }
-        }) as any);
+        });
       });
     });
   }

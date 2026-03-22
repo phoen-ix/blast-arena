@@ -1,8 +1,4 @@
-import {
-  CampaignWorld,
-  CampaignLevel,
-  CampaignLevelSummary,
-} from '@blast-arena/shared';
+import { CampaignWorld, CampaignLevel, CampaignLevelSummary } from '@blast-arena/shared';
 import { query, execute } from '../db/connection';
 import { CampaignWorldRow, CampaignLevelRow, CountRow } from '../db/types';
 
@@ -19,6 +15,15 @@ function worldRowToEntry(row: CampaignWorldRow): CampaignWorld {
   };
 }
 
+function safeJsonParse<T>(value: unknown, fallback: T): T {
+  if (typeof value !== 'string') return (value as T) ?? fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 function levelRowToEntry(row: CampaignLevelRow): CampaignLevel {
   return {
     id: row.id,
@@ -28,25 +33,23 @@ function levelRowToEntry(row: CampaignLevelRow): CampaignLevel {
     sortOrder: row.sort_order,
     mapWidth: row.map_width,
     mapHeight: row.map_height,
-    tiles: typeof row.tiles === 'string' ? JSON.parse(row.tiles) : row.tiles,
+    tiles: safeJsonParse(row.tiles, []),
     fillMode: row.fill_mode,
     wallDensity: Number(row.wall_density),
-    playerSpawns: typeof row.player_spawns === 'string' ? JSON.parse(row.player_spawns) : row.player_spawns,
-    enemyPlacements: typeof row.enemy_placements === 'string' ? JSON.parse(row.enemy_placements) : row.enemy_placements,
-    powerupPlacements: typeof row.powerup_placements === 'string' ? JSON.parse(row.powerup_placements) : row.powerup_placements,
+    playerSpawns: safeJsonParse(row.player_spawns, []),
+    enemyPlacements: safeJsonParse(row.enemy_placements, []),
+    powerupPlacements: safeJsonParse(row.powerup_placements, []),
     winCondition: row.win_condition as CampaignLevel['winCondition'],
     winConditionConfig: row.win_condition_config
-      ? (typeof row.win_condition_config === 'string' ? JSON.parse(row.win_condition_config) : row.win_condition_config)
+      ? safeJsonParse(row.win_condition_config, null)
       : null,
     lives: row.lives,
     timeLimit: row.time_limit,
     parTime: row.par_time ?? 0,
     carryOverPowerups: !!row.carry_over_powerups,
-    startingPowerups: row.starting_powerups
-      ? (typeof row.starting_powerups === 'string' ? JSON.parse(row.starting_powerups) : row.starting_powerups)
-      : null,
+    startingPowerups: row.starting_powerups ? safeJsonParse(row.starting_powerups, null) : null,
     availablePowerupTypes: row.available_powerup_types
-      ? (typeof row.available_powerup_types === 'string' ? JSON.parse(row.available_powerup_types) : row.available_powerup_types)
+      ? safeJsonParse(row.available_powerup_types, null)
       : null,
     powerupDropRate: Number(row.powerup_drop_rate),
     reinforcedWalls: !!row.reinforced_walls,
@@ -56,9 +59,7 @@ function levelRowToEntry(row: CampaignLevelRow): CampaignLevel {
 }
 
 function levelRowToSummary(row: CampaignLevelRow): CampaignLevelSummary {
-  const placements = typeof row.enemy_placements === 'string'
-    ? JSON.parse(row.enemy_placements)
-    : row.enemy_placements;
+  const placements = safeJsonParse(row.enemy_placements, []);
 
   return {
     id: row.id,
@@ -136,10 +137,22 @@ export async function updateWorld(
   const sets: string[] = [];
   const params: (string | boolean | number)[] = [];
 
-  if (updates.name !== undefined) { sets.push('name = ?'); params.push(updates.name); }
-  if (updates.description !== undefined) { sets.push('description = ?'); params.push(updates.description); }
-  if (updates.theme !== undefined) { sets.push('theme = ?'); params.push(updates.theme); }
-  if (updates.isPublished !== undefined) { sets.push('is_published = ?'); params.push(updates.isPublished); }
+  if (updates.name !== undefined) {
+    sets.push('name = ?');
+    params.push(updates.name);
+  }
+  if (updates.description !== undefined) {
+    sets.push('description = ?');
+    params.push(updates.description);
+  }
+  if (updates.theme !== undefined) {
+    sets.push('theme = ?');
+    params.push(updates.theme);
+  }
+  if (updates.isPublished !== undefined) {
+    sets.push('is_published = ?');
+    params.push(updates.isPublished);
+  }
 
   if (sets.length === 0) return;
   params.push(id);
@@ -204,10 +217,7 @@ export async function listLevelsWithProgress(
 }
 
 export async function getLevel(id: number): Promise<CampaignLevel | null> {
-  const rows = await query<CampaignLevelRow[]>(
-    `SELECT * FROM campaign_levels WHERE id = ?`,
-    [id],
-  );
+  const rows = await query<CampaignLevelRow[]>(`SELECT * FROM campaign_levels WHERE id = ?`, [id]);
   return rows.length > 0 ? levelRowToEntry(rows[0]) : null;
 }
 

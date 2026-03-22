@@ -231,7 +231,7 @@ router.put(
         ],
       );
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, {
+      io.emit('admin:settingsChanged', {
         key: 'registration_enabled',
         value: req.body.enabled,
       });
@@ -261,7 +261,7 @@ router.put(
       );
       // Broadcast to all connected clients
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, {
+      io.emit('admin:settingsChanged', {
         key: 'recordings_enabled',
         value: req.body.enabled,
       });
@@ -294,7 +294,7 @@ router.put(
         ],
       );
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, {
+      io.emit('admin:settingsChanged', {
         key: 'party_chat_mode',
         value: req.body.mode,
       });
@@ -323,7 +323,7 @@ router.put(
         ],
       );
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, { key: 'lobby_chat_mode', value: req.body.mode });
+      io.emit('admin:settingsChanged', { key: 'lobby_chat_mode', value: req.body.mode });
       res.json({ message: 'Setting updated' });
     } catch (err) {
       next(err);
@@ -349,7 +349,7 @@ router.put(
         ],
       );
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, { key: 'dm_mode', value: req.body.mode });
+      io.emit('admin:settingsChanged', { key: 'dm_mode', value: req.body.mode });
       res.json({ message: 'Setting updated' });
     } catch (err) {
       next(err);
@@ -375,7 +375,7 @@ router.put(
         ],
       );
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, { key: 'emote_mode', value: req.body.mode });
+      io.emit('admin:settingsChanged', { key: 'emote_mode', value: req.body.mode });
       res.json({ message: 'Setting updated' });
     } catch (err) {
       next(err);
@@ -401,7 +401,7 @@ router.put(
         ],
       );
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, { key: 'spectator_chat_mode', value: req.body.mode });
+      io.emit('admin:settingsChanged', { key: 'spectator_chat_mode', value: req.body.mode });
       res.json({ message: 'Setting updated' });
     } catch (err) {
       next(err);
@@ -427,7 +427,7 @@ router.put('/admin/settings/xp_multiplier', adminOnlyMiddleware, async (req, res
       ],
     );
     const io = getIO();
-    io.emit('admin:settingsChanged' as any, { key: 'xp_multiplier', value: multiplier });
+    io.emit('admin:settingsChanged', { key: 'xp_multiplier', value: multiplier });
     res.json({ message: 'XP multiplier updated' });
   } catch (err) {
     next(err);
@@ -456,7 +456,7 @@ router.put(
         ],
       );
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, { key: 'default_theme', value: req.body.theme });
+      io.emit('admin:settingsChanged', { key: 'default_theme', value: req.body.theme });
       res.json({ message: 'Default theme updated' });
     } catch (err) {
       next(err);
@@ -624,7 +624,7 @@ router.put(
         ],
       );
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, { key: 'game_defaults', value: defaults });
+      io.emit('admin:settingsChanged', { key: 'game_defaults', value: defaults });
       res.json({ message: 'Game defaults updated' });
     } catch (err) {
       next(err);
@@ -651,7 +651,7 @@ router.put(
         ],
       );
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, { key: 'simulation_defaults', value: defaults });
+      io.emit('admin:settingsChanged', { key: 'simulation_defaults', value: defaults });
       res.json({ message: 'Simulation defaults updated' });
     } catch (err) {
       next(err);
@@ -727,7 +727,7 @@ router.put(
       );
 
       const io = getIO();
-      io.emit('admin:settingsChanged' as any, { key: 'email_settings' });
+      io.emit('admin:settingsChanged', { key: 'email_settings' });
 
       res.json({ message: 'Email settings updated' });
     } catch (err) {

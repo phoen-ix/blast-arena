@@ -5,6 +5,8 @@ import { PublicUser } from '@blast-arena/shared';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
+const ROOM_TTL_SECONDS = 3600; // 1 hour
+
 function generateRoomCode(): string {
   return uuidv4().substring(0, 6).toUpperCase();
 }
@@ -27,8 +29,8 @@ export async function createRoom(
     createdAt: new Date(),
   };
 
-  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', 3600); // 1 hour TTL
-  await redis.set(`player:${host.id}:room`, code, 'EX', 3600);
+  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', ROOM_TTL_SECONDS);
+  await redis.set(`player:${host.id}:room`, code, 'EX', ROOM_TTL_SECONDS);
 
   logger.info({ code, host: host.username }, 'Room created');
   return room;
@@ -110,8 +112,8 @@ local user = cjson.decode(ARGV[1])
 table.insert(room.players, { user = user, ready = false, team = cjson.null })
 
 local updated = cjson.encode(room)
-redis.call('SET', KEYS[1], updated, 'EX', 3600)
-redis.call('SET', KEYS[2], room.code, 'EX', 3600)
+redis.call('SET', KEYS[1], updated, 'EX', ROOM_TTL_SECONDS)
+redis.call('SET', KEYS[2], room.code, 'EX', ROOM_TTL_SECONDS)
 
 return updated
 `;
@@ -126,14 +128,14 @@ const JOIN_ERROR_MAP: Record<string, { message: string; status: number; code: st
 export async function joinRoom(code: string, user: PublicUser): Promise<Room> {
   const redis = getRedis();
 
-  const result = await redis.eval(
+  const result = (await redis.eval(
     JOIN_ROOM_LUA,
     2,
     `room:${code}`,
     `player:${user.id}:room`,
     JSON.stringify(user),
     String(user.id),
-  ) as string;
+  )) as string;
 
   if (result.startsWith('ERR:')) {
     const errorCode = result.slice(4);
@@ -147,42 +149,159 @@ export async function joinRoom(code: string, user: PublicUser): Promise<Room> {
   return JSON.parse(result);
 }
 
+// Lua script for atomic leave: removes player, transfers host if needed, deletes empty rooms
+// KEYS[1] = room key, KEYS[2] = player:userId:room key
+// ARGV[1] = userId
+// Returns: updated room JSON, "DELETED" if room empty, or "ERR:NOT_FOUND"
+const LEAVE_ROOM_LUA = `
+local data = redis.call('GET', KEYS[1])
+if not data then
+  return 'ERR:NOT_FOUND'
+end
+
+local room = cjson.decode(data)
+redis.call('DEL', KEYS[2])
+
+local newPlayers = {}
+for _, p in ipairs(room.players) do
+  if p.user.id ~= tonumber(ARGV[1]) then
+    table.insert(newPlayers, p)
+  end
+end
+
+if #newPlayers == 0 then
+  redis.call('DEL', KEYS[1])
+  return 'DELETED'
+end
+
+room.players = newPlayers
+
+if room.host.id == tonumber(ARGV[1]) then
+  room.host = newPlayers[1].user
+end
+
+local updated = cjson.encode(room)
+redis.call('SET', KEYS[1], updated, 'EX', ${ROOM_TTL_SECONDS})
+return updated
+`;
+
+// Lua script for atomic ready toggle
+// KEYS[1] = room key
+// ARGV[1] = userId, ARGV[2] = "true" or "false"
+// Returns: updated room JSON or ERR:*
+const SET_READY_LUA = `
+local data = redis.call('GET', KEYS[1])
+if not data then
+  return 'ERR:NOT_FOUND'
+end
+
+local room = cjson.decode(data)
+local found = false
+local userId = tonumber(ARGV[1])
+local ready = ARGV[2] == 'true'
+
+for _, p in ipairs(room.players) do
+  if p.user.id == userId then
+    p.ready = ready
+    found = true
+    break
+  end
+end
+
+if not found then
+  return 'ERR:NOT_IN_ROOM'
+end
+
+local updated = cjson.encode(room)
+redis.call('SET', KEYS[1], updated, 'EX', ${ROOM_TTL_SECONDS})
+return updated
+`;
+
+// Lua script for atomic team assignment
+// KEYS[1] = room key
+// ARGV[1] = userId, ARGV[2] = team number or "null"
+// Returns: updated room JSON or ERR:*
+const SET_TEAM_LUA = `
+local data = redis.call('GET', KEYS[1])
+if not data then
+  return 'ERR:NOT_FOUND'
+end
+
+local room = cjson.decode(data)
+local found = false
+local userId = tonumber(ARGV[1])
+local team = ARGV[2] == 'null' and cjson.null or tonumber(ARGV[2])
+
+for _, p in ipairs(room.players) do
+  if p.user.id == userId then
+    p.team = team
+    found = true
+    break
+  end
+end
+
+if not found then
+  return 'ERR:NOT_IN_ROOM'
+end
+
+local updated = cjson.encode(room)
+redis.call('SET', KEYS[1], updated, 'EX', ${ROOM_TTL_SECONDS})
+return updated
+`;
+
+// Lua script for atomic room start: only succeeds if status is 'waiting'
+// KEYS[1] = room key
+// ARGV[1] = new status ('countdown')
+// Returns: updated room JSON or ERR:*
+const START_ROOM_LUA = `
+local data = redis.call('GET', KEYS[1])
+if not data then
+  return 'ERR:NOT_FOUND'
+end
+
+local room = cjson.decode(data)
+if room.status ~= 'waiting' then
+  return 'ERR:ALREADY_STARTING'
+end
+
+room.status = ARGV[1]
+local updated = cjson.encode(room)
+redis.call('SET', KEYS[1], updated, 'EX', ${ROOM_TTL_SECONDS})
+return updated
+`;
+
 export async function leaveRoom(code: string, userId: number): Promise<Room | null> {
   const redis = getRedis();
-  const room = await getRoom(code);
 
-  if (!room) return null;
+  const result = (await redis.eval(
+    LEAVE_ROOM_LUA,
+    2,
+    `room:${code}`,
+    `player:${userId}:room`,
+    String(userId),
+  )) as string;
 
-  room.players = room.players.filter((p) => p.user.id !== userId);
-  await redis.del(`player:${userId}:room`);
+  if (result === 'ERR:NOT_FOUND') return null;
+  if (result === 'DELETED') return null;
 
-  if (room.players.length === 0) {
-    await redis.del(`room:${code}`);
-    return null;
-  }
-
-  // Transfer host if needed
-  if (room.host.id === userId) {
-    room.host = room.players[0].user;
-  }
-
-  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', 3600);
-  return room;
+  return JSON.parse(result);
 }
 
 export async function setPlayerReady(code: string, userId: number, ready: boolean): Promise<Room> {
   const redis = getRedis();
-  const room = await getRoom(code);
 
-  if (!room) throw new AppError('Room not found', 404, 'NOT_FOUND');
+  const result = (await redis.eval(
+    SET_READY_LUA,
+    1,
+    `room:${code}`,
+    String(userId),
+    String(ready),
+  )) as string;
 
-  const player = room.players.find((p) => p.user.id === userId);
-  if (!player) throw new AppError('Not in this room', 400, 'NOT_IN_ROOM');
+  if (result === 'ERR:NOT_FOUND') throw new AppError('Room not found', 404, 'NOT_FOUND');
+  if (result === 'ERR:NOT_IN_ROOM') throw new AppError('Not in this room', 400, 'NOT_IN_ROOM');
 
-  player.ready = ready;
-
-  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', 3600);
-  return room;
+  return JSON.parse(result);
 }
 
 export async function setPlayerTeam(
@@ -191,22 +310,40 @@ export async function setPlayerTeam(
   team: number | null,
 ): Promise<Room> {
   const redis = getRedis();
-  const room = await getRoom(code);
 
-  if (!room) throw new AppError('Room not found', 404, 'NOT_FOUND');
+  const result = (await redis.eval(
+    SET_TEAM_LUA,
+    1,
+    `room:${code}`,
+    String(targetUserId),
+    team === null ? 'null' : String(team),
+  )) as string;
 
-  const player = room.players.find((p) => p.user.id === targetUserId);
-  if (!player) throw new AppError('Player not in this room', 400, 'NOT_IN_ROOM');
+  if (result === 'ERR:NOT_FOUND') throw new AppError('Room not found', 404, 'NOT_FOUND');
+  if (result === 'ERR:NOT_IN_ROOM')
+    throw new AppError('Player not in this room', 400, 'NOT_IN_ROOM');
 
-  player.team = team;
-
-  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', 3600);
-  return room;
+  return JSON.parse(result);
 }
 
 export async function updateRoom(code: string, room: Room): Promise<void> {
   const redis = getRedis();
-  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', 3600);
+  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', ROOM_TTL_SECONDS);
+}
+
+/**
+ * Atomically start a room — only succeeds if current status is 'waiting'.
+ * Prevents TOCTOU race where two concurrent room:start events both pass the guard.
+ * Returns the updated room, or null if room not found / already starting.
+ */
+export async function startRoom(code: string): Promise<Room | null> {
+  const redis = getRedis();
+
+  const result = (await redis.eval(START_ROOM_LUA, 1, `room:${code}`, 'countdown')) as string;
+
+  if (result.startsWith('ERR:')) return null;
+
+  return JSON.parse(result);
 }
 
 export async function updateRoomStatus(code: string, status: Room['status']): Promise<void> {
@@ -215,7 +352,7 @@ export async function updateRoomStatus(code: string, status: Room['status']): Pr
   if (!room) return;
 
   room.status = status;
-  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', 3600);
+  await redis.set(`room:${code}`, JSON.stringify(room), 'EX', ROOM_TTL_SECONDS);
 }
 
 export async function getPlayerRoom(userId: number): Promise<string | null> {

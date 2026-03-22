@@ -301,6 +301,9 @@ export class AITab {
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', title);
     overlay.style.cssText =
       'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;';
 
@@ -389,6 +392,9 @@ export class AITab {
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', `Re-upload ${isEnemy ? 'Enemy ' : ''}AI Source`);
     overlay.style.cssText =
       'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;';
 
@@ -459,6 +465,9 @@ export class AITab {
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', `Edit ${isEnemy ? 'Enemy ' : ''}AI`);
     overlay.style.cssText =
       'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;';
 
@@ -520,6 +529,9 @@ export class AITab {
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', `Delete ${isEnemy ? 'Enemy ' : ''}AI`);
     overlay.style.cssText =
       'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;';
 
@@ -528,7 +540,7 @@ export class AITab {
         <h3 style="margin:0 0 12px;color:var(--danger);">Delete ${isEnemy ? 'Enemy ' : ''}AI</h3>
         <p style="color:var(--text-dim);margin:0 0 12px;">This will permanently delete <strong style="color:var(--text);">${escapeHtml(name)}</strong> and its source files. ${fallbackMsg}</p>
         <p style="color:var(--text-dim);margin:0 0 16px;font-size:13px;">Type the AI name to confirm:</p>
-        <input type="text" id="ai-delete-confirm" class="admin-input" placeholder="${escapeHtml(name)}" style="width:100%;box-sizing:border-box;margin-bottom:16px;">
+        <input type="text" id="ai-delete-confirm" class="admin-input" placeholder="${escapeHtml(name)}" aria-label="Type AI name to confirm deletion" style="width:100%;box-sizing:border-box;margin-bottom:16px;">
         <div style="display:flex;gap:12px;justify-content:flex-end;">
           <button class="btn btn-secondary" id="ai-delete-cancel">Cancel</button>
           <button class="btn btn-danger" id="ai-delete-submit" disabled>Delete</button>

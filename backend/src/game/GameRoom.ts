@@ -8,7 +8,15 @@ import {
   InterServerEvents,
   SocketData,
 } from '@blast-arena/shared';
-import { GAME_MODES, MAX_SPEED, calculateXpGained, getLevelForXp, getXpForLevel, getXpToNextLevel, XpUpdateResult } from '@blast-arena/shared';
+import {
+  GAME_MODES,
+  MAX_SPEED,
+  calculateXpGained,
+  getLevelForXp,
+  getXpForLevel,
+  getXpToNextLevel,
+  XpUpdateResult,
+} from '@blast-arena/shared';
 
 type TypedServer = Server<
   ClientToServerEvents,
@@ -107,16 +115,7 @@ export class GameRoom {
       }
     }
 
-    // Load cosmetics for human players (fire-and-forget, cosmetics are visual only)
-    const humanIds = room.players.map((rp) => rp.user.id);
-    cosmeticsService.getPlayerCosmeticsForGame(humanIds).then((cosmeticsMap) => {
-      for (const [userId, cosmeticData] of cosmeticsMap) {
-        const player = this.gameState.players.get(userId);
-        if (player) player.cosmetics = cosmeticData;
-      }
-    }).catch((err) => {
-      logger.error({ err }, 'Failed to load player cosmetics');
-    });
+    // Cosmetics are loaded in start() to ensure they're ready before game:start broadcast
 
     // Replay recorder for game replay (conditional on room config)
     if (room.config.recordGame !== false) {
@@ -191,6 +190,18 @@ export class GameRoom {
       }
     } catch (err) {
       logger.error({ err }, 'Failed to create match record');
+    }
+
+    // Load cosmetics for human players before broadcasting initial state
+    try {
+      const humanIds = this.room.players.map((rp) => rp.user.id);
+      const cosmeticsMap = await cosmeticsService.getPlayerCosmeticsForGame(humanIds);
+      for (const [userId, cosmeticData] of cosmeticsMap) {
+        const player = this.gameState.players.get(userId);
+        if (player) player.cosmetics = cosmeticData;
+      }
+    } catch (err) {
+      logger.error({ err }, 'Failed to load player cosmetics');
     }
 
     // Broadcast initial state
@@ -312,9 +323,10 @@ export class GameRoom {
     // Record frame for replay — pass raw tile grid reference for diff computation
     // (broadcast state has empty tiles for bandwidth savings, but replays need actual tiles)
     if (this.replayRecorder) {
-      const replayState = state.tileDiffs !== undefined
-        ? { ...state, map: { ...state.map, tiles: this.gameState.map.tiles } }
-        : state;
+      const replayState =
+        state.tileDiffs !== undefined
+          ? { ...state, map: { ...state.map, tiles: this.gameState.map.tiles } }
+          : state;
       this.replayRecorder.recordTick(replayState, events);
     }
   }
@@ -369,7 +381,8 @@ export class GameRoom {
         const duration = Math.floor(state.timeElapsed);
         // Don't store bot IDs (negative) as winner_id in DB
         const dbWinnerId = state.winnerId && state.winnerId > 0 ? state.winnerId : null;
-        const matchStatus = this.gameState.finishReason === 'All players disconnected' ? 'aborted' : 'finished';
+        const matchStatus =
+          this.gameState.finishReason === 'All players disconnected' ? 'aborted' : 'finished';
         await execute(
           `UPDATE matches SET status = ?, finished_at = NOW(), duration = ?, winner_id = ? WHERE id = ?`,
           [matchStatus, duration, dbWinnerId, this.matchId],
@@ -432,7 +445,9 @@ export class GameRoom {
                 userId: p.id,
                 placement: p.placement ?? 999,
                 team: p.team,
-                isWinner: p.id === state.winnerId || (state.winnerTeam !== null && p.team === state.winnerTeam),
+                isWinner:
+                  p.id === state.winnerId ||
+                  (state.winnerTeam !== null && p.team === state.winnerTeam),
               }));
 
             const eloResults = await eloService.processMatchElo(
@@ -455,7 +470,9 @@ export class GameRoom {
               const unlocked = await achievementsService.evaluateAfterGame({
                 userId: player.id,
                 gameMode: this.room.config.gameMode,
-                isWinner: player.id === state.winnerId || (state.winnerTeam !== null && player.team === state.winnerTeam),
+                isWinner:
+                  player.id === state.winnerId ||
+                  (state.winnerTeam !== null && player.team === state.winnerTeam),
                 kills: player.kills,
                 deaths: player.deaths,
                 selfKills: player.selfKills,
@@ -477,30 +494,41 @@ export class GameRoom {
 
         // --- XP & Level ---
         try {
-          const xpMultiplier = parseFloat(await settingsService.getSetting('xp_multiplier') ?? '1');
+          const xpMultiplier = parseFloat(
+            (await settingsService.getSetting('xp_multiplier')) ?? '1',
+          );
           const xpResults: XpUpdateResult[] = [];
 
           for (const p of placements) {
             if (p.isBot || p.userId < 0) continue;
 
-            const [statsRow] = await query<any[]>('SELECT total_xp, level FROM user_stats WHERE user_id = ?', [p.userId]);
+            const [statsRow] = await query<any[]>(
+              'SELECT total_xp, level FROM user_stats WHERE user_id = ?',
+              [p.userId],
+            );
             const currentXp = statsRow?.total_xp ?? 0;
             const oldLevel = statsRow?.level ?? 1;
 
             const player = this.gameState.players.get(p.userId);
-            const xpGained = calculateXpGained({
-              kills: p.kills,
-              bombsPlaced: player?.bombsPlaced ?? 0,
-              powerupsCollected: player?.powerupsCollected ?? 0,
-              placement: p.placement,
-              isWinner: p.userId === state.winnerId,
-            }, xpMultiplier);
+            const xpGained = calculateXpGained(
+              {
+                kills: p.kills,
+                bombsPlaced: player?.bombsPlaced ?? 0,
+                powerupsCollected: player?.powerupsCollected ?? 0,
+                placement: p.placement,
+                isWinner: p.userId === state.winnerId,
+              },
+              xpMultiplier,
+            );
 
             const newTotalXp = currentXp + xpGained;
             const newLevel = getLevelForXp(newTotalXp);
 
-            await execute('UPDATE user_stats SET total_xp = ?, level = ? WHERE user_id = ?',
-              [newTotalXp, newLevel, p.userId]);
+            await execute('UPDATE user_stats SET total_xp = ?, level = ? WHERE user_id = ?', [
+              newTotalXp,
+              newLevel,
+              p.userId,
+            ]);
 
             if (newLevel > oldLevel) {
               await cosmeticsService.checkLevelMilestoneUnlocks(p.userId, newLevel);
@@ -518,7 +546,7 @@ export class GameRoom {
           }
 
           if (xpResults.length > 0) {
-            this.io.to(`room:${this.code}`).emit('game:xpUpdate' as any, xpResults);
+            this.io.to(`room:${this.code}`).emit('game:xpUpdate', xpResults);
           }
         } catch (xpErr) {
           logger.error({ err: xpErr }, 'Failed to process XP');

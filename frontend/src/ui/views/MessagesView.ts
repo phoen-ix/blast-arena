@@ -21,7 +21,7 @@ export class MessagesView implements ILobbyView {
   // Socket handlers
   private dmReceiveHandler: (message: DirectMessage) => void;
   private dmReadHandler: (data: { fromUserId: number; readAt: string }) => void;
-  private settingsChangedHandler: (data: { key: string; value: any }) => void;
+  private settingsChangedHandler: (data: { key: string; value?: unknown }) => void;
 
   constructor(deps: ViewDeps, options?: Record<string, any>) {
     this.deps = deps;
@@ -61,16 +61,16 @@ export class MessagesView implements ILobbyView {
   destroy(): void {
     this.container = null;
     const sc = this.deps.socketClient;
-    sc.off('dm:receive' as any, this.dmReceiveHandler);
-    sc.off('dm:read' as any, this.dmReadHandler);
-    sc.off('admin:settingsChanged' as any, this.settingsChangedHandler);
+    sc.off('dm:receive', this.dmReceiveHandler);
+    sc.off('dm:read', this.dmReadHandler);
+    sc.off('admin:settingsChanged', this.settingsChangedHandler);
   }
 
   private setupSocketListeners(): void {
     const sc = this.deps.socketClient;
-    sc.on('dm:receive' as any, this.dmReceiveHandler);
-    sc.on('dm:read' as any, this.dmReadHandler);
-    sc.on('admin:settingsChanged' as any, this.settingsChangedHandler);
+    sc.on('dm:receive', this.dmReceiveHandler);
+    sc.on('dm:read', this.dmReadHandler);
+    sc.on('admin:settingsChanged', this.settingsChangedHandler);
   }
 
   private async loadDMMode(): Promise<void> {
@@ -104,7 +104,7 @@ export class MessagesView implements ILobbyView {
       this.messages.push(message);
       this.renderMessages();
       this.scrollToBottom();
-      this.deps.socketClient.emit('dm:read' as any, { fromUserId: message.senderId });
+      this.deps.socketClient.emit('dm:read', { fromUserId: message.senderId });
     } else {
       const conv = this.conversations.find((c) => c.userId === message.senderId);
       if (conv) {
@@ -140,7 +140,7 @@ export class MessagesView implements ILobbyView {
     this.messages = [];
     this.renderView();
     this.loadMessages(userId);
-    this.deps.socketClient.emit('dm:read' as any, { fromUserId: userId });
+    this.deps.socketClient.emit('dm:read', { fromUserId: userId });
     const conv = this.conversations.find((c) => c.userId === userId);
     if (conv) conv.unreadCount = 0;
   }
@@ -194,7 +194,7 @@ export class MessagesView implements ILobbyView {
               this.canSend()
                 ? `
               <div class="messages-input-row">
-                <input type="text" class="input messages-input" placeholder="Type a message..." maxlength="${DM_MAX_LENGTH}" data-msg-input>
+                <input type="text" class="input messages-input" placeholder="Type a message..." maxlength="${DM_MAX_LENGTH}" data-msg-input aria-label="Direct message">
                 <button class="btn btn-primary" data-msg-send>Send</button>
               </div>
             `
@@ -313,9 +313,9 @@ export class MessagesView implements ILobbyView {
       if (!text || !this.activeConversation) return;
 
       this.deps.socketClient.emit(
-        'dm:send' as any,
+        'dm:send',
         { toUserId: this.activeConversation.userId, message: text },
-        ((res: any) => {
+        (res) => {
           if (res.success && res.message) {
             this.messages.push(res.message);
             this.renderMessages();
@@ -330,7 +330,7 @@ export class MessagesView implements ILobbyView {
           } else {
             this.deps.notifications.error(res.error || 'Failed to send message');
           }
-        }) as any,
+        },
       );
       input.value = '';
     };

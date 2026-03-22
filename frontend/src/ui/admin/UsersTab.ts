@@ -181,12 +181,15 @@ export class UsersTab {
   private showDeleteModal(userId: number, username: string): void {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Delete User');
     modal.innerHTML = `
       <div class="modal" style="max-width:420px;">
         <h2 style="margin-bottom:12px;color:var(--danger);">Delete User Permanently</h2>
         <p style="color:var(--text-dim);font-size:14px;">This will permanently delete <strong style="color:var(--text);">${escapeHtml(username)}</strong> and all their data. This action cannot be undone.</p>
         <p style="color:var(--text-dim);font-size:13px;margin-top:8px;">Type the username to confirm:</p>
-        <input type="text" class="confirm-input" id="delete-confirm-input" placeholder="${escapeAttr(username)}">
+        <input type="text" class="confirm-input" id="delete-confirm-input" placeholder="${escapeAttr(username)}" aria-label="Type username to confirm deletion">
         <div class="modal-actions" style="margin-top:16px;">
           <button class="btn btn-secondary" id="delete-cancel">Cancel</button>
           <button class="btn-danger" style="padding:8px 16px;font-size:14px;opacity:0.5;" id="delete-confirm" disabled>Delete</button>
@@ -217,6 +220,9 @@ export class UsersTab {
   private showCreateUserModal(): void {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Create User');
     modal.innerHTML = `
       <div class="modal" style="max-width:420px;">
         <h2 style="margin-bottom:16px;">Create User</h2>
@@ -293,6 +299,9 @@ export class UsersTab {
   private showResetPasswordModal(userId: number, username: string): void {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Reset Password');
     modal.innerHTML = `
       <div class="modal" style="max-width:420px;">
         <h2 style="margin-bottom:12px;">Reset Password</h2>

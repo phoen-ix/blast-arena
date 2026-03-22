@@ -4,7 +4,7 @@ import { SocketClient } from '../network/SocketClient';
 import { NotificationUI } from '../ui/NotificationUI';
 import { LobbyUI } from '../ui/LobbyUI';
 import { RoomUI } from '../ui/RoomUI';
-import { Room } from '@blast-arena/shared';
+import { GameState, Room, CoopStartData } from '@blast-arena/shared';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 
 export class LobbyScene extends Phaser.Scene {
@@ -13,12 +13,12 @@ export class LobbyScene extends Phaser.Scene {
   private notifications!: NotificationUI;
   private lobbyUI!: LobbyUI;
   private roomUI: RoomUI | null = null;
-  private gameStartHandler: ((state: any) => void) | null = null;
-  private adminToastHandler: ((data: any) => void) | null = null;
-  private adminBannerHandler: ((data: any) => void) | null = null;
-  private adminKickedHandler: ((data: any) => void) | null = null;
-  private partyJoinRoomHandler: ((data: any) => void) | null = null;
-  private campaignCoopStartHandler: ((data: any) => void) | null = null;
+  private gameStartHandler: ((state: GameState) => void) | null = null;
+  private adminToastHandler: ((data: { message: string }) => void) | null = null;
+  private adminBannerHandler: ((data: { message: string | null }) => void) | null = null;
+  private adminKickedHandler: ((data: { reason: string }) => void) | null = null;
+  private partyJoinRoomHandler: ((data: { roomCode: string }) => void) | null = null;
+  private campaignCoopStartHandler: ((data: CoopStartData) => void) | null = null;
 
   constructor() {
     super({ key: 'LobbyScene' });
@@ -33,9 +33,9 @@ export class LobbyScene extends Phaser.Scene {
     // If the server detects we were in an active game, it emits game:start on connect.
     // This is replaced by onJoinRoom()'s handler during normal flow.
     if (!this.gameStartHandler) {
-      this.gameStartHandler = (state: any) => {
+      this.gameStartHandler = (state) => {
         if (this.gameStartHandler) {
-          this.socketClient.off('game:start' as any, this.gameStartHandler as any);
+          this.socketClient.off('game:start', this.gameStartHandler);
           this.gameStartHandler = null;
         }
         this.lobbyUI?.hide();
@@ -50,7 +50,7 @@ export class LobbyScene extends Phaser.Scene {
         this.scene.start('GameScene');
         this.scene.launch('HUDScene');
       };
-      this.socketClient.on('game:start' as any, this.gameStartHandler as any);
+      this.socketClient.on('game:start', this.gameStartHandler);
     }
 
     // Reset gamepad UI navigator for clean state
@@ -98,12 +98,12 @@ export class LobbyScene extends Phaser.Scene {
     this.events.once('shutdown', this.shutdown, this);
 
     // Admin socket listeners
-    this.adminToastHandler = (data: any) => {
+    this.adminToastHandler = (data) => {
       this.notifications.info(data.message);
     };
-    this.socketClient.on('admin:toast' as any, this.adminToastHandler as any);
+    this.socketClient.on('admin:toast', this.adminToastHandler);
 
-    this.adminBannerHandler = (data: any) => {
+    this.adminBannerHandler = (data) => {
       const area = document.getElementById('lobby-banner-area');
       if (area) {
         if (data.message) {
@@ -124,32 +124,32 @@ export class LobbyScene extends Phaser.Scene {
         }
       }
     };
-    this.socketClient.on('admin:banner' as any, this.adminBannerHandler as any);
+    this.socketClient.on('admin:banner', this.adminBannerHandler);
 
-    this.adminKickedHandler = (data: any) => {
+    this.adminKickedHandler = (data) => {
       this.notifications.error(data.reason || 'You have been kicked');
       this.roomUI?.hide();
       this.roomUI = null;
       this.showLobby();
     };
-    this.socketClient.on('admin:kicked' as any, this.adminKickedHandler as any);
+    this.socketClient.on('admin:kicked', this.adminKickedHandler);
 
     // Party join room listener (party leader joined a room, follow them)
-    this.partyJoinRoomHandler = (data: any) => {
+    this.partyJoinRoomHandler = (data) => {
       if (data.roomCode) {
-        this.socketClient.emit('room:join' as any, { code: data.roomCode }, ((response: any) => {
+        this.socketClient.emit('room:join', { code: data.roomCode }, (response) => {
           if (response.success && response.room) {
             this.notifications.info('Following party leader into room');
             this.onJoinRoom(response.room);
           }
-        }) as any);
+        });
       }
     };
-    this.socketClient.on('party:joinRoom' as any, this.partyJoinRoomHandler as any);
+    this.socketClient.on('party:joinRoom', this.partyJoinRoomHandler);
 
     // Campaign co-op start listener (partner auto-joins when leader starts co-op)
-    this.campaignCoopStartHandler = (data: any) => {
-      this.socketClient.off('campaign:coopStart' as any, this.campaignCoopStartHandler as any);
+    this.campaignCoopStartHandler = (data) => {
+      this.socketClient.off('campaign:coopStart', this.campaignCoopStartHandler!);
       this.campaignCoopStartHandler = null;
 
       // Clear all DOM overlays
@@ -173,7 +173,7 @@ export class LobbyScene extends Phaser.Scene {
       this.scene.start('GameScene');
       this.scene.launch('HUDScene');
     };
-    this.socketClient.on('campaign:coopStart' as any, this.campaignCoopStartHandler as any);
+    this.socketClient.on('campaign:coopStart', this.campaignCoopStartHandler);
 
     // Background
     const width = this.cameras.main.width;
@@ -208,14 +208,14 @@ export class LobbyScene extends Phaser.Scene {
 
     // Remove previous game:start listener if any
     if (this.gameStartHandler) {
-      this.socketClient.off('game:start' as any, this.gameStartHandler as any);
+      this.socketClient.off('game:start', this.gameStartHandler);
     }
 
     // Listen for game start (one-shot: removes itself after firing)
-    this.gameStartHandler = (state: any) => {
+    this.gameStartHandler = (state) => {
       // Remove this listener immediately so it doesn't leak to next game
       if (this.gameStartHandler) {
-        this.socketClient.off('game:start' as any, this.gameStartHandler as any);
+        this.socketClient.off('game:start', this.gameStartHandler);
         this.gameStartHandler = null;
       }
 
@@ -233,33 +233,33 @@ export class LobbyScene extends Phaser.Scene {
       this.scene.start('GameScene');
       this.scene.launch('HUDScene');
     };
-    this.socketClient.on('game:start' as any, this.gameStartHandler as any);
+    this.socketClient.on('game:start', this.gameStartHandler);
   }
 
   shutdown(): void {
     // Clean up socket listener to prevent leaks across scene transitions
     if (this.gameStartHandler) {
-      this.socketClient.off('game:start' as any, this.gameStartHandler as any);
+      this.socketClient.off('game:start', this.gameStartHandler);
       this.gameStartHandler = null;
     }
     if (this.adminToastHandler) {
-      this.socketClient.off('admin:toast' as any, this.adminToastHandler as any);
+      this.socketClient.off('admin:toast', this.adminToastHandler);
       this.adminToastHandler = null;
     }
     if (this.adminBannerHandler) {
-      this.socketClient.off('admin:banner' as any, this.adminBannerHandler as any);
+      this.socketClient.off('admin:banner', this.adminBannerHandler);
       this.adminBannerHandler = null;
     }
     if (this.adminKickedHandler) {
-      this.socketClient.off('admin:kicked' as any, this.adminKickedHandler as any);
+      this.socketClient.off('admin:kicked', this.adminKickedHandler);
       this.adminKickedHandler = null;
     }
     if (this.partyJoinRoomHandler) {
-      this.socketClient.off('party:joinRoom' as any, this.partyJoinRoomHandler as any);
+      this.socketClient.off('party:joinRoom', this.partyJoinRoomHandler);
       this.partyJoinRoomHandler = null;
     }
     if (this.campaignCoopStartHandler) {
-      this.socketClient.off('campaign:coopStart' as any, this.campaignCoopStartHandler as any);
+      this.socketClient.off('campaign:coopStart', this.campaignCoopStartHandler);
       this.campaignCoopStartHandler = null;
     }
     this.lobbyUI?.destroyPanels();

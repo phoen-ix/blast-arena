@@ -5,7 +5,7 @@ import { NotificationUI } from './NotificationUI';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { PartyBar } from './PartyBar';
 import { escapeHtml } from '../utils/html';
-import { getErrorMessage } from '@blast-arena/shared';
+import { getErrorMessage, CampaignGameState, CampaignLevelSummary } from '@blast-arena/shared';
 import { showLocalCoopModal } from './modals/LocalCoopModal';
 import { showBuddyModal, BuddyLaunchConfig } from './modals/BuddyModal';
 import { LocalCoopP2Identity } from '../game/LocalCoopInput';
@@ -721,8 +721,11 @@ export class CampaignUI {
       const enemyTypesResp = await ApiClient.get<any>('/campaign/enemy-types');
 
       // Listen for the server's initial state before transitioning
-      const gameStartHandler = (data: any) => {
-        this.socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
+      const gameStartHandler = (data: {
+        state: CampaignGameState;
+        level: CampaignLevelSummary;
+      }) => {
+        this.socketClient.off('campaign:gameStart', gameStartHandler);
 
         // Clear all DOM overlays
         const uiOverlay = document.getElementById('ui-overlay');
@@ -747,10 +750,16 @@ export class CampaignUI {
           activeScene.scene.launch('HUDScene');
         }
       };
-      this.socketClient.on('campaign:gameStart' as any, gameStartHandler as any);
+      this.socketClient.on('campaign:gameStart', gameStartHandler);
 
       // Build start data
-      const startData: any = { levelId };
+      const startData: {
+        levelId: number;
+        coopMode?: boolean;
+        localCoopMode?: boolean;
+        localP2?: { userId?: number; username: string; guestColor?: number };
+        buddyMode?: boolean;
+      } = { levelId };
       if (buddyMode) {
         startData.buddyMode = true;
       } else if (coopMode) {
@@ -759,7 +768,10 @@ export class CampaignUI {
         startData.localCoopMode = true;
         const p2Id = game.registry.get('localCoopP2Identity') as LocalCoopP2Identity | undefined;
         if (p2Id?.mode === 'loggedIn' && p2Id.loggedInUserId) {
-          startData.localP2 = { userId: p2Id.loggedInUserId, username: p2Id.loggedInUsername };
+          startData.localP2 = {
+            userId: p2Id.loggedInUserId,
+            username: p2Id.loggedInUsername || 'Player 2',
+          };
         } else {
           startData.localP2 = {
             username: p2Id?.guestName || 'Player 2',
@@ -769,9 +781,9 @@ export class CampaignUI {
       }
 
       // Emit campaign:start socket event
-      this.socketClient.emit('campaign:start' as any, startData, (response: any) => {
+      this.socketClient.emit('campaign:start', startData, (response) => {
         if (response && response.error) {
-          this.socketClient.off('campaign:gameStart' as any, gameStartHandler as any);
+          this.socketClient.off('campaign:gameStart', gameStartHandler);
           this.notifications.error(response.error);
         }
       });

@@ -71,8 +71,8 @@ export class LobbyChatPanel {
   }
 
   destroy(): void {
-    this.socketClient.off('lobby:chat' as any, this.lobbyChatHandler);
-    this.socketClient.off('admin:settingsChanged' as any, this.settingsChangedHandler);
+    this.socketClient.off('lobby:chat', this.lobbyChatHandler);
+    this.socketClient.off('admin:settingsChanged', this.settingsChangedHandler);
     this.container.remove();
   }
 
@@ -82,9 +82,9 @@ export class LobbyChatPanel {
       if (this.messages.length > 100) this.messages.shift();
       this.renderMessages();
     };
-    this.socketClient.on('lobby:chat' as any, this.lobbyChatHandler);
+    this.socketClient.on('lobby:chat', this.lobbyChatHandler);
 
-    this.settingsChangedHandler = (data: { key: string; value: any }) => {
+    this.settingsChangedHandler = (data: { key: string; value?: unknown }) => {
       if (data.key === 'lobby_chat_mode') {
         this.chatMode = data.value as ChatMode;
         if (!this.canChat() && this.expanded) {
@@ -93,7 +93,7 @@ export class LobbyChatPanel {
         this.render();
       }
     };
-    this.socketClient.on('admin:settingsChanged' as any, this.settingsChangedHandler);
+    this.socketClient.on('admin:settingsChanged', this.settingsChangedHandler);
   }
 
   private getRoleColor(role: UserRole): string {
@@ -156,6 +156,7 @@ export class LobbyChatPanel {
       input.placeholder = 'Type a message...';
       input.maxLength = LOBBY_CHAT_MAX_LENGTH;
       input.className = 'lobby-chat-input';
+      input.setAttribute('aria-label', 'Lobby chat message');
       this.inputEl = input;
 
       const sendBtn = document.createElement('button');
@@ -165,7 +166,7 @@ export class LobbyChatPanel {
       const send = () => {
         const msg = input.value.trim();
         if (!msg) return;
-        this.socketClient.emit('lobby:chat' as any, { message: msg });
+        this.socketClient.emit('lobby:chat', { message: msg });
         input.value = '';
         input.focus();
       };

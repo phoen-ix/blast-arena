@@ -176,6 +176,7 @@ Documentation served via backend API from `docs/` directory (bind-mounted in dev
 | Real-time | Socket.io |
 | Database | MariaDB 11 + Redis 7 |
 | Auth | JWT + bcrypt + httpOnly cookies |
+| Security | HTTP security headers, parameterized queries, rate limiting |
 | Validation | Zod |
 | Container | Docker Compose |
 

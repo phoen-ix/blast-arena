@@ -61,6 +61,22 @@ export class CampaignGame {
     return this.userIds[0];
   }
 
+  public getGameState(): GameStateManager {
+    return this.gameState;
+  }
+
+  public getEnemies(): Map<number, Enemy> {
+    return this.enemies;
+  }
+
+  public getLives(): number {
+    return this.lives;
+  }
+
+  public getMaxLives(): number {
+    return this.maxLives;
+  }
+
   private gameState: GameStateManager;
   private gameLoop: GameLoop;
   private enemies: Map<number, Enemy> = new Map();

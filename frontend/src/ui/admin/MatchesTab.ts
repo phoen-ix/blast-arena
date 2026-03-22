@@ -178,6 +178,9 @@ export class MatchesTab {
 
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-label', `Match ${match.id} Details`);
       modal.innerHTML = `
         <div class="modal" style="max-width:520px;">
           <h2 style="margin-bottom:16px;">Match #${match.id} Details</h2>

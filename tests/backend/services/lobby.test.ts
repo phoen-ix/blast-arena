@@ -91,29 +91,97 @@ describe('lobby service', () => {
     mockRedis.mget.mockImplementation((...keys: string[]) => {
       return Promise.resolve(keys.map((k) => store.get(k) || null));
     });
-    // eval mock: simulate the Lua join script behavior using the in-memory store
-    mockRedis.eval.mockImplementation(
-      (_script: string, _numKeys: number, roomKey: string, playerRoomKey: string, userJson: string, userIdStr: string) => {
-        const data = store.get(roomKey);
-        if (!data) return Promise.resolve('ERR:NOT_FOUND');
+    // eval mock: simulate Lua scripts using the in-memory store
+    // Dispatches by numKeys and arg patterns to handle join, leave, ready, team, and start scripts
+    mockRedis.eval.mockImplementation((script: string, numKeys: number, ...args: string[]) => {
+      const roomKey = args[0];
+      const data = store.get(roomKey);
 
+      // JOIN: 2 keys (room + player:room), 2 args (userJson, userIdStr)
+      if (numKeys === 2 && script.includes('ALREADY_IN_ROOM')) {
+        const playerRoomKey = args[1];
+        const userJson = args[2];
+        const userIdStr = args[3];
+        if (!data) return Promise.resolve('ERR:NOT_FOUND');
         const room = JSON.parse(data);
         if (room.status !== 'waiting') return Promise.resolve('ERR:GAME_IN_PROGRESS');
         if (room.players.length >= room.config.maxPlayers) return Promise.resolve('ERR:ROOM_FULL');
-
         const userId = parseInt(userIdStr);
-        if (room.players.some((p: any) => p.user.id === userId)) return Promise.resolve('ERR:ALREADY_IN_ROOM');
-
+        if (room.players.some((p: any) => p.user.id === userId))
+          return Promise.resolve('ERR:ALREADY_IN_ROOM');
         const user = JSON.parse(userJson);
         room.players.push({ user, ready: false, team: null });
-
         const updated = JSON.stringify(room);
         store.set(roomKey, updated);
         store.set(playerRoomKey, room.code);
-
         return Promise.resolve(updated);
-      },
-    );
+      }
+
+      // LEAVE: 2 keys (room + player:room), 1 arg (userId)
+      if (numKeys === 2 && script.includes('DELETED')) {
+        const playerRoomKey = args[1];
+        const userIdStr = args[2];
+        if (!data) return Promise.resolve('ERR:NOT_FOUND');
+        store.delete(playerRoomKey);
+        const room = JSON.parse(data);
+        const userId = parseInt(userIdStr);
+        room.players = room.players.filter((p: any) => p.user.id !== userId);
+        if (room.players.length === 0) {
+          store.delete(roomKey);
+          return Promise.resolve('DELETED');
+        }
+        if (room.host.id === userId) {
+          room.host = room.players[0].user;
+        }
+        const updated = JSON.stringify(room);
+        store.set(roomKey, updated);
+        return Promise.resolve(updated);
+      }
+
+      // SET_READY: 1 key, 2 args (userId, ready)
+      if (numKeys === 1 && script.includes('ready')) {
+        const userIdStr = args[1];
+        const readyStr = args[2];
+        if (!data) return Promise.resolve('ERR:NOT_FOUND');
+        const room = JSON.parse(data);
+        const userId = parseInt(userIdStr);
+        const player = room.players.find((p: any) => p.user.id === userId);
+        if (!player) return Promise.resolve('ERR:NOT_IN_ROOM');
+        player.ready = readyStr === 'true';
+        const updated = JSON.stringify(room);
+        store.set(roomKey, updated);
+        return Promise.resolve(updated);
+      }
+
+      // SET_TEAM: 1 key, 2 args (userId, team)
+      if (numKeys === 1 && script.includes('team')) {
+        const userIdStr = args[1];
+        const teamStr = args[2];
+        if (!data) return Promise.resolve('ERR:NOT_FOUND');
+        const room = JSON.parse(data);
+        const userId = parseInt(userIdStr);
+        const player = room.players.find((p: any) => p.user.id === userId);
+        if (!player) return Promise.resolve('ERR:NOT_IN_ROOM');
+        player.team = teamStr === 'null' ? null : parseInt(teamStr);
+        const updated = JSON.stringify(room);
+        store.set(roomKey, updated);
+        return Promise.resolve(updated);
+      }
+
+      // START_ROOM: 1 key, 1 arg (status)
+      if (numKeys === 1 && script.includes('ALREADY_STARTING')) {
+        const newStatus = args[1];
+        if (!data) return Promise.resolve('ERR:NOT_FOUND');
+        const room = JSON.parse(data);
+        if (room.status !== 'waiting') return Promise.resolve('ERR:ALREADY_STARTING');
+        room.status = newStatus;
+        const updated = JSON.stringify(room);
+        store.set(roomKey, updated);
+        return Promise.resolve(updated);
+      }
+
+      return Promise.resolve(undefined);
+    });
   });
 
   // ── createRoom ─────────────────────────────────────────────────────
@@ -125,12 +193,7 @@ describe('lobby service', () => {
 
       await createRoom(host as any, 'Test Room', config as any);
 
-      expect(mockRedis.set).toHaveBeenCalledWith(
-        'room:ABCDEF',
-        expect.any(String),
-        'EX',
-        3600,
-      );
+      expect(mockRedis.set).toHaveBeenCalledWith('room:ABCDEF', expect.any(String), 'EX', 3600);
     });
 
     it('returns room with generated 6-char code', async () => {
@@ -337,7 +400,8 @@ describe('lobby service', () => {
       const result = await leaveRoom('ABCDEF', 1);
 
       expect(result).toBeNull();
-      expect(mockRedis.del).toHaveBeenCalledWith('room:ABCDEF');
+      // Room key cleaned up by atomic Lua script
+      expect(store.has('room:ABCDEF')).toBe(false);
     });
 
     it('transfers host when host leaves', async () => {

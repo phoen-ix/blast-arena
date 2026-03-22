@@ -54,7 +54,7 @@ export class RoomUI {
         ),
       ],
       onBack: () => {
-        this.socketClient.emit('room:leave' as any);
+        this.socketClient.emit('room:leave');
         this.hide();
         this.onLeave();
       },
@@ -62,33 +62,33 @@ export class RoomUI {
   }
 
   private setupListeners(): void {
-    this.socketClient.on('room:state', ((room: Room) => {
+    this.socketClient.on('room:state', (room) => {
       this.room = room;
       this.render();
-    }) as any);
+    });
 
-    this.socketClient.on('room:playerJoined', ((player: RoomPlayer) => {
+    this.socketClient.on('room:playerJoined', (player) => {
       if (!this.room.players.some((p) => p.user.id === player.user.id)) {
         this.room.players.push(player);
       }
       this.render();
       this.notifications.info(`${player.user.username} joined`);
-    }) as any);
+    });
 
-    this.socketClient.on('room:playerLeft', ((userId: number) => {
+    this.socketClient.on('room:playerLeft', (userId) => {
       const player = this.room.players.find((p) => p.user.id === userId);
       this.room.players = this.room.players.filter((p) => p.user.id !== userId);
       this.render();
       if (player) {
         this.notifications.info(`${player.user.username} left`);
       }
-    }) as any);
+    });
 
-    this.socketClient.on('room:playerReady', ((data: { userId: number; ready: boolean }) => {
+    this.socketClient.on('room:playerReady', (data) => {
       const player = this.room.players.find((p) => p.user.id === data.userId);
       if (player) player.ready = data.ready;
       this.render();
-    }) as any);
+    });
   }
 
   private removeListeners(): void {
@@ -244,7 +244,7 @@ export class RoomUI {
 
     // Event listeners
     this.container.querySelector('#room-back')!.addEventListener('click', () => {
-      this.socketClient.emit('room:leave' as any);
+      this.socketClient.emit('room:leave');
       this.hide();
       this.onLeave();
     });
@@ -252,14 +252,14 @@ export class RoomUI {
     const startBtn = this.container.querySelector('#room-start');
     if (startBtn) {
       startBtn.addEventListener('click', () => {
-        this.socketClient.emit('room:start' as any);
+        this.socketClient.emit('room:start');
       });
     }
 
     const readyBtn = this.container.querySelector('#room-ready');
     if (readyBtn) {
       readyBtn.addEventListener('click', () => {
-        this.socketClient.emit('room:ready' as any, { ready: !isReady });
+        this.socketClient.emit('room:ready', { ready: !isReady });
       });
     }
 
@@ -269,7 +269,7 @@ export class RoomUI {
         const el = e.target as HTMLSelectElement;
         const userId = parseInt(el.dataset.userId!);
         const team = parseInt(el.value);
-        this.socketClient.emit('room:setTeam' as any, { userId, team });
+        this.socketClient.emit('room:setTeam', { userId, team });
       });
     });
 
@@ -279,7 +279,7 @@ export class RoomUI {
         const el = e.target as HTMLSelectElement;
         const botIndex = parseInt(el.dataset.botIndex!);
         const team = parseInt(el.value);
-        this.socketClient.emit('room:setBotTeam' as any, { botIndex, team });
+        this.socketClient.emit('room:setBotTeam', { botIndex, team });
       });
     });
   }
@@ -328,7 +328,7 @@ export class RoomUI {
         ${
           isTeamsMode && iAmHost
             ? `
-          <select class="team-select admin-select" data-user-id="${player.user.id}">
+          <select class="team-select admin-select" data-user-id="${player.user.id}" aria-label="Team assignment for ${escapeHtml(player.user.username)}">
             <option value="0" ${playerTeam === 0 ? 'selected' : ''} style="color:#ff4466;">Team Red</option>
             <option value="1" ${playerTeam === 1 ? 'selected' : ''} style="color:#448aff;">Team Blue</option>
           </select>
@@ -386,7 +386,7 @@ export class RoomUI {
           ${
             isTeamsMode && iAmHost
               ? `
-            <select class="bot-team-select admin-select" data-bot-index="${i}">
+            <select class="bot-team-select admin-select" data-bot-index="${i}" aria-label="Team assignment for Bot ${i + 1}">
               <option value="0" ${botTeam === 0 ? 'selected' : ''} style="color:#ff4466;">Team Red</option>
               <option value="1" ${botTeam === 1 ? 'selected' : ''} style="color:#448aff;">Team Blue</option>
             </select>

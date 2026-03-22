@@ -5,6 +5,9 @@ export function showSettingsModal(): void {
   const settings = getSettings();
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', 'Visual Settings');
   modal.innerHTML = `
     <div class="modal" style="width:300px;">
       <h2>Visual Settings</h2>
@@ -35,7 +38,11 @@ export function showSettingsModal(): void {
     saveSettings(current);
   });
 
+  const escHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') closeModal();
+  };
   const closeModal = () => {
+    document.removeEventListener('keydown', escHandler);
     UIGamepadNavigator.getInstance().popContext('settings-modal');
     modal.remove();
   };
@@ -44,6 +51,7 @@ export function showSettingsModal(): void {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
   });
+  document.addEventListener('keydown', escHandler);
 
   document.getElementById('ui-overlay')!.appendChild(modal);
 
