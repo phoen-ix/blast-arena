@@ -55,6 +55,7 @@ function levelRowToEntry(row: CampaignLevelRow): CampaignLevel {
     reinforcedWalls: !!row.reinforced_walls,
     hazardTiles: !!row.hazard_tiles,
     coveredTiles: safeJsonParse(row.covered_tiles, []),
+    puzzleConfig: row.puzzle_config ? safeJsonParse(row.puzzle_config, null) : null,
     isPublished: !!row.is_published,
   };
 }
@@ -238,8 +239,8 @@ export async function createLevel(
      (world_id, name, description, sort_order, map_width, map_height, tiles, fill_mode, wall_density,
       player_spawns, enemy_placements, powerup_placements, win_condition, win_condition_config,
       lives, time_limit, par_time, carry_over_powerups, starting_powerups, available_powerup_types,
-      powerup_drop_rate, reinforced_walls, hazard_tiles, is_published, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      powerup_drop_rate, reinforced_walls, hazard_tiles, puzzle_config, is_published, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       worldId,
       data.name ?? 'Untitled Level',
@@ -264,6 +265,7 @@ export async function createLevel(
       data.powerupDropRate ?? 0.3,
       data.reinforcedWalls ?? false,
       data.hazardTiles ?? false,
+      data.puzzleConfig ? JSON.stringify(data.puzzleConfig) : null,
       data.isPublished ?? false,
       createdBy,
     ],
@@ -311,6 +313,7 @@ export async function updateLevel(id: number, data: Partial<CampaignLevel>): Pro
     startingPowerups: 'starting_powerups',
     availablePowerupTypes: 'available_powerup_types',
     coveredTiles: 'covered_tiles',
+    puzzleConfig: 'puzzle_config',
   };
 
   for (const [key, col] of Object.entries(jsonFields)) {

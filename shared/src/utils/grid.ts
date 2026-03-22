@@ -29,14 +29,14 @@ export function getExplosionCells(
   mapWidth: number,
   mapHeight: number,
   tiles: TileType[][],
-  pierce: boolean = false
+  pierce: boolean = false,
 ): Position[] {
   const cells: Position[] = [{ x: originX, y: originY }];
   const directions = [
     { dx: 0, dy: -1 }, // up
-    { dx: 0, dy: 1 },  // down
+    { dx: 0, dy: 1 }, // down
     { dx: -1, dy: 0 }, // left
-    { dx: 1, dy: 0 },  // right
+    { dx: 1, dy: 0 }, // right
   ];
 
   for (const { dx, dy } of directions) {
@@ -48,6 +48,14 @@ export function getExplosionCells(
 
       const tile = tiles[ny][nx];
       if (tile === 'wall') break;
+      // Closed gates block explosions like walls
+      if (
+        tile === 'gate_red' ||
+        tile === 'gate_blue' ||
+        tile === 'gate_green' ||
+        tile === 'gate_yellow'
+      )
+        break;
 
       cells.push({ x: nx, y: ny });
 

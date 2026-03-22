@@ -133,6 +133,7 @@ function createMinimalLevel(overrides: Partial<CampaignLevel> = {}): CampaignLev
     reinforcedWalls: false,
     hazardTiles: false,
     coveredTiles: [],
+    puzzleConfig: null,
     isPublished: true,
     ...overrides,
   };

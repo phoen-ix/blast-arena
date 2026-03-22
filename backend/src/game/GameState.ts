@@ -697,6 +697,14 @@ export class GameStateManager {
     return this._mapEventsCache;
   }
 
+  /** Set a tile type and track the change for tile diff broadcast */
+  setTileTracked(x: number, y: number, type: TileType): void {
+    if (x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) return;
+    this.map.tiles[y][x] = type;
+    this._dirtyTiles.set(`${x},${y}`, { x, y, type });
+    this.collisionSystem.updateTiles(this.map.tiles);
+  }
+
   /** Destroy a tile and track the change for delta broadcasting */
   private destroyTileTracked(x: number, y: number): boolean {
     const result = this.collisionSystem.destroyTile(x, y);

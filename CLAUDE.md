@@ -78,6 +78,20 @@ Campaign modifier — P2 is a smaller, invulnerable support character for young/
 - Campaign retry (GameOverScene) must preserve and re-send `buddyMode` flag — check buddy before localCoop in the if/else chain since buddy mode is exclusive with co-op
 - Buddy ID: `-(2000 + (Date.now() % 10000))`. Sprite size enforced every frame to survive texture swaps and tweens
 
+### Puzzle Tiles (Campaign Only)
+Environmental puzzle system with switches, gates, and crumbling floors. 18 new tile types, campaign-only.
+- **Switches** (4 colors × 2 states): `switch_red` / `switch_red_active` etc. Three variants stored in `puzzleConfig.switchVariants` (key="x,y"):
+  - `toggle`: flips on step-on or blast
+  - `pressure`: active while occupied by player/bomb; deactivates when vacated
+  - `oneshot`: activates permanently on first step-on or blast
+- **Gates** (4 colors × 2 states): `gate_red` (closed, impassable like wall) / `gate_red_open` (walkable). Linked to switches by color (OR logic: any active switch of color → gates open). Block explosions when closed
+- **Crumbling floor**: `crumbling` → `pit` after entity steps off (10-tick delay). Enemies trigger crumbling (unless `canPassWalls`), buddy does NOT trigger
+- `GameStateManager.setTileTracked(x, y, type)` for puzzle tile state changes (records tileDiff + updates collision)
+- `CampaignGame.processPuzzleTiles()` runs in campaignTick between hidden power-up reveals and boss phases
+- Editor: Puzzle palette section with color selector, variant selector (toggle/pressure/oneshot), link mode (switch → gate). `drawPuzzleLinks()` shows colored lines between linked switches/gates
+- `PuzzleConfig` stored in `campaign_levels.puzzle_config` JSON column (migration 024). `shared/src/utils/puzzle.ts` exports helpers: `isSwitchTile`, `isGateTile`, `isGateClosed`, `getSwitchColor`, `getGateColor`, `getSwitchTile`, `getGateTile`, `PUZZLE_COLORS`, `PUZZLE_COLOR_VALUES`, `CRUMBLE_DELAY_TICKS`
+- Switches/gates can be covered tiles (hidden under destructible walls). Buddy blocked by closed gates and pits
+
 ### Export/Import
 - Two-phase conflict resolution: first call returns `conflicts` array, second call with ID map resolves via create/use-existing/skip. `_format`/`_version` fields for validation. Download via `Blob` + `createObjectURL` + click anchor. Same pattern used for achievements/cosmetics export/import
 - See [docs/campaign.md](docs/campaign.md) for full details
@@ -165,7 +179,8 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 - **Reinforced walls** (optional): 2 hits — first cracks (`destructible_cracked`), second destroys
 - **Dynamic map events** (optional): Meteor strikes every 30-45s (40-tick/2s warning with crosshair reticle, exclamation mark, growing shadow; impact triggers falling meteor animation, flash, debris/fire/spark particles, screen shake). `ownerId: -999` for system-owned meteor explosions (2-tile blast radius). Power-up rain every 60s. `MapEventRenderer` in `frontend/src/game/MapEventRenderer.ts`
 - **Hazard tiles** (optional): Teleporter pairs (A↔B, seeded-RNG destination selection, works for players and campaign enemies), conveyor belts (auto-push in direction when movement cooldown ready, chain into teleporters)
-- **Covered tiles**: Special tiles (exit, goal, teleporters, conveyors) hidden under destructible walls via `coveredTiles` array. Editor shows overlay at 0.7 alpha; gameplay reveals tile type when wall destroyed. `reservedPowerUpTiles` Set prevents random power-up drops at positions with hidden power-ups
+- **Covered tiles**: Special tiles (exit, goal, teleporters, conveyors, switches, gates) hidden under destructible walls via `coveredTiles` array. Editor shows overlay at 0.7 alpha; gameplay reveals tile type when wall destroyed. `reservedPowerUpTiles` Set prevents random power-up drops at positions with hidden power-ups
+- **Puzzle tiles** (campaign only): Switches (4 colors × 3 variants), gates (4 colors), crumbling floors. See Campaign System → Puzzle Tiles section
 
 ## Replay System
 Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-system.md).

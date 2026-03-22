@@ -103,6 +103,16 @@ export interface CoveredTile {
   type: TileType;
 }
 
+// --- Puzzle Configuration ---
+
+export type PuzzleColor = 'red' | 'blue' | 'green' | 'yellow';
+export type SwitchVariant = 'toggle' | 'pressure' | 'oneshot';
+
+export interface PuzzleConfig {
+  /** Maps "x,y" position key to switch variant. Switches not listed default to 'toggle'. */
+  switchVariants?: Record<string, SwitchVariant>;
+}
+
 export interface StartingPowerUps {
   bombUp?: number;
   fireUp?: number;
@@ -140,6 +150,7 @@ export interface CampaignLevel {
   reinforcedWalls: boolean;
   hazardTiles: boolean;
   coveredTiles: CoveredTile[];
+  puzzleConfig: PuzzleConfig | null;
   isPublished: boolean;
 }
 
@@ -244,6 +255,7 @@ export interface LevelExportData {
   powerupDropRate: number;
   reinforcedWalls: boolean;
   hazardTiles: boolean;
+  puzzleConfig?: PuzzleConfig | null;
 }
 
 export interface EnemyTypeExportData {

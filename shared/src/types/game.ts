@@ -13,7 +13,28 @@ export type TileType =
   | 'conveyor_left'
   | 'conveyor_right'
   | 'exit'
-  | 'goal';
+  | 'goal'
+  // Puzzle switches (walkable, campaign only)
+  | 'switch_red'
+  | 'switch_blue'
+  | 'switch_green'
+  | 'switch_yellow'
+  | 'switch_red_active'
+  | 'switch_blue_active'
+  | 'switch_green_active'
+  | 'switch_yellow_active'
+  // Puzzle gates (closed = impassable like walls, open = walkable)
+  | 'gate_red'
+  | 'gate_blue'
+  | 'gate_green'
+  | 'gate_yellow'
+  | 'gate_red_open'
+  | 'gate_blue_open'
+  | 'gate_green_open'
+  | 'gate_yellow_open'
+  // Crumbling floor (walkable once, then collapses to pit)
+  | 'crumbling'
+  | 'pit';
 
 export interface Tile {
   x: number;

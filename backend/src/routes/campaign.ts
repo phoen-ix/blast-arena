@@ -158,6 +158,12 @@ const levelSchema = z.object({
   coveredTiles: z
     .array(z.object({ x: z.number().int(), y: z.number().int(), type: z.string() }))
     .optional(),
+  puzzleConfig: z
+    .object({
+      switchVariants: z.record(z.enum(['toggle', 'pressure', 'oneshot'])).optional(),
+    })
+    .nullable()
+    .optional(),
   isPublished: z.boolean().optional(),
 });
 

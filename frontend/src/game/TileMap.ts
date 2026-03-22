@@ -62,6 +62,26 @@ export class TileMapRenderer {
         return 'exit';
       case 'goal' as TileType:
         return 'goal';
+      // Puzzle tiles — texture key matches tile type name
+      case 'switch_red' as TileType:
+      case 'switch_blue' as TileType:
+      case 'switch_green' as TileType:
+      case 'switch_yellow' as TileType:
+      case 'switch_red_active' as TileType:
+      case 'switch_blue_active' as TileType:
+      case 'switch_green_active' as TileType:
+      case 'switch_yellow_active' as TileType:
+      case 'gate_red' as TileType:
+      case 'gate_blue' as TileType:
+      case 'gate_green' as TileType:
+      case 'gate_yellow' as TileType:
+      case 'gate_red_open' as TileType:
+      case 'gate_blue_open' as TileType:
+      case 'gate_green_open' as TileType:
+      case 'gate_yellow_open' as TileType:
+      case 'crumbling' as TileType:
+      case 'pit' as TileType:
+        return type;
       case 'empty':
       case 'spawn':
       default:
@@ -82,8 +102,7 @@ export class TileMapRenderer {
 
         // A destructible block was destroyed (changed to empty/spawn)
         const wasDestructible =
-          prevType === 'destructible' ||
-          prevType === ('destructible_cracked' as TileType);
+          prevType === 'destructible' || prevType === ('destructible_cracked' as TileType);
         const isNowEmpty = newType === 'empty' || newType === 'spawn';
 
         if (wasDestructible && isNowEmpty) {
@@ -119,8 +138,88 @@ export class TileMapRenderer {
             this.tileSprites[y][x].setAlpha(1);
             this.tileSprites[y][x].setScale(1);
           }
+        } else if (this.isGateOpening(prevType, newType)) {
+          // Gate opening: scale down old bars, reveal open gate underneath
+          const newTexture = this.getTileTexture(newType, x, y);
+          if (settings.animations) {
+            const oldSprite = this.tileSprites[y][x];
+            this.scene.tweens.add({
+              targets: oldSprite,
+              alpha: 0,
+              scaleX: 0.3,
+              scaleY: 0.3,
+              duration: 200,
+              ease: 'Power2',
+              onComplete: () => {
+                oldSprite.destroy();
+              },
+            });
+            const newSprite = this.scene.add.sprite(
+              x * TILE_SIZE + TILE_SIZE / 2,
+              y * TILE_SIZE + TILE_SIZE / 2,
+              newTexture,
+            );
+            this.tileSprites[y][x] = newSprite;
+          } else {
+            this.tileSprites[y][x].setTexture(newTexture);
+            this.tileSprites[y][x].setAlpha(1);
+            this.tileSprites[y][x].setScale(1);
+          }
+        } else if (this.isGateClosing(prevType, newType)) {
+          // Gate closing: new bars scale up from small to full
+          const newTexture = this.getTileTexture(newType, x, y);
+          if (settings.animations) {
+            const oldSprite = this.tileSprites[y][x];
+            oldSprite.destroy();
+            const newSprite = this.scene.add.sprite(
+              x * TILE_SIZE + TILE_SIZE / 2,
+              y * TILE_SIZE + TILE_SIZE / 2,
+              newTexture,
+            );
+            newSprite.setScale(0.3);
+            this.scene.tweens.add({
+              targets: newSprite,
+              scaleX: 1,
+              scaleY: 1,
+              duration: 200,
+              ease: 'Power2',
+            });
+            this.tileSprites[y][x] = newSprite;
+          } else {
+            this.tileSprites[y][x].setTexture(newTexture);
+            this.tileSprites[y][x].setAlpha(1);
+            this.tileSprites[y][x].setScale(1);
+          }
+        } else if (prevType === ('crumbling' as TileType) && newType === ('pit' as TileType)) {
+          // Crumbling floor collapses into pit
+          const newTexture = this.getTileTexture(newType, x, y);
+          if (settings.animations) {
+            const oldSprite = this.tileSprites[y][x];
+            this.scene.tweens.add({
+              targets: oldSprite,
+              alpha: 0,
+              scaleX: 0.3,
+              scaleY: 0.3,
+              duration: 300,
+              ease: 'Power2',
+              onComplete: () => {
+                oldSprite.destroy();
+              },
+            });
+            const newSprite = this.scene.add.sprite(
+              x * TILE_SIZE + TILE_SIZE / 2,
+              y * TILE_SIZE + TILE_SIZE / 2,
+              newTexture,
+            );
+            this.tileSprites[y][x] = newSprite;
+          } else {
+            this.tileSprites[y][x].setTexture(newTexture);
+            this.tileSprites[y][x].setAlpha(1);
+            this.tileSprites[y][x].setScale(1);
+          }
         } else {
-          // Non-destructive tile change (e.g. conveyor placed, teleporter toggled)
+          // Non-destructive tile change (e.g. conveyor placed, teleporter toggled,
+          // switch state change — simple texture swap)
           const newTexture = this.getTileTexture(newType, x, y);
           this.tileSprites[y][x].setTexture(newTexture);
         }
@@ -130,6 +229,28 @@ export class TileMapRenderer {
     }
 
     return destroyedPositions;
+  }
+
+  private isGateOpening(prev: TileType | undefined, next: TileType): boolean {
+    const closedGates: string[] = ['gate_red', 'gate_blue', 'gate_green', 'gate_yellow'];
+    const openGates: string[] = [
+      'gate_red_open',
+      'gate_blue_open',
+      'gate_green_open',
+      'gate_yellow_open',
+    ];
+    return closedGates.includes(prev as string) && openGates.includes(next as string);
+  }
+
+  private isGateClosing(prev: TileType | undefined, next: TileType): boolean {
+    const closedGates: string[] = ['gate_red', 'gate_blue', 'gate_green', 'gate_yellow'];
+    const openGates: string[] = [
+      'gate_red_open',
+      'gate_blue_open',
+      'gate_green_open',
+      'gate_yellow_open',
+    ];
+    return openGates.includes(prev as string) && closedGates.includes(next as string);
   }
 
   destroy(): void {

@@ -35,7 +35,20 @@ export class CollisionSystem {
       tile === 'conveyor_left' ||
       tile === 'conveyor_right' ||
       tile === 'exit' ||
-      tile === 'goal'
+      tile === 'goal' ||
+      tile === 'switch_red' ||
+      tile === 'switch_blue' ||
+      tile === 'switch_green' ||
+      tile === 'switch_yellow' ||
+      tile === 'switch_red_active' ||
+      tile === 'switch_blue_active' ||
+      tile === 'switch_green_active' ||
+      tile === 'switch_yellow_active' ||
+      tile === 'gate_red_open' ||
+      tile === 'gate_blue_open' ||
+      tile === 'gate_green_open' ||
+      tile === 'gate_yellow_open' ||
+      tile === 'crumbling'
     );
   }
 
@@ -102,7 +115,15 @@ export class CollisionSystem {
 
     // Only indestructible walls block the buddy
     const tile = this.tiles[newY][newX];
-    if (tile === 'wall') return null;
+    if (
+      tile === 'wall' ||
+      tile === 'pit' ||
+      tile === 'gate_red' ||
+      tile === 'gate_blue' ||
+      tile === 'gate_green' ||
+      tile === 'gate_yellow'
+    )
+      return null;
 
     return { x: newX, y: newY };
   }

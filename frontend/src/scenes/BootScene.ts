@@ -333,6 +333,175 @@ export class BootScene extends Phaser.Scene {
     goalGfx.fillTriangle(35, 20, 31, 24, 35, 28);
     goalGfx.generateTexture('goal', 48, 48);
     goalGfx.destroy();
+
+    // Puzzle tile textures
+    this.generatePuzzleTileTextures();
+  }
+
+  private generatePuzzleTileTextures(): void {
+    const puzzleColors: Record<string, number> = {
+      red: 0xff4444,
+      blue: 0x4488ff,
+      green: 0x44cc66,
+      yellow: 0xffcc44,
+    };
+
+    // Switch textures (4 colors × 2 states)
+    for (const [colorName, colorVal] of Object.entries(puzzleColors)) {
+      const brighterColor = Phaser.Display.Color.IntegerToColor(colorVal).lighten(30).color;
+      const darkerColor = Phaser.Display.Color.IntegerToColor(colorVal).darken(30).color;
+
+      // Inactive switch
+      const swGfx = this.make.graphics({ x: 0, y: 0 });
+      // Floor base
+      swGfx.fillStyle(0x2a2a3e, 1);
+      swGfx.fillRect(0, 0, 48, 48);
+      swGfx.lineStyle(1, 0x333348, 0.2);
+      swGfx.strokeRect(0, 0, 48, 48);
+      // Circular pressure plate
+      swGfx.fillStyle(colorVal, 0.5);
+      swGfx.fillCircle(24, 24, 16);
+      // Border ring
+      swGfx.lineStyle(2, colorVal, 0.6);
+      swGfx.strokeCircle(24, 24, 16);
+      // Center gem/button
+      swGfx.fillStyle(brighterColor, 0.8);
+      swGfx.fillCircle(24, 24, 6);
+      // Inner highlight
+      swGfx.fillStyle(0xffffff, 0.2);
+      swGfx.fillCircle(22, 22, 3);
+      swGfx.generateTexture(`switch_${colorName}`, 48, 48);
+      swGfx.destroy();
+
+      // Active switch
+      const swActGfx = this.make.graphics({ x: 0, y: 0 });
+      // Floor base
+      swActGfx.fillStyle(0x2a2a3e, 1);
+      swActGfx.fillRect(0, 0, 48, 48);
+      swActGfx.lineStyle(1, 0x333348, 0.2);
+      swActGfx.strokeRect(0, 0, 48, 48);
+      // Sunken pressure plate (darker shade)
+      swActGfx.fillStyle(darkerColor, 0.5);
+      swActGfx.fillCircle(24, 24, 16);
+      // Glow aura
+      swActGfx.fillStyle(colorVal, 0.2);
+      swActGfx.fillCircle(24, 24, 20);
+      // Border ring
+      swActGfx.lineStyle(2, colorVal, 0.8);
+      swActGfx.strokeCircle(24, 24, 16);
+      // Center gem/button (larger, brighter when active)
+      swActGfx.fillStyle(brighterColor, 1);
+      swActGfx.fillCircle(24, 24, 8);
+      // Inner highlight
+      swActGfx.fillStyle(0xffffff, 0.35);
+      swActGfx.fillCircle(22, 21, 4);
+      swActGfx.generateTexture(`switch_${colorName}_active`, 48, 48);
+      swActGfx.destroy();
+    }
+
+    // Gate textures (4 colors × 2 states)
+    for (const [colorName, colorVal] of Object.entries(puzzleColors)) {
+      const darkerColor = Phaser.Display.Color.IntegerToColor(colorVal).darken(20).color;
+
+      // Closed gate (portcullis bars)
+      const gateGfx = this.make.graphics({ x: 0, y: 0 });
+      // Dark background
+      gateGfx.fillStyle(0x2a2a40, 1);
+      gateGfx.fillRect(0, 0, 48, 48);
+      // Vertical bars
+      gateGfx.lineStyle(4, colorVal, 0.8);
+      for (let i = 0; i < 5; i++) {
+        const bx = 6 + i * 9;
+        gateGfx.lineBetween(bx, 2, bx, 46);
+      }
+      // Horizontal crossbars
+      gateGfx.lineStyle(3, darkerColor, 0.7);
+      gateGfx.lineBetween(2, 16, 46, 16);
+      gateGfx.lineBetween(2, 32, 46, 32);
+      // Top/bottom frame
+      gateGfx.fillStyle(darkerColor, 0.6);
+      gateGfx.fillRect(0, 0, 48, 3);
+      gateGfx.fillRect(0, 45, 48, 3);
+      gateGfx.generateTexture(`gate_${colorName}`, 48, 48);
+      gateGfx.destroy();
+
+      // Open gate (retracted bar stubs at top)
+      const gateOpenGfx = this.make.graphics({ x: 0, y: 0 });
+      // Floor base (same as empty tile)
+      gateOpenGfx.fillStyle(0x2a2a3e, 1);
+      gateOpenGfx.fillRect(0, 0, 48, 48);
+      gateOpenGfx.lineStyle(1, 0x333348, 0.2);
+      gateOpenGfx.strokeRect(0, 0, 48, 48);
+      // Small retracted bar stubs at top edge
+      gateOpenGfx.lineStyle(3, colorVal, 0.35);
+      for (let i = 0; i < 5; i++) {
+        const bx = 6 + i * 9;
+        gateOpenGfx.lineBetween(bx, 0, bx, 6);
+      }
+      // Top frame remnant
+      gateOpenGfx.fillStyle(colorVal, 0.2);
+      gateOpenGfx.fillRect(0, 0, 48, 2);
+      gateOpenGfx.generateTexture(`gate_${colorName}_open`, 48, 48);
+      gateOpenGfx.destroy();
+    }
+
+    // Crumbling floor texture
+    const crumbleGfx = this.make.graphics({ x: 0, y: 0 });
+    // Brownish-tinted floor base
+    crumbleGfx.fillStyle(0x33302e, 1);
+    crumbleGfx.fillRect(0, 0, 48, 48);
+    crumbleGfx.lineStyle(1, 0x333348, 0.2);
+    crumbleGfx.strokeRect(0, 0, 48, 48);
+    // Crack lines
+    crumbleGfx.lineStyle(2, 0x1a1a28, 0.7);
+    crumbleGfx.lineBetween(8, 6, 18, 20);
+    crumbleGfx.lineBetween(18, 20, 14, 34);
+    crumbleGfx.lineBetween(14, 34, 22, 44);
+    crumbleGfx.lineStyle(1.5, 0x1a1a28, 0.6);
+    crumbleGfx.lineBetween(32, 4, 38, 16);
+    crumbleGfx.lineBetween(38, 16, 34, 28);
+    crumbleGfx.lineStyle(1, 0x1a1a28, 0.5);
+    crumbleGfx.lineBetween(18, 20, 30, 22);
+    crumbleGfx.lineBetween(26, 36, 40, 42);
+    // Debris dots near cracks
+    crumbleGfx.fillStyle(0x1a1a28, 0.4);
+    crumbleGfx.fillCircle(16, 22, 1.5);
+    crumbleGfx.fillCircle(20, 18, 1);
+    crumbleGfx.fillCircle(36, 14, 1);
+    crumbleGfx.fillCircle(32, 26, 1.5);
+    crumbleGfx.fillCircle(14, 38, 1);
+    crumbleGfx.fillCircle(28, 40, 1);
+    crumbleGfx.generateTexture('crumbling', 48, 48);
+    crumbleGfx.destroy();
+
+    // Pit texture (dark void)
+    const pitGfx = this.make.graphics({ x: 0, y: 0 });
+    // Very dark void center
+    pitGfx.fillStyle(0x0a0a12, 1);
+    pitGfx.fillRect(0, 0, 48, 48);
+    // Slightly lighter rim for depth effect
+    pitGfx.lineStyle(3, 0x1a1a2e, 0.6);
+    pitGfx.strokeRect(2, 2, 44, 44);
+    pitGfx.lineStyle(1, 0x222240, 0.3);
+    pitGfx.strokeRect(5, 5, 38, 38);
+    // Inner shadow gradient — darker center
+    pitGfx.fillStyle(0x050508, 0.5);
+    pitGfx.fillCircle(24, 24, 16);
+    pitGfx.fillStyle(0x020204, 0.4);
+    pitGfx.fillCircle(24, 24, 10);
+    // Small highlight dots at edges for depth
+    pitGfx.fillStyle(0x2a2a44, 0.3);
+    pitGfx.fillCircle(6, 6, 1.5);
+    pitGfx.fillCircle(42, 6, 1.5);
+    pitGfx.fillCircle(6, 42, 1.5);
+    pitGfx.fillCircle(42, 42, 1.5);
+    pitGfx.fillStyle(0x2a2a44, 0.2);
+    pitGfx.fillCircle(24, 4, 1);
+    pitGfx.fillCircle(24, 44, 1);
+    pitGfx.fillCircle(4, 24, 1);
+    pitGfx.fillCircle(44, 24, 1);
+    pitGfx.generateTexture('pit', 48, 48);
+    pitGfx.destroy();
   }
 
   private generateBombTexture(): void {

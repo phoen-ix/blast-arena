@@ -203,6 +203,7 @@ export interface CampaignLevelRow extends RowDataPacket {
   reinforced_walls: boolean;
   hazard_tiles: boolean;
   covered_tiles: string | null; // JSON string
+  puzzle_config: string | null; // JSON string
   is_published: boolean;
   created_by: number | null;
   created_at: Date;

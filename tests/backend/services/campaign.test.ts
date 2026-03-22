@@ -56,7 +56,10 @@ function makeLevelRow(overrides: Record<string, unknown> = {}) {
     sort_order: 0,
     map_width: 15,
     map_height: 13,
-    tiles: JSON.stringify([['empty', 'wall'], ['empty', 'empty']]),
+    tiles: JSON.stringify([
+      ['empty', 'wall'],
+      ['empty', 'empty'],
+    ]),
     fill_mode: 'handcrafted',
     wall_density: 0.65,
     player_spawns: JSON.stringify([{ x: 1, y: 1 }]),
@@ -109,9 +112,7 @@ describe('Campaign Service', () => {
         levelCount: 5,
         completedCount: undefined,
       });
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('is_published = TRUE'),
-      );
+      expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('is_published = TRUE'));
     });
 
     it('should include unpublished worlds when flag is true', async () => {
@@ -159,10 +160,7 @@ describe('Campaign Service', () => {
       expect(result).toHaveLength(1);
       expect(result[0].levelCount).toBe(4);
       expect(result[0].completedCount).toBe(2);
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('completed_count'),
-        [42],
-      );
+      expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('completed_count'), [42]);
     });
 
     it('should only return published worlds', async () => {
@@ -170,10 +168,7 @@ describe('Campaign Service', () => {
 
       await listWorldsWithProgress(1);
 
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('is_published = TRUE'),
-        [1],
-      );
+      expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('is_published = TRUE'), [1]);
     });
 
     it('should return empty array when no worlds exist', async () => {
@@ -197,10 +192,7 @@ describe('Campaign Service', () => {
       expect(result!.name).toBe('Lava World');
       expect(result!.theme).toBe('lava');
       expect(result!.levelCount).toBe(7);
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE w.id = ?'),
-        [5],
-      );
+      expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE w.id = ?'), [5]);
     });
 
     it('should return null when world is not found', async () => {
@@ -238,9 +230,7 @@ describe('Campaign Service', () => {
       const result = await createWorld('New World', 'Desc', 'desert', 1);
 
       expect(result).toBe(10);
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('MAX(sort_order)'),
-      );
+      expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('MAX(sort_order)'));
       expect(mockExecute).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO campaign_worlds'),
         ['New World', 'Desc', 'desert', 3, 1],
@@ -324,10 +314,10 @@ describe('Campaign Service', () => {
 
       await updateWorld(1, { isPublished: false });
 
-      expect(mockExecute).toHaveBeenCalledWith(
-        expect.stringContaining('is_published = ?'),
-        [false, 1],
-      );
+      expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining('is_published = ?'), [
+        false,
+        1,
+      ]);
     });
   });
 
@@ -382,10 +372,7 @@ describe('Campaign Service', () => {
         enemyCount: 2,
         isPublished: true,
       });
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('is_published = TRUE'),
-        [1],
-      );
+      expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('is_published = TRUE'), [1]);
     });
 
     it('should include unpublished levels when flag is true', async () => {
@@ -477,7 +464,8 @@ describe('Campaign Service', () => {
       ];
       mockQuery
         .mockResolvedValueOnce(rows) // levels query
-        .mockResolvedValueOnce([     // progress query
+        .mockResolvedValueOnce([
+          // progress query
           {
             level_id: 10,
             completed: 1,
@@ -501,20 +489,19 @@ describe('Campaign Service', () => {
     });
 
     it('should pass userId and levelIds to progress query', async () => {
-      const rows = [
-        makeLevelRow({ id: 10 }),
-        makeLevelRow({ id: 20 }),
-      ];
-      mockQuery
-        .mockResolvedValueOnce(rows)
-        .mockResolvedValueOnce([]);
+      const rows = [makeLevelRow({ id: 10 }), makeLevelRow({ id: 20 })];
+      mockQuery.mockResolvedValueOnce(rows).mockResolvedValueOnce([]);
 
       await listLevelsWithProgress(1, 99);
 
       // First call: levels query
       expect(mockQuery).toHaveBeenNthCalledWith(1, expect.any(String), [1]);
       // Second call: progress query with userId and level ids
-      expect(mockQuery).toHaveBeenNthCalledWith(2, expect.stringContaining('IN (?,?)'), [99, 10, 20]);
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('IN (?,?)'),
+        [99, 10, 20],
+      );
     });
 
     it('should skip progress query when no levels exist', async () => {
@@ -528,15 +515,15 @@ describe('Campaign Service', () => {
 
     it('should coerce progress completed to boolean', async () => {
       const rows = [makeLevelRow({ id: 10 })];
-      mockQuery
-        .mockResolvedValueOnce(rows)
-        .mockResolvedValueOnce([{
+      mockQuery.mockResolvedValueOnce(rows).mockResolvedValueOnce([
+        {
           level_id: 10,
           completed: 0,
           best_time_seconds: null,
           stars: 0,
           attempts: 1,
-        }]);
+        },
+      ]);
 
       const result = await listLevelsWithProgress(1, 1);
 
@@ -558,7 +545,10 @@ describe('Campaign Service', () => {
       expect(result!.name).toBe('Level 1');
       expect(result!.mapWidth).toBe(15);
       expect(result!.mapHeight).toBe(13);
-      expect(result!.tiles).toEqual([['empty', 'wall'], ['empty', 'empty']]);
+      expect(result!.tiles).toEqual([
+        ['empty', 'wall'],
+        ['empty', 'empty'],
+      ]);
       expect(result!.playerSpawns).toEqual([{ x: 1, y: 1 }]);
       expect(result!.enemyPlacements).toEqual([
         { enemyTypeId: 1, x: 5, y: 5 },
@@ -707,10 +697,7 @@ describe('Campaign Service', () => {
       const result = await createLevel(1, { name: 'New Level' }, 5);
 
       expect(result).toBe(25);
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('MAX(sort_order)'),
-        [1],
-      );
+      expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('MAX(sort_order)'), [1]);
       const params = mockExecute.mock.calls[0][1] as unknown[];
       // sortOrder should be 5 (4 + 1)
       expect(params[3]).toBe(5);
@@ -733,30 +720,31 @@ describe('Campaign Service', () => {
       await createLevel(1, {}, 1);
 
       const params = mockExecute.mock.calls[0][1] as unknown[];
-      expect(params[0]).toBe(1);           // worldId
+      expect(params[0]).toBe(1); // worldId
       expect(params[1]).toBe('Untitled Level'); // name default
-      expect(params[2]).toBe('');           // description default
-      expect(params[4]).toBe(15);          // mapWidth default
-      expect(params[5]).toBe(13);          // mapHeight default
-      expect(params[6]).toBe('[]');        // tiles default
+      expect(params[2]).toBe(''); // description default
+      expect(params[4]).toBe(15); // mapWidth default
+      expect(params[5]).toBe(13); // mapHeight default
+      expect(params[6]).toBe('[]'); // tiles default
       expect(params[7]).toBe('handcrafted'); // fillMode default
-      expect(params[8]).toBe(0.65);        // wallDensity default
-      expect(params[9]).toBe('[]');        // playerSpawns default
-      expect(params[10]).toBe('[]');       // enemyPlacements default
-      expect(params[11]).toBe('[]');       // powerupPlacements default
+      expect(params[8]).toBe(0.65); // wallDensity default
+      expect(params[9]).toBe('[]'); // playerSpawns default
+      expect(params[10]).toBe('[]'); // enemyPlacements default
+      expect(params[11]).toBe('[]'); // powerupPlacements default
       expect(params[12]).toBe('kill_all'); // winCondition default
-      expect(params[13]).toBeNull();       // winConditionConfig default
-      expect(params[14]).toBe(3);          // lives default
-      expect(params[15]).toBe(0);          // timeLimit default
-      expect(params[16]).toBe(0);          // parTime default
-      expect(params[17]).toBe(false);      // carryOverPowerups default
-      expect(params[18]).toBeNull();       // startingPowerups default
-      expect(params[19]).toBeNull();       // availablePowerupTypes default
-      expect(params[20]).toBe(0.3);        // powerupDropRate default
-      expect(params[21]).toBe(false);      // reinforcedWalls default
-      expect(params[22]).toBe(false);      // hazardTiles default
-      expect(params[23]).toBe(false);      // isPublished default
-      expect(params[24]).toBe(1);          // createdBy
+      expect(params[13]).toBeNull(); // winConditionConfig default
+      expect(params[14]).toBe(3); // lives default
+      expect(params[15]).toBe(0); // timeLimit default
+      expect(params[16]).toBe(0); // parTime default
+      expect(params[17]).toBe(false); // carryOverPowerups default
+      expect(params[18]).toBeNull(); // startingPowerups default
+      expect(params[19]).toBeNull(); // availablePowerupTypes default
+      expect(params[20]).toBe(0.3); // powerupDropRate default
+      expect(params[21]).toBe(false); // reinforcedWalls default
+      expect(params[22]).toBe(false); // hazardTiles default
+      expect(params[23]).toBeNull(); // puzzleConfig default
+      expect(params[24]).toBe(false); // isPublished default
+      expect(params[25]).toBe(1); // createdBy
     });
 
     it('should JSON.stringify array/object fields', async () => {
@@ -789,11 +777,15 @@ describe('Campaign Service', () => {
       mockQuery.mockResolvedValue([{ total: 0 }]);
       mockExecute.mockResolvedValue({ insertId: 1 });
 
-      await createLevel(1, {
-        winConditionConfig: null,
-        startingPowerups: null,
-        availablePowerupTypes: null,
-      } as Record<string, unknown>, 1);
+      await createLevel(
+        1,
+        {
+          winConditionConfig: null,
+          startingPowerups: null,
+          availablePowerupTypes: null,
+        } as Record<string, unknown>,
+        1,
+      );
 
       const params = mockExecute.mock.calls[0][1] as unknown[];
       expect(params[13]).toBeNull(); // winConditionConfig
@@ -959,16 +951,14 @@ describe('Campaign Service', () => {
     it('should return the next level id when one exists', async () => {
       mockQuery
         .mockResolvedValueOnce([{ world_id: 1, sort_order: 2 }]) // current level
-        .mockResolvedValueOnce([{ id: 15 }]);                     // next level
+        .mockResolvedValueOnce([{ id: 15 }]); // next level
 
       const result = await getNextLevel(10);
 
       expect(result).toBe(15);
-      expect(mockQuery).toHaveBeenNthCalledWith(1,
-        expect.stringContaining('WHERE id = ?'),
-        [10],
-      );
-      expect(mockQuery).toHaveBeenNthCalledWith(2,
+      expect(mockQuery).toHaveBeenNthCalledWith(1, expect.stringContaining('WHERE id = ?'), [10]);
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        2,
         expect.stringContaining('sort_order > ?'),
         [1, 2],
       );
@@ -984,9 +974,7 @@ describe('Campaign Service', () => {
     });
 
     it('should return null when no next level exists', async () => {
-      mockQuery
-        .mockResolvedValueOnce([{ world_id: 1, sort_order: 5 }])
-        .mockResolvedValueOnce([]);
+      mockQuery.mockResolvedValueOnce([{ world_id: 1, sort_order: 5 }]).mockResolvedValueOnce([]);
 
       const result = await getNextLevel(10);
 
@@ -1000,23 +988,19 @@ describe('Campaign Service', () => {
 
       await getNextLevel(10);
 
-      expect(mockQuery).toHaveBeenNthCalledWith(2,
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        2,
         expect.stringContaining('is_published = TRUE'),
         [2, 0],
       );
     });
 
     it('should query within the same world_id', async () => {
-      mockQuery
-        .mockResolvedValueOnce([{ world_id: 3, sort_order: 1 }])
-        .mockResolvedValueOnce([]);
+      mockQuery.mockResolvedValueOnce([{ world_id: 3, sort_order: 1 }]).mockResolvedValueOnce([]);
 
       await getNextLevel(10);
 
-      expect(mockQuery).toHaveBeenNthCalledWith(2,
-        expect.stringContaining('world_id = ?'),
-        [3, 1],
-      );
+      expect(mockQuery).toHaveBeenNthCalledWith(2, expect.stringContaining('world_id = ?'), [3, 1]);
     });
 
     it('should order by sort_order ASC and LIMIT 1', async () => {

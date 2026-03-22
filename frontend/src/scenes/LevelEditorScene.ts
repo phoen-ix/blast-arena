@@ -1,5 +1,18 @@
 import Phaser from 'phaser';
-import { TileType, TILE_SIZE, CampaignLevel, EnemyTypeEntry } from '@blast-arena/shared';
+import {
+  TileType,
+  TILE_SIZE,
+  CampaignLevel,
+  EnemyTypeEntry,
+  PuzzleColor,
+  SwitchVariant,
+  PUZZLE_COLORS,
+  PUZZLE_COLOR_VALUES,
+  isSwitchTile,
+  isGateTile,
+  getSwitchColor,
+  getGateColor,
+} from '@blast-arena/shared';
 import { EnemyTextureGenerator } from '../game/EnemyTextureGenerator';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { ApiClient } from '../network/ApiClient';
@@ -17,6 +30,9 @@ type EditorTool =
   | 'conveyor_down'
   | 'conveyor_left'
   | 'conveyor_right'
+  | 'puzzle_switch'
+  | 'puzzle_gate'
+  | 'crumbling'
   | 'enemy'
   | 'powerup'
   | 'eraser';
@@ -56,6 +72,12 @@ export class LevelEditorScene extends Phaser.Scene {
   private coveredTiles: Map<string, TileType> = new Map();
   private coveredTileSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   private nextEntityId = 1;
+
+  // Puzzle tools
+  private puzzleColor: PuzzleColor = 'red';
+  private switchVariant: SwitchVariant = 'toggle';
+  private puzzleSwitchVariants: Map<string, SwitchVariant> = new Map();
+  private puzzleLinkGraphics: Phaser.GameObjects.Graphics | null = null;
 
   private currentTool: EditorTool = 'empty';
   private selectedEnemyTypeId: number = 0;
@@ -112,6 +134,8 @@ export class LevelEditorScene extends Phaser.Scene {
     this.undoStack = [];
     this.redoStack = [];
     this.spawnLabels = [];
+    this.puzzleSwitchVariants = new Map();
+    this.puzzleLinkGraphics = null;
 
     this.events.once('shutdown', this.shutdown, this);
 
@@ -181,6 +205,13 @@ export class LevelEditorScene extends Phaser.Scene {
           // Restore covered tiles
           for (const ct of this.level.coveredTiles ?? []) {
             this.coveredTiles.set(`${ct.x},${ct.y}`, ct.type);
+          }
+
+          // Restore puzzle config
+          if (this.level.puzzleConfig?.switchVariants) {
+            for (const [key, variant] of Object.entries(this.level.puzzleConfig.switchVariants)) {
+              this.puzzleSwitchVariants.set(key, variant);
+            }
           }
         }
       } catch {
@@ -265,6 +296,8 @@ export class LevelEditorScene extends Phaser.Scene {
       const [x, y] = key.split(',').map(Number);
       this.setCoveredTile(x, y, type);
     }
+
+    this.drawPuzzleLinks();
   }
 
   private buildGridOverlay(): void {
@@ -345,6 +378,76 @@ export class LevelEditorScene extends Phaser.Scene {
     }
   }
 
+  private drawPuzzleLinks(): void {
+    if (!this.puzzleLinkGraphics) {
+      this.puzzleLinkGraphics = this.add.graphics();
+      this.puzzleLinkGraphics.setDepth(3);
+    }
+    this.puzzleLinkGraphics.clear();
+
+    // Collect switch and gate positions by color
+    const switches: Record<string, { x: number; y: number }[]> = {};
+    const gates: Record<string, { x: number; y: number }[]> = {};
+
+    for (let y = 0; y < this.mapHeight; y++) {
+      for (let x = 0; x < this.mapWidth; x++) {
+        const tile = this.tiles[y]?.[x];
+        if (!tile) continue;
+        if (isSwitchTile(tile)) {
+          const color = getSwitchColor(tile);
+          if (color) {
+            if (!switches[color]) switches[color] = [];
+            switches[color].push({ x, y });
+          }
+        } else if (isGateTile(tile)) {
+          const color = getGateColor(tile);
+          if (color) {
+            if (!gates[color]) gates[color] = [];
+            gates[color].push({ x, y });
+          }
+        }
+      }
+    }
+
+    // Also check covered tiles for switches/gates
+    for (const [key, type] of this.coveredTiles) {
+      const [x, y] = key.split(',').map(Number);
+      if (isSwitchTile(type)) {
+        const color = getSwitchColor(type);
+        if (color) {
+          if (!switches[color]) switches[color] = [];
+          switches[color].push({ x, y });
+        }
+      } else if (isGateTile(type)) {
+        const color = getGateColor(type);
+        if (color) {
+          if (!gates[color]) gates[color] = [];
+          gates[color].push({ x, y });
+        }
+      }
+    }
+
+    // Draw lines from each switch to each gate of same color
+    for (const color of PUZZLE_COLORS) {
+      const sw = switches[color];
+      const gt = gates[color];
+      if (!sw || !gt) continue;
+
+      const hexColor = PUZZLE_COLOR_VALUES[color as PuzzleColor];
+      this.puzzleLinkGraphics.lineStyle(2, hexColor, 0.4);
+
+      for (const s of sw) {
+        for (const g of gt) {
+          const sx = s.x * TILE_SIZE + TILE_SIZE / 2;
+          const sy = s.y * TILE_SIZE + TILE_SIZE / 2;
+          const gx = g.x * TILE_SIZE + TILE_SIZE / 2;
+          const gy = g.y * TILE_SIZE + TILE_SIZE / 2;
+          this.puzzleLinkGraphics.lineBetween(sx, sy, gx, gy);
+        }
+      }
+    }
+  }
+
   private getTileTexture(type: TileType, x: number, y: number): string {
     switch (type) {
       case 'wall':
@@ -369,6 +472,25 @@ export class LevelEditorScene extends Phaser.Scene {
         return 'conveyor_left';
       case 'conveyor_right':
         return 'conveyor_right';
+      case 'switch_red':
+      case 'switch_blue':
+      case 'switch_green':
+      case 'switch_yellow':
+      case 'switch_red_active':
+      case 'switch_blue_active':
+      case 'switch_green_active':
+      case 'switch_yellow_active':
+      case 'gate_red':
+      case 'gate_blue':
+      case 'gate_green':
+      case 'gate_yellow':
+      case 'gate_red_open':
+      case 'gate_blue_open':
+      case 'gate_green_open':
+      case 'gate_yellow_open':
+      case 'crumbling':
+      case 'pit':
+        return type;
       case 'spawn':
         return `floor_${(x + y) % 4}`;
       default:
@@ -567,12 +689,52 @@ export class LevelEditorScene extends Phaser.Scene {
         }
         break;
       }
+      case 'puzzle_switch': {
+        const switchTile = `switch_${this.puzzleColor}` as TileType;
+        const isWallSw = currentTile === 'destructible' || currentTile === 'destructible_cracked';
+        if (isWallSw) {
+          this.setCoveredTile(tx, ty, switchTile);
+        } else {
+          this.removeCoveredTile(tx, ty);
+          this.tiles[ty][tx] = switchTile;
+          this.updateTileSprite(tx, ty);
+        }
+        this.puzzleSwitchVariants.set(posKey, this.switchVariant);
+        this.drawPuzzleLinks();
+        break;
+      }
+      case 'puzzle_gate': {
+        const gateTile = `gate_${this.puzzleColor}` as TileType;
+        const isWallGt = currentTile === 'destructible' || currentTile === 'destructible_cracked';
+        if (isWallGt) {
+          this.setCoveredTile(tx, ty, gateTile);
+        } else {
+          this.removeCoveredTile(tx, ty);
+          this.tiles[ty][tx] = gateTile;
+          this.updateTileSprite(tx, ty);
+        }
+        this.drawPuzzleLinks();
+        break;
+      }
+      case 'crumbling': {
+        const isWallCr = currentTile === 'destructible' || currentTile === 'destructible_cracked';
+        if (isWallCr) {
+          this.setCoveredTile(tx, ty, 'crumbling' as TileType);
+        } else {
+          this.removeCoveredTile(tx, ty);
+          this.tiles[ty][tx] = 'crumbling' as TileType;
+          this.updateTileSprite(tx, ty);
+        }
+        break;
+      }
       case 'eraser':
         this.removeCoveredTile(tx, ty);
+        this.puzzleSwitchVariants.delete(posKey);
         this.tiles[ty][tx] = 'empty';
         this.updateTileSprite(tx, ty);
         // Remove entities at this position
         this.removeEntitiesAt(tx, ty);
+        this.drawPuzzleLinks();
         break;
       case 'enemy':
         if (this.selectedEnemyTypeId > 0) {
@@ -714,6 +876,7 @@ export class LevelEditorScene extends Phaser.Scene {
         const [x, y] = k.split(',').map(Number);
         return { x, y, type };
       }),
+      puzzleSwitchVariants: Array.from(this.puzzleSwitchVariants.entries()),
     });
   }
 
@@ -796,6 +959,13 @@ export class LevelEditorScene extends Phaser.Scene {
     for (const ct of state.coveredTiles ?? []) {
       this.setCoveredTile(ct.x, ct.y, ct.type);
     }
+
+    // Restore puzzle switch variants
+    this.puzzleSwitchVariants.clear();
+    for (const [key, variant] of state.puzzleSwitchVariants ?? []) {
+      this.puzzleSwitchVariants.set(key, variant);
+    }
+    this.drawPuzzleLinks();
 
     // Update dimension inputs if they exist
     if (this.widthInput) this.widthInput.value = String(this.mapWidth);
@@ -882,6 +1052,14 @@ export class LevelEditorScene extends Phaser.Scene {
       }
     }
 
+    // Remove out-of-bounds puzzle switch variants
+    for (const [key] of this.puzzleSwitchVariants) {
+      const [x, y] = key.split(',').map(Number);
+      if (x >= newWidth || y >= newHeight) {
+        this.puzzleSwitchVariants.delete(key);
+      }
+    }
+
     this.rebuildAfterResize();
 
     // Update input values in case odd-rounding changed them
@@ -920,6 +1098,94 @@ export class LevelEditorScene extends Phaser.Scene {
       { label: 'Conveyor \u2190', tool: 'conveyor_left' },
       { label: 'Conveyor \u2192', tool: 'conveyor_right' },
     ]);
+
+    // Puzzle tools section
+    const puzzleSection = document.createElement('div');
+    puzzleSection.style.marginTop = '8px';
+    const puzzleLabel = document.createElement('div');
+    puzzleLabel.textContent = 'Puzzle';
+    puzzleLabel.style.cssText =
+      'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
+    puzzleSection.appendChild(puzzleLabel);
+
+    // Color selector (4 color buttons in a row)
+    const colorRow = document.createElement('div');
+    colorRow.style.cssText = 'display:flex;gap:3px;margin-bottom:4px;';
+    const colorNames: PuzzleColor[] = ['red', 'blue', 'green', 'yellow'];
+    const colorHex: Record<PuzzleColor, string> = {
+      red: '#ff4444',
+      blue: '#4488ff',
+      green: '#44cc66',
+      yellow: '#ffcc44',
+    };
+    for (const color of colorNames) {
+      const btn = document.createElement('button');
+      btn.style.cssText = `flex:1;height:22px;border:2px solid ${this.puzzleColor === color ? '#fff' : 'transparent'};background:${colorHex[color]};border-radius:3px;cursor:pointer;`;
+      btn.title = color;
+      btn.addEventListener('click', () => {
+        this.puzzleColor = color;
+        // Update button borders
+        colorRow.querySelectorAll('button').forEach((b, i) => {
+          (b as HTMLElement).style.borderColor = colorNames[i] === color ? '#fff' : 'transparent';
+        });
+      });
+      colorRow.appendChild(btn);
+    }
+    puzzleSection.appendChild(colorRow);
+
+    // Switch variant selector
+    const variantRow = document.createElement('div');
+    variantRow.style.cssText = 'display:flex;gap:2px;margin-bottom:4px;';
+    const variants: SwitchVariant[] = ['toggle', 'pressure', 'oneshot'];
+    for (const v of variants) {
+      const btn = document.createElement('button');
+      btn.textContent = v.charAt(0).toUpperCase() + v.slice(1);
+      btn.style.cssText = `flex:1;padding:2px 4px;font-size:10px;background:${this.switchVariant === v ? 'var(--bg-elevated)' : 'var(--bg-surface)'};border:1px solid ${this.switchVariant === v ? 'var(--primary)' : 'var(--bg-hover)'};color:var(--text);cursor:pointer;border-radius:3px;`;
+      btn.addEventListener('click', () => {
+        this.switchVariant = v;
+        variantRow.querySelectorAll('button').forEach((b, i) => {
+          (b as HTMLElement).style.background =
+            variants[i] === v ? 'var(--bg-elevated)' : 'var(--bg-surface)';
+          (b as HTMLElement).style.borderColor =
+            variants[i] === v ? 'var(--primary)' : 'var(--bg-hover)';
+        });
+      });
+      variantRow.appendChild(btn);
+    }
+    puzzleSection.appendChild(variantRow);
+
+    // Puzzle tile buttons
+    const switchBtn = document.createElement('button');
+    switchBtn.textContent = 'Switch';
+    switchBtn.style.cssText =
+      'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+    switchBtn.addEventListener('click', () => {
+      this.currentTool = 'puzzle_switch';
+      this.highlightActiveTool(switchBtn);
+    });
+    puzzleSection.appendChild(switchBtn);
+
+    const gateBtn = document.createElement('button');
+    gateBtn.textContent = 'Gate';
+    gateBtn.style.cssText =
+      'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+    gateBtn.addEventListener('click', () => {
+      this.currentTool = 'puzzle_gate';
+      this.highlightActiveTool(gateBtn);
+    });
+    puzzleSection.appendChild(gateBtn);
+
+    const crumbleBtn = document.createElement('button');
+    crumbleBtn.textContent = 'Crumbling Floor';
+    crumbleBtn.style.cssText =
+      'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+    crumbleBtn.addEventListener('click', () => {
+      this.currentTool = 'crumbling';
+      this.highlightActiveTool(crumbleBtn);
+    });
+    puzzleSection.appendChild(crumbleBtn);
+
+    this.editorContainer.appendChild(puzzleSection);
 
     // Enemy tools
     if (this.enemyTypes.length > 0) {
@@ -1258,6 +1524,10 @@ export class LevelEditorScene extends Phaser.Scene {
       parTime: this.levelParTime,
       winCondition: this.levelWinCondition,
       isPublished: this.levelIsPublished,
+      puzzleConfig:
+        this.puzzleSwitchVariants.size > 0
+          ? { switchVariants: Object.fromEntries(this.puzzleSwitchVariants) }
+          : null,
     };
 
     try {
@@ -1318,6 +1588,10 @@ export class LevelEditorScene extends Phaser.Scene {
         const [x, y] = k.split(',').map(Number);
         return { x, y, type };
       }),
+      puzzleConfig:
+        this.puzzleSwitchVariants.size > 0
+          ? { switchVariants: Object.fromEntries(this.puzzleSwitchVariants) }
+          : null,
     };
 
     const json = JSON.stringify(data, null, 2);
@@ -1359,6 +1633,7 @@ export class LevelEditorScene extends Phaser.Scene {
     for (const s of this.coveredTileSprites.values()) s.destroy();
     this.gridOverlay?.destroy();
     this.spawnOverlay?.destroy();
+    this.puzzleLinkGraphics?.destroy();
     for (const label of this.spawnLabels) label.destroy();
     this.spawnLabels = [];
   }
