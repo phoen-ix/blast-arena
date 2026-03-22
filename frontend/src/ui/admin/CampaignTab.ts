@@ -8,12 +8,14 @@ import {
   EnemySpriteConfig,
   EnemyBodyShape,
   EnemyEyeStyle,
+  EnemyAccessory,
   EnemyMovementPattern,
   CampaignWinCondition,
   PowerUpType,
   ImportConflict,
   ENEMY_BODY_SHAPES,
   ENEMY_EYE_STYLES,
+  ENEMY_ACCESSORIES,
   MOVEMENT_PATTERNS,
   EnemyAIEntry,
   getErrorMessage,
@@ -53,6 +55,12 @@ function defaultEnemyConfig(): EnemyTypeConfig {
       eyeStyle: 'round',
       hasTeeth: false,
       hasHorns: false,
+      hasTail: false,
+      hasAura: false,
+      hasCrown: false,
+      hasScar: false,
+      hasWings: false,
+      accessory: 'none',
     },
     dropChance: 0.25,
     dropTable: ['bomb_up', 'fire_up'] as PowerUpType[],
@@ -775,6 +783,10 @@ export class CampaignTab {
       (s) =>
         `<option value="${s}" ${sprite.eyeStyle === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`,
     ).join('');
+    const accessoryOptions = ENEMY_ACCESSORIES.map(
+      (a) =>
+        `<option value="${a}" ${(sprite.accessory ?? 'none') === a ? 'selected' : ''}>${a === 'none' ? 'None' : a.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</option>`,
+    ).join('');
     const movementOptions = MOVEMENT_PATTERNS.map(
       (p) =>
         `<option value="${p}" ${config.movementPattern === p ? 'selected' : ''}>${p.replace(/_/g, ' ')}</option>`,
@@ -894,6 +906,29 @@ export class CampaignTab {
               <label class="camp-checkbox-label sm">
                 <input type="checkbox" id="enemy-has-horns" ${sprite.hasHorns ? 'checked' : ''}> Horns
               </label>
+              <label class="camp-checkbox-label sm">
+                <input type="checkbox" id="enemy-has-crown" ${sprite.hasCrown ? 'checked' : ''}> Crown
+              </label>
+            </div>
+            <div class="camp-checkbox-row">
+              <label class="camp-checkbox-label sm">
+                <input type="checkbox" id="enemy-has-tail" ${sprite.hasTail ? 'checked' : ''}> Tail
+              </label>
+              <label class="camp-checkbox-label sm">
+                <input type="checkbox" id="enemy-has-aura" ${sprite.hasAura ? 'checked' : ''}> Aura
+              </label>
+              <label class="camp-checkbox-label sm">
+                <input type="checkbox" id="enemy-has-scar" ${sprite.hasScar ? 'checked' : ''}> Scar
+              </label>
+              <label class="camp-checkbox-label sm">
+                <input type="checkbox" id="enemy-has-wings" ${sprite.hasWings ? 'checked' : ''}> Wings
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="camp-form-label sm">Accessory</label>
+              <select id="enemy-accessory" class="admin-input w-full text-xs">
+                ${accessoryOptions}
+              </select>
             </div>
           </div>
         </div>
@@ -964,6 +999,12 @@ export class CampaignTab {
       '#enemy-secondary-color',
       '#enemy-has-teeth',
       '#enemy-has-horns',
+      '#enemy-has-tail',
+      '#enemy-has-aura',
+      '#enemy-has-crown',
+      '#enemy-has-scar',
+      '#enemy-has-wings',
+      '#enemy-accessory',
     ];
     previewInputs.forEach((sel) => {
       overlay.querySelector(sel)?.addEventListener('input', () => {
@@ -972,6 +1013,18 @@ export class CampaignTab {
       overlay.querySelector(sel)?.addEventListener('change', () => {
         this.updateEnemyPreview(overlay, previewCanvas);
       });
+    });
+
+    // Crown/horns mutual exclusion
+    const hornsCheck = overlay.querySelector('#enemy-has-horns') as HTMLInputElement;
+    const crownCheck = overlay.querySelector('#enemy-has-crown') as HTMLInputElement;
+    hornsCheck.addEventListener('change', () => {
+      if (hornsCheck.checked) crownCheck.checked = false;
+      this.updateEnemyPreview(overlay, previewCanvas);
+    });
+    crownCheck.addEventListener('change', () => {
+      if (crownCheck.checked) hornsCheck.checked = false;
+      this.updateEnemyPreview(overlay, previewCanvas);
     });
 
     overlay.querySelector('#enemy-modal-cancel')!.addEventListener('click', () => overlay.remove());
@@ -1017,6 +1070,13 @@ export class CampaignTab {
             .value,
           hasTeeth: (overlay.querySelector('#enemy-has-teeth') as HTMLInputElement).checked,
           hasHorns: (overlay.querySelector('#enemy-has-horns') as HTMLInputElement).checked,
+          hasTail: (overlay.querySelector('#enemy-has-tail') as HTMLInputElement).checked,
+          hasAura: (overlay.querySelector('#enemy-has-aura') as HTMLInputElement).checked,
+          hasCrown: (overlay.querySelector('#enemy-has-crown') as HTMLInputElement).checked,
+          hasScar: (overlay.querySelector('#enemy-has-scar') as HTMLInputElement).checked,
+          hasWings: (overlay.querySelector('#enemy-has-wings') as HTMLInputElement).checked,
+          accessory: (overlay.querySelector('#enemy-accessory') as HTMLSelectElement)
+            .value as EnemyAccessory,
         },
       };
 
@@ -1054,6 +1114,13 @@ export class CampaignTab {
       secondaryColor: (overlay.querySelector('#enemy-secondary-color') as HTMLInputElement).value,
       hasTeeth: (overlay.querySelector('#enemy-has-teeth') as HTMLInputElement).checked,
       hasHorns: (overlay.querySelector('#enemy-has-horns') as HTMLInputElement).checked,
+      hasTail: (overlay.querySelector('#enemy-has-tail') as HTMLInputElement).checked,
+      hasAura: (overlay.querySelector('#enemy-has-aura') as HTMLInputElement).checked,
+      hasCrown: (overlay.querySelector('#enemy-has-crown') as HTMLInputElement).checked,
+      hasScar: (overlay.querySelector('#enemy-has-scar') as HTMLInputElement).checked,
+      hasWings: (overlay.querySelector('#enemy-has-wings') as HTMLInputElement).checked,
+      accessory: (overlay.querySelector('#enemy-accessory') as HTMLSelectElement)
+        .value as EnemyAccessory,
     };
     EnemyTextureGenerator.generatePreview(canvas, spriteConfig, 80);
   }
@@ -1064,7 +1131,7 @@ export class CampaignTab {
 
   private async downloadExport(url: string, fallbackFilename: string): Promise<void> {
     try {
-      const data = await ApiClient.get<any>(url);
+      const data = await ApiClient.get<Record<string, unknown>>(url);
       const json = JSON.stringify(data, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
       const a = document.createElement('a');
@@ -1128,6 +1195,7 @@ export class CampaignTab {
 
     document.body.appendChild(overlay);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSON.parse result with dynamic format detection
     let parsedData: any = null;
 
     const fileInput = overlay.querySelector('#import-level-file') as HTMLInputElement;
@@ -1172,21 +1240,24 @@ export class CampaignTab {
 
       try {
         // Build request body
-        let levelPayload: any;
-        let enemyTypes: any[] | undefined;
+        let levelPayload: Record<string, unknown>;
+        let enemyTypes: Record<string, unknown>[] | undefined;
 
         if (parsedData._format === 'blast-arena-level-bundle') {
-          levelPayload = parsedData.level;
-          enemyTypes = parsedData.enemyTypes;
+          levelPayload = parsedData.level as Record<string, unknown>;
+          enemyTypes = parsedData.enemyTypes as Record<string, unknown>[] | undefined;
         } else if (parsedData._format === 'blast-arena-level') {
-          const { _format, _version, ...rest } = parsedData;
+          const { _format: _, _version: __, ...rest } = parsedData;
           levelPayload = rest;
         } else {
           levelPayload = parsedData;
         }
 
-        const body: any = { level: levelPayload, worldId, enemyTypes };
-        const res = await ApiClient.post<any>('/admin/campaign/levels/import', body);
+        const body = { level: levelPayload, worldId, enemyTypes };
+        const res = await ApiClient.post<{ conflicts?: ImportConflict[] }>(
+          '/admin/campaign/levels/import',
+          body,
+        );
 
         if (res.conflicts && res.conflicts.length > 0) {
           overlay.remove();
@@ -1206,8 +1277,8 @@ export class CampaignTab {
 
   private showConflictResolutionModal(
     conflicts: ImportConflict[],
-    levelData: any,
-    enemyTypes: any[] | undefined,
+    levelData: Record<string, unknown>,
+    enemyTypes: Record<string, unknown>[] | undefined,
     worldId: number,
   ): void {
     const overlay = document.createElement('div');
@@ -1225,7 +1296,7 @@ export class CampaignTab {
            </label>`
           : '';
 
-        const createOption = enemyTypes?.find((et: any) => et.originalId === c.originalId)
+        const createOption = enemyTypes?.find((et) => et.originalId === c.originalId)
           ? `<label class="camp-conflict-option">
              <input type="radio" name="conflict-${i}" value="create" checked>
              Create new "${escapeHtml(c.name)}"

@@ -8,6 +8,33 @@ import * as enemyTypeService from '../services/enemy-type';
 import * as progressService from '../services/campaign-progress';
 import * as enemyaiService from '../services/enemyai';
 import { AppError } from '../middleware/errorHandler';
+import {
+  CampaignLevel,
+  EnemyPlacement,
+  EnemyTypeEntry,
+  ImportConflict,
+  EnemyTypeConfig,
+  TileType,
+} from '@blast-arena/shared';
+
+interface BundledEnemyType {
+  originalId: number;
+  name: string;
+  description: string;
+  config: EnemyTypeConfig;
+  enemyAiSource?: string;
+  enemyAiName?: string;
+}
+
+interface LevelImportData extends Record<string, unknown> {
+  _format?: string;
+  _version?: number;
+  name?: string;
+  tiles?: TileType[][];
+  level?: LevelImportData;
+  enemyTypes?: BundledEnemyType[];
+  enemyPlacements?: EnemyPlacement[];
+}
 
 const router = Router();
 
@@ -68,6 +95,12 @@ const enemyTypeSchema = z.object({
       eyeStyle: z.enum(['round', 'angry', 'sleepy', 'crazy']),
       hasTeeth: z.boolean(),
       hasHorns: z.boolean(),
+      hasTail: z.boolean().optional().default(false),
+      hasAura: z.boolean().optional().default(false),
+      hasCrown: z.boolean().optional().default(false),
+      hasScar: z.boolean().optional().default(false),
+      hasWings: z.boolean().optional().default(false),
+      accessory: z.enum(['none', 'bow_tie', 'monocle', 'bandana']).optional().default('none'),
     }),
     dropChance: z.number().min(0).max(1),
     dropTable: z.array(z.string()),
@@ -448,7 +481,7 @@ router.delete(
 
 // --- Export/Import ---
 
-function stripLevelDbFields(level: any) {
+function stripLevelDbFields(level: CampaignLevel) {
   const {
     id: _id,
     worldId: _wid,
@@ -458,12 +491,12 @@ function stripLevelDbFields(level: any) {
     sortOrder: _so,
     isPublished: _ip,
     ...rest
-  } = level;
+  } = level as CampaignLevel & { createdBy?: unknown; createdAt?: unknown; updatedAt?: unknown };
   return rest;
 }
 
-function stripEnemyTypeDbFields(et: any) {
-  const { id: _id, createdBy: _cb, createdAt: _ca, isBoss: _ib, ...rest } = et;
+function stripEnemyTypeDbFields(et: EnemyTypeEntry) {
+  const { id: _id, createdAt: _ca, isBoss: _ib, ...rest } = et;
   return rest;
 }
 
@@ -507,7 +540,7 @@ router.get(
 
       // Collect unique enemy type IDs from placements
       const enemyTypeIds = [...new Set(level.enemyPlacements.map((ep) => ep.enemyTypeId))];
-      const enemyTypes: any[] = [];
+      const enemyTypes: Record<string, unknown>[] = [];
 
       for (const etId of enemyTypeIds) {
         const et = await enemyTypeService.getEnemyType(etId);
@@ -604,8 +637,8 @@ router.post(
       const { worldId, enemyIdMap } = req.body;
 
       // Accept both plain level and bundle format
-      let levelData: any;
-      let bundledEnemyTypes: any[] | undefined;
+      let levelData: LevelImportData;
+      let bundledEnemyTypes: BundledEnemyType[] | undefined;
 
       if (
         req.body.level?._format === 'blast-arena-level-bundle' ||
@@ -631,16 +664,16 @@ router.post(
 
       // Collect enemy type IDs referenced in placements
       const referencedIds = [
-        ...new Set((levelData.enemyPlacements || []).map((ep: any) => ep.enemyTypeId)),
+        ...new Set((levelData.enemyPlacements || []).map((ep: EnemyPlacement) => ep.enemyTypeId)),
       ];
 
       // Phase 1: Check for conflicts if no enemyIdMap provided
       if (!enemyIdMap && referencedIds.length > 0) {
-        const conflicts: any[] = [];
+        const conflicts: ImportConflict[] = [];
 
         for (const origId of referencedIds) {
           const existing = await enemyTypeService.getEnemyType(origId as number);
-          const bundled = bundledEnemyTypes?.find((et: any) => et.originalId === origId);
+          const bundled = bundledEnemyTypes?.find((et) => et.originalId === origId);
 
           if (existing) {
             // ID exists in DB — might be a different enemy type
@@ -683,7 +716,7 @@ router.post(
             // Will filter out these placements
             continue;
           } else if (action === 'create') {
-            const bundled = bundledEnemyTypes?.find((et: any) => et.originalId === origId);
+            const bundled = bundledEnemyTypes?.find((et) => et.originalId === origId);
             if (bundled) {
               const newId = await enemyTypeService.createEnemyType(
                 bundled.name,
@@ -708,8 +741,8 @@ router.post(
       }
 
       const remappedPlacements = (levelData.enemyPlacements || [])
-        .filter((ep: any) => !skippedIds.has(ep.enemyTypeId))
-        .map((ep: any) => ({
+        .filter((ep: EnemyPlacement) => !skippedIds.has(ep.enemyTypeId))
+        .map((ep: EnemyPlacement) => ({
           ...ep,
           enemyTypeId: idMap.get(ep.enemyTypeId) ?? ep.enemyTypeId,
         }));

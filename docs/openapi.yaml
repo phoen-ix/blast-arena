@@ -2890,6 +2890,19 @@ components:
           type: boolean
         hasHorns:
           type: boolean
+        hasTail:
+          type: boolean
+        hasAura:
+          type: boolean
+        hasCrown:
+          type: boolean
+        hasScar:
+          type: boolean
+        hasWings:
+          type: boolean
+        accessory:
+          type: string
+          enum: [none, bow_tie, monocle, bandana]
 
     BossPhaseConfig:
       type: object

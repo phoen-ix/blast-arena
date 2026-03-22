@@ -1,4 +1,10 @@
-import { EnemyBodyShape, EnemyEyeStyle, EnemyMovementPattern, CampaignWinCondition } from '../types/campaign';
+import {
+  EnemyBodyShape,
+  EnemyEyeStyle,
+  EnemyAccessory,
+  EnemyMovementPattern,
+  CampaignWinCondition,
+} from '../types/campaign';
 
 export const CAMPAIGN_RESPAWN_TICKS = 40; // 2 seconds
 export const CAMPAIGN_RESPAWN_INVULNERABILITY = 40; // 2 seconds after respawn
@@ -14,6 +20,8 @@ export const ENEMY_BODY_SHAPES: EnemyBodyShape[] = [
 ];
 
 export const ENEMY_EYE_STYLES: EnemyEyeStyle[] = ['round', 'angry', 'sleepy', 'crazy'];
+
+export const ENEMY_ACCESSORIES: EnemyAccessory[] = ['none', 'bow_tie', 'monocle', 'bandana'];
 
 export const MOVEMENT_PATTERNS: EnemyMovementPattern[] = [
   'random_walk',

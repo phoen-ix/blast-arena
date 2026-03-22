@@ -11,6 +11,7 @@ export type EnemyMovementPattern =
 
 export type EnemyBodyShape = 'blob' | 'spiky' | 'ghost' | 'robot' | 'bug' | 'skull';
 export type EnemyEyeStyle = 'round' | 'angry' | 'sleepy' | 'crazy';
+export type EnemyAccessory = 'none' | 'bow_tie' | 'monocle' | 'bandana';
 
 export interface EnemySpriteConfig {
   bodyShape: EnemyBodyShape;
@@ -19,6 +20,12 @@ export interface EnemySpriteConfig {
   eyeStyle: EnemyEyeStyle;
   hasTeeth: boolean;
   hasHorns: boolean;
+  hasTail?: boolean;
+  hasAura?: boolean;
+  hasCrown?: boolean;
+  hasScar?: boolean;
+  hasWings?: boolean;
+  accessory?: EnemyAccessory;
 }
 
 export interface EnemyBombConfig {
