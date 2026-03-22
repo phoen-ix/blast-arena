@@ -45,6 +45,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Themes**: 11 palettes defined in `frontend/src/themes/definitions.ts`. `ThemeManager` singleton reads localStorage → admin default → 'inferno'. Applies via `[data-theme]` attribute on `<html>`. Flash prevention: inline `<script>` in `<head>` sets attribute before CSS loads. Phaser scenes use `themeManager.getCanvasColors()`
 - **CSS**: All styles in `frontend/index.html` using CSS custom properties. Always use CSS variables (e.g. `var(--primary)` not hardcoded hex) for theme compatibility. Typography: Chakra Petch (display/headings) + DM Sans (body)
 - **Sidebar & Views**: `.app-layout` with collapsible left sidebar + `.main-content`. `ILobbyView` interface with `render()`/`destroy()`. `LobbyUI.createView()` factory with dynamic imports. Wrapper views delegate via `renderEmbedded()`. All lobby views render inline in `.main-body` — sidebar stays persistent. Views with own sub-header hide `.main-header`
+- **UI conventions**: Full-screen tabbed panels (Admin, Settings, Help) reuse `admin-container` CSS class. Unified CSS classes: `.panel-header`/`.panel-content`, `.tab-bar`/`.tab-item`, `.data-table`, `.form-grid`/`.form-group`/`.input`/`.select`, `.toggle-switch`, `.setting-row`, `.option-chip`, `.mini-stat`, `.modal-header`/`.modal-body`/`.modal-footer`, `.btn`/`.btn-primary`/`.btn-secondary`/`.btn-ghost`/`.btn-sm`
+- **Gamepad UI nav**: `UIGamepadNavigator` uses spatial navigation — new interactive elements need `.sidebar-nav-item` or `.room-card` classes or gamepad navigation will skip them
 - **Rendering**: GameScene delegates to renderer classes in `frontend/src/game/`. `activeMoveAnim` Set on PlayerSprite prevents tween stacking. All sprites procedurally generated in `BootScene.generateTextures()` — no external image assets. Enemy textures on-demand via `EnemyTextureGenerator`
 - **HUD**: DOM-based overlay in HUDScene.ts. Settings and Help are in sidebar navigation, not in-game HUD
 - **Countdown**: Synced between server and client — GameLoop holds `status: 'countdown'` for 36 ticks (1.8s). Both client and server block inputs during countdown
@@ -56,7 +58,7 @@ Campaign with hand-crafted levels, enemies, and bosses. Supports solo, online co
 - `CampaignGame` wraps `GameStateManager` with `customMap`. `checkWinCondition()`/time limit skip `campaign` mode. Frontend uses `campaignMode` registry flag for `campaign:state`/`campaign:input` events
 - Has 3-2-1-GO countdown (36 ticks) and 30-tick grace period after win condition. `startTick` set on first 'playing' tick so countdown doesn't count toward level time
 - Pause: `campaign:pause`/`campaign:resume` events; input blocked while paused; pause blocked during countdown
-- Spawn fallback: level spawns → scan tiles for 'spawn' → first empty tile → (1,1); co-op adds P2 spawn via spiral search if only 1 exists
+- Spawn fallback: empty/null tiles array triggers default map generation. Otherwise: level spawns → scan tiles for 'spawn' → first empty tile → (1,1); co-op adds P2 spawn via spiral search if only 1 exists
 - Editor back button: `returnToAdmin: 'campaign'` registry flag. `AdminUI` accepts optional `initialTab`
 
 ### Co-Op
@@ -84,7 +86,7 @@ Campaign modifier — P2 is a smaller, invulnerable support character for young/
 - **Seasons**: Admin-defined start/end dates. `season_elo` tracks per-user per-season Elo + peak. Hard reset (to 1000) or soft reset (compress toward 1000 with 0.5 factor)
 - **Rank Tiers**: Admin-configurable via `rank_tiers` JSON in `server_settings`. `getRankForElo()` pure function. Sub-tiers (I/II/III) split each tier into thirds
 - **Achievements**: 4 condition types: `cumulative` (user_stats), `per_game` (match data with operators), `mode_specific` (match_players JOIN), `campaign` (stars/levels/world). Each can reward a cosmetic. Evaluated via `evaluateAfterGame` and `evaluateAfterCampaign`
-- **Cosmetics**: 4 types: `color`, `eyes`, `trail`, `bomb_skin`. Included in `PlayerState.toState()` (NOT `toTickState()` — static per game). `getPlayerCosmeticsForGame(userIds[])` single JOIN query at game start
+- **Cosmetics**: 4 types: `color`, `eyes`, `trail`, `bomb_skin`. Included in `PlayerState.toState()` (NOT `toTickState()` — static per game). `getPlayerCosmeticsForGame(userIds[])` single JOIN query at game start. Rendering: `BootScene.generateCustomPlayerTextures(scene, hex, eyeStyle?)` and `generateCustomBombTexture(scene, config)` for on-demand textures. PlayerSprite color priority: 1) cosmetic → custom texture, 2) team color, 3) index-based. `BombSpriteRenderer.setPlayerCosmetics(map)` for bomb skins
 - **XP**: kills×50 + bombs×5 + powerups×10 + completion(25) + placement bonus + win bonus(100). Level N→N+1 costs N×100 XP. Admin `xp_multiplier` setting
 - **Rematch voting**: >50% threshold triggers auto-restart. `humanPlayerIds` filters to `id > 0` (excludes bots); solo with bots shows direct "Play Again" instead of vote UI
 - **Profiles**: Click usernames for public profile. `is_profile_public` toggle hides from leaderboard. `accept_friend_requests` toggle checked in `sendFriendRequest`
@@ -99,6 +101,7 @@ Campaign modifier — P2 is a smaller, invulnerable support character for young/
 - **Emotes**: Keys 1-6 during gameplay (only when `!localPlayerDead` — no conflict with spectator digit keys 1-9). 3s server-side cooldown
 - **All social chat features** admin-configurable via `ChatMode` (`'everyone' | 'staff' | 'admin_only' | 'disabled'`)
 - Each socket joins `user:{userId}` room on connect for targeted notifications. On disconnect: presence removed, friends notified, party leave/disband handled
+- Lobby chat toggle: dispatches `lobbychat-toggle` window event from Settings; LobbyUI listens to refresh panel visibility
 
 ## Admin Panel
 Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches, Rooms, Logs, Simulations, AI, Campaign, Announcements, Seasons, Achievements. `staffMiddleware` (admin+moderator) and `adminOnlyMiddleware` for route protection. All actions audit-logged.
@@ -121,6 +124,7 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished'; winner invulnerable during grace period
 - Dead players enter spectator mode: free camera pan, click-to-follow, number keys 1-9, LB/RB bumpers
+- Mouse drag panning: pointerdown records start, pointermove after 4px threshold pans freeCam; pointerup without drag triggers replay play/pause
 - Spectate-follow breaks only on new keydown or mouse drag (not stale keysDown state); blur handler clears keysDown
 - HUD spectate click uses mousedown event delegation on stable container (not click — unreliable with innerHTML rebuilds)
 - HUDScene forces `localPlayerDead = true` when `simulationSpectate` or `replayMode` registry flags are set
@@ -130,6 +134,7 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 - Shield has no time limit — lasts until consumed. After break, 10 ticks invulnerability. Extra pickups consumed but don't stack
 - Game start transitions instantly; room:start guard checks GameRoom existence and room status to prevent duplicate starts
 - "Back to Lobby" from game over clears currentRoom registry to prevent stale room UI
+- Play Again: room:restart resets to 'waiting'; other players auto-navigate via room:state listener
 
 ## Game Reference
 
