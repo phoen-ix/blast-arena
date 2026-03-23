@@ -501,11 +501,48 @@ export class CampaignGame {
       }
     }
 
-    // 2. Enemy AI + movement
+    // 2. Enemy tick + conveyor + AI movement
     const bombPositions = Array.from(this.gameState.bombs.values()).map((b) => b.position);
     for (const enemy of this.enemies.values()) {
       if (!enemy.alive) continue;
       enemy.tick();
+
+      // Conveyor belts push enemies before AI (skip wall-passers — they float above)
+      if (enemy.canMove() && !enemy.typeConfig.canPassWalls) {
+        const convTile = this.gameState.collisionSystem.getTileAt(
+          enemy.position.x,
+          enemy.position.y,
+        );
+        let convDir: Direction | null = null;
+        switch (convTile) {
+          case 'conveyor_up':
+            convDir = 'up';
+            break;
+          case 'conveyor_down':
+            convDir = 'down';
+            break;
+          case 'conveyor_left':
+            convDir = 'left';
+            break;
+          case 'conveyor_right':
+            convDir = 'right';
+            break;
+        }
+        if (convDir) {
+          const convPos = this.gameState.collisionSystem.canMoveTo(
+            enemy.position.x,
+            enemy.position.y,
+            convDir,
+            enemy.typeConfig.canPassBombs ? [] : bombPositions,
+          );
+          if (convPos) {
+            enemy.position = convPos;
+            enemy.direction = convDir;
+            enemy.applyMoveCooldown();
+            this.gameState.applyTeleporter(enemy);
+          }
+        }
+      }
 
       if (enemy.canMove()) {
         let result: EnemyAIResult;

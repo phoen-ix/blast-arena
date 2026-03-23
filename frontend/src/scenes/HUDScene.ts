@@ -85,9 +85,9 @@ export class HUDScene extends Phaser.Scene {
 
     this.socketClient = this.registry.get('socketClient');
 
-    // Hide timer initially for campaign levels with no time limit (prevents 1-frame "3:00" flicker)
+    // Show "0:00" initially for campaign levels with no time limit (count-up), else "3:00"
     const initialState = this.registry.get('initialGameState') as GameState | undefined;
-    const hideTimer =
+    const noTimeLimit =
       !!this.registry.get('campaignMode') && initialState && initialState.roundTime >= 99999;
 
     // Main HUD container
@@ -95,7 +95,7 @@ export class HUDScene extends Phaser.Scene {
     this.hudContainer.className = 'hud-container';
     this.hudContainer.innerHTML = `
       <div class="hud-top">
-        <div class="hud-timer" id="hud-timer"${hideTimer ? ' style="display:none;"' : ''}>3:00</div>
+        <div class="hud-timer" id="hud-timer">${noTimeLimit ? '0:00' : '3:00'}</div>
       </div>
       <div class="hud-spectator-banner" id="hud-spectator" style="display:none;">
         SPECTATOR — WASD/Arrows/D-Pad to pan, 1-9/LB/RB or click to follow
@@ -265,13 +265,17 @@ export class HUDScene extends Phaser.Scene {
       specBanner.style.display = this.localPlayerDead && !this.campaignMode ? 'block' : 'none';
     }
 
-    // Timer (hide for campaign with no time limit)
+    // Timer — count-up for campaign with no time limit, countdown otherwise
     const timerEl = document.getElementById('hud-timer');
     if (timerEl) {
+      timerEl.style.display = '';
       if (this.campaignMode && state.roundTime >= 99999) {
-        timerEl.style.display = 'none';
+        const elapsed = Math.max(0, Math.floor(state.timeElapsed));
+        const mins = Math.floor(elapsed / 60);
+        const secs = elapsed % 60;
+        timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        timerEl.style.color = '#fff';
       } else {
-        timerEl.style.display = '';
         const remaining = Math.max(0, Math.ceil(state.roundTime - state.timeElapsed));
         const mins = Math.floor(remaining / 60);
         const secs = remaining % 60;

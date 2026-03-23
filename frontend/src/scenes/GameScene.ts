@@ -32,10 +32,12 @@ import { MapEventRenderer } from '../game/MapEventRenderer';
 import {
   LocalCoopInput,
   LocalCoopConfig,
+  LocalCoopP2Identity,
   CameraMode,
   DEFAULT_LOCAL_COOP_CONFIG,
 } from '../game/LocalCoopInput';
-import { EmoteId, EMOTES } from '@blast-arena/shared';
+import { ApiClient } from '../network/ApiClient';
+import { EmoteId, EMOTES, CampaignLevelSummary } from '@blast-arena/shared';
 
 export class GameScene extends Phaser.Scene {
   private socketClient!: SocketClient;
@@ -1198,7 +1200,8 @@ export class GameScene extends Phaser.Scene {
       <div class="pause-menu">
         <h2 class="pause-title">PAUSED</h2>
         <button class="btn btn-primary pause-btn" id="pause-continue">Continue</button>
-        <button class="btn btn-secondary pause-btn" id="pause-exit">Exit Level</button>
+        <button class="btn btn-secondary pause-btn" id="pause-restart">Restart Level</button>
+        <button class="btn btn-ghost pause-btn" id="pause-exit">Exit Level</button>
       </div>
     `;
     document.body.appendChild(overlay);
@@ -1206,6 +1209,14 @@ export class GameScene extends Phaser.Scene {
 
     overlay.querySelector('#pause-continue')!.addEventListener('click', () => {
       this.resumeCampaign();
+    });
+    overlay.querySelector('#pause-restart')!.addEventListener('click', () => {
+      const levelId = this.lastCampaignState?.levelId;
+      if (!levelId) return;
+      this.paused = false;
+      this.hidePauseOverlay();
+      this.socketClient.emit('campaign:quit');
+      this.restartCampaignLevel(levelId);
     });
     overlay.querySelector('#pause-exit')!.addEventListener('click', () => {
       this.paused = false;
@@ -1228,6 +1239,82 @@ export class GameScene extends Phaser.Scene {
       this.pauseOverlay.remove();
       this.pauseOverlay = null;
     }
+  }
+
+  private restartCampaignLevel(levelId: number): void {
+    const isCoopMode = !!this.registry.get('campaignCoopMode');
+    const isLocalCoopMode = !!this.registry.get('localCoopMode');
+    const isBuddyMode = !!this.registry.get('buddyMode');
+
+    ApiClient.get<{ enemyTypes: any[] }>('/campaign/enemy-types')
+      .then((enemyTypesResp) => {
+        const gameStartHandler = (data: {
+          state: CampaignGameState;
+          level: CampaignLevelSummary;
+        }) => {
+          this.socketClient.off('campaign:gameStart', gameStartHandler);
+
+          this.registry.set('campaignMode', true);
+          this.registry.set('campaignCoopMode', isCoopMode || isLocalCoopMode);
+          this.registry.set('localCoopMode', isLocalCoopMode);
+          if (isBuddyMode) {
+            this.registry.set('buddyMode', true);
+          }
+          this.registry.set('initialGameState', data.state.gameState);
+          this.registry.set('campaignEnemyTypes', enemyTypesResp.enemyTypes || []);
+
+          this.scene.start('GameScene');
+          this.scene.launch('HUDScene');
+        };
+        this.socketClient.on('campaign:gameStart', gameStartHandler);
+
+        const startData: {
+          levelId: number;
+          coopMode?: boolean;
+          localCoopMode?: boolean;
+          localP2?: { userId?: number; username: string; guestColor?: number };
+          buddyMode?: boolean;
+        } = { levelId };
+        if (isBuddyMode) {
+          startData.buddyMode = true;
+        } else if (isCoopMode && !isLocalCoopMode) {
+          startData.coopMode = true;
+        } else if (isLocalCoopMode) {
+          startData.localCoopMode = true;
+          const p2Id = this.registry.get('localCoopP2Identity') as LocalCoopP2Identity | undefined;
+          if (p2Id?.mode === 'loggedIn' && p2Id.loggedInUserId) {
+            startData.localP2 = {
+              userId: p2Id.loggedInUserId,
+              username: p2Id.loggedInUsername || 'Player 2',
+            };
+          } else {
+            startData.localP2 = {
+              username: p2Id?.guestName || 'Player 2',
+              guestColor: p2Id?.guestColor,
+            };
+          }
+        }
+
+        this.socketClient.emit('campaign:start', startData, (response) => {
+          if (response && response.error) {
+            this.socketClient.off('campaign:gameStart', gameStartHandler);
+            this.registry.remove('campaignMode');
+            this.registry.remove('campaignCoopMode');
+            this.registry.remove('localCoopMode');
+            this.registry.set('openCampaign', true);
+            this.scene.stop('HUDScene');
+            this.scene.start('LobbyScene');
+          }
+        });
+      })
+      .catch(() => {
+        this.registry.remove('campaignMode');
+        this.registry.remove('campaignCoopMode');
+        this.registry.remove('localCoopMode');
+        this.registry.set('openCampaign', true);
+        this.scene.stop('HUDScene');
+        this.scene.start('LobbyScene');
+      });
   }
 
   shutdown(): void {
