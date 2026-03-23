@@ -56,7 +56,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ## Campaign System
 Campaign with hand-crafted levels, enemies, and bosses. Supports solo, online co-op (2 players via party), and local co-op (same keyboard/gamepads).
 - `CampaignGame` wraps `GameStateManager` with `customMap`. `checkWinCondition()`/time limit skip `campaign` mode. Frontend uses `campaignMode` registry flag for `campaign:state`/`campaign:input` events
-- Has 3-2-1-GO countdown (36 ticks) and 30-tick grace period after win condition. `startTick` set on first 'playing' tick so countdown doesn't count toward level time
+- Has 3-2-1-GO countdown (36 ticks) and 30-tick grace period after win condition. `startTick` set on first 'playing' tick so countdown doesn't count toward level time. Hard 60-minute safety cap (`3600s` from `startTick`) terminates via `gameOverInternal()` for levels with no time limit
 - Pause: `campaign:pause`/`campaign:resume` events; input blocked while paused; pause blocked during countdown. Pause menu: Continue, Restart Level (quits + re-launches same level via `restartCampaignLevel()`), Exit Level
 - Spawn fallback: empty/null tiles array triggers default map generation. Otherwise: level spawns → scan tiles for 'spawn' → first empty tile → (1,1); co-op adds P2 spawn via spiral search if only 1 exists
 - Editor back button: `returnToAdmin: 'campaign'` registry flag. `AdminUI` accepts optional `initialTab`

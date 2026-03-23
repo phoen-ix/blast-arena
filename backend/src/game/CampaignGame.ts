@@ -485,6 +485,13 @@ export class CampaignGame {
   private campaignTick(): void {
     const tick = this.gameState.tick;
 
+    // Safety cap: terminate campaign games that exceed 60 minutes
+    const elapsedSeconds = (tick - this.startTick) / TICK_RATE;
+    if (this.startTick > 0 && elapsedSeconds >= 3600) {
+      this.gameOverInternal('Time limit reached (60 minutes)');
+      return;
+    }
+
     // 1. Handle per-player respawn
     for (const [playerId, respawnTick] of this.respawnTicks) {
       if (tick >= respawnTick) {
