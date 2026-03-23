@@ -88,7 +88,8 @@ Environmental puzzle system with switches, gates, and crumbling floors. 18 new t
 - **Crumbling floor**: `crumbling` → `pit` after entity steps off (10-tick delay). Enemies trigger crumbling (unless `canPassWalls`), buddy does NOT trigger
 - `GameStateManager.setTileTracked(x, y, type)` for puzzle tile state changes (records tileDiff + updates collision)
 - `CampaignGame.processPuzzleTiles()` runs in campaignTick between hidden power-up reveals and boss phases
-- Editor: Puzzle palette section with color selector, variant selector (toggle/pressure/oneshot), link mode (switch → gate). `drawPuzzleLinks()` shows colored lines between linked switches/gates
+- Editor: Puzzle palette section with color selector, variant selector (toggle/pressure/oneshot), link mode (switch → gate). `drawPuzzleLinks()` shows colored lines between linked switches/gates. Color/variant buttons use `.puzzle-color-btn`/`.puzzle-variant-btn` classes to survive `highlightActiveTool()` resets
+- Editor map resize: `resizeMap()` clears old perimeter `wall` tiles that become interior when growing, then enforces new perimeter walls
 - `PuzzleConfig` stored in `campaign_levels.puzzle_config` JSON column (migration 024). `shared/src/utils/puzzle.ts` exports helpers: `isSwitchTile`, `isGateTile`, `isGateClosed`, `getSwitchColor`, `getGateColor`, `getSwitchTile`, `getGateTile`, `PUZZLE_COLORS`, `PUZZLE_COLOR_VALUES`, `CRUMBLE_DELAY_TICKS`
 - Switches/gates can be covered tiles (hidden under destructible walls). Buddy blocked by closed gates and pits
 

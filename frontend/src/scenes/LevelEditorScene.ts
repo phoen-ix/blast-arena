@@ -1018,6 +1018,22 @@ export class LevelEditorScene extends Phaser.Scene {
       }
     }
 
+    // Clear old perimeter walls that are now interior (when map grows)
+    if (newWidth > oldW) {
+      for (let y = 0; y < oldH; y++) {
+        if (this.tiles[y][oldW - 1] === 'wall') {
+          this.tiles[y][oldW - 1] = 'empty';
+        }
+      }
+    }
+    if (newHeight > oldH) {
+      for (let x = 0; x < oldW; x++) {
+        if (this.tiles[oldH - 1][x] === 'wall') {
+          this.tiles[oldH - 1][x] = 'empty';
+        }
+      }
+    }
+
     // Enforce perimeter walls on all edges
     for (let y = 0; y < newHeight; y++) {
       this.tiles[y][0] = 'wall';
@@ -1122,6 +1138,7 @@ export class LevelEditorScene extends Phaser.Scene {
       const btn = document.createElement('button');
       btn.style.cssText = `flex:1;height:22px;border:2px solid ${this.puzzleColor === color ? '#fff' : 'transparent'};background:${colorHex[color]};border-radius:3px;cursor:pointer;`;
       btn.title = color;
+      btn.classList.add('puzzle-color-btn');
       btn.addEventListener('click', () => {
         this.puzzleColor = color;
         // Update button borders
@@ -1141,6 +1158,7 @@ export class LevelEditorScene extends Phaser.Scene {
       const btn = document.createElement('button');
       btn.textContent = v.charAt(0).toUpperCase() + v.slice(1);
       btn.style.cssText = `flex:1;padding:2px 4px;font-size:10px;background:${this.switchVariant === v ? 'var(--bg-elevated)' : 'var(--bg-surface)'};border:1px solid ${this.switchVariant === v ? 'var(--primary)' : 'var(--bg-hover)'};color:var(--text);cursor:pointer;border-radius:3px;`;
+      btn.classList.add('puzzle-variant-btn');
       btn.addEventListener('click', () => {
         this.switchVariant = v;
         variantRow.querySelectorAll('button').forEach((b, i) => {
@@ -1476,10 +1494,33 @@ export class LevelEditorScene extends Phaser.Scene {
 
   private highlightActiveTool(activeBtn: HTMLElement): void {
     // Reset all tool buttons
-    const buttons = this.editorContainer?.querySelectorAll('button:not(.btn)');
+    const buttons = this.editorContainer?.querySelectorAll(
+      'button:not(.btn):not(.puzzle-color-btn):not(.puzzle-variant-btn)',
+    );
     buttons?.forEach((btn) => {
       (btn as HTMLElement).style.background = 'var(--bg-surface)';
       (btn as HTMLElement).style.borderColor = 'var(--bg-hover)';
+    });
+    // Re-apply puzzle color button styles (colored backgrounds)
+    this.editorContainer?.querySelectorAll('.puzzle-color-btn').forEach((btn) => {
+      const color = (btn as HTMLElement).title as PuzzleColor;
+      const hex: Record<string, string> = {
+        red: '#ff4444',
+        blue: '#4488ff',
+        green: '#44cc66',
+        yellow: '#ffcc44',
+      };
+      (btn as HTMLElement).style.background = hex[color] || 'var(--bg-surface)';
+      (btn as HTMLElement).style.borderColor = color === this.puzzleColor ? '#fff' : 'transparent';
+    });
+    // Re-apply puzzle variant button styles
+    const variants: SwitchVariant[] = ['toggle', 'pressure', 'oneshot'];
+    this.editorContainer?.querySelectorAll('.puzzle-variant-btn').forEach((btn, i) => {
+      const v = variants[i];
+      (btn as HTMLElement).style.background =
+        v === this.switchVariant ? 'var(--bg-elevated)' : 'var(--bg-surface)';
+      (btn as HTMLElement).style.borderColor =
+        v === this.switchVariant ? 'var(--primary)' : 'var(--bg-hover)';
     });
     activeBtn.style.background = 'var(--bg-elevated)';
     activeBtn.style.borderColor = 'var(--primary)';
