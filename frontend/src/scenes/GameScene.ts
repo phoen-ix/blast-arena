@@ -284,6 +284,14 @@ export class GameScene extends Phaser.Scene {
       this.localPlayerDead = true; // Force spectator camera
       const replayData: ReplayData = this.registry.get('replayData');
 
+      // Set up campaign enemy rendering for campaign replays
+      const isCampaignReplay = !!replayData.campaign;
+      if (isCampaignReplay && replayData.campaign) {
+        this.campaignMode = true;
+        EnemyTextureGenerator.generateForLevel(this, replayData.campaign.enemyTypes);
+        this.enemyRenderer = new EnemySpriteRenderer(this);
+      }
+
       this.replayPlayer = new ReplayPlayer(replayData, {
         onFrame: (state: GameState) => this.updateState(state),
         onTickEvents: (events: ReplayTickEvents) => this.handleReplayTickEvents(events),
@@ -294,6 +302,20 @@ export class GameScene extends Phaser.Scene {
         onStateChange: () => {
           this.replayControls?.update();
         },
+        onCampaignFrame: isCampaignReplay
+          ? (data) => {
+              this.enemyRenderer?.update(data.enemies);
+              this.events.emit('campaignStateUpdate', {
+                enemies: data.enemies,
+                lives: data.lives,
+                maxLives: replayData.campaign?.lives ?? data.lives,
+                exitOpen: data.exitOpen,
+                levelId: replayData.campaign?.levelId ?? 0,
+                coopMode: replayData.campaign?.coopMode ?? false,
+                gameState: {},
+              });
+            }
+          : undefined,
       });
 
       const matchInfo = {

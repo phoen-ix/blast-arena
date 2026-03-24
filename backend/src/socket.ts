@@ -33,6 +33,7 @@ import { setupDMHandlers, cleanupDMLimiters } from './handlers/dmHandlers';
 import * as settingsService from './services/settings';
 import * as presenceService from './services/presence';
 import * as partyService from './services/party';
+import * as replayService from './services/replay';
 import { z } from 'zod';
 
 type TypedServer = Server<
@@ -1037,6 +1038,24 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
                 }
               }
 
+              // Save campaign replay
+              const replayResult = game.finalizeReplay('completed', timeSeconds, stars);
+              if (replayResult) {
+                replayService
+                  .saveCampaignReplayRecord({
+                    sessionId: replayResult.sessionId,
+                    userId: socket.data.userId,
+                    levelId: level.id,
+                    duration: timeSeconds,
+                    result: 'completed',
+                    stars,
+                    coopMode: isCoopMode,
+                    buddyMode: !!data.buddyMode,
+                    filename: replayResult.filename,
+                  })
+                  .catch((err) => logger.error({ err }, 'Failed to save campaign replay record'));
+              }
+
               // Clean up sessions
               if (partnerSocket) {
                 partnerSocket.data.activeCampaignSession = undefined;
@@ -1048,6 +1067,25 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
             },
             onGameOver: (reason) => {
               emitToCampaign('campaign:gameOver', { levelId: level.id, reason });
+
+              // Save campaign replay
+              const replayResult = game.finalizeReplay('failed', 0, 0);
+              if (replayResult) {
+                replayService
+                  .saveCampaignReplayRecord({
+                    sessionId: replayResult.sessionId,
+                    userId: socket.data.userId,
+                    levelId: level.id,
+                    duration: 0,
+                    result: 'failed',
+                    stars: 0,
+                    coopMode: isCoopMode,
+                    buddyMode: !!data.buddyMode,
+                    filename: replayResult.filename,
+                  })
+                  .catch((err) => logger.error({ err }, 'Failed to save campaign replay record'));
+              }
+
               if (partnerSocket) {
                 partnerSocket.data.activeCampaignSession = undefined;
                 partnerSocket.leave(campaignRoom);
@@ -1060,6 +1098,32 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
           carriedPowerups,
           data.buddyMode,
         );
+
+        // Enable replay recording if recordings are enabled
+        if (await settingsService.isRecordingEnabled()) {
+          const world = await campaignService.getWorld(level.worldId);
+          // Build EnemyTypeEntry[] from the Map for replay metadata
+          const enemyTypeEntries = Array.from(enemyTypes.entries()).map(([id, config]) => ({
+            id,
+            name: '',
+            description: '',
+            config,
+            isBoss: config.isBoss,
+            createdAt: '',
+          }));
+          game.enableReplayRecording({
+            levelId: level.id,
+            levelName: level.name,
+            worldId: level.worldId,
+            worldName: world?.name ?? 'Unknown',
+            coopMode: isCoopMode,
+            buddyMode: data.buddyMode,
+            enemyTypes: enemyTypeEntries,
+            lives: level.lives,
+            winCondition: level.winCondition,
+            timeLimit: level.timeLimit,
+          });
+        }
 
         // Join campaign room
         socket.join(campaignRoom);

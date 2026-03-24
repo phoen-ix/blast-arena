@@ -1016,6 +1016,43 @@ router.delete('/admin/replays/:matchId', adminOnlyMiddleware, async (req, res, n
   }
 });
 
+// --- Campaign Replays ---
+
+router.get('/admin/campaign-replays', async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+    const levelId = req.query.levelId ? parseInt(req.query.levelId as string) : undefined;
+    const result = await replayService.listCampaignReplays(page, limit, userId, levelId);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/admin/campaign-replays/:sessionId', async (req, res, next) => {
+  try {
+    const replay = await replayService.getCampaignReplay(req.params.sessionId);
+    if (!replay) {
+      res.status(404).json({ error: 'Campaign replay not found' });
+      return;
+    }
+    res.json(replay);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/admin/campaign-replays/:sessionId', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    await replayService.deleteCampaignReplay(req.params.sessionId);
+    res.json({ message: 'Campaign replay deleted' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // --- Simulations ---
 
 const simulationConfigSchema = z.object({

@@ -2,7 +2,7 @@ import {
   GameState,
   TileType,
   ReplayData,
-
+  CampaignEnemyState,
   ReplayTickEvents,
   TICK_RATE,
 } from '@blast-arena/shared';
@@ -15,6 +15,11 @@ export interface ReplayCallbacks {
   onLogUpdate: (tick: number) => void;
   onComplete: () => void;
   onStateChange: (playing: boolean, speed: number) => void;
+  onCampaignFrame?: (data: {
+    enemies: CampaignEnemyState[];
+    lives: number;
+    exitOpen: boolean;
+  }) => void;
 }
 
 export class ReplayPlayer {
@@ -207,6 +212,15 @@ export class ReplayPlayer {
     // Emit tick events for effects
     if (frame.events) {
       this.callbacks.onTickEvents(frame.events);
+    }
+
+    // Emit campaign-specific data if present
+    if (frame.enemies && this.callbacks.onCampaignFrame) {
+      this.callbacks.onCampaignFrame({
+        enemies: frame.enemies,
+        lives: frame.lives ?? 0,
+        exitOpen: frame.exitOpen ?? false,
+      });
     }
   }
 }

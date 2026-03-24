@@ -11,6 +11,7 @@ import {
   TileType,
   PowerUpType,
   Direction,
+  CampaignReplayMeta,
 } from '@blast-arena/shared';
 import {
   TICK_RATE,
@@ -34,6 +35,7 @@ import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { processEnemyAI, IEnemyAI, EnemyAIContext, EnemyAIResult } from './EnemyAI';
 import { getEnemyAIRegistry } from './registry';
+import { ReplayRecorder } from '../utils/replayRecorder';
 import { logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -88,6 +90,44 @@ export class CampaignGame {
     return this.maxLives;
   }
 
+  public enableReplayRecording(meta: CampaignReplayMeta): void {
+    const initialState = this.gameState.toState();
+    this.replayRecorder = new ReplayRecorder(this.sessionId, 'campaign', initialState);
+    this.replayRecorder.setSessionId(this.sessionId);
+    this.replayRecorder.setCampaignMeta(meta);
+  }
+
+  public finalizeReplay(
+    result: 'completed' | 'failed',
+    _timeSeconds: number,
+    _stars: number,
+  ): { filename: string; sessionId: string } | null {
+    if (!this.replayRecorder) return null;
+
+    const placements = Array.from(this.gameState.players.values()).map((p) => ({
+      userId: p.id,
+      username: p.username,
+      isBot: false,
+      placement: p.alive ? 1 : 2,
+      kills: p.kills,
+      selfKills: p.selfKills,
+      team: p.team,
+      alive: p.alive,
+    }));
+
+    const reason = result === 'completed' ? 'Level completed' : 'Game over';
+    const winnerId = result === 'completed' ? this.userIds[0] : null;
+
+    this.replayRecorder.finalize({
+      winnerId,
+      winnerTeam: null,
+      reason,
+      placements,
+    });
+
+    return { filename: this.replayRecorder.getFilename(), sessionId: this.sessionId };
+  }
+
   private gameState: GameStateManager;
   private gameLoop: GameLoop;
   private enemies: Map<number, Enemy> = new Map();
@@ -127,6 +167,9 @@ export class CampaignGame {
 
   // Custom AI instances per enemy
   private enemyAIs: Map<number, IEnemyAI> = new Map();
+
+  // Replay recording (optional, enabled via enableReplayRecording())
+  private replayRecorder: ReplayRecorder | null = null;
 
   // Grace period: ticks remaining after win condition before level complete
   private static readonly GRACE_TICKS = 30; // 1.5s at 20 tick/sec
@@ -458,6 +501,7 @@ export class CampaignGame {
       // Still broadcast state during countdown so frontend shows the countdown overlay
       const state = this.toCampaignState();
       this.callbacks.onStateUpdate(state);
+      // Skip recording during countdown — tick stays at 0 and would create duplicate frames
       return;
     }
 
@@ -471,6 +515,24 @@ export class CampaignGame {
     // Broadcast combined state
     const state = this.toCampaignState();
     this.callbacks.onStateUpdate(state);
+    this.recordReplayTick(state);
+  }
+
+  private recordReplayTick(state: CampaignGameState): void {
+    if (!this.replayRecorder) return;
+    // Record standard game state + tile diffs
+    const gameState = state.gameState;
+    const replayState = {
+      ...gameState,
+      map: { ...gameState.map, tiles: this.gameState.map.tiles },
+    };
+    this.replayRecorder.recordTick(replayState, this.gameState.tickEvents);
+    // Attach campaign-specific data to the frame
+    this.replayRecorder.recordCampaignData({
+      enemies: state.enemies,
+      lives: state.lives,
+      exitOpen: state.exitOpen,
+    });
   }
 
   private onTimeUp(): void {

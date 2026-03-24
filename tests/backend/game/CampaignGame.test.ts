@@ -985,6 +985,97 @@ describe('CampaignGame', () => {
       }
     });
 
+    it('should not push canPassWalls enemies with conveyor belts', () => {
+      // Build a 7x7 map with a conveyor_right at (3,3) — enemy starts there
+      const tiles: TileType[][] = [];
+      for (let y = 0; y < 7; y++) {
+        tiles[y] = [];
+        for (let x = 0; x < 7; x++) {
+          if (x === 0 || y === 0 || x === 6 || y === 6) {
+            tiles[y][x] = 'wall';
+          } else {
+            tiles[y][x] = 'empty';
+          }
+        }
+      }
+      tiles[1][1] = 'spawn';
+      tiles[3][3] = 'conveyor_right';
+
+      const ghostConfig = createMinimalEnemyConfig({ canPassWalls: true, speed: 1 });
+      const enemyTypes = new Map<number, EnemyTypeConfig>();
+      enemyTypes.set(1, ghostConfig);
+
+      const level = createMinimalLevel({
+        tiles,
+        enemyPlacements: [{ enemyTypeId: 1, x: 3, y: 3 }],
+      });
+
+      const game = new CampaignGame([1], ['Player1'], level, enemyTypes, callbacks);
+      game.start();
+
+      // Get the enemy's initial position
+      const enemies = game.getEnemies();
+      const enemy = enemies.values().next().value!;
+      expect(enemy.position).toEqual({ x: 3, y: 3 });
+
+      // Force gameState to 'playing' so campaignTick runs
+      game.getGameState().status = 'playing';
+
+      // Simulate several ticks via the captured onTick callback
+      // processEnemyAI is mocked to return { direction: null, placeBomb: false }
+      // so the ONLY thing that could move the enemy is conveyor logic
+      for (let i = 0; i < 20; i++) {
+        game.getGameState().tick++;
+        capturedOnTick!({});
+      }
+
+      // canPassWalls enemy should NOT have been pushed by the conveyor
+      expect(enemy.position).toEqual({ x: 3, y: 3 });
+    });
+
+    it('should push non-canPassWalls enemies with conveyor belts', () => {
+      const tiles: TileType[][] = [];
+      for (let y = 0; y < 7; y++) {
+        tiles[y] = [];
+        for (let x = 0; x < 7; x++) {
+          if (x === 0 || y === 0 || x === 6 || y === 6) {
+            tiles[y][x] = 'wall';
+          } else {
+            tiles[y][x] = 'empty';
+          }
+        }
+      }
+      tiles[1][1] = 'spawn';
+      tiles[3][3] = 'conveyor_right';
+
+      const normalConfig = createMinimalEnemyConfig({ canPassWalls: false, speed: 1 });
+      const enemyTypes = new Map<number, EnemyTypeConfig>();
+      enemyTypes.set(1, normalConfig);
+
+      const level = createMinimalLevel({
+        tiles,
+        enemyPlacements: [{ enemyTypeId: 1, x: 3, y: 3 }],
+      });
+
+      const game = new CampaignGame([1], ['Player1'], level, enemyTypes, callbacks);
+      game.start();
+
+      const enemies = game.getEnemies();
+      const enemy = enemies.values().next().value!;
+      expect(enemy.position).toEqual({ x: 3, y: 3 });
+
+      game.getGameState().status = 'playing';
+
+      // Simulate enough ticks for the enemy to be pushed (cooldown must expire first)
+      for (let i = 0; i < 20; i++) {
+        game.getGameState().tick++;
+        capturedOnTick!({});
+      }
+
+      // Normal enemy SHOULD have been pushed right by conveyor
+      expect(enemy.position.x).toBeGreaterThan(3);
+    });
+
     it('should handle boss enemy type', () => {
       const bossConfig = createMinimalEnemyConfig({
         isBoss: true,

@@ -2,9 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as zlib from 'zlib';
 import { promisify } from 'util';
-import { ReplayData, ReplayListItem } from '@blast-arena/shared';
-import { query } from '../db/connection';
-import { MatchRow } from '../db/types';
+import { ReplayData, ReplayListItem, CampaignReplayListItem } from '@blast-arena/shared';
+import { query, execute } from '../db/connection';
+import { MatchRow, CountRow } from '../db/types';
+import { RowDataPacket } from 'mysql2';
 import { logger } from '../utils/logger';
 
 const gunzip = promisify(zlib.gunzip);
@@ -137,6 +138,162 @@ function findReplayFile(matchId: number): string | null {
   const files = fs.readdirSync(REPLAY_DIR);
   const prefix = `${matchId}_`;
   const file = files.find((f) => f.startsWith(prefix) && f.endsWith('.replay.json.gz'));
+  if (!file) return null;
+
+  return path.join(REPLAY_DIR, file);
+}
+
+// --- Campaign Replays ---
+
+export async function saveCampaignReplayRecord(record: {
+  sessionId: string;
+  userId: number;
+  levelId: number;
+  duration: number;
+  result: 'completed' | 'failed';
+  stars: number;
+  coopMode: boolean;
+  buddyMode: boolean;
+  filename: string;
+}): Promise<void> {
+  await execute(
+    `INSERT INTO campaign_replays (session_id, user_id, level_id, duration, result, stars, coop_mode, buddy_mode, filename)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      record.sessionId,
+      record.userId,
+      record.levelId,
+      record.duration,
+      record.result,
+      record.stars,
+      record.coopMode,
+      record.buddyMode,
+      record.filename,
+    ],
+  );
+}
+
+interface CampaignReplayRow extends RowDataPacket {
+  session_id: string;
+  level_id: number;
+  level_name: string;
+  world_name: string;
+  user_id: number;
+  username: string;
+  coop_mode: boolean | number;
+  buddy_mode: boolean | number;
+  duration: number;
+  result: 'completed' | 'failed';
+  stars: number;
+  filename: string;
+  created_at: Date | string;
+}
+
+export async function listCampaignReplays(
+  page: number = 1,
+  limit: number = 20,
+  userId?: number,
+  levelId?: number,
+): Promise<{ replays: CampaignReplayListItem[]; total: number }> {
+  const conditions: string[] = [];
+  const params: (number | string)[] = [];
+
+  if (userId) {
+    conditions.push('cr.user_id = ?');
+    params.push(userId);
+  }
+  if (levelId) {
+    conditions.push('cr.level_id = ?');
+    params.push(levelId);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const countRows = await query<CountRow[]>(
+    `SELECT COUNT(*) as total FROM campaign_replays cr ${where}`,
+    params,
+  );
+  const total = countRows[0]?.total ?? 0;
+
+  const offset = (page - 1) * limit;
+  const rows = await query<CampaignReplayRow[]>(
+    `SELECT cr.session_id, cr.level_id, cl.name as level_name, cw.name as world_name,
+            cr.user_id, u.username, cr.coop_mode, cr.buddy_mode, cr.duration,
+            cr.result, cr.stars, cr.filename, cr.created_at
+     FROM campaign_replays cr
+     JOIN campaign_levels cl ON cr.level_id = cl.id
+     JOIN campaign_worlds cw ON cl.world_id = cw.id
+     JOIN users u ON cr.user_id = u.id
+     ${where}
+     ORDER BY cr.created_at DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+  );
+
+  // Look up file sizes
+  const replays: CampaignReplayListItem[] = [];
+  for (const row of rows) {
+    let fileSizeKB = 0;
+    try {
+      const stat = await fs.promises.stat(path.join(REPLAY_DIR, row.filename));
+      fileSizeKB = Math.round(stat.size / 1024);
+    } catch {
+      // File may have been deleted
+    }
+    replays.push({
+      sessionId: row.session_id,
+      levelId: row.level_id,
+      levelName: row.level_name,
+      worldName: row.world_name,
+      userId: row.user_id,
+      username: row.username,
+      coopMode: !!row.coop_mode,
+      buddyMode: !!row.buddy_mode,
+      duration: row.duration,
+      result: row.result,
+      stars: row.stars,
+      createdAt:
+        row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+      fileSizeKB,
+    });
+  }
+
+  return { replays, total };
+}
+
+export async function getCampaignReplay(sessionId: string): Promise<ReplayData | null> {
+  const filePath = findCampaignReplayFile(sessionId);
+  if (!filePath) return null;
+
+  try {
+    const compressed = await fs.promises.readFile(filePath);
+    const decompressed = await gunzip(compressed);
+    return JSON.parse(decompressed.toString()) as ReplayData;
+  } catch (err) {
+    logger.error({ err, sessionId }, 'Failed to read campaign replay file');
+    return null;
+  }
+}
+
+export async function deleteCampaignReplay(sessionId: string): Promise<boolean> {
+  const filePath = findCampaignReplayFile(sessionId);
+  if (filePath) {
+    try {
+      await fs.promises.unlink(filePath);
+    } catch (err) {
+      logger.error({ err, sessionId }, 'Failed to delete campaign replay file');
+    }
+  }
+  await execute(`DELETE FROM campaign_replays WHERE session_id = ?`, [sessionId]);
+  return true;
+}
+
+function findCampaignReplayFile(sessionId: string): string | null {
+  if (!fs.existsSync(REPLAY_DIR)) return null;
+
+  const files = fs.readdirSync(REPLAY_DIR);
+  const target = `campaign_${sessionId}.replay.json.gz`;
+  const file = files.find((f) => f === target);
   if (!file) return null;
 
   return path.join(REPLAY_DIR, file);

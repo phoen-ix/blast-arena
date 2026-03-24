@@ -122,7 +122,7 @@ All actions audit-logged. See [docs/admin-and-systems.md](docs/admin-and-systems
 
 ## Game Replays
 
-Games recorded as gzipped JSON with video-player controls (play/pause, seek, 0.5-4x speed), synced event log panel, and click-to-follow spectating. Access via Matches tab or Simulations tab. See [docs/replay-system.md](docs/replay-system.md).
+Games recorded as gzipped JSON with video-player controls (play/pause, seek, 0.5-4x speed), synced event log panel, and click-to-follow spectating. Access via Matches tab or Simulations tab. Campaign games also record replays (with enemy rendering) when recordings are enabled — access via Campaign tab Replays sub-view. See [docs/replay-system.md](docs/replay-system.md).
 
 ## In-Game Help & Documentation
 

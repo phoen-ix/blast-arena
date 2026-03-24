@@ -186,6 +186,7 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 
 ## Replay System
 Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-system.md).
+- **Campaign replays**: Recorded via `ReplayRecorder` in `CampaignGame`, controlled by `recordings_enabled` setting. Stores enemy states per frame in optional `ReplayFrame.enemies` field. `CampaignReplayMeta` on `ReplayData.campaign` carries level info + `EnemyTypeEntry[]` for texture generation during playback. Files named `campaign_{sessionId}.replay.json.gz`. DB table `campaign_replays` (migration 025) tracks metadata. Admin API: `GET/DELETE /admin/campaign-replays`. Frontend: Campaign tab "Replays" sub-view with watch/delete; `ReplayPlayer.onCampaignFrame` callback feeds `EnemySpriteRenderer` during playback
 
 ## Security, Connection Resilience & Docker
 - HTTP security headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (restrictive)

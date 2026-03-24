@@ -10,6 +10,8 @@ import {
   ReplayLogEventType,
   ReplayTileDiff,
   ReplayTickEvents,
+  CampaignReplayMeta,
+  CampaignEnemyState,
   TICK_RATE,
 } from '@blast-arena/shared';
 import { logger } from './logger';
@@ -30,6 +32,8 @@ export class ReplayRecorder {
   private roomCode: string;
   private gameMode: string;
   private matchId: number = 0;
+  private sessionId?: string;
+  private campaignMeta?: CampaignReplayMeta;
   private initialState: GameState;
   private previousTiles: TileType[][];
   private frames: ReplayFrame[] = [];
@@ -57,6 +61,32 @@ export class ReplayRecorder {
 
   setMatchId(id: number): void {
     this.matchId = id;
+  }
+
+  setSessionId(id: string): void {
+    this.sessionId = id;
+  }
+
+  setCampaignMeta(meta: CampaignReplayMeta): void {
+    this.campaignMeta = meta;
+  }
+
+  getFilename(): string {
+    return this.matchId === 0 && this.sessionId
+      ? `campaign_${this.sessionId}.replay.json.gz`
+      : `${this.matchId}_${this.roomCode}_${this.gameMode}.replay.json.gz`;
+  }
+
+  recordCampaignData(data: {
+    enemies?: CampaignEnemyState[];
+    lives?: number;
+    exitOpen?: boolean;
+  }): void {
+    if (this.frames.length === 0) return;
+    const lastFrame = this.frames[this.frames.length - 1];
+    if (data.enemies) lastFrame.enemies = data.enemies;
+    if (data.lives !== undefined) lastFrame.lives = data.lives;
+    if (data.exitOpen !== undefined) lastFrame.exitOpen = data.exitOpen;
   }
 
   recordTick(state: GameState, tickEvents: TickEvents): void {
@@ -131,14 +161,18 @@ export class ReplayRecorder {
   ): void {
     const saveDir = options?.saveDir;
 
-    if (!saveDir && this.matchId === 0) {
-      logger.warn({ roomCode: this.roomCode }, 'ReplayRecorder: matchId not set, skipping save');
+    if (!saveDir && this.matchId === 0 && !this.sessionId) {
+      logger.warn(
+        { roomCode: this.roomCode },
+        'ReplayRecorder: matchId/sessionId not set, skipping save',
+      );
       return;
     }
 
     const replayData: ReplayData = {
       version: 1,
       matchId: this.matchId,
+      sessionId: this.sessionId,
       roomCode: this.roomCode,
       gameMode: this.gameMode,
       config: {
@@ -152,6 +186,7 @@ export class ReplayRecorder {
       tickRate: TICK_RATE,
       frames: this.frames,
       log: this.logEntries,
+      campaign: this.campaignMeta,
     };
 
     // Write to disk asynchronously
@@ -161,7 +196,10 @@ export class ReplayRecorder {
         fs.mkdirSync(dir, { recursive: true });
       }
 
-      const filename = `${this.matchId}_${this.roomCode}_${this.gameMode}.replay.json.gz`;
+      const filename =
+        this.matchId === 0 && this.sessionId
+          ? `campaign_${this.sessionId}.replay.json.gz`
+          : `${this.matchId}_${this.roomCode}_${this.gameMode}.replay.json.gz`;
       const filePath = path.join(dir, filename);
       const frameCount = this.frames.length;
       const json = JSON.stringify(replayData);

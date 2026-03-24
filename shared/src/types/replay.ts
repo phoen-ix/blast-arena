@@ -11,6 +11,7 @@ import {
   TileType,
   Position,
 } from './game';
+import { CampaignEnemyState, EnemyTypeEntry, CampaignWinCondition } from './campaign';
 
 export type ReplayLogEventType =
   | 'kill'
@@ -61,11 +62,29 @@ export interface ReplayFrame {
   timeElapsed: number;
   tileDiffs?: ReplayTileDiff[];
   events?: ReplayTickEvents;
+  // Campaign-specific fields (only present for campaign replays)
+  enemies?: CampaignEnemyState[];
+  lives?: number;
+  exitOpen?: boolean;
+}
+
+export interface CampaignReplayMeta {
+  levelId: number;
+  levelName: string;
+  worldId: number;
+  worldName: string;
+  coopMode: boolean;
+  buddyMode?: boolean;
+  enemyTypes: EnemyTypeEntry[];
+  lives: number;
+  winCondition: CampaignWinCondition;
+  timeLimit: number;
 }
 
 export interface ReplayData {
   version: 1;
   matchId: number;
+  sessionId?: string;
   roomCode: string;
   gameMode: string;
   config: {
@@ -100,6 +119,7 @@ export interface ReplayData {
   tickRate: number;
   frames: ReplayFrame[];
   log: ReplayLogEntry[];
+  campaign?: CampaignReplayMeta;
 }
 
 export interface ReplayListItem {
@@ -109,6 +129,22 @@ export interface ReplayListItem {
   duration: number;
   playerCount: number;
   winnerName: string | null;
+  createdAt: string;
+  fileSizeKB: number;
+}
+
+export interface CampaignReplayListItem {
+  sessionId: string;
+  levelId: number;
+  levelName: string;
+  worldName: string;
+  userId: number;
+  username: string;
+  coopMode: boolean;
+  buddyMode: boolean;
+  duration: number;
+  result: 'completed' | 'failed';
+  stars: number;
   createdAt: string;
   fileSizeKB: number;
 }

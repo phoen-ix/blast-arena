@@ -18,13 +18,16 @@ import {
   ENEMY_ACCESSORIES,
   MOVEMENT_PATTERNS,
   EnemyAIEntry,
+  CampaignReplayListItem,
+  ReplayData,
+  GameState,
   getErrorMessage,
 } from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../../utils/html';
 import { EnemyTextureGenerator } from '../../game/EnemyTextureGenerator';
 import game from '../../main';
 
-type ViewMode = 'worlds' | 'enemies';
+type ViewMode = 'worlds' | 'enemies' | 'replays';
 
 interface WorldWithLevels extends CampaignWorld {
   expanded?: boolean;
@@ -102,6 +105,7 @@ export class CampaignTab {
         <div class="flex-row">
           <button class="btn ${this.viewMode === 'worlds' ? 'btn-primary' : 'btn-ghost'}" id="camp-view-worlds">Worlds &amp; Levels</button>
           <button class="btn ${this.viewMode === 'enemies' ? 'btn-primary' : 'btn-ghost'}" id="camp-view-enemies">Enemy Types</button>
+          <button class="btn ${this.viewMode === 'replays' ? 'btn-primary' : 'btn-ghost'}" id="camp-view-replays">Replays</button>
         </div>
       </div>
       <div id="camp-content"></div>
@@ -119,11 +123,19 @@ export class CampaignTab {
         this.renderView();
       }
     });
+    this.container.querySelector('#camp-view-replays')!.addEventListener('click', () => {
+      if (this.viewMode !== 'replays') {
+        this.viewMode = 'replays';
+        this.renderView();
+      }
+    });
 
     if (this.viewMode === 'worlds') {
       await this.loadWorlds();
-    } else {
+    } else if (this.viewMode === 'enemies') {
       await this.loadEnemyTypes();
+    } else {
+      await this.loadCampaignReplays();
     }
   }
 
@@ -1448,5 +1460,184 @@ export class CampaignTab {
         this.notifications.error(getErrorMessage(err));
       }
     });
+  }
+
+  // ============================
+  // Campaign Replays View
+  // ============================
+
+  private campaignReplaysPage = 1;
+
+  private async loadCampaignReplays(): Promise<void> {
+    if (!this.container) return;
+    const content = this.container.querySelector('#camp-content');
+    if (!content) return;
+
+    try {
+      const data = await ApiClient.get<{
+        replays: CampaignReplayListItem[];
+        total: number;
+      }>(`/admin/campaign-replays?page=${this.campaignReplaysPage}&limit=20`);
+
+      const totalPages = Math.ceil(data.total / 20) || 1;
+
+      content.innerHTML = `
+        <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+          <div class="text-dim">${data.total} campaign replay${data.total !== 1 ? 's' : ''}</div>
+          <div class="flex-row" style="gap:6px;">
+            <button class="btn btn-sm btn-ghost" id="camp-replays-prev" ${this.campaignReplaysPage <= 1 ? 'disabled' : ''}>Prev</button>
+            <span class="text-sm text-dim">Page ${this.campaignReplaysPage}/${totalPages}</span>
+            <button class="btn btn-sm btn-ghost" id="camp-replays-next" ${this.campaignReplaysPage >= totalPages ? 'disabled' : ''}>Next</button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Level</th>
+              <th>World</th>
+              <th>Player</th>
+              <th>Result</th>
+              <th>Stars</th>
+              <th>Duration</th>
+              <th>Mode</th>
+              <th>Date</th>
+              <th>Size</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.replays.length === 0 ? '<tr><td colspan="10" style="text-align:center;color:var(--text-dim);padding:16px;">No campaign replays yet</td></tr>' : data.replays.map((r) => this.renderCampaignReplayRow(r)).join('')}
+          </tbody>
+        </table>
+      `;
+
+      content.querySelector('#camp-replays-prev')?.addEventListener('click', () => {
+        if (this.campaignReplaysPage > 1) {
+          this.campaignReplaysPage--;
+          this.loadCampaignReplays();
+        }
+      });
+      content.querySelector('#camp-replays-next')?.addEventListener('click', () => {
+        if (this.campaignReplaysPage < totalPages) {
+          this.campaignReplaysPage++;
+          this.loadCampaignReplays();
+        }
+      });
+
+      this.attachCampaignReplayHandlers(content as HTMLElement);
+    } catch (err: unknown) {
+      content.innerHTML = `<div class="text-danger">Failed to load campaign replays: ${getErrorMessage(err)}</div>`;
+    }
+  }
+
+  private renderCampaignReplayRow(r: CampaignReplayListItem): string {
+    const resultClass = r.result === 'completed' ? 'text-success' : 'text-danger';
+    const resultLabel = r.result === 'completed' ? 'Completed' : 'Failed';
+    const mode = r.buddyMode ? 'Buddy' : r.coopMode ? 'Co-op' : 'Solo';
+    const duration =
+      r.duration > 0
+        ? `${Math.floor(r.duration / 60)}:${String(r.duration % 60).padStart(2, '0')}`
+        : '-';
+    const date = new Date(r.createdAt).toLocaleDateString();
+    const stars =
+      r.result === 'completed' ? '\u2605'.repeat(r.stars) + '\u2606'.repeat(3 - r.stars) : '-';
+
+    return `
+      <tr>
+        <td>${escapeHtml(r.levelName)}</td>
+        <td class="text-dim">${escapeHtml(r.worldName)}</td>
+        <td>${escapeHtml(r.username)}</td>
+        <td><span class="${resultClass}">${resultLabel}</span></td>
+        <td class="text-warning">${stars}</td>
+        <td>${duration}</td>
+        <td class="text-dim">${mode}</td>
+        <td class="text-dim">${date}</td>
+        <td class="text-dim">${r.fileSizeKB} KB</td>
+        <td>
+          <div class="camp-btn-group">
+            <button class="btn-sm btn-secondary camp-replay-watch" data-session="${escapeAttr(r.sessionId)}">Watch</button>
+            <button class="btn-sm btn-danger camp-replay-delete" data-session="${escapeAttr(r.sessionId)}">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  private attachCampaignReplayHandlers(content: HTMLElement): void {
+    content.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+
+      if (target.classList.contains('camp-replay-watch')) {
+        const sessionId = target.dataset.session;
+        if (sessionId) await this.launchCampaignReplay(sessionId);
+      }
+
+      if (target.classList.contains('camp-replay-delete')) {
+        const sessionId = target.dataset.session;
+        if (sessionId) {
+          try {
+            await ApiClient.delete(`/admin/campaign-replays/${sessionId}`);
+            this.notifications.success('Campaign replay deleted');
+            this.loadCampaignReplays();
+          } catch (err: unknown) {
+            this.notifications.error(getErrorMessage(err));
+          }
+        }
+      }
+    });
+  }
+
+  private async launchCampaignReplay(sessionId: string): Promise<void> {
+    try {
+      this.notifications.info('Loading campaign replay...');
+      const replayData = await ApiClient.get<ReplayData>(`/admin/campaign-replays/${sessionId}`);
+
+      if (!replayData || !replayData.frames || replayData.frames.length === 0) {
+        this.notifications.error('Replay data is empty or corrupted');
+        return;
+      }
+
+      // Reconstruct initial GameState from first frame + stored map
+      const firstFrame = replayData.frames[0];
+      const initialState: GameState = {
+        tick: firstFrame.tick,
+        players: firstFrame.players,
+        bombs: firstFrame.bombs,
+        explosions: firstFrame.explosions,
+        powerUps: firstFrame.powerUps,
+        map: replayData.map,
+        status: firstFrame.status,
+        winnerId: firstFrame.winnerId,
+        winnerTeam: firstFrame.winnerTeam,
+        roundTime: firstFrame.roundTime,
+        timeElapsed: firstFrame.timeElapsed,
+      };
+      if (firstFrame.zone) initialState.zone = firstFrame.zone;
+      if (firstFrame.hillZone) initialState.hillZone = firstFrame.hillZone;
+      if (firstFrame.kothScores) initialState.kothScores = firstFrame.kothScores;
+
+      // Clear all DOM overlays
+      const uiOverlay = document.getElementById('ui-overlay');
+      if (uiOverlay) {
+        while (uiOverlay.firstChild) {
+          uiOverlay.removeChild(uiOverlay.firstChild);
+        }
+      }
+
+      // Set registry values for GameScene
+      const registry = game.registry;
+      registry.set('initialGameState', initialState);
+      registry.set('replayMode', true);
+      registry.set('replayData', replayData);
+
+      // Start GameScene and HUDScene
+      const activeScene = game.scene.getScene('LobbyScene') || game.scene.getScene('MenuScene');
+      if (activeScene) {
+        activeScene.scene.start('GameScene');
+        activeScene.scene.launch('HUDScene');
+      }
+    } catch {
+      this.notifications.error('Failed to load campaign replay');
+    }
   }
 }
