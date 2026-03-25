@@ -37,5 +37,13 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     modulePreload: { polyfill: false },
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          phaser: ['phaser'],
+        },
+      },
+    },
   },
 });
