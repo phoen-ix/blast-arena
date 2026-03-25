@@ -28,6 +28,91 @@ const BUDDY_DEFAULTS: BuddySettings = {
   size: 0.6,
 };
 
+/** Draw a player sprite icon using Canvas2D (matches BootScene's Phaser rendering) */
+function drawPlayerSprite(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  hexColor: string,
+): void {
+  const r = size * 0.12;
+  const pad = size * 0.04;
+
+  // Body darker bottom
+  const darkerColor = darkenHex(hexColor, 0.7);
+  ctx.fillStyle = darkerColor;
+  roundRect(ctx, x + pad, y + pad, size - pad * 2, size - pad * 2, r);
+  ctx.fill();
+
+  // Body lighter top
+  ctx.fillStyle = hexColor;
+  roundRect(ctx, x + pad, y + pad, size - pad * 2, size * 0.75, r);
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = Math.max(1, size * 0.04);
+  roundRect(ctx, x + pad, y + pad, size - pad * 2, size - pad * 2, r);
+  ctx.stroke();
+
+  // Highlight shine
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  roundRect(ctx, x + size * 0.12, y + size * 0.1, size * 0.22, size * 0.13, size * 0.06);
+  ctx.fill();
+
+  // Eyes (white sclera)
+  const eyeR = size * 0.1;
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.beginPath();
+  ctx.arc(cx - size * 0.15, cy + size * 0.04, eyeR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx + size * 0.15, cy + size * 0.04, eyeR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pupils
+  ctx.fillStyle = '#111';
+  const pupilR = size * 0.05;
+  ctx.beginPath();
+  ctx.arc(cx - size * 0.15, cy + size * 0.08, pupilR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx + size * 0.15, cy + size * 0.08, pupilR, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function darkenHex(hex: string, factor: number): string {
+  const c = hex.replace('#', '');
+  const r = Math.round(parseInt(c.substring(0, 2), 16) * factor);
+  const g = Math.round(parseInt(c.substring(2, 4), 16) * factor);
+  const b = Math.round(parseInt(c.substring(4, 6), 16) * factor);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
 export function showBuddyModal(
   onStart: (config: BuddyLaunchConfig) => void,
   onCancel: () => void,
@@ -106,29 +191,43 @@ export function showBuddyModal(
     if (editingBuddy) {
       section.appendChild(createBuddyEditor());
     } else {
-      // Summary line
+      // Summary with sprite preview
       const summary = document.createElement('div');
       summary.style.cssText =
-        'display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text-dim);';
+        'display:flex;align-items:center;gap:14px;font-size:14px;color:var(--text-dim);';
 
-      const colorDot = document.createElement('div');
-      colorDot.style.cssText = `
-        width:20px;height:20px;border-radius:50%;
-        background:${buddySettings.color};
-        border:2px solid var(--border);
-        flex-shrink:0;
-      `;
-      summary.appendChild(colorDot);
+      // Canvas preview: regular player (P1) + buddy side by side
+      const previewCanvas = document.createElement('canvas');
+      const refSize = 40;
+      const buddySize = Math.round(refSize * buddySettings.size);
+      const canvasWidth = refSize + 16 + buddySize;
+      const canvasHeight = refSize + 4;
+      previewCanvas.width = canvasWidth;
+      previewCanvas.height = canvasHeight;
+      previewCanvas.style.cssText = `width:${canvasWidth}px;height:${canvasHeight}px;flex-shrink:0;`;
+      const ctx = previewCanvas.getContext('2d')!;
 
+      // Draw P1 (reference player) — use first PLAYER_COLOR
+      const p1Color = `#${PLAYER_COLORS[0].toString(16).padStart(6, '0')}`;
+      drawPlayerSprite(ctx, 0, canvasHeight - refSize, refSize, p1Color);
+
+      // Draw buddy at its relative size
+      const buddyX = refSize + 16;
+      const buddyY = canvasHeight - buddySize;
+      drawPlayerSprite(ctx, buddyX, buddyY, buddySize, buddySettings.color);
+
+      summary.appendChild(previewCanvas);
+
+      const textCol = document.createElement('div');
       const nameSpan = document.createElement('span');
-      nameSpan.style.fontWeight = '600';
-      nameSpan.style.color = 'var(--text)';
+      nameSpan.style.cssText = 'font-weight:600;color:var(--text);';
       nameSpan.textContent = buddySettings.name;
-      summary.appendChild(nameSpan);
-
       const sizeSpan = document.createElement('span');
+      sizeSpan.style.cssText = 'margin-left:6px;';
       sizeSpan.textContent = `${Math.round(buddySettings.size * 100)}% size`;
-      summary.appendChild(sizeSpan);
+      textCol.appendChild(nameSpan);
+      textCol.appendChild(sizeSpan);
+      summary.appendChild(textCol);
 
       section.appendChild(summary);
     }
@@ -206,12 +305,47 @@ export function showBuddyModal(
     slider.step = '5';
     slider.value = String(Math.round(buddySettings.size * 100));
     slider.style.cssText = 'width:100%;accent-color:var(--primary);';
+    // Live preview canvas
+    const previewRow = document.createElement('div');
+    previewRow.style.cssText =
+      'display:flex;align-items:flex-end;gap:8px;justify-content:center;padding:8px 0;';
+    const previewLabel = document.createElement('span');
+    previewLabel.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:2px;';
+    previewLabel.textContent = 'P1';
+    previewRow.appendChild(previewLabel);
+
+    const previewCanvas = document.createElement('canvas');
+    const refSize = 44;
+
+    function updatePreview(): void {
+      const bSize = Math.round(refSize * buddySettings.size);
+      const cw = refSize + 20 + bSize;
+      const ch = refSize + 4;
+      previewCanvas.width = cw;
+      previewCanvas.height = ch;
+      previewCanvas.style.cssText = `width:${cw}px;height:${ch}px;`;
+      const pCtx = previewCanvas.getContext('2d')!;
+      pCtx.clearRect(0, 0, cw, ch);
+      const p1Color = `#${PLAYER_COLORS[0].toString(16).padStart(6, '0')}`;
+      drawPlayerSprite(pCtx, 0, ch - refSize, refSize, p1Color);
+      drawPlayerSprite(pCtx, refSize + 20, ch - bSize, bSize, buddySettings.color);
+    }
+    updatePreview();
+    previewRow.appendChild(previewCanvas);
+
+    const buddyLabel = document.createElement('span');
+    buddyLabel.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:2px;';
+    buddyLabel.textContent = 'Buddy';
+    previewRow.appendChild(buddyLabel);
+
     slider.addEventListener('input', () => {
       buddySettings.size = parseInt(slider.value, 10) / 100;
       sizeLabel.textContent = `Size: ${slider.value}%`;
+      updatePreview();
     });
     sizeGroup.appendChild(slider);
     editor.appendChild(sizeGroup);
+    editor.appendChild(previewRow);
 
     return editor;
   }
