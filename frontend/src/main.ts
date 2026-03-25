@@ -31,10 +31,6 @@ const config: Phaser.Types.Core.GameConfig = {
   audio: {
     noAudio: true,
   },
-  render: {
-    premultipliedAlpha: false,
-    mipmapFilter: 'NEAREST',
-  },
   input: {
     gamepad: true,
   },
