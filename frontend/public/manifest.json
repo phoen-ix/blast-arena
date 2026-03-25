@@ -1,0 +1,19 @@
+{
+  "name": "BlastArena",
+  "short_name": "BlastArena",
+  "description": "Free multiplayer bomb arena game. Place bombs, collect power-ups, and blast your way to victory.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080810",
+  "theme_color": "#ff6b35",
+  "orientation": "any",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

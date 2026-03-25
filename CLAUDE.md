@@ -43,7 +43,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ## Frontend Architecture
 - **Themes**: 11 palettes defined in `frontend/src/themes/definitions.ts`. `ThemeManager` singleton reads localStorage → admin default → 'inferno'. Applies via `[data-theme]` attribute on `<html>`. Flash prevention: inline `<script>` in `<head>` sets attribute before CSS loads. Phaser scenes use `themeManager.getCanvasColors()`
-- **CSS**: All styles in `frontend/index.html` using CSS custom properties. Always use CSS variables (e.g. `var(--primary)` not hardcoded hex) for theme compatibility. Typography: Chakra Petch (display/headings) + DM Sans (body)
+- **CSS**: All styles in `frontend/index.html` using CSS custom properties. Always use CSS variables (e.g. `var(--primary)` not hardcoded hex) for theme compatibility. Typography: Chakra Petch (display/headings) + DM Sans (body). Fonts self-hosted as woff2 in `frontend/public/fonts/` with `@font-face` declarations — no external CDN dependencies
 - **Sidebar & Views**: `.app-layout` with collapsible left sidebar + `.main-content`. `ILobbyView` interface with `render()`/`destroy()`. `LobbyUI.createView()` factory with dynamic imports. Wrapper views delegate via `renderEmbedded()`. All lobby views render inline in `.main-body` — sidebar stays persistent. Views with own sub-header hide `.main-header`
 - **UI conventions**: Full-screen tabbed panels (Admin, Settings, Help) reuse `admin-container` CSS class. Unified CSS classes: `.panel-header`/`.panel-content`, `.tab-bar`/`.tab-item`, `.data-table`, `.form-grid`/`.form-group`/`.input`/`.select`, `.toggle-switch`, `.setting-row`, `.option-chip`, `.mini-stat`, `.modal-header`/`.modal-body`/`.modal-footer`, `.btn`/`.btn-primary`/`.btn-secondary`/`.btn-ghost`/`.btn-sm`
 - **Gamepad UI nav**: `UIGamepadNavigator` uses spatial navigation — new interactive elements need `.sidebar-nav-item` or `.room-card` classes or gamepad navigation will skip them
@@ -187,6 +187,16 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 ## Replay System
 Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-system.md).
 - **Campaign replays**: Recorded via `ReplayRecorder` in `CampaignGame`, controlled by `recordings_enabled` setting. Stores enemy states per frame in optional `ReplayFrame.enemies` field. `CampaignReplayMeta` on `ReplayData.campaign` carries level info + `EnemyTypeEntry[]` for texture generation during playback. Files named `campaign_{sessionId}.replay.json.gz`. DB table `campaign_replays` (migration 025) tracks metadata. Admin API: `GET/DELETE /admin/campaign-replays`. Frontend: Campaign tab "Replays" sub-view with watch/delete; `ReplayPlayer.onCampaignFrame` callback feeds `EnemySpriteRenderer` during playback
+
+## SEO & Static Assets
+- All resources self-hosted — no external CDN calls (fonts, images, scripts all served locally)
+- Meta tags in `index.html`: description, keywords, Open Graph (`og:title/description/image`), Twitter Card (`summary_large_image`), `theme-color`, `color-scheme`, canonical link
+- `frontend/public/` contains static assets copied to dist root by Vite: `favicon.svg` (bomb icon), `robots.txt`, `sitemap.xml`, `manifest.json`, `fonts/` directory
+- JSON-LD structured data (`VideoGame` schema) in `index.html` head
+- Noscript fallback with branded content for JS-disabled crawlers
+- Nginx serves SEO files (`robots.txt`, `sitemap.xml`, `manifest.json`) with 24h cache; fonts with 1-year immutable cache
+- CSP header: all sources `'self'` only (no external domains). `style-src` includes `'unsafe-inline'` for inline styles
+- OG image (`og-image.png`) deferred — meta tags reference it but file not yet created
 
 ## Security, Connection Resilience & Docker
 - HTTP security headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (restrictive)

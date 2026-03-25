@@ -3,10 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BlastArena</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <meta name="description" content="BlastArena is a free multiplayer bomb arena game. Place bombs, collect power-ups, and blast your way to victory in classic grid-based combat. Play solo, online, or local co-op.">
+  <meta name="keywords" content="bomberman, multiplayer game, arena game, browser game, online game, bomb game, free game, co-op game">
+  <meta name="author" content="BlastArena">
+  <meta name="theme-color" content="#ff6b35">
+  <meta name="color-scheme" content="dark">
+  <link rel="canonical" href="/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="BlastArena — Free Multiplayer Bomb Arena Game">
+  <meta property="og:description" content="Place bombs, collect power-ups, and blast your way to victory. Solo campaign, online multiplayer, and local co-op.">
+  <meta property="og:image" content="/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="BlastArena">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="BlastArena — Free Multiplayer Bomb Arena Game">
+  <meta name="twitter:description" content="Place bombs, collect power-ups, and blast your way to victory. Solo campaign, online multiplayer, and local co-op.">
+  <meta name="twitter:image" content="/og-image.png">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.json">
+  <title>BlastArena — Free Multiplayer Bomb Arena Game</title>
+  <style>
+    @font-face {
+      font-family: 'Chakra Petch';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('/fonts/chakra-petch-400.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Chakra Petch';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url('/fonts/chakra-petch-500.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Chakra Petch';
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+      src: url('/fonts/chakra-petch-600.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Chakra Petch';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('/fonts/chakra-petch-700.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'DM Sans';
+      font-style: normal;
+      font-weight: 400 700;
+      font-display: swap;
+      src: url('/fonts/dm-sans-latin.woff2') format('woff2');
+    }
+  </style>
   <script>
     (function(){
       var t;
@@ -5905,8 +5958,40 @@
     }
 
   </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "BlastArena",
+    "description": "Free multiplayer bomb arena game. Place bombs, collect power-ups, and blast your way to victory in classic grid-based combat.",
+    "genre": ["Action", "Strategy", "Multiplayer"],
+    "gamePlatform": "Web Browser",
+    "applicationCategory": "Game",
+    "operatingSystem": "Any",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "numberOfPlayers": {
+      "@type": "QuantitativeValue",
+      "minValue": 1,
+      "maxValue": 8
+    },
+    "playMode": ["SinglePlayer", "MultiPlayer", "CoOp"]
+  }
+  </script>
 </head>
 <body>
+  <noscript>
+    <div style="background:#080810;color:#eae8e4;font-family:'DM Sans',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px;">
+      <div>
+        <h1 style="color:#ff6b35;font-family:'Chakra Petch',sans-serif;font-size:32px;margin-bottom:16px;letter-spacing:3px;"><span style="color:#eae8e4;">BLAST</span>ARENA</h1>
+        <p style="font-size:18px;margin-bottom:12px;">Free Multiplayer Bomb Arena Game</p>
+        <p style="color:#8888a0;font-size:14px;">BlastArena requires JavaScript to run. Please enable JavaScript in your browser settings to play.</p>
+      </div>
+    </div>
+  </noscript>
   <div id="game-container">
     <div id="ui-overlay"></div>
     <div id="toast-container"></div>

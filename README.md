@@ -168,6 +168,16 @@ Documentation served via backend API from `docs/` directory (bind-mounted in dev
 - **Server-authoritative**: All game logic runs on the server at 20 ticks/sec
 - **Grid-based movement**: Players occupy exactly one tile at a time
 - **Monorepo**: npm workspaces — `shared/` (types + constants), `backend/` (server), `frontend/` (client)
+- **Self-hosted assets**: All fonts and static resources served locally — no external CDN dependencies
+
+## SEO & Web Standards
+
+- Meta tags: description, keywords, Open Graph, Twitter Card for social media previews
+- JSON-LD structured data (`VideoGame` schema) for rich search results
+- Self-hosted fonts (Chakra Petch + DM Sans) as woff2 in `frontend/public/fonts/`
+- SVG favicon, web app manifest (PWA-ready), robots.txt, sitemap.xml
+- Noscript fallback with branded content for JS-disabled crawlers
+- CSP header restricts all sources to `'self'` — no external domains
 
 ## Tech Stack
 
@@ -196,7 +206,8 @@ blast-arena/
 │       ├── services/        # Auth, user, admin, lobby, email, replay, settings, friends, party, presence, messages, elo, season, leaderboard, achievements, cosmetics, buddy
 │       └── middleware/       # Auth, rate limiting, staff checks
 ├── frontend/
-│   ├── index.html           # HTML + full CSS design system (5 themes)
+│   ├── index.html           # HTML + full CSS design system (11 themes)
+│   ├── public/              # Static assets (favicon, fonts, robots.txt, sitemap, manifest)
 │   └── src/
 │       ├── scenes/          # Phaser scenes (Boot, Menu, Lobby, Game, HUD, GameOver)
 │       ├── ui/              # DOM-based UI (Auth, Lobby, Room, Campaign, Admin, Views)
