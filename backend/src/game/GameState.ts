@@ -974,13 +974,12 @@ export class GameStateManager {
       }
       if (!convDir) continue;
 
+      // Stop kick-sliding — conveyor takes over at player-like speed
       if (bomb.sliding) {
-        // Redirect sliding (kicked) bombs to match conveyor direction
-        bomb.sliding = convDir;
-        continue;
+        bomb.sliding = null;
       }
 
-      // Push stationary bombs with cooldown
+      // Push bombs with cooldown (same rate as players)
       if (bomb.conveyorCooldown > 0) {
         bomb.conveyorCooldown--;
         continue;
