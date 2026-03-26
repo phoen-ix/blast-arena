@@ -174,7 +174,7 @@ Documentation served via backend API from `docs/` directory (bind-mounted in dev
 
 - Meta tags: description, keywords, Open Graph, Twitter Card for social media previews
 - JSON-LD structured data (`VideoGame` schema) for rich search results
-- Self-hosted fonts (Chakra Petch + DM Sans) as woff2 in `frontend/public/fonts/`
+- Self-hosted fonts (Chakra Petch + DM Sans) as woff2 in `frontend/public/fonts/`, critical fonts preloaded
 - SVG favicon, web app manifest (PWA-ready), robots.txt, sitemap.xml
 - Noscript fallback with branded content for JS-disabled crawlers
 - Full security header suite: CSP (with Trusted Types, script hashes, frame-ancestors), HSTS, COOP, X-Frame-Options, Permissions-Policy — all self-hosted, no external domains

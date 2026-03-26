@@ -508,12 +508,12 @@ export class HelpUI {
 
   private async loadFooterSettings(): Promise<void> {
     try {
-      const [imprintResp, githubResp] = await Promise.all([
-        ApiClient.get<{ enabled: boolean }>('/admin/settings/imprint'),
-        ApiClient.get<{ enabled: boolean }>('/admin/settings/display_github'),
-      ]);
-      this.displayImprint = imprintResp.enabled;
-      this.displayGithub = githubResp.enabled;
+      const resp = await ApiClient.get<{
+        imprint: boolean;
+        displayGithub: boolean;
+      }>('/admin/settings/public');
+      this.displayImprint = resp.imprint;
+      this.displayGithub = resp.displayGithub;
     } catch {
       // defaults
     }

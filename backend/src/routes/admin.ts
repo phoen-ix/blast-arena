@@ -63,6 +63,27 @@ const createUserSchema = z.object({
   role: z.enum(['user', 'moderator', 'admin']).optional(),
 });
 
+// Public: batched public settings (no auth required) — reduces 3 requests to 1
+router.get('/admin/settings/public', async (_req, res, next) => {
+  try {
+    const [registrationEnabled, displayImprint, imprintText, displayGithub] = await Promise.all([
+      settingsService.isRegistrationEnabled(),
+      settingsService.getSetting('display_imprint'),
+      settingsService.getSetting('imprint_text'),
+      settingsService.getSetting('display_github'),
+    ]);
+    const imprint = displayImprint === 'true';
+    res.json({
+      registrationEnabled,
+      imprint: imprint,
+      imprintText: imprint ? (imprintText ?? '') : '',
+      displayGithub: displayGithub === 'true',
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Public: get registration enabled setting (no auth required, needed by auth UI)
 router.get('/admin/settings/registration_enabled', async (_req, res, next) => {
   try {

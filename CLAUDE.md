@@ -43,7 +43,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ## Frontend Architecture
 - **Themes**: 11 palettes defined in `frontend/src/themes/definitions.ts`. `ThemeManager` singleton reads localStorage → admin default → 'inferno'. Applies via `[data-theme]` attribute on `<html>`. Flash prevention: inline `<script>` in `<head>` sets attribute before CSS loads. Phaser scenes use `themeManager.getCanvasColors()`
-- **CSS**: All styles in `frontend/index.html` using CSS custom properties. Always use CSS variables (e.g. `var(--primary)` not hardcoded hex) for theme compatibility. Typography: Chakra Petch (display/headings) + DM Sans (body). Fonts self-hosted as woff2 in `frontend/public/fonts/` with `@font-face` declarations — no external CDN dependencies
+- **CSS**: All styles in `frontend/index.html` using CSS custom properties. Always use CSS variables (e.g. `var(--primary)` not hardcoded hex) for theme compatibility. Typography: Chakra Petch (display/headings) + DM Sans (body). Fonts self-hosted as woff2 in `frontend/public/fonts/` with `@font-face` declarations — no external CDN dependencies. Critical fonts (DM Sans, Chakra Petch 700) preloaded via `<link rel="preload">` to avoid CSS-parse discovery delay
 - **Sidebar & Views**: `.app-layout` with collapsible left sidebar + `.main-content`. `ILobbyView` interface with `render()`/`destroy()`. `LobbyUI.createView()` factory with dynamic imports. Wrapper views delegate via `renderEmbedded()`. All lobby views render inline in `.main-body` — sidebar stays persistent. Views with own sub-header hide `.main-header`
 - **UI conventions**: Full-screen tabbed panels (Admin, Settings, Help) reuse `admin-container` CSS class. Unified CSS classes: `.panel-header`/`.panel-content`, `.tab-bar`/`.tab-item`, `.data-table`, `.form-grid`/`.form-group`/`.input`/`.select`, `.toggle-switch`, `.setting-row`, `.option-chip`, `.mini-stat`, `.modal-header`/`.modal-body`/`.modal-footer`, `.btn`/`.btn-primary`/`.btn-secondary`/`.btn-ghost`/`.btn-sm`
 - **Gamepad UI nav**: `UIGamepadNavigator` uses spatial navigation — new interactive elements need `.sidebar-nav-item` or `.room-card` classes or gamepad navigation will skip them
@@ -125,6 +125,7 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 - `admin_actions.target_id` is `INT NOT NULL` — use `0` (not `null`) for bulk operations without a specific target
 - Email/SMTP settings stored in DB (`email_settings` key), `.env` values as fallback. `invalidateTransporter()` resets cached nodemailer on save. Password masked in API responses
 - `registration_enabled` setting — when disabled, `/auth/register` returns 403 and AuthUI hides register link
+- `/admin/settings/public` batched endpoint returns `registrationEnabled`, `imprint`, `imprintText`, `displayGithub` in one request (used by AuthUI + HelpUI to reduce critical request chain)
 - See [docs/admin-and-systems.md](docs/admin-and-systems.md) for full details
 
 ## AI Systems

@@ -24,31 +24,20 @@ export class AuthUI {
     this.onAuthenticated = onAuthenticated;
     this.overlay = document.createElement('div');
     this.overlay.className = 'auth-overlay';
-    this.checkRegistration();
-    this.loadFooterLinks();
+    this.loadPublicSettings();
     this.render();
   }
 
-  private async checkRegistration(): Promise<void> {
+  private async loadPublicSettings(): Promise<void> {
     try {
-      const resp = await ApiClient.get<{ enabled: boolean }>(
-        '/admin/settings/registration_enabled',
-      );
-      this.registrationEnabled = resp.enabled;
-      if (this.mode === 'login') this.render();
-    } catch {
-      // Default to enabled on failure
-    }
-  }
-
-  private async loadFooterLinks(): Promise<void> {
-    try {
-      const [imprintResp, githubResp] = await Promise.all([
-        ApiClient.get<{ enabled: boolean }>('/admin/settings/imprint'),
-        ApiClient.get<{ enabled: boolean }>('/admin/settings/display_github'),
-      ]);
-      this.displayImprint = imprintResp.enabled;
-      this.displayGithub = githubResp.enabled;
+      const resp = await ApiClient.get<{
+        registrationEnabled: boolean;
+        imprint: boolean;
+        displayGithub: boolean;
+      }>('/admin/settings/public');
+      this.registrationEnabled = resp.registrationEnabled;
+      this.displayImprint = resp.imprint;
+      this.displayGithub = resp.displayGithub;
       this.render();
     } catch {
       // defaults
