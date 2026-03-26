@@ -148,6 +148,7 @@ export class LevelEditorScene extends Phaser.Scene {
     this.spawnLabels = [];
     this.puzzleSwitchVariants = new Map();
     this.puzzleLinkGraphics = null;
+    this.worldTheme = 'classic';
 
     this.events.once('shutdown', this.shutdown, this);
 
@@ -231,19 +232,10 @@ export class LevelEditorScene extends Phaser.Scene {
       }
     }
 
-    // Fetch world theme
-    const worldId = this.level?.worldId ?? this.registry.get('editorWorldId');
-    if (worldId) {
-      try {
-        const worldResp = await apiClient.get<{ world: { theme?: string } }>(
-          `/admin/campaign/worlds/${worldId}`,
-        );
-        if (worldResp.world?.theme) {
-          this.worldTheme = worldResp.world.theme as CampaignWorldTheme;
-        }
-      } catch {
-        // default to classic
-      }
+    // Read world theme from registry (set by CampaignTab when launching editor)
+    const registryTheme = this.registry.get('editorWorldTheme') as string | undefined;
+    if (registryTheme && registryTheme !== 'classic') {
+      this.worldTheme = registryTheme as CampaignWorldTheme;
     }
 
     // Generate themed textures for the editor

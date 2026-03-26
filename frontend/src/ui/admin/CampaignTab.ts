@@ -309,7 +309,7 @@ export class CampaignTab {
         <td>${publishBadge}</td>
         <td>
           <div class="camp-btn-group">
-            <button class="btn-sm btn-primary camp-edit-level" data-id="${level.id}">Edit</button>
+            <button class="btn-sm btn-primary camp-edit-level" data-id="${level.id}" data-world-id="${level.worldId}">Edit</button>
             <button class="btn-sm btn-secondary camp-export-level" data-id="${level.id}" data-name="${escapeAttr(level.name)}" title="Export level">Export</button>
             <button class="btn-sm btn-secondary camp-export-bundle" data-id="${level.id}" data-name="${escapeAttr(level.name)}" title="Export level + enemy types">Bundle</button>
             <button class="btn-sm btn-secondary camp-toggle-pub-level" data-id="${level.id}" data-pub="${level.isPublished}">${level.isPublished ? 'Unpublish' : 'Publish'}</button>
@@ -424,7 +424,8 @@ export class CampaignTab {
     content.querySelectorAll('.camp-edit-level').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = Number((btn as HTMLElement).dataset.id);
-        this.launchLevelEditor(id);
+        const worldId = Number((btn as HTMLElement).dataset.worldId);
+        this.launchLevelEditor(id, worldId || undefined);
       });
     });
 
@@ -567,6 +568,10 @@ export class CampaignTab {
     game.registry.set('editorLevelId', levelId);
     if (worldId) {
       game.registry.set('editorWorldId', worldId);
+      const world = this.worlds.find((w) => w.id === worldId);
+      game.registry.set('editorWorldTheme', world?.theme ?? 'classic');
+    } else {
+      game.registry.set('editorWorldTheme', 'classic');
     }
     game.registry.set('returnToAdmin', 'campaign');
 
