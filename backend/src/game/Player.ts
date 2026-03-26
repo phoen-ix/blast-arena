@@ -34,6 +34,7 @@ export class Player {
   public direction: Direction = 'down';
   public invulnerableTicks: number = INVULNERABILITY_TICKS;
   public moveCooldown: number = 0;
+  public movedThisTick: boolean = false;
   public readonly isBot: boolean;
 
   // Buddy mode: invulnerable support character that proxies power-ups to owner
@@ -117,6 +118,7 @@ export class Player {
 
   applyMoveCooldown(): void {
     this.moveCooldown = Math.max(1, MOVE_COOLDOWN_BASE - (this.speed - 1));
+    this.movedThisTick = true;
   }
 
   canPlaceBomb(): boolean {
@@ -155,6 +157,8 @@ export class Player {
     if (this.moveCooldown > 0) {
       this.moveCooldown--;
     }
+    // movedThisTick is set by applyMoveCooldown() earlier in processTick(),
+    // consumed by campaignTick() after processTick(), then reset next tick
   }
 
   toState(): PlayerState {

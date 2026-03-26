@@ -1,4 +1,10 @@
-import { Position, Direction, CampaignEnemyState, EnemyTypeConfig, BossPhaseConfig } from '@blast-arena/shared';
+import {
+  Position,
+  Direction,
+  CampaignEnemyState,
+  EnemyTypeConfig,
+  BossPhaseConfig,
+} from '@blast-arena/shared';
 import { MOVE_COOLDOWN_BASE } from '@blast-arena/shared';
 import { ENEMY_ID_OFFSET } from '@blast-arena/shared';
 
@@ -11,6 +17,7 @@ export class Enemy {
   public readonly maxHp: number;
   public alive: boolean = true;
   public moveCooldown: number = 0;
+  public movedThisTick: boolean = false;
   public bombCooldown: number = 0;
 
   public readonly typeConfig: EnemyTypeConfig;
@@ -50,7 +57,11 @@ export class Enemy {
   }
 
   applyMoveCooldown(): void {
-    this.moveCooldown = Math.max(1, Math.round(MOVE_COOLDOWN_BASE / Math.max(0.01, this.typeConfig.speed)));
+    this.moveCooldown = Math.max(
+      1,
+      Math.round(MOVE_COOLDOWN_BASE / Math.max(0.01, this.typeConfig.speed)),
+    );
+    this.movedThisTick = true;
   }
 
   canPlaceBomb(): boolean {
@@ -91,8 +102,10 @@ export class Enemy {
 
         // Apply phase changes
         if (phase.speedMultiplier != null) {
-          (this.typeConfig as EnemyTypeConfig).speed =
-            Math.max(0.01, this.typeConfig.speed * phase.speedMultiplier);
+          (this.typeConfig as EnemyTypeConfig).speed = Math.max(
+            0.01,
+            this.typeConfig.speed * phase.speedMultiplier,
+          );
         }
         if (phase.movementPattern != null) {
           (this.typeConfig as EnemyTypeConfig).movementPattern = phase.movementPattern;

@@ -590,12 +590,14 @@ export class CampaignGame {
       return;
     }
 
-    // Apply speed modifiers for players on slowing tiles (processTick already applied normal cooldown)
+    // Apply speed modifiers for players on slowing tiles.
+    // Only boost cooldown on the tick the player actually moved,
+    // not every tick — otherwise the player gets permanently stuck.
     for (const player of this.gameState.players.values()) {
-      if (!player.alive || player.moveCooldown <= 0) continue;
+      if (!player.alive || !player.movedThisTick) continue;
       const tile = this.gameState.collisionSystem.getTileAt(player.position.x, player.position.y);
       if (tile === 'vine' || tile === 'quicksand' || tile === 'mud') {
-        player.moveCooldown = Math.max(player.moveCooldown, MOVE_COOLDOWN_BASE * 2);
+        player.moveCooldown += MOVE_COOLDOWN_BASE;
       }
     }
 
@@ -619,6 +621,7 @@ export class CampaignGame {
     // 2. Enemy tick + conveyor + AI movement
     const bombPositions = Array.from(this.gameState.bombs.values()).map((b) => b.position);
     for (const enemy of this.enemies.values()) {
+      enemy.movedThisTick = false;
       if (!enemy.alive) continue;
       enemy.tick();
 
@@ -706,14 +709,14 @@ export class CampaignGame {
 
     // 2b. Apply speed modifiers for enemies on slowing tiles
     for (const enemy of this.enemies.values()) {
-      if (!enemy.alive || enemy.moveCooldown <= 0 || enemy.typeConfig.canPassWalls) continue;
+      if (!enemy.alive || !enemy.movedThisTick || enemy.typeConfig.canPassWalls) continue;
       const tile = this.gameState.collisionSystem.getTileAt(enemy.position.x, enemy.position.y);
       if (tile === 'vine' || tile === 'quicksand' || tile === 'mud') {
         const baseCooldown = Math.max(
           1,
           Math.round(MOVE_COOLDOWN_BASE / Math.max(0.01, enemy.typeConfig.speed)),
         );
-        enemy.moveCooldown = Math.max(enemy.moveCooldown, baseCooldown * 2);
+        enemy.moveCooldown += baseCooldown;
       }
     }
 
@@ -737,7 +740,12 @@ export class CampaignGame {
       for (const enemy of this.enemies.values()) {
         if (!enemy.alive || !enemy.typeConfig.contactDamage) continue;
         if (enemy.position.x === player.position.x && enemy.position.y === player.position.y) {
-          this.handlePlayerDeath(player.id);
+          if (player.hasShield) {
+            player.hasShield = false;
+            player.invulnerableTicks = 10;
+          } else {
+            this.handlePlayerDeath(player.id);
+          }
           break;
         }
       }

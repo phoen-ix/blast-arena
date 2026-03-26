@@ -49,7 +49,7 @@ Walk into a bomb with the Kick power-up to send it sliding. Click a player name 
 | **Bomb Up** | +1 max bombs (up to 8) |
 | **Fire Up** | +1 explosion range (up to 8) |
 | **Speed Up** | Faster movement (up to 5 levels) |
-| **Shield** | Absorbs one explosion hit (no time limit, doesn't stack) |
+| **Shield** | Absorbs one hit from any source (no time limit, doesn't stack) |
 | **Kick** | Walk into bombs to kick them |
 | **Pierce Bomb** | Explosions pass through destructible walls |
 | **Remote Bomb** | Bombs don't auto-detonate; press E to detonate all (10s safety max) |

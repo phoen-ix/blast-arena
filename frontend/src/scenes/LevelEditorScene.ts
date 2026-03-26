@@ -1278,7 +1278,7 @@ export class LevelEditorScene extends Phaser.Scene {
       { label: 'Eraser', tool: 'eraser' },
     ]);
 
-    this.addToolSection('Hazard', [
+    this.addToolSection('Mechanics', [
       { label: 'Teleporter A', tool: 'teleporter_a' },
       { label: 'Teleporter B', tool: 'teleporter_b' },
       { label: 'Conveyor \u2191', tool: 'conveyor_up' },

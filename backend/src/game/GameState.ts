@@ -341,6 +341,7 @@ export class GameStateManager {
 
       // 1. Process inputs
       for (const [playerId, player] of this.players) {
+        player.movedThisTick = false;
         if (!player.alive) continue;
 
         const input = this.inputBuffer.getLatestInput(playerId);
