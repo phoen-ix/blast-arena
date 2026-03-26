@@ -405,7 +405,7 @@ export class GameOverScene extends Phaser.Scene {
     // Play Again (on success) / Retry (on failure)
     const retryLabel = success ? '[ Play Again ]' : '[ Retry ]';
     const retryBtn = this.add
-      .text(width / 2, height - 40, retryLabel, {
+      .text(width / 2 - 100, height - 40, retryLabel, {
         fontSize: '20px',
         color: colors.textHex,
         fontFamily: 'Chakra Petch, sans-serif',
@@ -425,7 +425,7 @@ export class GameOverScene extends Phaser.Scene {
 
     // Back to Campaign button
     const backBtn = this.add
-      .text(width / 2 + 120, height - 40, '[ Campaign ]', {
+      .text(width / 2 + 100, height - 40, '[ Campaign ]', {
         fontSize: '20px',
         color: colors.primaryHex,
         fontFamily: 'Chakra Petch, sans-serif',
