@@ -1,6 +1,13 @@
 import { ILobbyView, ViewDeps } from './types';
 import { ApiClient } from '../../network/ApiClient';
-import { RoomListItem, Room, GameDefaults, BotAIEntry, getErrorMessage } from '@blast-arena/shared';
+import {
+  RoomListItem,
+  Room,
+  GameDefaults,
+  BotAIEntry,
+  CustomMapSummary,
+  getErrorMessage,
+} from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../../utils/html';
 import { showCreateRoomModal } from '../modals/CreateRoomModal';
 
@@ -137,15 +144,24 @@ export class RoomsView implements ILobbyView {
     let recordingsEnabled = false;
     let gameDefaults: GameDefaults = {};
     let activeAIs: BotAIEntry[] = [];
+    let customMaps: CustomMapSummary[] = [];
     try {
-      const [recResp, defResp, aiResp] = await Promise.all([
+      const [recResp, defResp, aiResp, myMapsResp, pubMapsResp] = await Promise.all([
         ApiClient.get<{ enabled: boolean }>('/admin/settings/recordings_enabled'),
         ApiClient.get<{ defaults: GameDefaults }>('/admin/settings/game_defaults'),
         ApiClient.get<{ ais: BotAIEntry[] }>('/admin/ai/active'),
+        ApiClient.get<{ maps: CustomMapSummary[] }>('/maps/mine').catch(() => ({ maps: [] })),
+        ApiClient.get<{ maps: CustomMapSummary[] }>('/maps/published').catch(() => ({ maps: [] })),
       ]);
       recordingsEnabled = recResp.enabled;
       gameDefaults = defResp.defaults ?? {};
       activeAIs = aiResp.ais ?? [];
+      // Merge and deduplicate
+      const myIds = new Set((myMapsResp.maps ?? []).map((m) => m.id));
+      customMaps = [
+        ...(myMapsResp.maps ?? []),
+        ...(pubMapsResp.maps ?? []).filter((m) => !myIds.has(m.id)),
+      ];
     } catch {
       // defaults
     }
@@ -157,6 +173,7 @@ export class RoomsView implements ILobbyView {
       recordingsEnabled,
       gameDefaults,
       activeAIs,
+      customMaps,
     });
   }
 

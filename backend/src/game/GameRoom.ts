@@ -24,7 +24,7 @@ type TypedServer = Server<
   InterServerEvents,
   SocketData
 >;
-import { GameStateManager } from './GameState';
+import { GameStateManager, GameConfig } from './GameState';
 import { GameLoop } from './GameLoop';
 import { execute, query } from '../db/connection';
 import { logger } from '../utils/logger';
@@ -48,7 +48,7 @@ export class GameRoom {
   private replayRecorder: ReplayRecorder | null = null;
   private disconnectedPlayers: Map<number, number> = new Map(); // playerId -> tick when disconnected
 
-  constructor(io: TypedServer, room: Room) {
+  constructor(io: TypedServer, room: Room, customMap?: GameConfig['customMap']) {
     this.code = room.code;
     this.io = io;
     this.room = room;
@@ -70,6 +70,7 @@ export class GameRoom {
       reinforcedWalls: room.config.reinforcedWalls ?? false,
       enableMapEvents: room.config.enableMapEvents ?? false,
       botAiId: room.config.botAiId,
+      customMap,
     });
 
     // Add human players

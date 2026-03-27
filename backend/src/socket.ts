@@ -34,6 +34,7 @@ import * as settingsService from './services/settings';
 import * as presenceService from './services/presence';
 import * as partyService from './services/party';
 import * as replayService from './services/replay';
+import * as customMapsService from './services/custom-maps';
 import { z } from 'zod';
 
 type TypedServer = Server<
@@ -91,6 +92,7 @@ const matchConfigSchema = z.object({
   reinforcedWalls: z.boolean().optional(),
   recordGame: z.boolean().optional(),
   botAiId: z.string().optional(),
+  customMapId: z.number().int().positive().optional(),
 });
 
 const createRoomRequestSchema = z.object({
@@ -245,11 +247,23 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
         await cleanupStaleRoom(socket);
 
-        const room = await lobbyService.createRoom(
-          currentUser,
-          parsed.data.name,
-          parsed.data.config,
-        );
+        // Resolve custom map name for display in room list
+        const config = parsed.data.config;
+        let customMapName: string | undefined;
+        if (config.customMapId) {
+          const mapName = await customMapsService.getMapName(config.customMapId);
+          if (!mapName) {
+            return callback({ success: false, error: 'Custom map not found' });
+          }
+          customMapName = mapName;
+        }
+
+        const room = await lobbyService.createRoom(currentUser, parsed.data.name, config);
+        if (customMapName) {
+          room.customMapName = customMapName;
+          // Re-persist with the name attached
+          await lobbyService.updateRoom(room.code, room);
+        }
         socket.join(`room:${room.code}`);
         socket.data.activeRoomCode = room.code;
         callback({ success: true, room });
@@ -401,7 +415,26 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
           return;
         }
 
-        await roomManager.createGame(startedRoom);
+        // Load custom map if specified
+        let customMap: import('./game/GameState').GameConfig['customMap'];
+        if (startedRoom.config.customMapId) {
+          const mapData = await customMapsService.getMap(startedRoom.config.customMapId);
+          if (!mapData) {
+            socket.emit('error', { message: 'Custom map not found' });
+            await lobbyService.updateRoomStatus(roomCode, 'waiting');
+            return;
+          }
+          customMap = {
+            width: mapData.mapWidth,
+            height: mapData.mapHeight,
+            tiles: mapData.tiles,
+            spawnPoints: mapData.spawnPoints,
+            seed: 0,
+          };
+          await customMapsService.incrementPlayCount(mapData.id);
+        }
+
+        await roomManager.createGame(startedRoom, customMap);
         logger.info({ roomCode, players: room.players.length }, 'Game started');
         broadcastRoomList();
 

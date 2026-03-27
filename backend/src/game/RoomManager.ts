@@ -7,6 +7,7 @@ import {
   SocketData,
 } from '@blast-arena/shared';
 import { GameRoom } from './GameRoom';
+import { GameConfig } from './GameState';
 import { logger } from '../utils/logger';
 
 type TypedServer = Server<
@@ -24,8 +25,8 @@ export class RoomManager {
     this.io = io;
   }
 
-  async createGame(room: Room): Promise<GameRoom> {
-    const gameRoom = new GameRoom(this.io, room);
+  async createGame(room: Room, customMap?: GameConfig['customMap']): Promise<GameRoom> {
+    const gameRoom = new GameRoom(this.io, room, customMap);
     this.rooms.set(room.code, gameRoom);
     await gameRoom.start();
     logger.info({ code: room.code, players: room.players.length }, 'Game room created and started');

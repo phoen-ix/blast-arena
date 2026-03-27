@@ -22,6 +22,7 @@ export interface MatchConfig {
   reinforcedWalls?: boolean;
   recordGame?: boolean;
   botAiId?: string;
+  customMapId?: number;
 }
 
 export interface RoomPlayer {
@@ -38,6 +39,7 @@ export interface Room {
   config: MatchConfig;
   status: 'waiting' | 'countdown' | 'playing' | 'finished';
   createdAt: Date;
+  customMapName?: string;
 }
 
 export interface CreateRoomRequest {
@@ -53,4 +55,5 @@ export interface RoomListItem {
   maxPlayers: number;
   gameMode: GameMode;
   status: 'waiting' | 'playing';
+  customMapName?: string;
 }

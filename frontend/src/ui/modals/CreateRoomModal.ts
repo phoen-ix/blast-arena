@@ -6,6 +6,7 @@ import {
   Room,
   GameDefaults,
   BotAIEntry,
+  CustomMapSummary,
 } from '@blast-arena/shared';
 import { UIGamepadNavigator } from '../../game/UIGamepadNavigator';
 
@@ -17,6 +18,7 @@ export interface CreateRoomModalDeps {
   recordingsEnabled?: boolean;
   gameDefaults?: GameDefaults;
   activeAIs?: BotAIEntry[];
+  customMaps?: CustomMapSummary[];
 }
 
 export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
@@ -67,6 +69,18 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <option value="600">10 min</option>
           </select>
         </div>
+        ${
+          deps.customMaps && deps.customMaps.length > 0
+            ? `
+        <div class="form-group">
+          <label for="room-custom-map">Map</label>
+          <select id="room-custom-map">
+            <option value="">Random (Generated)</option>
+            ${deps.customMaps.map((m) => `<option value="${m.id}">${m.name} (${m.mapWidth}x${m.mapHeight}, ${m.spawnCount} spawns)</option>`).join('')}
+          </select>
+        </div>`
+            : ''
+        }
         <div class="form-group">
           <label for="room-map-size">Map Size</label>
           <select id="room-map-size">
@@ -228,6 +242,20 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
   botsSelect.addEventListener('change', updateBotDiffEnabled);
   updateBotDiffEnabled();
 
+  // Custom map selection
+  const customMapSelect = modal.querySelector('#room-custom-map') as HTMLSelectElement | null;
+  const mapSizeSelect = modal.querySelector('#room-map-size') as HTMLSelectElement;
+  const wallDensitySelectEl = modal.querySelector('#room-wall-density') as HTMLSelectElement;
+  if (customMapSelect) {
+    customMapSelect.addEventListener('change', () => {
+      const isCustom = customMapSelect.value !== '';
+      mapSizeSelect.disabled = isCustom;
+      mapSizeSelect.style.opacity = isCustom ? '0.4' : '1';
+      wallDensitySelectEl.disabled = isCustom;
+      wallDensitySelectEl.style.opacity = isCustom ? '0.4' : '1';
+    });
+  }
+
   const escHandler = (e: KeyboardEvent) => {
     if (e.key === 'Escape') closeModal();
   };
@@ -269,6 +297,9 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
     }
 
     const mapSize = parseInt((modal.querySelector('#room-map-size') as HTMLSelectElement).value);
+    const customMapVal = (modal.querySelector('#room-custom-map') as HTMLSelectElement | null)
+      ?.value;
+    const customMapId = customMapVal ? parseInt(customMapVal, 10) : undefined;
     const friendlyFire =
       gameMode === 'teams'
         ? (modal.querySelector('#room-friendly-fire') as HTMLInputElement).checked
@@ -302,6 +333,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           hazardTiles,
           recordGame,
           botAiId: effectiveBots > 0 && botAiSelect ? botAiSelect.value : undefined,
+          customMapId,
         },
       },
       (response: any) => {

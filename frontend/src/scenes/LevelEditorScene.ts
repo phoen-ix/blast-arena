@@ -15,6 +15,7 @@ import {
   CampaignWorldTheme,
   HAZARD_TILES_BY_THEME,
   HAZARD_TILE_NAMES,
+  CustomMap,
 } from '@blast-arena/shared';
 import { EnemyTextureGenerator } from '../game/EnemyTextureGenerator';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
@@ -103,6 +104,11 @@ export class LevelEditorScene extends Phaser.Scene {
   private levelWinCondition: string = 'kill_all';
   private levelIsPublished = false;
 
+  // Editor mode: 'campaign' for campaign levels, 'custom_map' for multiplayer maps
+  private editorMode: 'campaign' | 'custom_map' = 'campaign';
+  private customMapId: number | null = null;
+  private customMapDescription = '';
+
   // History for undo/redo
   private undoStack: string[] = [];
   private redoStack: string[] = [];
@@ -141,6 +147,9 @@ export class LevelEditorScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.editorMode = this.registry.get('editorMode') ?? 'campaign';
+    this.customMapId = this.registry.get('customMapId') ?? null;
+    this.customMapDescription = '';
     this.levelId = this.registry.get('editorLevelId') ?? null;
     this.enemies = [];
     this.powerups = [];
@@ -180,6 +189,27 @@ export class LevelEditorScene extends Phaser.Scene {
 
   private async loadData(): Promise<void> {
     const apiClient = ApiClient;
+
+    // Custom map mode: skip enemy types, load custom map data
+    if (this.editorMode === 'custom_map') {
+      if (this.customMapId) {
+        try {
+          const resp = await apiClient.get<{ map: CustomMap }>(`/maps/${this.customMapId}`);
+          const map = resp.map;
+          if (map) {
+            this.mapWidth = map.mapWidth;
+            this.mapHeight = map.mapHeight;
+            this.levelName = map.name;
+            this.customMapDescription = map.description || '';
+            this.levelIsPublished = map.isPublished;
+            this.tiles = map.tiles.map((row) => [...row]);
+          }
+        } catch {
+          // Use defaults for new map
+        }
+      }
+      return;
+    }
 
     // Load enemy types
     try {
@@ -989,6 +1019,8 @@ export class LevelEditorScene extends Phaser.Scene {
   private doNavigateBack(): void {
     this.registry.remove('editorLevelId');
     this.registry.remove('editorWorldId');
+    this.registry.remove('editorMode');
+    this.registry.remove('customMapId');
     this.scene.start('LobbyScene');
   }
 
@@ -1262,21 +1294,24 @@ export class LevelEditorScene extends Phaser.Scene {
       'position:fixed;top:0;left:0;width:200px;height:100%;background:var(--bg-base);border-right:1px solid var(--bg-hover);overflow-y:auto;z-index:200;font-family:"DM Sans",sans-serif;color:var(--text);padding:8px;box-sizing:border-box;';
 
     const title = document.createElement('h3');
-    title.textContent = 'Level Editor';
+    title.textContent = this.editorMode === 'custom_map' ? 'Map Editor' : 'Level Editor';
     title.style.cssText =
       'margin:0 0 8px 0;font-family:"Chakra Petch",sans-serif;color:var(--primary);font-size:16px;';
     this.editorContainer.appendChild(title);
 
-    // Tool sections
-    this.addToolSection('Tiles', [
+    // Tool sections - filter tools based on editor mode
+    const tileTools: { label: string; tool: EditorTool }[] = [
       { label: 'Empty', tool: 'empty' },
       { label: 'Wall', tool: 'wall' },
       { label: 'Destructible', tool: 'destructible' },
       { label: 'Spawn', tool: 'spawn' },
-      { label: 'Exit', tool: 'exit' },
-      { label: 'Goal', tool: 'goal' },
-      { label: 'Eraser', tool: 'eraser' },
-    ]);
+    ];
+    if (this.editorMode === 'campaign') {
+      tileTools.push({ label: 'Exit', tool: 'exit' });
+      tileTools.push({ label: 'Goal', tool: 'goal' });
+    }
+    tileTools.push({ label: 'Eraser', tool: 'eraser' });
+    this.addToolSection('Tiles', tileTools);
 
     this.addToolSection('Mechanics', [
       { label: 'Teleporter A', tool: 'teleporter_a' },
@@ -1287,166 +1322,170 @@ export class LevelEditorScene extends Phaser.Scene {
       { label: 'Conveyor \u2192', tool: 'conveyor_right' },
     ]);
 
-    // Puzzle tools section
-    const puzzleSection = document.createElement('div');
-    puzzleSection.style.marginTop = '8px';
-    const puzzleLabel = document.createElement('div');
-    puzzleLabel.textContent = 'Puzzle';
-    puzzleLabel.style.cssText =
-      'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
-    puzzleSection.appendChild(puzzleLabel);
-
-    // Color selector (4 color buttons in a row)
-    const colorRow = document.createElement('div');
-    colorRow.style.cssText = 'display:flex;gap:3px;margin-bottom:4px;';
-    const colorNames: PuzzleColor[] = ['red', 'blue', 'green', 'yellow'];
-    const colorHex: Record<PuzzleColor, string> = {
-      red: '#ff4444',
-      blue: '#4488ff',
-      green: '#44cc66',
-      yellow: '#ffcc44',
-    };
-    for (const color of colorNames) {
-      const btn = document.createElement('button');
-      btn.style.cssText = `flex:1;height:22px;border:2px solid ${this.puzzleColor === color ? '#fff' : 'transparent'};background:${colorHex[color]};border-radius:3px;cursor:pointer;`;
-      btn.title = color;
-      btn.classList.add('puzzle-color-btn');
-      btn.addEventListener('click', () => {
-        this.puzzleColor = color;
-        // Update button borders
-        colorRow.querySelectorAll('button').forEach((b, i) => {
-          (b as HTMLElement).style.borderColor = colorNames[i] === color ? '#fff' : 'transparent';
-        });
-      });
-      colorRow.appendChild(btn);
-    }
-    puzzleSection.appendChild(colorRow);
-
-    // Switch variant selector
-    const variantRow = document.createElement('div');
-    variantRow.style.cssText = 'display:flex;gap:2px;margin-bottom:4px;';
-    const variants: SwitchVariant[] = ['toggle', 'pressure', 'oneshot'];
-    for (const v of variants) {
-      const btn = document.createElement('button');
-      btn.textContent = v.charAt(0).toUpperCase() + v.slice(1);
-      btn.style.cssText = `flex:1;padding:2px 4px;font-size:10px;background:${this.switchVariant === v ? 'var(--bg-elevated)' : 'var(--bg-surface)'};border:1px solid ${this.switchVariant === v ? 'var(--primary)' : 'var(--bg-hover)'};color:var(--text);cursor:pointer;border-radius:3px;`;
-      btn.classList.add('puzzle-variant-btn');
-      btn.addEventListener('click', () => {
-        this.switchVariant = v;
-        variantRow.querySelectorAll('button').forEach((b, i) => {
-          (b as HTMLElement).style.background =
-            variants[i] === v ? 'var(--bg-elevated)' : 'var(--bg-surface)';
-          (b as HTMLElement).style.borderColor =
-            variants[i] === v ? 'var(--primary)' : 'var(--bg-hover)';
-        });
-      });
-      variantRow.appendChild(btn);
-    }
-    puzzleSection.appendChild(variantRow);
-
-    // Puzzle tile buttons
-    const switchBtn = document.createElement('button');
-    switchBtn.textContent = 'Switch';
-    switchBtn.style.cssText =
-      'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
-    switchBtn.addEventListener('click', () => {
-      this.currentTool = 'puzzle_switch';
-      this.highlightActiveTool(switchBtn);
-    });
-    puzzleSection.appendChild(switchBtn);
-
-    const gateBtn = document.createElement('button');
-    gateBtn.textContent = 'Gate';
-    gateBtn.style.cssText =
-      'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
-    gateBtn.addEventListener('click', () => {
-      this.currentTool = 'puzzle_gate';
-      this.highlightActiveTool(gateBtn);
-    });
-    puzzleSection.appendChild(gateBtn);
-
-    const crumbleBtn = document.createElement('button');
-    crumbleBtn.textContent = 'Crumbling Floor';
-    crumbleBtn.style.cssText =
-      'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
-    crumbleBtn.addEventListener('click', () => {
-      this.currentTool = 'crumbling';
-      this.highlightActiveTool(crumbleBtn);
-    });
-    puzzleSection.appendChild(crumbleBtn);
-
-    this.editorContainer.appendChild(puzzleSection);
-
-    // Hazard tile tools section (theme-filtered)
-    const themeHazards = HAZARD_TILES_BY_THEME[this.worldTheme] || [];
-    const allHazardTiles = Object.keys(HAZARD_TILE_NAMES);
-    if (allHazardTiles.length > 0) {
-      const hazardSection = document.createElement('div');
-      hazardSection.style.marginTop = '8px';
-      const hazardLabel = document.createElement('div');
-      hazardLabel.textContent = 'Theme Hazards';
-      hazardLabel.style.cssText =
+    // Puzzle tools section (campaign only)
+    if (this.editorMode === 'campaign') {
+      const puzzleSection = document.createElement('div');
+      puzzleSection.style.marginTop = '8px';
+      const puzzleLabel = document.createElement('div');
+      puzzleLabel.textContent = 'Puzzle';
+      puzzleLabel.style.cssText =
         'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
-      hazardSection.appendChild(hazardLabel);
+      puzzleSection.appendChild(puzzleLabel);
 
-      let showAll = false;
-      const hazardBtnsContainer = document.createElement('div');
-
-      const renderHazardButtons = () => {
-        hazardBtnsContainer.innerHTML = '';
-        const tilesToShow = showAll ? allHazardTiles : themeHazards;
-        if (tilesToShow.length === 0) {
-          const noTiles = document.createElement('div');
-          noTiles.textContent =
-            this.worldTheme === 'classic' || this.worldTheme === 'sky'
-              ? 'No hazard tiles for this theme'
-              : 'No hazard tiles available';
-          noTiles.style.cssText = 'font-size:10px;color:var(--text-dim);padding:2px 0;';
-          hazardBtnsContainer.appendChild(noTiles);
-          return;
-        }
-        for (const tile of tilesToShow) {
-          const btn = document.createElement('button');
-          btn.textContent = HAZARD_TILE_NAMES[tile] || tile;
-          btn.style.cssText =
-            'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
-          btn.addEventListener('click', () => {
-            this.currentTool = tile as EditorTool;
-            this.highlightActiveTool(btn);
-          });
-          hazardBtnsContainer.appendChild(btn);
-        }
+      // Color selector (4 color buttons in a row)
+      const colorRow = document.createElement('div');
+      colorRow.style.cssText = 'display:flex;gap:3px;margin-bottom:4px;';
+      const colorNames: PuzzleColor[] = ['red', 'blue', 'green', 'yellow'];
+      const colorHex: Record<PuzzleColor, string> = {
+        red: '#ff4444',
+        blue: '#4488ff',
+        green: '#44cc66',
+        yellow: '#ffcc44',
       };
-
-      renderHazardButtons();
-      hazardSection.appendChild(hazardBtnsContainer);
-
-      // "Show All" toggle
-      if (themeHazards.length < allHazardTiles.length) {
-        const toggleRow = document.createElement('div');
-        toggleRow.style.cssText = 'display:flex;align-items:center;gap:4px;margin-top:4px;';
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = 'hazard-show-all';
-        checkbox.style.cssText = 'margin:0;cursor:pointer;';
-        checkbox.addEventListener('change', () => {
-          showAll = checkbox.checked;
-          renderHazardButtons();
+      for (const color of colorNames) {
+        const btn = document.createElement('button');
+        btn.style.cssText = `flex:1;height:22px;border:2px solid ${this.puzzleColor === color ? '#fff' : 'transparent'};background:${colorHex[color]};border-radius:3px;cursor:pointer;`;
+        btn.title = color;
+        btn.classList.add('puzzle-color-btn');
+        btn.addEventListener('click', () => {
+          this.puzzleColor = color;
+          // Update button borders
+          colorRow.querySelectorAll('button').forEach((b, i) => {
+            (b as HTMLElement).style.borderColor = colorNames[i] === color ? '#fff' : 'transparent';
+          });
         });
-        const lbl = document.createElement('label');
-        lbl.htmlFor = 'hazard-show-all';
-        lbl.textContent = 'Show all themes';
-        lbl.style.cssText = 'font-size:10px;color:var(--text-dim);cursor:pointer;';
-        toggleRow.appendChild(checkbox);
-        toggleRow.appendChild(lbl);
-        hazardSection.appendChild(toggleRow);
+        colorRow.appendChild(btn);
       }
+      puzzleSection.appendChild(colorRow);
 
-      this.editorContainer.appendChild(hazardSection);
-    }
+      // Switch variant selector
+      const variantRow = document.createElement('div');
+      variantRow.style.cssText = 'display:flex;gap:2px;margin-bottom:4px;';
+      const variants: SwitchVariant[] = ['toggle', 'pressure', 'oneshot'];
+      for (const v of variants) {
+        const btn = document.createElement('button');
+        btn.textContent = v.charAt(0).toUpperCase() + v.slice(1);
+        btn.style.cssText = `flex:1;padding:2px 4px;font-size:10px;background:${this.switchVariant === v ? 'var(--bg-elevated)' : 'var(--bg-surface)'};border:1px solid ${this.switchVariant === v ? 'var(--primary)' : 'var(--bg-hover)'};color:var(--text);cursor:pointer;border-radius:3px;`;
+        btn.classList.add('puzzle-variant-btn');
+        btn.addEventListener('click', () => {
+          this.switchVariant = v;
+          variantRow.querySelectorAll('button').forEach((b, i) => {
+            (b as HTMLElement).style.background =
+              variants[i] === v ? 'var(--bg-elevated)' : 'var(--bg-surface)';
+            (b as HTMLElement).style.borderColor =
+              variants[i] === v ? 'var(--primary)' : 'var(--bg-hover)';
+          });
+        });
+        variantRow.appendChild(btn);
+      }
+      puzzleSection.appendChild(variantRow);
 
-    // Enemy tools
-    if (this.enemyTypes.length > 0) {
+      // Puzzle tile buttons
+      const switchBtn = document.createElement('button');
+      switchBtn.textContent = 'Switch';
+      switchBtn.style.cssText =
+        'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+      switchBtn.addEventListener('click', () => {
+        this.currentTool = 'puzzle_switch';
+        this.highlightActiveTool(switchBtn);
+      });
+      puzzleSection.appendChild(switchBtn);
+
+      const gateBtn = document.createElement('button');
+      gateBtn.textContent = 'Gate';
+      gateBtn.style.cssText =
+        'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+      gateBtn.addEventListener('click', () => {
+        this.currentTool = 'puzzle_gate';
+        this.highlightActiveTool(gateBtn);
+      });
+      puzzleSection.appendChild(gateBtn);
+
+      const crumbleBtn = document.createElement('button');
+      crumbleBtn.textContent = 'Crumbling Floor';
+      crumbleBtn.style.cssText =
+        'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+      crumbleBtn.addEventListener('click', () => {
+        this.currentTool = 'crumbling';
+        this.highlightActiveTool(crumbleBtn);
+      });
+      puzzleSection.appendChild(crumbleBtn);
+
+      this.editorContainer.appendChild(puzzleSection);
+    } // end campaign-only puzzle section
+
+    // Hazard tile tools section (theme-filtered, campaign only)
+    if (this.editorMode === 'campaign') {
+      const themeHazards = HAZARD_TILES_BY_THEME[this.worldTheme] || [];
+      const allHazardTiles = Object.keys(HAZARD_TILE_NAMES);
+      if (allHazardTiles.length > 0) {
+        const hazardSection = document.createElement('div');
+        hazardSection.style.marginTop = '8px';
+        const hazardLabel = document.createElement('div');
+        hazardLabel.textContent = 'Theme Hazards';
+        hazardLabel.style.cssText =
+          'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
+        hazardSection.appendChild(hazardLabel);
+
+        let showAll = false;
+        const hazardBtnsContainer = document.createElement('div');
+
+        const renderHazardButtons = () => {
+          hazardBtnsContainer.innerHTML = '';
+          const tilesToShow = showAll ? allHazardTiles : themeHazards;
+          if (tilesToShow.length === 0) {
+            const noTiles = document.createElement('div');
+            noTiles.textContent =
+              this.worldTheme === 'classic' || this.worldTheme === 'sky'
+                ? 'No hazard tiles for this theme'
+                : 'No hazard tiles available';
+            noTiles.style.cssText = 'font-size:10px;color:var(--text-dim);padding:2px 0;';
+            hazardBtnsContainer.appendChild(noTiles);
+            return;
+          }
+          for (const tile of tilesToShow) {
+            const btn = document.createElement('button');
+            btn.textContent = HAZARD_TILE_NAMES[tile] || tile;
+            btn.style.cssText =
+              'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+            btn.addEventListener('click', () => {
+              this.currentTool = tile as EditorTool;
+              this.highlightActiveTool(btn);
+            });
+            hazardBtnsContainer.appendChild(btn);
+          }
+        };
+
+        renderHazardButtons();
+        hazardSection.appendChild(hazardBtnsContainer);
+
+        // "Show All" toggle
+        if (themeHazards.length < allHazardTiles.length) {
+          const toggleRow = document.createElement('div');
+          toggleRow.style.cssText = 'display:flex;align-items:center;gap:4px;margin-top:4px;';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = 'hazard-show-all';
+          checkbox.style.cssText = 'margin:0;cursor:pointer;';
+          checkbox.addEventListener('change', () => {
+            showAll = checkbox.checked;
+            renderHazardButtons();
+          });
+          const lbl = document.createElement('label');
+          lbl.htmlFor = 'hazard-show-all';
+          lbl.textContent = 'Show all themes';
+          lbl.style.cssText = 'font-size:10px;color:var(--text-dim);cursor:pointer;';
+          toggleRow.appendChild(checkbox);
+          toggleRow.appendChild(lbl);
+          hazardSection.appendChild(toggleRow);
+        }
+
+        this.editorContainer.appendChild(hazardSection);
+      }
+    } // end campaign-only hazard section
+
+    // Enemy tools (campaign only)
+    if (this.editorMode === 'campaign' && this.enemyTypes.length > 0) {
       const enemySection = document.createElement('div');
       enemySection.style.marginTop = '8px';
       const enemyLabel = document.createElement('div');
@@ -1470,37 +1509,39 @@ export class LevelEditorScene extends Phaser.Scene {
       this.editorContainer.appendChild(enemySection);
     }
 
-    // Power-up tools
-    const puTypes = [
-      'bomb_up',
-      'fire_up',
-      'speed_up',
-      'shield',
-      'kick',
-      'pierce_bomb',
-      'remote_bomb',
-      'line_bomb',
-    ];
-    const puSection = document.createElement('div');
-    puSection.style.marginTop = '8px';
-    const puLabel = document.createElement('div');
-    puLabel.textContent = 'Power-ups';
-    puLabel.style.cssText =
-      'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
-    puSection.appendChild(puLabel);
-    for (const type of puTypes) {
-      const btn = document.createElement('button');
-      btn.textContent = type.replace(/_/g, ' ');
-      btn.style.cssText =
-        'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
-      btn.addEventListener('click', () => {
-        this.currentTool = 'powerup';
-        this.selectedPowerUpType = type;
-        this.highlightActiveTool(btn);
-      });
-      puSection.appendChild(btn);
-    }
-    this.editorContainer.appendChild(puSection);
+    // Power-up tools (campaign only)
+    if (this.editorMode === 'campaign') {
+      const puTypes = [
+        'bomb_up',
+        'fire_up',
+        'speed_up',
+        'shield',
+        'kick',
+        'pierce_bomb',
+        'remote_bomb',
+        'line_bomb',
+      ];
+      const puSection = document.createElement('div');
+      puSection.style.marginTop = '8px';
+      const puLabel = document.createElement('div');
+      puLabel.textContent = 'Power-ups';
+      puLabel.style.cssText =
+        'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
+      puSection.appendChild(puLabel);
+      for (const type of puTypes) {
+        const btn = document.createElement('button');
+        btn.textContent = type.replace(/_/g, ' ');
+        btn.style.cssText =
+          'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
+        btn.addEventListener('click', () => {
+          this.currentTool = 'powerup';
+          this.selectedPowerUpType = type;
+          this.highlightActiveTool(btn);
+        });
+        puSection.appendChild(btn);
+      }
+      this.editorContainer.appendChild(puSection);
+    } // end campaign-only power-ups
 
     // Level settings section
     this.addSettingsSection();
@@ -1516,12 +1557,14 @@ export class LevelEditorScene extends Phaser.Scene {
     saveBtn.addEventListener('click', () => this.saveLevel());
     actionSection.appendChild(saveBtn);
 
-    const exportBtn = document.createElement('button');
-    exportBtn.textContent = 'Export';
-    exportBtn.className = 'btn btn-secondary';
-    exportBtn.style.cssText = 'padding:6px 12px;font-size:13px;';
-    exportBtn.addEventListener('click', () => this.exportLevel());
-    actionSection.appendChild(exportBtn);
+    if (this.editorMode === 'campaign') {
+      const exportBtn = document.createElement('button');
+      exportBtn.textContent = 'Export';
+      exportBtn.className = 'btn btn-secondary';
+      exportBtn.style.cssText = 'padding:6px 12px;font-size:13px;';
+      exportBtn.addEventListener('click', () => this.exportLevel());
+      actionSection.appendChild(exportBtn);
+    }
 
     const backBtn = document.createElement('button');
     backBtn.textContent = 'Back';
@@ -1562,7 +1605,7 @@ export class LevelEditorScene extends Phaser.Scene {
     section.style.cssText = 'margin-top:12px;border-top:1px solid var(--bg-hover);padding-top:8px;';
 
     const label = document.createElement('div');
-    label.textContent = 'Level Settings';
+    label.textContent = this.editorMode === 'custom_map' ? 'Map Settings' : 'Level Settings';
     label.style.cssText =
       'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:6px;';
     section.appendChild(label);
@@ -1634,86 +1677,107 @@ export class LevelEditorScene extends Phaser.Scene {
     });
     section.appendChild(nameInput);
 
-    // Lives
-    const livesLabel = document.createElement('div');
-    livesLabel.textContent = 'Lives';
-    livesLabel.style.cssText = labelStyle;
-    section.appendChild(livesLabel);
-    const livesInput = document.createElement('input');
-    livesInput.type = 'number';
-    livesInput.min = '1';
-    livesInput.max = '99';
-    livesInput.value = String(this.levelLives);
-    livesInput.style.cssText = inputStyle;
-    livesInput.addEventListener('change', () => {
-      this.levelLives = parseInt(livesInput.value, 10) || 3;
-      this.markDirty();
-    });
-    section.appendChild(livesInput);
-
-    // Time Limit
-    const timeLabel = document.createElement('div');
-    timeLabel.textContent = 'Time Limit (seconds, 0=none)';
-    timeLabel.style.cssText = labelStyle;
-    section.appendChild(timeLabel);
-    const timeInput = document.createElement('input');
-    timeInput.type = 'number';
-    timeInput.min = '0';
-    timeInput.max = '3600';
-    timeInput.value = String(this.levelTimeLimit);
-    timeInput.style.cssText = inputStyle;
-    timeInput.addEventListener('change', () => {
-      this.levelTimeLimit = parseInt(timeInput.value, 10) || 0;
-      this.markDirty();
-    });
-    section.appendChild(timeInput);
-
-    // Par Time
-    const parLabel = document.createElement('div');
-    parLabel.textContent = 'Par Time (seconds, 0=none)';
-    parLabel.style.cssText = labelStyle;
-    section.appendChild(parLabel);
-    const parInput = document.createElement('input');
-    parInput.type = 'number';
-    parInput.min = '0';
-    parInput.max = '3600';
-    parInput.value = String(this.levelParTime);
-    parInput.style.cssText = inputStyle;
-    parInput.addEventListener('change', () => {
-      this.levelParTime = parseInt(parInput.value, 10) || 0;
-      this.markDirty();
-    });
-    section.appendChild(parInput);
-    const parHint = document.createElement('div');
-    parHint.textContent = '2 stars if completed under par time';
-    parHint.style.cssText = 'font-size:9px;color:var(--text-dim);margin-top:1px;';
-    section.appendChild(parHint);
-
-    // Win Condition
-    const winLabel = document.createElement('div');
-    winLabel.textContent = 'Win Condition';
-    winLabel.style.cssText = labelStyle;
-    section.appendChild(winLabel);
-    const winSelect = document.createElement('select');
-    winSelect.style.cssText = inputStyle;
-    const conditions = [
-      { value: 'kill_all', label: 'Kill All Enemies' },
-      { value: 'find_exit', label: 'Find Exit' },
-      { value: 'reach_goal', label: 'Reach Goal' },
-      { value: 'survive_time', label: 'Survive Time' },
-    ];
-    for (const c of conditions) {
-      const opt = document.createElement('option');
-      opt.value = c.value;
-      opt.textContent = c.label;
-      if (c.value === this.levelWinCondition) opt.selected = true;
-      winSelect.appendChild(opt);
+    // Description (custom map mode only)
+    if (this.editorMode === 'custom_map') {
+      const descLabel = document.createElement('div');
+      descLabel.textContent = 'Description';
+      descLabel.style.cssText = labelStyle;
+      section.appendChild(descLabel);
+      const descInput = document.createElement('textarea');
+      descInput.value = this.customMapDescription;
+      descInput.maxLength = 500;
+      descInput.rows = 2;
+      descInput.style.cssText = inputStyle + 'resize:vertical;';
+      descInput.addEventListener('change', () => {
+        this.customMapDescription = descInput.value;
+        this.markDirty();
+      });
+      section.appendChild(descInput);
     }
-    winSelect.addEventListener('change', () => {
-      this.levelWinCondition = winSelect.value;
-      this.markDirty();
-    });
-    section.appendChild(winSelect);
+
+    // Campaign-only settings
+    if (this.editorMode === 'campaign') {
+      // Lives
+      const livesLabel = document.createElement('div');
+      livesLabel.textContent = 'Lives';
+      livesLabel.style.cssText = labelStyle;
+      section.appendChild(livesLabel);
+      const livesInput = document.createElement('input');
+      livesInput.type = 'number';
+      livesInput.min = '1';
+      livesInput.max = '99';
+      livesInput.value = String(this.levelLives);
+      livesInput.style.cssText = inputStyle;
+      livesInput.addEventListener('change', () => {
+        this.levelLives = parseInt(livesInput.value, 10) || 3;
+        this.markDirty();
+      });
+      section.appendChild(livesInput);
+
+      // Time Limit
+      const timeLabel = document.createElement('div');
+      timeLabel.textContent = 'Time Limit (seconds, 0=none)';
+      timeLabel.style.cssText = labelStyle;
+      section.appendChild(timeLabel);
+      const timeInput = document.createElement('input');
+      timeInput.type = 'number';
+      timeInput.min = '0';
+      timeInput.max = '3600';
+      timeInput.value = String(this.levelTimeLimit);
+      timeInput.style.cssText = inputStyle;
+      timeInput.addEventListener('change', () => {
+        this.levelTimeLimit = parseInt(timeInput.value, 10) || 0;
+        this.markDirty();
+      });
+      section.appendChild(timeInput);
+
+      // Par Time
+      const parLabel = document.createElement('div');
+      parLabel.textContent = 'Par Time (seconds, 0=none)';
+      parLabel.style.cssText = labelStyle;
+      section.appendChild(parLabel);
+      const parInput = document.createElement('input');
+      parInput.type = 'number';
+      parInput.min = '0';
+      parInput.max = '3600';
+      parInput.value = String(this.levelParTime);
+      parInput.style.cssText = inputStyle;
+      parInput.addEventListener('change', () => {
+        this.levelParTime = parseInt(parInput.value, 10) || 0;
+        this.markDirty();
+      });
+      section.appendChild(parInput);
+      const parHint = document.createElement('div');
+      parHint.textContent = '2 stars if completed under par time';
+      parHint.style.cssText = 'font-size:9px;color:var(--text-dim);margin-top:1px;';
+      section.appendChild(parHint);
+
+      // Win Condition
+      const winLabel = document.createElement('div');
+      winLabel.textContent = 'Win Condition';
+      winLabel.style.cssText = labelStyle;
+      section.appendChild(winLabel);
+      const winSelect = document.createElement('select');
+      winSelect.style.cssText = inputStyle;
+      const conditions = [
+        { value: 'kill_all', label: 'Kill All Enemies' },
+        { value: 'find_exit', label: 'Find Exit' },
+        { value: 'reach_goal', label: 'Reach Goal' },
+        { value: 'survive_time', label: 'Survive Time' },
+      ];
+      for (const c of conditions) {
+        const opt = document.createElement('option');
+        opt.value = c.value;
+        opt.textContent = c.label;
+        if (c.value === this.levelWinCondition) opt.selected = true;
+        winSelect.appendChild(opt);
+      }
+      winSelect.addEventListener('change', () => {
+        this.levelWinCondition = winSelect.value;
+        this.markDirty();
+      });
+      section.appendChild(winSelect);
+    } // end campaign-only settings
 
     // Published toggle
     const pubRow = document.createElement('div');
@@ -1784,7 +1848,53 @@ export class LevelEditorScene extends Phaser.Scene {
     }, 2000);
   }
 
+  private async saveCustomMap(): Promise<void> {
+    // Collect spawn points
+    const spawnPoints: { x: number; y: number }[] = [];
+    for (let y = 0; y < this.mapHeight; y++) {
+      for (let x = 0; x < this.mapWidth; x++) {
+        if (this.tiles[y][x] === 'spawn') {
+          spawnPoints.push({ x, y });
+        }
+      }
+    }
+
+    if (spawnPoints.length < 2) {
+      this.showToast('Need at least 2 spawn points', 'error');
+      return;
+    }
+
+    const mapData = {
+      name: this.levelName || 'Untitled Map',
+      description: this.customMapDescription,
+      mapWidth: this.mapWidth,
+      mapHeight: this.mapHeight,
+      tiles: this.tiles,
+      spawnPoints,
+      isPublished: this.levelIsPublished,
+    };
+
+    try {
+      if (this.customMapId) {
+        await ApiClient.put(`/maps/${this.customMapId}`, mapData);
+      } else {
+        const resp = await ApiClient.post<{ id: number }>('/maps', mapData);
+        this.customMapId = resp.id;
+        this.registry.set('customMapId', this.customMapId);
+      }
+      this.savedState = this.serializeState();
+      this.isDirty = false;
+      this.showToast('Map saved!', 'success');
+    } catch (err) {
+      this.showToast('Save failed: ' + (err as Error).message, 'error');
+    }
+  }
+
   private async saveLevel(): Promise<void> {
+    if (this.editorMode === 'custom_map') {
+      return this.saveCustomMap();
+    }
+
     const apiClient = ApiClient;
 
     // Find spawn points

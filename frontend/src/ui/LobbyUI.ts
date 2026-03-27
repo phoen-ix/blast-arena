@@ -204,6 +204,10 @@ export class LobbyUI {
         const { PartyView } = await import('./views/PartyView');
         return new PartyView(deps, this.partyBar);
       }
+      case 'maps': {
+        const { MapsView } = await import('./views/MapsView');
+        return new MapsView(deps);
+      }
       case 'create-room': {
         const { CreateRoomView } = await import('./views/CreateRoomView');
         return new CreateRoomView(
@@ -234,6 +238,18 @@ export class LobbyUI {
         createBtn.addEventListener('click', () => this.navigateTo('create-room'));
       }
     }
+    if (viewId === 'maps') {
+      const createMapBtn = this.container.querySelector('#create-map-btn');
+      if (createMapBtn) {
+        createMapBtn.addEventListener('click', async () => {
+          const game = (await import('../main')).default;
+          game.registry.set('editorMode', 'custom_map');
+          game.registry.set('customMapId', null);
+          const lobbyScene = game.scene.getScene('LobbyScene');
+          if (lobbyScene) lobbyScene.scene.start('LevelEditorScene');
+        });
+      }
+    }
   }
 
   private render(): void {
@@ -259,6 +275,10 @@ export class LobbyUI {
           <button class="sidebar-nav-item" id="nav-campaign">
             <span class="nav-icon">&#9876;</span>
             <span class="nav-label">Campaign</span>
+          </button>
+          <button class="sidebar-nav-item" id="nav-maps">
+            <span class="nav-icon">&#9638;</span>
+            <span class="nav-label">My Maps</span>
           </button>
 
           <div class="sidebar-section-label">Social</div>

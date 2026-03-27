@@ -413,6 +413,24 @@ export interface BuddySettingsRow extends RowDataPacket {
   updated_at: Date;
 }
 
+/** Custom map row */
+export interface CustomMapRow extends RowDataPacket {
+  id: number;
+  name: string;
+  description: string;
+  map_width: number;
+  map_height: number;
+  tiles: string; // JSON string
+  spawn_points: string; // JSON string
+  is_published: boolean;
+  created_by: number;
+  play_count: number;
+  created_at: Date;
+  updated_at: Date;
+  // Joined fields
+  creator_username?: string;
+}
+
 export interface AdminUserRow extends RowDataPacket {
   id: number;
   username: string;

@@ -67,6 +67,15 @@ All optional, toggled per-room: **Reinforced Walls** (2-hit destructible walls),
 
 Campaign with hand-crafted levels grouped into themed worlds (9 themes: classic, forest, desert, ice, volcano, void, castle, swamp, sky — each with unique color palettes and tile textures). Defeat enemies (5 built-in movement patterns, boss phases, or custom AI scripts), earn 1-3 stars per level, track progress. Supports solo play, online co-op (2 players via party), local co-op (same keyboard/gamepads), and buddy mode. Local co-op features a setup modal for Player 2 identity (guest with custom name/color, or log in as a registered player with own cosmetics and cookie-based session persistence), control presets (WASD, Arrows, Numpad, Gamepad 1/2), and camera mode: shared auto-zoom, horizontal split-screen, or vertical split-screen. Split-screen auto-zooms to fill each viewport and shows off-screen partner arrows at viewport edges (aligned on the line connecting the two players). **Buddy Mode** is designed for playing with very young or inexperienced players — the buddy is a smaller, permanently invulnerable support character who can pass through destructible walls and bombs, pick up power-ups for P1, and place limited bombs (1 bomb, 1 fire range). Buddy name, color, and size (40-80%) are saved per-account and configurable in Settings > Preferences or the pre-launch modal. 3-2-1-GO countdown, pause menu (Escape key — Continue/Exit), win grace period for smooth transitions, and seamless retry/play-again with full mode preservation. Admins create enemy types and levels via a visual editor with resizable maps, WASD/arrow panning, zoom, and prominent spawn point markers. Enemy types are fully customizable: 6 body shapes (blob, spiky, ghost, robot, bug, skull), 4 eye styles, 8 visual addons (teeth, horns, tail, aura, crown, scar, wings, accessories like bow tie/monocle/bandana), primary/secondary colors, and size multiplier — all with live preview. Enemy types can optionally use custom AI scripts (TypeScript `decide()` method) that override built-in movement patterns — uploaded in the AI tab and assigned per enemy type with a difficulty setting. Ships with 6 default enemy AIs: Hunter (aggressive chaser), Patrol Guard (path follower), Bomber (area denial), Coward (flee + trap), Swarm (coordinated flanking), and Ambusher (wait + rush) — all scaling across easy/normal/hard difficulty. Export/import levels and enemy types as JSON (AI source bundled in exports). Ships with "Training Grounds" (3 levels). See [docs/campaign.md](docs/campaign.md) and [docs/enemy-ai-guide.md](docs/enemy-ai-guide.md).
 
+## Custom Maps
+
+Create and share custom maps for multiplayer rooms. The built-in map editor (adapted from the campaign level editor) lets any authenticated user design maps with walls, destructible blocks, spawn points, teleporter pairs, and conveyor belts. Maps can be published for the community or kept private.
+
+- **My Maps** sidebar view: list, edit, publish/unpublish, delete your maps
+- **Map picker** in room creation: choose from your own maps or community-published maps (grouped in dropdown). Selecting a custom map auto-disables map size and wall density settings
+- **Validation**: Maps must have odd dimensions (9-51), wall borders, 2-8 spawn points, and valid tile types. Validated both client-side and server-side
+- **Play count tracking**: Each game played on a custom map increments its play counter
+
 ## Bot AI
 
 Three difficulty tiers optimized through 20,000+ simulation games:
@@ -109,7 +118,7 @@ All actions audit-logged. See [docs/admin-and-systems.md](docs/admin-and-systems
 ## Social Features
 
 - **Theme System**: 11 color themes — 5 dark (Inferno, Arctic, Toxic, Crimson, Midnight), 3 vivid light (Daylight, Sakura, Sand), 3 pastel light (Frost, Blossom, Dune). User selects in Settings > Preferences; admin sets global default in Dashboard. Themes affect all UI and Phaser canvas colors.
-- **Sidebar Navigation**: Persistent collapsible left sidebar with "ear" toggle tab. All lobby views (Rooms, Friends, Messages, Party, Leaderboard, Settings, Help, Admin, Campaign, Create Room, Profile) render inline in the main content area — no overlays or slide-out panels.
+- **Sidebar Navigation**: Persistent collapsible left sidebar with "ear" toggle tab. All lobby views (Rooms, Campaign, My Maps, Friends, Messages, Party, Leaderboard, Settings, Help, Admin, Create Room, Profile) render inline in the main content area — no overlays or slide-out panels.
 - **Friends**: Full-page view with tabs (Friends/Requests/Blocked), search, friend cards with online status indicators.
 - **Online Presence**: See friends' real-time status (online, in lobby, in game, in campaign). Presence tracked via Redis with 120s TTL.
 - **Parties**: Full-page view with two states: empty (create party) / active (member cards, chat, invites). When the party leader joins a room, all members auto-follow.
@@ -201,11 +210,11 @@ blast-arena/
 ├── shared/                  # Shared types, constants, utilities
 ├── backend/
 │   └── src/
-│       ├── routes/          # REST endpoints (auth, lobby, user, admin, campaign, friends, messages, leaderboard, cosmetics, docs)
+│       ├── routes/          # REST endpoints (auth, lobby, user, admin, campaign, custom-maps, friends, messages, leaderboard, cosmetics, docs)
 │       ├── game/            # Server game logic (GameLoop, GameState, BotAI, etc.)
 │       ├── simulation/      # Bot simulation system
 │       ├── db/              # MariaDB connection, migrations, redis
-│       ├── services/        # Auth, user, admin, lobby, email, replay, settings, friends, party, presence, messages, elo, season, leaderboard, achievements, cosmetics, buddy
+│       ├── services/        # Auth, user, admin, lobby, email, replay, settings, friends, party, presence, messages, elo, season, leaderboard, achievements, cosmetics, buddy, custom-maps
 │       └── middleware/       # Auth, rate limiting, staff checks
 ├── frontend/
 │   ├── index.html           # HTML + full CSS design system (11 themes)

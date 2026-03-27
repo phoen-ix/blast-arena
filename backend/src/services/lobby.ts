@@ -74,6 +74,7 @@ export async function listRooms(): Promise<RoomListItem[]> {
         maxPlayers: room.config.maxPlayers,
         gameMode: room.config.gameMode,
         status: room.status === 'waiting' ? 'waiting' : 'playing',
+        customMapName: room.customMapName,
       });
     }
   }

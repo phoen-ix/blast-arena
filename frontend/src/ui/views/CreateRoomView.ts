@@ -6,7 +6,9 @@ import {
   Room,
   GameDefaults,
   BotAIEntry,
+  CustomMapSummary,
 } from '@blast-arena/shared';
+import game from '../../main';
 
 export class CreateRoomView implements ILobbyView {
   readonly viewId = 'create-room';
@@ -19,6 +21,8 @@ export class CreateRoomView implements ILobbyView {
   private recordingsEnabled = false;
   private gameDefaults: GameDefaults = {};
   private activeAIs: BotAIEntry[] = [];
+  private myMaps: CustomMapSummary[] = [];
+  private publishedMaps: CustomMapSummary[] = [];
 
   constructor(deps: ViewDeps, onRoomCreated: (room: Room) => void, onCancel: () => void) {
     this.deps = deps;
@@ -31,14 +35,18 @@ export class CreateRoomView implements ILobbyView {
 
     // Load settings in parallel
     try {
-      const [recResp, defResp, aiResp] = await Promise.all([
+      const [recResp, defResp, aiResp, myMapsResp, pubMapsResp] = await Promise.all([
         ApiClient.get<{ enabled: boolean }>('/admin/settings/recordings_enabled'),
         ApiClient.get<{ defaults: GameDefaults }>('/admin/settings/game_defaults'),
         ApiClient.get<{ ais: BotAIEntry[] }>('/admin/ai/active'),
+        ApiClient.get<{ maps: CustomMapSummary[] }>('/maps/mine').catch(() => ({ maps: [] })),
+        ApiClient.get<{ maps: CustomMapSummary[] }>('/maps/published').catch(() => ({ maps: [] })),
       ]);
       this.recordingsEnabled = recResp.enabled;
       this.gameDefaults = defResp.defaults ?? {};
       this.activeAIs = aiResp.ais ?? [];
+      this.myMaps = myMapsResp.maps ?? [];
+      this.publishedMaps = pubMapsResp.maps ?? [];
     } catch {
       // defaults
     }
@@ -102,6 +110,17 @@ export class CreateRoomView implements ILobbyView {
           <div class="create-room-section">
             <h3 class="create-room-section-title">Map</h3>
             <div class="create-room-grid">
+              <div class="form-group" style="grid-column:1/-1;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <label style="flex:1;">Map</label>
+                  <button class="btn btn-sm btn-ghost" id="cr-new-map" style="font-size:11px;padding:2px 8px;">+ New Map</button>
+                </div>
+                <select class="select" id="cr-custom-map">
+                  <option value="">Random (Generated)</option>
+                  ${this.buildMapOptions()}
+                </select>
+                <div id="cr-map-hint" style="font-size:10px;color:var(--text-dim);margin-top:2px;display:none;"></div>
+              </div>
               <div class="form-group">
                 <label>Map Size</label>
                 <select class="select" id="cr-map-size">
@@ -311,6 +330,51 @@ export class CreateRoomView implements ILobbyView {
     botsSelect.addEventListener('change', updateBots);
     updateBots();
 
+    // Custom map selection
+    const customMapSelect = this.container.querySelector('#cr-custom-map') as HTMLSelectElement;
+    const mapSizeSelect = this.container.querySelector('#cr-map-size') as HTMLSelectElement;
+    const wallDensitySelect = this.container.querySelector('#cr-wall-density') as HTMLSelectElement;
+    const mapHint = this.container.querySelector('#cr-map-hint') as HTMLElement;
+    const allMaps = [...this.myMaps, ...this.publishedMaps];
+    const mapById = new Map(allMaps.map((m) => [String(m.id), m]));
+
+    const updateMapSelection = () => {
+      const val = customMapSelect.value;
+      const isCustom = val !== '';
+      mapSizeSelect.disabled = isCustom;
+      mapSizeSelect.style.opacity = isCustom ? '0.4' : '1';
+      wallDensitySelect.disabled = isCustom;
+      wallDensitySelect.style.opacity = isCustom ? '0.4' : '1';
+
+      if (isCustom) {
+        const map = mapById.get(val);
+        if (map) {
+          const maxP = parseInt(maxPlayersSelect.value);
+          if (map.spawnCount < maxP) {
+            mapHint.textContent = `This map has ${map.spawnCount} spawn points (${map.spawnCount} players max)`;
+            mapHint.style.display = 'block';
+            mapHint.style.color = 'var(--warning)';
+          } else {
+            mapHint.textContent = `${map.mapWidth}x${map.mapHeight} map`;
+            mapHint.style.display = 'block';
+            mapHint.style.color = 'var(--text-dim)';
+          }
+        }
+      } else {
+        mapHint.style.display = 'none';
+      }
+    };
+    customMapSelect.addEventListener('change', updateMapSelection);
+    maxPlayersSelect.addEventListener('change', updateMapSelection);
+
+    // New Map button
+    this.container.querySelector('#cr-new-map')!.addEventListener('click', () => {
+      game.registry.set('editorMode', 'custom_map');
+      game.registry.set('customMapId', null);
+      const lobbyScene = game.scene.getScene('LobbyScene');
+      if (lobbyScene) lobbyScene.scene.start('LevelEditorScene');
+    });
+
     // Cancel
     this.container.querySelector('#cr-cancel')!.addEventListener('click', () => {
       this.onCancel();
@@ -348,6 +412,9 @@ export class CreateRoomView implements ILobbyView {
     const mapSize = parseInt(
       (this.container.querySelector('#cr-map-size') as HTMLSelectElement).value,
     );
+    const customMapValue = (this.container.querySelector('#cr-custom-map') as HTMLSelectElement)
+      .value;
+    const customMapId = customMapValue ? parseInt(customMapValue, 10) : undefined;
 
     const enabledPowerUps: PowerUpType[] = [];
     this.container.querySelectorAll('.powerup-check:checked').forEach((cb: any) => {
@@ -398,6 +465,7 @@ export class CreateRoomView implements ILobbyView {
           hazardTiles,
           recordGame,
           botAiId: effectiveBots > 0 && botAiSelect ? botAiSelect.value : undefined,
+          customMapId,
         },
       },
       (response: any) => {
@@ -409,6 +477,29 @@ export class CreateRoomView implements ILobbyView {
         }
       },
     );
+  }
+
+  private buildMapOptions(): string {
+    const myMapIds = new Set(this.myMaps.map((m) => m.id));
+    // Community maps = published maps not created by this user
+    const communityMaps = this.publishedMaps.filter((m) => !myMapIds.has(m.id));
+    let html = '';
+    if (this.myMaps.length > 0) {
+      html += '<optgroup label="My Maps">';
+      for (const m of this.myMaps) {
+        html += `<option value="${m.id}">${m.name} (${m.mapWidth}x${m.mapHeight}, ${m.spawnCount} spawns)</option>`;
+      }
+      html += '</optgroup>';
+    }
+    if (communityMaps.length > 0) {
+      html += '<optgroup label="Community Maps">';
+      for (const m of communityMaps) {
+        const by = m.creatorUsername ? ` by ${m.creatorUsername}` : '';
+        html += `<option value="${m.id}">${m.name}${by} (${m.mapWidth}x${m.mapHeight}, ${m.spawnCount} spawns)</option>`;
+      }
+      html += '</optgroup>';
+    }
+    return html;
   }
 
   private generateRoomName(): string {
