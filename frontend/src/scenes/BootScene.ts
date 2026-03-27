@@ -608,6 +608,7 @@ export class BootScene extends Phaser.Scene {
       pierce_bomb: { color: '#ff2222' },
       remote_bomb: { color: '#4488ff' },
       line_bomb: { color: '#ffaa44' },
+      bomb_throw: { color: '#ff66ff' },
     };
 
     for (const [type, def] of Object.entries(defs)) {

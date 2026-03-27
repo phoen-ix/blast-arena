@@ -12,7 +12,11 @@ export class HillZoneRenderer {
     this.graphics.setDepth(5); // Above tiles, below players/bombs
   }
 
-  update(hillZone: HillZone, _scores?: Record<number, number>): void {
+  update(
+    hillZone: HillZone,
+    _scores?: Record<number, number>,
+    pendingHillZone?: HillZone | null,
+  ): void {
     this.graphics.clear();
     this.graphics.setVisible(true);
     this.pulseTimer += 0.03;
@@ -79,6 +83,26 @@ export class HillZoneRenderer {
     // Simple diamond shape
     this.graphics.fillTriangle(cx, cy - 8, cx + 6, cy, cx, cy + 8);
     this.graphics.fillTriangle(cx, cy - 8, cx - 6, cy, cx, cy + 8);
+
+    // Render pending hill zone as a pulsing ghost outline
+    if (pendingHillZone) {
+      const px = pendingHillZone.x * TILE_SIZE;
+      const py = pendingHillZone.y * TILE_SIZE;
+      const pw = pendingHillZone.width * TILE_SIZE;
+      const ph = pendingHillZone.height * TILE_SIZE;
+      const ghostAlpha = 0.15 + Math.sin(this.pulseTimer * 3) * 0.1;
+      this.graphics.fillStyle(0x44ccff, ghostAlpha);
+      this.graphics.fillRect(px, py, pw, ph);
+      const ghostBorderAlpha = 0.5 + Math.sin(this.pulseTimer * 3) * 0.25;
+      this.graphics.lineStyle(2, 0x44ccff, ghostBorderAlpha);
+      this.graphics.strokeRect(px, py, pw, ph);
+      // Arrow icon in center
+      const pcx = px + pw / 2;
+      const pcy = py + ph / 2;
+      this.graphics.fillStyle(0x44ccff, 0.4 + Math.sin(this.pulseTimer * 2) * 0.15);
+      this.graphics.fillTriangle(pcx, pcy - 8, pcx + 6, pcy, pcx, pcy + 8);
+      this.graphics.fillTriangle(pcx, pcy - 8, pcx - 6, pcy, pcx, pcy + 8);
+    }
   }
 
   hide(): void {

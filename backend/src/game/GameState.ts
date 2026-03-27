@@ -20,6 +20,8 @@ import {
   KOTH_ZONE_SIZE,
   KOTH_SCORE_TARGET,
   KOTH_POINTS_PER_TICK,
+  KOTH_HILL_MOVE_INTERVAL,
+  KOTH_HILL_MOVE_WARNING,
 } from '@blast-arena/shared';
 import { Player } from './Player';
 import { Bomb, BombType } from './Bomb';
@@ -90,7 +92,9 @@ export class GameStateManager {
 
   // KOTH properties
   public hillZone: { x: number; y: number; width: number; height: number } | null = null;
+  public pendingHillZone: { x: number; y: number; width: number; height: number } | null = null;
   public kothScores: Map<number, number> = new Map();
+  private nextHillMoveTick: number = 0;
 
   private rng: SeededRandom;
   private gameMode: string;
@@ -125,14 +129,39 @@ export class GameStateManager {
   private shuffledSpawnIndices: number[] = [];
 
   // Map events (dynamic)
-  private mapEvents: { type: string; position?: Position; tick: number; warningTick?: number }[] =
-    [];
+  private mapEvents: {
+    type: string;
+    position?: Position;
+    tick: number;
+    warningTick?: number;
+    direction?: 'row' | 'column';
+    index?: number;
+  }[] = [];
   private _mapEventsCache:
-    | { type: 'meteor' | 'powerup_rain'; position?: Position; tick: number; warningTick?: number }[]
+    | {
+        type:
+          | 'meteor'
+          | 'powerup_rain'
+          | 'wall_collapse'
+          | 'freeze_wave'
+          | 'bomb_surge'
+          | 'hill_move';
+        position?: Position;
+        tick: number;
+        warningTick?: number;
+        direction?: 'row' | 'column';
+        index?: number;
+      }[]
     | undefined;
   private _mapEventsDirty = true;
   private nextMeteorTick: number = 0;
   private nextPowerupRainTick: number = 0;
+  private nextWallCollapseTick: number = 0;
+  private nextFreezeWaveTick: number = 0;
+  private nextBombSurgeTick: number = 0;
+  // Freeze wave state: stores original tiles to revert after duration
+  private frozenTiles: Map<string, TileType> = new Map();
+  private frozenTilesRevertTick: number = 0;
 
   // Tile diff tracking for delta state broadcasts
   private _dirtyTiles: Map<string, TileDiff> = new Map();
@@ -175,6 +204,12 @@ export class GameStateManager {
     this.botDifficulty = botDifficulty;
     this.reinforcedWalls = reinforcedWalls;
     this.enableMapEvents = enableMapEvents;
+    if (enableMapEvents) {
+      // Stagger initial event timers so they don't all fire at once
+      this.nextWallCollapseTick = Math.floor((45 + this.rng.next() * 15) * TICK_RATE);
+      this.nextFreezeWaveTick = Math.floor((55 + this.rng.next() * 15) * TICK_RATE);
+      this.nextBombSurgeTick = Math.floor((40 + this.rng.next() * 15) * TICK_RATE);
+    }
 
     // Shuffle spawn point indices using Fisher-Yates for fair spawn assignment (deterministic per seed)
     this.shuffledSpawnIndices = this.map.spawnPoints.map((_, i) => i);
@@ -199,6 +234,7 @@ export class GameStateManager {
       const hx = Math.floor(mapWidth / 2) - Math.floor(KOTH_ZONE_SIZE / 2);
       const hy = Math.floor(mapHeight / 2) - Math.floor(KOTH_ZONE_SIZE / 2);
       this.hillZone = { x: hx, y: hy, width: KOTH_ZONE_SIZE, height: KOTH_ZONE_SIZE };
+      this.nextHillMoveTick = KOTH_HILL_MOVE_INTERVAL;
     }
   }
 
@@ -487,6 +523,9 @@ export class GameStateManager {
             } else {
               this.tickEvents.playerDied.push({ playerId: player.id, killerId: null });
             }
+
+            // Drop one random collected power-up at death position
+            this.dropPowerUpOnDeath(player);
           }
           break;
         }
@@ -527,6 +566,26 @@ export class GameStateManager {
     // 6.5 King of the Hill scoring
     this._hillControllingPlayerId = null;
     if (this.hillZone && this.finishTick === null) {
+      // Dynamic hill movement
+      if (this.tick >= this.nextHillMoveTick - KOTH_HILL_MOVE_WARNING && !this.pendingHillZone) {
+        const newZone = this.pickNewHillZone();
+        if (newZone) {
+          this.pendingHillZone = newZone;
+          this.mapEvents.push({
+            type: 'hill_move',
+            position: { x: newZone.x, y: newZone.y },
+            tick: this.nextHillMoveTick,
+            warningTick: this.tick,
+          });
+          this._mapEventsDirty = true;
+        }
+      }
+      if (this.tick >= this.nextHillMoveTick && this.pendingHillZone) {
+        this.hillZone = this.pendingHillZone;
+        this.pendingHillZone = null;
+        this.nextHillMoveTick = this.tick + KOTH_HILL_MOVE_INTERVAL;
+      }
+
       const playersInZone = this.getAlivePlayers().filter(
         (p) =>
           p.position.x >= this.hillZone!.x &&
@@ -598,6 +657,79 @@ export class GameStateManager {
         this.nextPowerupRainTick = this.tick + 60 * TICK_RATE;
       }
 
+      // Wall collapse every 45-60 seconds
+      if (this.tick >= this.nextWallCollapseTick) {
+        // Find 3x3 areas with at least 1 destructible wall
+        const candidates: Position[] = [];
+        for (let y = 1; y < this.map.height - 4; y++) {
+          for (let x = 1; x < this.map.width - 4; x++) {
+            let hasDestructible = false;
+            for (let dy = 0; dy < 3 && !hasDestructible; dy++) {
+              for (let dx = 0; dx < 3 && !hasDestructible; dx++) {
+                const tile = this.map.tiles[y + dy][x + dx];
+                if (tile === 'destructible' || tile === 'destructible_cracked') {
+                  hasDestructible = true;
+                }
+              }
+            }
+            if (hasDestructible) candidates.push({ x, y });
+          }
+        }
+        if (candidates.length > 0) {
+          const target = candidates[Math.floor(this.rng.next() * candidates.length)];
+          const impactTick = this.tick + 40; // 2 second warning
+          this.mapEvents.push({
+            type: 'wall_collapse',
+            position: target,
+            tick: impactTick,
+            warningTick: this.tick,
+          });
+          this._mapEventsDirty = true;
+        }
+        this.nextWallCollapseTick = this.tick + Math.floor((45 + this.rng.next() * 15) * TICK_RATE);
+      }
+
+      // Freeze wave every 50-70 seconds
+      if (this.tick >= this.nextFreezeWaveTick) {
+        const isRow = this.rng.next() > 0.5;
+        const maxIdx = isRow ? this.map.height - 2 : this.map.width - 2;
+        const idx = 1 + Math.floor(this.rng.next() * maxIdx);
+        const impactTick = this.tick + 20; // 1 second warning
+        this.mapEvents.push({
+          type: 'freeze_wave',
+          position: isRow ? { x: 0, y: idx } : { x: idx, y: 0 },
+          direction: isRow ? 'row' : 'column',
+          index: idx,
+          tick: impactTick,
+          warningTick: this.tick,
+        });
+        this._mapEventsDirty = true;
+        this.nextFreezeWaveTick = this.tick + Math.floor((50 + this.rng.next() * 20) * TICK_RATE);
+      }
+
+      // Bomb surge every 40-55 seconds
+      if (this.tick >= this.nextBombSurgeTick) {
+        let bombCount = 0;
+        for (const bomb of this.bombs.values()) {
+          bomb.ticksRemaining = Math.max(1, bomb.ticksRemaining - 20);
+          bombCount++;
+        }
+        if (bombCount > 0) {
+          this.mapEvents.push({ type: 'bomb_surge', tick: this.tick });
+          this._mapEventsDirty = true;
+        }
+        this.nextBombSurgeTick = this.tick + Math.floor((40 + this.rng.next() * 15) * TICK_RATE);
+      }
+
+      // Revert freeze wave tiles when duration expires
+      if (this.frozenTiles.size > 0 && this.tick >= this.frozenTilesRevertTick) {
+        for (const [key, originalType] of this.frozenTiles) {
+          const [xStr, yStr] = key.split(',');
+          this.setTileTracked(parseInt(xStr), parseInt(yStr), originalType);
+        }
+        this.frozenTiles.clear();
+      }
+
       // Process pending meteor impacts
       for (let i = this.mapEvents.length - 1; i >= 0; i--) {
         const event = this.mapEvents[i];
@@ -617,6 +749,41 @@ export class GameStateManager {
           for (const cell of cells) {
             this.destroyTileTracked(cell.x, cell.y);
           }
+          this.mapEvents.splice(i, 1);
+          this._mapEventsDirty = true;
+        }
+
+        // Process wall collapse impacts
+        if (event.type === 'wall_collapse' && event.position && this.tick >= event.tick) {
+          for (let dy = 0; dy < 3; dy++) {
+            for (let dx = 0; dx < 3; dx++) {
+              this.destroyTileTracked(event.position.x + dx, event.position.y + dy);
+            }
+          }
+          this.mapEvents.splice(i, 1);
+          this._mapEventsDirty = true;
+        }
+
+        // Process freeze wave impacts
+        if (
+          event.type === 'freeze_wave' &&
+          this.tick >= event.tick &&
+          this.frozenTiles.size === 0
+        ) {
+          const idx = event.index!;
+          const isRow = event.direction === 'row';
+          const len = isRow ? this.map.width : this.map.height;
+          for (let j = 1; j < len - 1; j++) {
+            const x = isRow ? j : idx;
+            const y = isRow ? idx : j;
+            const tile = this.map.tiles[y][x];
+            // Only freeze walkable non-special tiles
+            if (tile === 'empty' || tile === 'spawn') {
+              this.frozenTiles.set(`${x},${y}`, tile);
+              this.setTileTracked(x, y, 'ice');
+            }
+          }
+          this.frozenTilesRevertTick = this.tick + 120; // 6 seconds
           this.mapEvents.splice(i, 1);
           this._mapEventsDirty = true;
         }
@@ -645,6 +812,7 @@ export class GameStateManager {
             this.placementCounter--;
             player.placement = this.getAlivePlayers().length + 1;
             this.tickEvents.playerDied.push({ playerId: player.id, killerId: null });
+            this.dropPowerUpOnDeath(player);
           }
         }
       }
@@ -694,10 +862,18 @@ export class GameStateManager {
       this._mapEventsCache =
         this.mapEvents.length > 0
           ? this.mapEvents.map((e) => ({
-              type: e.type as 'meteor' | 'powerup_rain',
+              type: e.type as
+                | 'meteor'
+                | 'powerup_rain'
+                | 'wall_collapse'
+                | 'freeze_wave'
+                | 'bomb_surge'
+                | 'hill_move',
               position: e.position,
               tick: e.tick,
               warningTick: e.warningTick,
+              direction: e.direction,
+              index: e.index,
             }))
           : undefined;
       this._mapEventsDirty = false;
@@ -797,9 +973,18 @@ export class GameStateManager {
       }
       if (remoteBombs.length > 0) {
         const tileSnapshot = this.map.tiles.map((row) => [...row]);
-        for (const bomb of remoteBombs) {
-          this.detonateBomb(bomb, tileSnapshot);
+        if (player.remoteDetonateMode === 'fifo') {
+          // Detonate only the oldest bomb (lowest ticksRemaining = placed earliest)
+          remoteBombs.sort((a, b) => a.ticksRemaining - b.ticksRemaining);
+          this.detonateBomb(remoteBombs[0], tileSnapshot);
+        } else {
+          for (const bomb of remoteBombs) {
+            this.detonateBomb(bomb, tileSnapshot);
+          }
         }
+      } else if (player.hasRemoteBomb) {
+        // No remote bombs placed — toggle detonation mode
+        player.remoteDetonateMode = player.remoteDetonateMode === 'all' ? 'fifo' : 'all';
       }
     }
 
@@ -874,6 +1059,52 @@ export class GameStateManager {
             player.fireRange,
           );
         }
+      }
+    }
+
+    // Bomb throw: throw a bomb 3 tiles in facing direction, flying over walls
+    if (input.action === 'throw' && player.hasBombThrow && player.canPlaceBomb()) {
+      const bombType: BombType = player.hasRemoteBomb
+        ? 'remote'
+        : player.hasPierceBomb
+          ? 'pierce'
+          : 'normal';
+
+      const dir = player.direction;
+      const dx = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+      const dy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
+      const throwRange = 3;
+
+      // Find the landing position: fly over everything, land on last valid tile
+      let landPos: Position | null = null;
+      for (let i = throwRange; i >= 1; i--) {
+        const tx = player.position.x + dx * i;
+        const ty = player.position.y + dy * i;
+        // Must be in bounds
+        if (tx < 0 || tx >= this.map.width || ty < 0 || ty >= this.map.height) continue;
+        // Must be walkable (can't land on walls)
+        if (!this.collisionSystem.isWalkable(tx, ty)) continue;
+        // Must not already have a bomb
+        if (bombPosSet.has(`${tx},${ty}`)) continue;
+        landPos = { x: tx, y: ty };
+        break;
+      }
+
+      // Fallback: place at feet if no valid landing position found
+      if (!landPos) {
+        const posKey = `${player.position.x},${player.position.y}`;
+        if (!bombPosSet.has(posKey)) {
+          landPos = { ...player.position };
+        }
+      }
+
+      if (landPos) {
+        const bomb = new Bomb(landPos, player.id, player.fireRange, bombType);
+        this.bombs.set(bomb.id, bomb);
+        bombPosSet.add(`${landPos.x},${landPos.y}`);
+        player.bombCount++;
+        player.bombsPlaced++;
+        this.gameLogger?.logBomb('place', player.id, player.username, landPos, player.fireRange);
       }
     }
   }
@@ -1091,6 +1322,51 @@ export class GameStateManager {
     return this.enabledPowerUps[Math.floor(this.rng.next() * this.enabledPowerUps.length)];
   }
 
+  /** Pick a random valid position for the KOTH hill zone, away from current zone */
+  private pickNewHillZone(): { x: number; y: number; width: number; height: number } | null {
+    const candidates: Position[] = [];
+    const curCenterX = this.hillZone!.x + Math.floor(KOTH_ZONE_SIZE / 2);
+    const curCenterY = this.hillZone!.y + Math.floor(KOTH_ZONE_SIZE / 2);
+    // Find valid positions: zone fits in map, avoids borders by 2 tiles, no indestructible walls in zone
+    for (let y = 2; y <= this.map.height - KOTH_ZONE_SIZE - 2; y++) {
+      for (let x = 2; x <= this.map.width - KOTH_ZONE_SIZE - 2; x++) {
+        const centerX = x + Math.floor(KOTH_ZONE_SIZE / 2);
+        const centerY = y + Math.floor(KOTH_ZONE_SIZE / 2);
+        // Must be at least 4 tiles from current center
+        const dist = Math.abs(centerX - curCenterX) + Math.abs(centerY - curCenterY);
+        if (dist < 4) continue;
+        // Check no indestructible walls in the zone area
+        let hasWall = false;
+        for (let dy = 0; dy < KOTH_ZONE_SIZE && !hasWall; dy++) {
+          for (let dx = 0; dx < KOTH_ZONE_SIZE && !hasWall; dx++) {
+            if (this.map.tiles[y + dy][x + dx] === 'wall') hasWall = true;
+          }
+        }
+        if (!hasWall) candidates.push({ x, y });
+      }
+    }
+    if (candidates.length === 0) return null;
+    const chosen = candidates[Math.floor(this.rng.next() * candidates.length)];
+    return { x: chosen.x, y: chosen.y, width: KOTH_ZONE_SIZE, height: KOTH_ZONE_SIZE };
+  }
+
+  /** Drop one random collected power-up at the player's death position */
+  private dropPowerUpOnDeath(player: Player): void {
+    const droppable: PowerUpType[] = [];
+    for (let i = 0; i < player.maxBombs - 1; i++) droppable.push('bomb_up');
+    for (let i = 0; i < player.fireRange - 1; i++) droppable.push('fire_up');
+    for (let i = 0; i < player.speed - 1; i++) droppable.push('speed_up');
+    if (player.hasKick) droppable.push('kick');
+    if (player.hasPierceBomb) droppable.push('pierce_bomb');
+    if (player.hasRemoteBomb) droppable.push('remote_bomb');
+    if (player.hasLineBomb) droppable.push('line_bomb');
+    if (droppable.length > 0) {
+      const type = droppable[Math.floor(this.rng.next() * droppable.length)];
+      const powerUp = new PowerUp(player.position, type);
+      this.powerUps.set(powerUp.id, powerUp);
+    }
+  }
+
   private checkWinCondition(): void {
     // Campaign mode handles its own win conditions in CampaignGame
     if (this.gameMode === 'campaign') return;
@@ -1160,6 +1436,7 @@ export class GameStateManager {
     this.placementCounter--;
     player.placement = this.getAlivePlayers().length + 1;
     this.tickEvents.playerDied.push({ playerId, killerId });
+    this.dropPowerUpOnDeath(player);
     this.gameLogger?.logKill(
       killerId ?? playerId,
       killerId ? (this.players.get(killerId)?.username ?? '') : player.username,
@@ -1189,6 +1466,13 @@ export class GameStateManager {
         ? {
             ...this.hillZone,
             controllingPlayer: this._hillControllingPlayerId,
+            controllingTeam: null,
+          }
+        : undefined,
+      pendingHillZone: this.pendingHillZone
+        ? {
+            ...this.pendingHillZone,
+            controllingPlayer: null,
             controllingTeam: null,
           }
         : undefined,
@@ -1226,6 +1510,13 @@ export class GameStateManager {
         ? {
             ...this.hillZone,
             controllingPlayer: this._hillControllingPlayerId,
+            controllingTeam: null,
+          }
+        : undefined,
+      pendingHillZone: this.pendingHillZone
+        ? {
+            ...this.pendingHillZone,
+            controllingPlayer: null,
             controllingTeam: null,
           }
         : undefined,

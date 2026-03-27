@@ -30,6 +30,8 @@ export class Player {
   public hasPierceBomb: boolean = false;
   public hasRemoteBomb: boolean = false;
   public hasLineBomb: boolean = false;
+  public hasBombThrow: boolean = false;
+  public remoteDetonateMode: 'all' | 'fifo' = 'all';
   public team: number | null = null;
   public direction: Direction = 'down';
   public invulnerableTicks: number = INVULNERABILITY_TICKS;
@@ -109,6 +111,9 @@ export class Player {
       case 'line_bomb':
         this.hasLineBomb = true;
         break;
+      case 'bomb_throw':
+        this.hasBombThrow = true;
+        break;
     }
   }
 
@@ -144,6 +149,7 @@ export class Player {
     this.hasPierceBomb = false;
     this.hasRemoteBomb = false;
     this.hasLineBomb = false;
+    this.hasBombThrow = false;
     this.invulnerableTicks = INVULNERABILITY_TICKS;
     this.moveCooldown = 0;
     this.respawnTick = null;
@@ -176,6 +182,8 @@ export class Player {
       hasPierceBomb: this.hasPierceBomb,
       hasRemoteBomb: this.hasRemoteBomb,
       hasLineBomb: this.hasLineBomb,
+      hasBombThrow: this.hasBombThrow,
+      remoteDetonateMode: this.hasRemoteBomb ? this.remoteDetonateMode : undefined,
       team: this.team,
       direction: this.direction,
       isBot: this.isBot,

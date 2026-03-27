@@ -1,6 +1,19 @@
 import { MapEvent, TILE_SIZE } from '@blast-arena/shared';
 import { getSettings } from './Settings';
 
+interface TrackedWarning {
+  type: 'wall_collapse' | 'freeze_wave';
+  graphics: Phaser.GameObjects.Graphics;
+  warningText: Phaser.GameObjects.Text;
+  impactTick: number;
+  warningTick: number;
+  /** For wall_collapse: top-left position. For freeze_wave: row/column index */
+  position: { x: number; y: number };
+  direction?: 'row' | 'column';
+  index?: number;
+  impacted: boolean;
+}
+
 interface TrackedMeteor {
   /** The target tile position */
   tileX: number;
@@ -22,8 +35,10 @@ interface TrackedMeteor {
 export class MapEventRenderer {
   private scene: Phaser.Scene;
   private tracked: Map<string, TrackedMeteor> = new Map();
+  private trackedWarnings: Map<string, TrackedWarning> = new Map();
   /** Reusable set to detect removed events */
   private activeKeys = new Set<string>();
+  private lastBombSurgeTick: number = -1;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -34,20 +49,50 @@ export class MapEventRenderer {
     this.activeKeys.clear();
 
     for (const event of events) {
-      if (event.type !== 'meteor' || !event.position || event.warningTick == null) continue;
+      // Meteor warnings
+      if (event.type === 'meteor' && event.position && event.warningTick != null) {
+        const key = `meteor_${event.position.x}_${event.position.y}_${event.tick}`;
+        this.activeKeys.add(key);
 
-      const key = `meteor_${event.position.x}_${event.position.y}_${event.tick}`;
-      this.activeKeys.add(key);
-
-      const existing = this.tracked.get(key);
-      if (!existing) {
-        this.createMeteorWarning(key, event);
+        if (!this.tracked.has(key)) {
+          this.createMeteorWarning(key, event);
+        }
+        const tracked = this.tracked.get(key);
+        if (tracked && !tracked.impacted) {
+          this.updateWarningPhase(tracked, currentTick);
+        }
       }
 
-      // Update warning animation based on progress
-      const tracked = this.tracked.get(key);
-      if (tracked && !tracked.impacted) {
-        this.updateWarningPhase(tracked, currentTick);
+      // Wall collapse warnings (reuse meteor-like pattern)
+      if (event.type === 'wall_collapse' && event.position && event.warningTick != null) {
+        const key = `collapse_${event.position.x}_${event.position.y}_${event.tick}`;
+        this.activeKeys.add(key);
+        if (!this.trackedWarnings.has(key)) {
+          this.createAreaWarning(key, event, 'wall_collapse');
+        }
+        const tw = this.trackedWarnings.get(key);
+        if (tw && !tw.impacted) {
+          this.updateAreaWarning(tw, currentTick);
+        }
+      }
+
+      // Freeze wave warnings
+      if (event.type === 'freeze_wave' && event.warningTick != null) {
+        const key = `freeze_${event.direction}_${event.index}_${event.tick}`;
+        this.activeKeys.add(key);
+        if (!this.trackedWarnings.has(key)) {
+          this.createAreaWarning(key, event, 'freeze_wave');
+        }
+        const tw = this.trackedWarnings.get(key);
+        if (tw && !tw.impacted) {
+          this.updateAreaWarning(tw, currentTick);
+        }
+      }
+
+      // Bomb surge — instant visual effect
+      if (event.type === 'bomb_surge' && event.tick !== this.lastBombSurgeTick) {
+        this.lastBombSurgeTick = event.tick;
+        this.triggerBombSurge();
       }
     }
 
@@ -57,14 +102,33 @@ export class MapEventRenderer {
         if (!tracked.impacted) {
           this.triggerImpact(tracked);
         }
-        // Give impact animation time to play, then clean up
         this.scene.time.delayedCall(1200, () => {
           this.destroyTracked(tracked);
           this.tracked.delete(key);
         });
-        // Remove from tracked iteration but keep reference for cleanup
-        // We mark it so we don't re-trigger
         tracked.impacted = true;
+      }
+    }
+
+    // Clean up area warnings that have resolved
+    for (const [key, tw] of this.trackedWarnings) {
+      if (!this.activeKeys.has(key)) {
+        if (!tw.impacted) {
+          tw.impacted = true;
+          // Flash effect on impact
+          const settings = getSettings();
+          if (settings.screenShake && tw.type === 'wall_collapse') {
+            this.scene.cameras.main.shake(250, 0.015);
+          }
+        }
+        this.scene.time.delayedCall(500, () => {
+          if (tw.graphics?.active) tw.graphics.destroy();
+          if (tw.warningText?.active) {
+            this.scene.tweens.killTweensOf(tw.warningText);
+            tw.warningText.destroy();
+          }
+          this.trackedWarnings.delete(key);
+        });
       }
     }
   }
@@ -285,6 +349,123 @@ export class MapEventRenderer {
     }
   }
 
+  private createAreaWarning(
+    key: string,
+    event: MapEvent,
+    type: 'wall_collapse' | 'freeze_wave',
+  ): void {
+    const graphics = this.scene.add.graphics();
+    graphics.setDepth(7);
+
+    let labelX: number, labelY: number;
+    if (type === 'wall_collapse' && event.position) {
+      // 3x3 area warning
+      labelX = (event.position.x + 1.5) * TILE_SIZE;
+      labelY = (event.position.y + 1.5) * TILE_SIZE;
+    } else {
+      // Freeze wave — row or column
+      const isRow = event.direction === 'row';
+      labelX = isRow ? 3 * TILE_SIZE : (event.index ?? 0) * TILE_SIZE + TILE_SIZE / 2;
+      labelY = isRow ? (event.index ?? 0) * TILE_SIZE + TILE_SIZE / 2 : 3 * TILE_SIZE;
+    }
+
+    const label = type === 'wall_collapse' ? '💥' : '❄';
+    const warningText = this.scene.add.text(labelX, labelY - TILE_SIZE * 0.5, label, {
+      fontSize: '24px',
+      fontFamily: 'Chakra Petch, sans-serif',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    warningText.setOrigin(0.5);
+    warningText.setDepth(16);
+
+    const settings = getSettings();
+    if (settings.animations) {
+      this.scene.tweens.add({
+        targets: warningText,
+        scale: { from: 0.8, to: 1.3 },
+        alpha: { from: 0.7, to: 1 },
+        duration: 250,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.InOut',
+      });
+    }
+
+    this.trackedWarnings.set(key, {
+      type,
+      graphics,
+      warningText,
+      impactTick: event.tick,
+      warningTick: event.warningTick!,
+      position: event.position ?? { x: 0, y: 0 },
+      direction: event.direction,
+      index: event.index,
+      impacted: false,
+    });
+  }
+
+  private updateAreaWarning(tw: TrackedWarning, currentTick: number): void {
+    const totalWarning = tw.impactTick - tw.warningTick;
+    const remaining = Math.max(0, tw.impactTick - currentTick);
+    const progress = 1 - remaining / totalWarning;
+    const gfx = tw.graphics;
+    gfx.clear();
+
+    const pulsePhase = Math.sin(currentTick * 0.5) * 0.5 + 0.5;
+    const alpha = 0.15 + progress * 0.3 + pulsePhase * 0.1;
+
+    if (tw.type === 'wall_collapse') {
+      const x = tw.position.x * TILE_SIZE;
+      const y = tw.position.y * TILE_SIZE;
+      const w = 3 * TILE_SIZE;
+      const h = 3 * TILE_SIZE;
+      gfx.fillStyle(0xff6600, alpha);
+      gfx.fillRect(x, y, w, h);
+      gfx.lineStyle(2, 0xff4400, alpha + 0.2);
+      gfx.strokeRect(x, y, w, h);
+    } else {
+      // Freeze wave — highlight row or column
+      const isRow = tw.direction === 'row';
+      const color = 0x44ccff;
+      if (isRow) {
+        const y = tw.index! * TILE_SIZE;
+        gfx.fillStyle(color, alpha);
+        gfx.fillRect(0, y, this.scene.scale.width, TILE_SIZE);
+        gfx.lineStyle(2, color, alpha + 0.2);
+        gfx.strokeRect(0, y, this.scene.scale.width, TILE_SIZE);
+      } else {
+        const x = tw.index! * TILE_SIZE;
+        gfx.fillStyle(color, alpha);
+        gfx.fillRect(x, 0, TILE_SIZE, this.scene.scale.height);
+        gfx.lineStyle(2, color, alpha + 0.2);
+        gfx.strokeRect(x, 0, TILE_SIZE, this.scene.scale.height);
+      }
+    }
+  }
+
+  private triggerBombSurge(): void {
+    const settings = getSettings();
+    // Full-screen red/orange pulse overlay
+    const flash = this.scene.add.graphics();
+    flash.setDepth(25);
+    flash.setScrollFactor(0); // Fixed to camera
+    flash.fillStyle(0xff4400, 0.25);
+    flash.fillRect(0, 0, this.scene.scale.width, this.scene.scale.height);
+
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 400,
+      ease: 'Power2',
+      onComplete: () => flash.destroy(),
+    });
+
+    if (settings.screenShake) {
+      this.scene.cameras.main.shake(200, 0.01);
+    }
+  }
+
   private destroyTracked(tracked: TrackedMeteor): void {
     this.scene.tweens.killTweensOf(tracked.warningText);
     if (tracked.targetGraphics?.active) tracked.targetGraphics.destroy();
@@ -297,5 +478,13 @@ export class MapEventRenderer {
       this.destroyTracked(tracked);
     }
     this.tracked.clear();
+    for (const tw of this.trackedWarnings.values()) {
+      if (tw.graphics?.active) tw.graphics.destroy();
+      if (tw.warningText?.active) {
+        this.scene.tweens.killTweensOf(tw.warningText);
+        tw.warningText.destroy();
+      }
+    }
+    this.trackedWarnings.clear();
   }
 }

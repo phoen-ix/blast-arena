@@ -27,6 +27,8 @@ export class HUDScene extends Phaser.Scene {
     speed: number;
     hasShield: boolean;
     hasKick: boolean;
+    hasBombThrow: boolean;
+    remoteDetonateMode?: 'all' | 'fifo';
   } | null = null;
   // Element refs for stats bar (avoid innerHTML on every update)
   private statEls: {
@@ -35,6 +37,8 @@ export class HUDScene extends Phaser.Scene {
     speed: HTMLElement;
     shield: HTMLElement;
     kick: HTMLElement;
+    throw: HTMLElement;
+    remoteMode: HTMLElement;
   } | null = null;
   // Player list element cache for differential updates
   private playerListCache: Map<string, HTMLElement> = new Map();
@@ -296,6 +300,8 @@ export class HUDScene extends Phaser.Scene {
             <span class="stat-item">⚡ <span id="stat-speed"></span></span>
             <span class="stat-item" id="stat-shield">🛡️</span>
             <span class="stat-item" id="stat-kick">👢</span>
+            <span class="stat-item" id="stat-throw" style="opacity:0.3">🎯</span>
+            <span class="stat-item" id="stat-remote-mode" style="display:none; font-size:0.75em;">🎯 ALL</span>
           `;
           this.statEls = {
             bombs: document.getElementById('stat-bombs')!,
@@ -303,6 +309,8 @@ export class HUDScene extends Phaser.Scene {
             speed: document.getElementById('stat-speed')!,
             shield: document.getElementById('stat-shield')!,
             kick: document.getElementById('stat-kick')!,
+            throw: document.getElementById('stat-throw')!,
+            remoteMode: document.getElementById('stat-remote-mode')!,
           };
         }
 
@@ -328,6 +336,17 @@ export class HUDScene extends Phaser.Scene {
         if (!prev || prev.hasKick !== me.hasKick) {
           els.kick.style.opacity = me.hasKick ? '1' : '0.3';
         }
+        if (!prev || prev.hasBombThrow !== me.hasBombThrow) {
+          els.throw.style.opacity = me.hasBombThrow ? '1' : '0.3';
+        }
+        if (!prev || prev.remoteDetonateMode !== me.remoteDetonateMode) {
+          if (me.hasRemoteBomb && me.remoteDetonateMode) {
+            els.remoteMode.style.display = '';
+            els.remoteMode.textContent = `🎯 ${me.remoteDetonateMode === 'fifo' ? '1st' : 'ALL'}`;
+          } else {
+            els.remoteMode.style.display = 'none';
+          }
+        }
 
         this.previousStats = {
           maxBombs: me.maxBombs,
@@ -335,6 +354,8 @@ export class HUDScene extends Phaser.Scene {
           speed: me.speed,
           hasShield: me.hasShield,
           hasKick: me.hasKick,
+          hasBombThrow: me.hasBombThrow,
+          remoteDetonateMode: me.remoteDetonateMode,
         };
       }
     }

@@ -27,7 +27,7 @@ Open `http://localhost:8080` (or your configured `APP_EXTERNAL_PORT`). See `.env
 | **Battle Royale** | 4-8 | 5 min | Circular danger zone shrinks inward |
 | **Sudden Death** | 2-8 | 2 min | Start fully powered, no power-ups, one hit kills |
 | **Deathmatch** | 2-8 | 5 min | Respawn after death, first to 10 kills wins |
-| **King of the Hill** | 2-8 | 4 min | Control the 3x3 center zone, first to 100 points |
+| **King of the Hill** | 2-8 | 4 min | Control the 3x3 zone (moves every 30s with warning), first to 100 points |
 
 ## Controls
 
@@ -35,7 +35,8 @@ Open `http://localhost:8080` (or your configured `APP_EXTERNAL_PORT`). See `.env
 |----------|---------|--------|
 | `WASD` / `Arrow Keys` | D-Pad / Left Stick | Move |
 | `Space` | A | Place bomb |
-| `E` | B | Detonate remote bombs |
+| `E` | B | Detonate remote bombs / Toggle FIFO mode |
+| `Q` | Y | Throw bomb (with Bomb Throw power-up) |
 | `1`-`6` | — | Quick emote (when alive) |
 | `Escape` | — | Pause campaign (when in campaign) |
 | `1`-`9` | LB / RB | Spectate player (when dead) |
@@ -52,14 +53,15 @@ Walk into a bomb with the Kick power-up to send it sliding. Click a player name 
 | **Shield** | Absorbs one hit from any source (no time limit, doesn't stack) |
 | **Kick** | Walk into bombs to kick them |
 | **Pierce Bomb** | Explosions pass through destructible walls |
-| **Remote Bomb** | Bombs don't auto-detonate; press E to detonate all (10s safety max) |
+| **Remote Bomb** | Bombs don't auto-detonate; press E to detonate all (10s safety max). Toggle FIFO mode (oldest first) by pressing E with no bombs placed |
 | **Line Bomb** | Places a line of bombs in facing direction |
+| **Bomb Throw** | Press Q to throw a bomb 3 tiles in facing direction, flying over walls and obstacles |
 
-All power-up icons are procedurally drawn (no emoji) for consistent rendering across all platforms.
+Killed players drop one random collected power-up at their death position. All power-up icons are procedurally drawn (no emoji) for consistent rendering across all platforms.
 
 ## Map Features
 
-All optional, toggled per-room: **Reinforced Walls** (2-hit destructible walls), **Map Events** (meteor strikes with 2-second visual warning — pulsing crosshair, exclamation mark, growing shadow — followed by a falling meteor animation with screen shake and particle effects; power-up rain every 60s), **Hazard Tiles** (teleporter pairs with random A↔B transport, conveyor belts with animated moving stripes that auto-push players, bombs, and campaign enemies). Campaign-only hazard tiles: vine (slows), quicksand (slows + kills over time), ice (sliding momentum), lava (instant kill), mud (slows), spikes (cycling damage), dark rift (random teleport). Special tiles and power-ups can be hidden under destructible walls — revealed when the wall is destroyed. **Puzzle Tiles** (campaign only): color-coded switches (toggle, pressure plate, one-shot) that open/close matching gates (explosions pass through gates in both states), and crumbling floors that collapse into pits after being stepped on — enables environmental puzzle design with bomb-triggered switches, timed pressure plate rushes, and path-planning challenges.
+All optional, toggled per-room: **Reinforced Walls** (2-hit destructible walls), **Map Events** (meteor strikes with 2-second visual warning — pulsing crosshair, exclamation mark, growing shadow — followed by a falling meteor animation with screen shake and particle effects; power-up rain every 60s; wall collapse destroys a 3x3 area with dust warning; freeze wave converts a row or column to ice temporarily; bomb surge reduces all bomb fuse timers with a screen pulse), **Hazard Tiles** (teleporter pairs with random A↔B transport, conveyor belts with animated moving stripes that auto-push players, bombs, and campaign enemies). Campaign-only hazard tiles: vine (slows), quicksand (slows + kills over time), ice (sliding momentum), lava (instant kill), mud (slows), spikes (cycling damage), dark rift (random teleport). Special tiles and power-ups can be hidden under destructible walls — revealed when the wall is destroyed. **Puzzle Tiles** (campaign only): color-coded switches (toggle, pressure plate, one-shot) that open/close matching gates (explosions pass through gates in both states), and crumbling floors that collapse into pits after being stepped on — enables environmental puzzle design with bomb-triggered switches, timed pressure plate rushes, and path-planning challenges.
 
 ## Campaign
 
@@ -131,7 +133,7 @@ Full-page Help view accessible from the lobby sidebar. Seven tabs with role-base
 | Tab | Access | Content |
 |-----|--------|---------|
 | Getting Started | All | Keyboard + gamepad controls, basic mechanics, spectator mode |
-| Power-Ups | All | All 8 power-ups with Canvas2D inline sprites matching in-game textures |
+| Power-Ups | All | All 9 power-ups with Canvas2D inline sprites matching in-game textures |
 | Game Modes | All | 6 modes with player counts, rules, win conditions |
 | Map Features | All | Reinforced walls, dynamic events, hazard tiles with visual previews |
 | Guides | All | Rendered markdown docs: Campaign, Replays, Bot AI (collapsible sections) |

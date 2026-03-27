@@ -321,6 +321,42 @@ function drawLineBombIcon(ctx: CanvasRenderingContext2D, cx: number, cy: number,
   ctx.globalAlpha = 1;
 }
 
+/** Bomb Throw: bomb with an arc arrow showing trajectory */
+function drawBombThrowIcon(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number): void {
+  // Bomb body (smaller, offset left)
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.9;
+  ctx.beginPath();
+  ctx.arc(cx - 5 * s, cy + 4 * s, 8 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Highlight
+  ctx.globalAlpha = 0.3;
+  ctx.beginPath();
+  ctx.arc(cx - 8 * s, cy + 1 * s, 3 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Arc trajectory arrow
+  ctx.globalAlpha = 0.8;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2 * s;
+  ctx.beginPath();
+  ctx.moveTo(cx - 5 * s, cy - 2 * s);
+  ctx.quadraticCurveTo(cx + 2 * s, cy - 14 * s, cx + 12 * s, cy - 2 * s);
+  ctx.stroke();
+
+  // Arrowhead
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(cx + 12 * s, cy - 2 * s);
+  ctx.lineTo(cx + 8 * s, cy - 6 * s);
+  ctx.lineTo(cx + 8 * s, cy + 1 * s);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+}
+
 export const POWERUP_ICON_DRAWERS: Record<string, PowerUpIconDrawFn> = {
   bomb_up: drawBombUpIcon,
   fire_up: drawFireUpIcon,
@@ -330,4 +366,5 @@ export const POWERUP_ICON_DRAWERS: Record<string, PowerUpIconDrawFn> = {
   pierce_bomb: drawPierceBombIcon,
   remote_bomb: drawRemoteBombIcon,
   line_bomb: drawLineBombIcon,
+  bomb_throw: drawBombThrowIcon,
 };

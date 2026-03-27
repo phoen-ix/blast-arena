@@ -68,6 +68,7 @@ const VALID_POWERUP_TYPES = [
   'pierce_bomb',
   'remote_bomb',
   'line_bomb',
+  'bomb_throw',
 ] as const;
 
 const matchConfigSchema = z.object({
@@ -605,7 +606,10 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
           input.direction !== 'down' &&
           input.direction !== 'left' &&
           input.direction !== 'right') ||
-        (input.action !== null && input.action !== 'bomb' && input.action !== 'detonate')
+        (input.action !== null &&
+          input.action !== 'bomb' &&
+          input.action !== 'detonate' &&
+          input.action !== 'throw')
       ) {
         return;
       }

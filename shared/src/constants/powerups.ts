@@ -67,16 +67,26 @@ export const POWERUP_DEFINITIONS: Record<PowerUpType, PowerUpDefinition> = {
     weight: 3,
     color: '#FFAA44',
   },
+  bomb_throw: {
+    type: 'bomb_throw',
+    name: 'Bomb Throw',
+    description: 'Press Q to throw a bomb over walls',
+    weight: 4,
+    color: '#FF66FF',
+  },
 };
 
 export const POWERUP_TOTAL_WEIGHT = Object.values(POWERUP_DEFINITIONS).reduce(
   (sum, def) => sum + def.weight,
-  0
+  0,
 );
 
-export function getRandomPowerUpType(random: () => number, enabledTypes?: PowerUpType[]): PowerUpType {
+export function getRandomPowerUpType(
+  random: () => number,
+  enabledTypes?: PowerUpType[],
+): PowerUpType {
   const defs = enabledTypes
-    ? Object.values(POWERUP_DEFINITIONS).filter(d => enabledTypes.includes(d.type))
+    ? Object.values(POWERUP_DEFINITIONS).filter((d) => enabledTypes.includes(d.type))
     : Object.values(POWERUP_DEFINITIONS);
 
   const totalWeight = defs.reduce((sum, def) => sum + def.weight, 0);

@@ -61,7 +61,8 @@ export type PowerUpType =
   | 'kick'
   | 'pierce_bomb'
   | 'remote_bomb'
-  | 'line_bomb';
+  | 'line_bomb'
+  | 'bomb_throw';
 
 export interface Position {
   x: number;
@@ -82,6 +83,8 @@ export interface PlayerState {
   hasPierceBomb: boolean;
   hasRemoteBomb: boolean;
   hasLineBomb: boolean;
+  hasBombThrow: boolean;
+  remoteDetonateMode?: 'all' | 'fifo';
   team: number | null;
   direction: Direction;
   isBot: boolean;
@@ -138,10 +141,12 @@ export interface HillZone {
 }
 
 export interface MapEvent {
-  type: 'meteor' | 'powerup_rain';
+  type: 'meteor' | 'powerup_rain' | 'wall_collapse' | 'freeze_wave' | 'bomb_surge' | 'hill_move';
   position?: Position;
   tick: number;
   warningTick?: number;
+  direction?: 'row' | 'column';
+  index?: number;
 }
 
 export interface GameState {
@@ -155,6 +160,7 @@ export interface GameState {
   tileDiffs?: TileDiff[];
   zone?: ZoneState;
   hillZone?: HillZone;
+  pendingHillZone?: HillZone;
   kothScores?: Record<number, number>;
   mapEvents?: MapEvent[];
   status: 'countdown' | 'playing' | 'finished';
@@ -177,6 +183,6 @@ export interface ZoneState {
 export interface PlayerInput {
   seq: number;
   direction: Direction | null;
-  action: 'bomb' | 'detonate' | null;
+  action: 'bomb' | 'detonate' | 'throw' | null;
   tick: number;
 }

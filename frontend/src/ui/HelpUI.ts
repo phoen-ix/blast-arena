@@ -38,6 +38,8 @@ const POWERUP_DETAILS: Record<string, string> = {
     'Your bombs no longer auto-detonate on a timer. Press <span class="help-key">E</span> (or <span class="help-key">B</span> on gamepad) to detonate all your remote bombs at once. Safety auto-detonation after 10 seconds. Bombs appear blue with a blinking effect.',
   line_bomb:
     'Places a line of bombs in your facing direction, using up to your remaining bomb capacity. Great for cutting off escape routes or triggering massive chain reactions.',
+  bomb_throw:
+    'Press <span class="help-key">Q</span> (or <span class="help-key">Y</span> on gamepad) to throw a bomb 3 tiles in your facing direction, flying over walls and obstacles. The bomb lands on the farthest valid tile. Combines with pierce/remote bomb types.',
 };
 
 const MODE_DETAILS: Record<string, string> = {

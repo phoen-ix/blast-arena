@@ -34,6 +34,7 @@ const createRoomSchema = z.object({
           'pierce_bomb',
           'remote_bomb',
           'line_bomb',
+          'bomb_throw',
         ]),
       )
       .optional(),

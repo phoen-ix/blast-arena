@@ -64,8 +64,9 @@ export class GameScene extends Phaser.Scene {
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private detonateKey!: Phaser.Input.Keyboard.Key;
+  private throwKey!: Phaser.Input.Keyboard.Key;
   private gamepadManager!: GamepadManager;
-  private pendingGamepadAction: 'bomb' | 'detonate' | null = null;
+  private pendingGamepadAction: 'bomb' | 'detonate' | 'throw' | null = null;
   private lastInputSeq: number = 0;
   private lastInputTime: number = 0;
 
@@ -216,6 +217,7 @@ export class GameScene extends Phaser.Scene {
       };
       this.spaceKey = this.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
       this.detonateKey = this.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+      this.throwKey = this.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     }
 
     this.gamepadManager = new GamepadManager(this);
@@ -588,7 +590,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (state.hillZone) {
-      this.hillZoneRenderer.update(state.hillZone, state.kothScores);
+      this.hillZoneRenderer.update(state.hillZone, state.kothScores, state.pendingHillZone);
     }
 
     // Update map events (meteors, etc.)
@@ -1043,7 +1045,7 @@ export class GameScene extends Phaser.Scene {
     if (now - this.lastInputTime < TICK_MS) return;
 
     let direction: Direction | null = null;
-    let action: 'bomb' | 'detonate' | null = null;
+    let action: 'bomb' | 'detonate' | 'throw' | null = null;
 
     // Keyboard input
     if (this.cursors) {
@@ -1054,6 +1056,7 @@ export class GameScene extends Phaser.Scene {
 
       if (this.spaceKey?.isDown) action = 'bomb';
       if (this.detonateKey?.isDown) action = 'detonate';
+      if (this.throwKey?.isDown) action = 'throw';
     }
 
     // Gamepad input (fills nulls — keyboard takes priority)

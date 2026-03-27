@@ -140,6 +140,7 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 - Bomb kick: player with hasKick walking into a bomb sets bomb.sliding direction; sliding bombs advance 1 tile/tick until blocked; kicking applies movement cooldown
 - Spawn position randomization: Fisher-Yates shuffle using seeded RNG (`shuffledSpawnIndices`), deterministic for replays
 - Self-kills subtract 1 from kill score (owner.kills decremented, owner.selfKills incremented)
+- Power-up drop on kill: dying players drop one random collected power-up as a pickup at death position. Weighted by stacked amounts (e.g., 3 bomb_up if maxBombs=4). `dropPowerUpOnDeath()` on GameState
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished'; winner invulnerable during grace period
 - Dead players enter spectator mode: free camera pan, click-to-follow, number keys 1-9, LB/RB bumpers
@@ -171,17 +172,18 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 - **Battle Royale**: 4-8 players, shrinking circular zone, 5 min
 - **Sudden Death**: 2-8 players, all maxed stats, no power-ups, one hit kills, 2 min
 - **Deathmatch**: 2-8 players, respawn after 3s, first to 10 kills or most at time, 5 min
-- **King of the Hill**: 2-8 players, control 3x3 center zone, first to 100, 4 min
+- **King of the Hill**: 2-8 players, control 3x3 center zone, first to 100, 4 min. Hill moves every 30s (`KOTH_HILL_MOVE_INTERVAL`) with 5s warning (`KOTH_HILL_MOVE_WARNING`). `pendingHillZone` shows ghost outline; `pickNewHillZone()` ensures minimum distance from current zone
 
-### Power-Ups (8 types)
+### Power-Ups (9 types)
 - bomb_up, fire_up, speed_up, shield, kick (original 5)
 - **pierce_bomb**: Explosions pass through destructible walls (still destroys them)
-- **remote_bomb**: Bombs don't auto-detonate; press E to detonate all at once (10s safety max)
+- **remote_bomb**: Bombs don't auto-detonate; press E to detonate all at once (10s safety max). Supports FIFO detonation mode — press E with no bombs placed to toggle between ALL (detonate all at once) and FIFO (detonate oldest first). Mode shown in HUD. `remoteDetonateMode` on Player
 - **line_bomb**: Places line of bombs in facing direction (up to remaining bomb capacity)
+- **bomb_throw**: Press Q to throw a bomb 3 tiles in facing direction, flying over walls/destructibles/bombs. Lands on farthest valid walkable tile. Combines with pierce/remote bomb types. Weight 4 (rare). `hasBombThrow` on Player
 
 ### Map Features
 - **Reinforced walls** (optional): 2 hits — first cracks (`destructible_cracked`), second destroys
-- **Dynamic map events** (optional): Meteor strikes every 30-45s (40-tick/2s warning with crosshair reticle, exclamation mark, growing shadow; impact triggers falling meteor animation, flash, debris/fire/spark particles, screen shake). `ownerId: -999` for system-owned meteor explosions (2-tile blast radius). Power-up rain every 60s. `MapEventRenderer` in `frontend/src/game/MapEventRenderer.ts`
+- **Dynamic map events** (optional): Meteor strikes every 30-45s (40-tick/2s warning with crosshair reticle, exclamation mark, growing shadow; impact triggers falling meteor animation, flash, debris/fire/spark particles, screen shake). `ownerId: -999` for system-owned meteor explosions (2-tile blast radius). Power-up rain every 60s. Wall collapse every 45-60s (40-tick warning, destroys 3x3 destructible area). Freeze wave every 50-70s (20-tick warning, converts row/column to ice for 120 ticks via `frozenTiles` Map, then reverts). Bomb surge every 40-55s (instant, all bombs lose 20 fuse ticks, red screen pulse + shake). `MapEventRenderer` in `frontend/src/game/MapEventRenderer.ts`
 - **Hazard tiles** (optional): Teleporter pairs (A↔B, seeded-RNG destination selection, works for players and campaign enemies), conveyor belts (auto-push players, bombs, and campaign enemies in direction when movement cooldown ready, chain into teleporters, animated moving stripes via 4-frame Phaser spritesheet animation at 8fps). Bombs on conveyors use `MOVE_COOLDOWN_BASE` tick cooldown between pushes; kicked bombs (already sliding) ignore conveyors. Conveyor belts also push campaign enemies (except `canPassWalls` enemies) — processed before AI so conveyor consumes the move cooldown and AI skips that tick. Campaign-only hazard tiles: vine (slows movement), quicksand (slows + kills after `QUICKSAND_KILL_TICKS`), ice (sliding momentum), lava (instant kill), mud (slows movement), spikes/spikes_active (cycling damage via `SPIKE_SAFE_TICKS`/`SPIKE_CYCLE_TICKS`), dark_rift (teleports to random empty tile). Slowing tiles (vine/quicksand/mud) use `movedThisTick` flag on Player/Enemy to apply slowdown only once per move — not every tick. Hazard tile types, constants, and theme mappings in `shared/src/utils/hazard.ts` and `shared/src/constants/campaignThemes.ts`
 - **Covered tiles**: Special tiles (exit, goal, teleporters, conveyors, switches, gates) hidden under destructible walls via `coveredTiles` array. Editor shows overlay at 0.7 alpha; gameplay reveals tile type when wall destroyed. `reservedPowerUpTiles` Set prevents random power-up drops at positions with hidden power-ups
 - **Puzzle tiles** (campaign only): Switches (4 colors × 3 variants), gates (4 colors), crumbling floors. See Campaign System → Puzzle Tiles section
