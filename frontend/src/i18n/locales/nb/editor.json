@@ -1,0 +1,91 @@
+{
+  "title": {
+    "mapEditor": "Kartredigerer",
+    "levelEditor": "Niv\u00e5redigerer"
+  },
+  "tools": {
+    "tiles": "Ruter",
+    "empty": "Tom",
+    "wall": "Vegg",
+    "destructible": "\u00d8deleggbar",
+    "spawn": "Startpunkt",
+    "exit": "Utgang",
+    "goal": "M\u00e5l",
+    "eraser": "Viskel\u00e6r",
+    "mechanics": "Mekanikk",
+    "teleporterA": "Teleporter A",
+    "teleporterB": "Teleporter B",
+    "conveyorUp": "Transportb\u00e5nd \u2191",
+    "conveyorDown": "Transportb\u00e5nd \u2193",
+    "conveyorLeft": "Transportb\u00e5nd \u2190",
+    "conveyorRight": "Transportb\u00e5nd \u2192",
+    "puzzle": "Puslespill",
+    "switch": "Bryter",
+    "gate": "Port",
+    "crumblingFloor": "Smuldrende gulv",
+    "themeHazards": "Temafarer",
+    "noHazardsTheme": "Ingen farefliser for dette temaet",
+    "noHazardsAvailable": "Ingen farefliser tilgjengelig",
+    "showAllThemes": "Vis alle temaer",
+    "enemies": "Fiender",
+    "powerUps": "Oppgraderinger",
+    "variants": {
+      "toggle": "Veksle",
+      "pressure": "Trykk",
+      "oneshot": "Engangs"
+    },
+    "powerUpNames": {
+      "bomb_up": "bombe opp",
+      "fire_up": "ild opp",
+      "speed_up": "fart opp",
+      "shield": "skjold",
+      "kick": "spark",
+      "pierce_bomb": "gjennomtrengende bombe",
+      "remote_bomb": "fjernbombe",
+      "line_bomb": "linjebombe"
+    }
+  },
+  "settings": {
+    "mapSettings": "Kartinnstillinger",
+    "levelSettings": "Niv\u00e5innstillinger",
+    "width": "Bredde",
+    "height": "H\u00f8yde",
+    "dimensionHint": "Oddetall, 7\u201351",
+    "name": "Navn",
+    "description": "Beskrivelse",
+    "lives": "Liv",
+    "timeLimit": "Tidsbegrensning (sekunder, 0=ingen)",
+    "parTime": "Partid (sekunder, 0=ingen)",
+    "parTimeHint": "2 stjerner hvis fullf\u00f8rt under partid",
+    "winCondition": "Seiersbetingelse",
+    "winConditions": {
+      "killAll": "Drep alle fiender",
+      "findExit": "Finn utgangen",
+      "reachGoal": "N\u00e5 m\u00e5let",
+      "surviveTime": "Overlev tiden"
+    },
+    "published": "Publisert"
+  },
+  "actions": {
+    "save": "Lagre",
+    "export": "Eksporter",
+    "back": "Tilbake"
+  },
+  "modals": {
+    "unsavedChanges": "Ulagrede endringer",
+    "unsavedDescription": "Du har ulagrede endringer. Vil du lagre f\u00f8r du g\u00e5r?",
+    "cancel": "Avbryt",
+    "discard": "Forkast",
+    "saveAndExit": "Lagre og avslutt"
+  },
+  "toasts": {
+    "needSpawns": "Trenger minst 2 startpunkter",
+    "mapSaved": "Kart lagret!",
+    "levelSaved": "Niv\u00e5 lagret!",
+    "saveFailed": "Lagring mislyktes: {{error}}"
+  },
+  "defaults": {
+    "untitledLevel": "Niv\u00e5 uten tittel",
+    "untitledMap": "Kart uten tittel"
+  }
+}

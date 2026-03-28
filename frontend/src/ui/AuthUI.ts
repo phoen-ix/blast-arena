@@ -261,6 +261,12 @@ export class AuthUI {
       { code: 'es', flag: '🇪🇸', label: 'Español' },
       { code: 'it', flag: '🇮🇹', label: 'Italiano' },
       { code: 'pt', flag: '🇵🇹', label: 'Português' },
+      { code: 'pl', flag: '🇵🇱', label: 'Polski' },
+      { code: 'nl', flag: '🇳🇱', label: 'Nederlands' },
+      { code: 'tr', flag: '🇹🇷', label: 'Türkçe' },
+      { code: 'sv', flag: '🇸🇪', label: 'Svenska' },
+      { code: 'nb', flag: '🇳🇴', label: 'Norsk' },
+      { code: 'da', flag: '🇩🇰', label: 'Dansk' },
     ];
     const current = i18n.language?.split('-')[0] || 'en';
     const currentLang = languages.find((l) => l.code === current) || languages[0];

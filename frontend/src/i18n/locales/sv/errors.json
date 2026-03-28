@@ -1,0 +1,14 @@
+{
+  "CONFLICT": "Användarnamn eller e-postadress redan upptaget",
+  "INVALID_CREDENTIALS": "Ogiltigt användarnamn eller lösenord",
+  "DEACTIVATED": "Kontot har inaktiverats",
+  "INVALID_TOKEN": "Ogiltig eller utgången token",
+  "TOKEN_EXPIRED": "Sessionen har gått ut — logga in igen",
+  "TOKEN_REUSE": "Sessionen ogiltigförklarad av säkerhetsskäl — logga in igen",
+  "VALIDATION_FAILED": "Validering misslyckades",
+  "REGISTRATION_DISABLED": "Registrering är för närvarande inaktiverad",
+  "FORBIDDEN": "Du har inte behörighet att utföra denna åtgärd",
+  "NOT_FOUND": "Resursen hittades inte",
+  "INTERNAL_ERROR": "Ett oväntat fel uppstod",
+  "BAD_REQUEST": "Ogiltig förfrågan"
+}

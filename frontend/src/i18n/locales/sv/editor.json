@@ -1,0 +1,91 @@
+{
+  "title": {
+    "mapEditor": "Kartredigerare",
+    "levelEditor": "Banredigerare"
+  },
+  "tools": {
+    "tiles": "Rutor",
+    "empty": "Tom",
+    "wall": "Vägg",
+    "destructible": "Förstörbar",
+    "spawn": "Startplats",
+    "exit": "Utgång",
+    "goal": "Mål",
+    "eraser": "Suddgummi",
+    "mechanics": "Mekaniker",
+    "teleporterA": "Teleportör A",
+    "teleporterB": "Teleportör B",
+    "conveyorUp": "Transportband \u2191",
+    "conveyorDown": "Transportband \u2193",
+    "conveyorLeft": "Transportband \u2190",
+    "conveyorRight": "Transportband \u2192",
+    "puzzle": "Pussel",
+    "switch": "Brytare",
+    "gate": "Grind",
+    "crumblingFloor": "Smulande golv",
+    "themeHazards": "Temafaror",
+    "noHazardsTheme": "Inga farorutor för detta tema",
+    "noHazardsAvailable": "Inga farorutor tillgängliga",
+    "showAllThemes": "Visa alla teman",
+    "enemies": "Fiender",
+    "powerUps": "Power-ups",
+    "variants": {
+      "toggle": "Växla",
+      "pressure": "Tryck",
+      "oneshot": "Engångs"
+    },
+    "powerUpNames": {
+      "bomb_up": "bomb up",
+      "fire_up": "fire up",
+      "speed_up": "speed up",
+      "shield": "sköld",
+      "kick": "spark",
+      "pierce_bomb": "genomborrbomb",
+      "remote_bomb": "fjärrbomb",
+      "line_bomb": "linjebomb"
+    }
+  },
+  "settings": {
+    "mapSettings": "Kartinställningar",
+    "levelSettings": "Baninställningar",
+    "width": "Bredd",
+    "height": "Höjd",
+    "dimensionHint": "Udda tal, 7-51",
+    "name": "Namn",
+    "description": "Beskrivning",
+    "lives": "Liv",
+    "timeLimit": "Tidsgräns (sekunder, 0=ingen)",
+    "parTime": "Partid (sekunder, 0=ingen)",
+    "parTimeHint": "2 stjärnor om avklarat under partid",
+    "winCondition": "Vinstvillkor",
+    "winConditions": {
+      "killAll": "Döda alla fiender",
+      "findExit": "Hitta utgången",
+      "reachGoal": "Nå målet",
+      "surviveTime": "Överlev tiden"
+    },
+    "published": "Publicerad"
+  },
+  "actions": {
+    "save": "Spara",
+    "export": "Exportera",
+    "back": "Tillbaka"
+  },
+  "modals": {
+    "unsavedChanges": "Osparade ändringar",
+    "unsavedDescription": "Du har osparade ändringar. Vill du spara innan du lämnar?",
+    "cancel": "Avbryt",
+    "discard": "Kassera",
+    "saveAndExit": "Spara & avsluta"
+  },
+  "toasts": {
+    "needSpawns": "Behöver minst 2 startplatser",
+    "mapSaved": "Kartan sparad!",
+    "levelSaved": "Banan sparad!",
+    "saveFailed": "Sparning misslyckades: {{error}}"
+  },
+  "defaults": {
+    "untitledLevel": "Namnlös bana",
+    "untitledMap": "Namnlös karta"
+  }
+}

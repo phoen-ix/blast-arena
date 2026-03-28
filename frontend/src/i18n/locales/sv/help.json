@@ -1,0 +1,199 @@
+{
+  "title": "Hjälp",
+  "backToLobby": "Tillbaka till lobbyn",
+  "github": "GitHub",
+  "loading": "Laddar...",
+  "retry": "Försök igen",
+  "failedToLoad": "Kunde inte ladda.",
+  "failedToLoadDoc": "Kunde inte ladda {{title}}.",
+  "failedToLoadLevelEditor": "Kunde inte ladda banredigerarens dokumentation.",
+
+  "tabs": {
+    "gettingStarted": "Kom igång",
+    "powerUps": "Power-ups",
+    "gameModes": "Spellägen",
+    "mapFeatures": "Kartfunktioner",
+    "guides": "Guider",
+    "levelEditor": "Banredigerare",
+    "adminDocs": "Admindokument"
+  },
+
+  "keyboard": {
+    "heading": "Tangentbordskontroller",
+    "arrowKeys": "Piltangenter",
+    "space": "Mellanslag",
+    "move": "Flytta din karaktär",
+    "placeBomb": "Placera en bomb på din nuvarande position",
+    "detonateRemote": "Detonera alla dina fjärrbomber",
+    "throwBomb": "Kasta en bomb i riktningen du tittar",
+    "sendEmote": "Skicka en snabbemote (GG, Hjälp!, Snyggt!, Hoppsan, Reta, Tack)",
+    "spectateNth": "Titta på den N:e spelaren (när du är död)"
+  },
+
+  "gamepad": {
+    "heading": "Gamepadkontroller (Xbox / Standard)",
+    "tip": "Alla standardmappade kontroller fungerar. Koppla bara in och spela.",
+    "dpad": "Styrplatta",
+    "leftStick": "Vänster spak",
+    "placeBomb": "Placera bomb",
+    "detonateRemote": "Detonera fjärrbomber",
+    "throwBomb": "Kasta bomb",
+    "cycleSpectate": "Byt åskådarmål (när du är död)",
+    "menuNavHeading": "Menynavigering",
+    "navigateMenus": "Navigera menyer",
+    "confirm": "Bekräfta / Välj",
+    "back": "Tillbaka / Stäng"
+  },
+
+  "mechanics": {
+    "heading": "Grundläggande mekaniker",
+    "bombs": "Bomber",
+    "bombsDesc": "exploderar efter 3 sekunder i 4 kardinalriktningar upp till sin eldräckvidd",
+    "chainReactions": "Kedjereaktioner",
+    "chainReactionsDesc": "bomber som fångas i en explosion detonerar omedelbart och skapar förödande kombinationer",
+    "kickedBombs": "Sparkade bomber",
+    "kickedBombsDesc": "glider tills de träffar en vägg, bomb eller spelare",
+    "shieldBreak": "Sköldbrott",
+    "shieldBreakDesc": "efter att din sköld absorberat en träff får du 10 tick av osårbarhet för att fly",
+    "spawnInvuln": "Spawn-osårbarhet",
+    "spawnInvulnDesc": "2 sekunders skydd efter spawn eller respawn",
+    "selfKills": "Självmord",
+    "selfKillsDesc": "drar av 1 från din killpoäng",
+    "gracePeriod": "Nådperiod",
+    "gracePeriodDesc": "1,5 sekunder efter vinstvillkoret innan spelet slutar; vinnaren är osårbar"
+  },
+
+  "spectator": {
+    "heading": "Åskådarläge",
+    "tip": "När du dör går du in i åskådarläge för att titta på de kvarvarande spelarna.",
+    "arrows": "Pilar",
+    "mouseDrag": "Musdragning",
+    "freeCam": "Fri kamerarörelse",
+    "click": "Klick",
+    "followPlayer": "på en spelare för att följa dem",
+    "jumpToNth": "Hoppa till den N:e spelaren",
+    "breakFollow": "Tryck på valfri rörelsetangent eller dra för att sluta följa och återgå till fri kamera"
+  },
+
+  "powerUps": {
+    "tip": "Släpps när förstörbara väggar förstörs. Gå över svävande rutor för att samla. Din HUD (nere till vänster) visar dina nuvarande statistik."
+  },
+
+  "powerUpDetails": {
+    "bomb_up": "Ökar ditt maximala antal bomber med 1 (max 8). Placera fler bomber samtidigt för att fånga fiender och skapa kedjereaktioner.",
+    "fire_up": "Utökar din explosionsräckvidd med 1 ruta i varje riktning (max 8). Längre räckvidd ger mer områdeskontroll och enklare kills.",
+    "speed_up": "Ökar din rörelsehastighet (upp till 5 nivåer). Rör dig snabbare för att undvika explosioner, jaga fiender och plocka power-ups först.",
+    "shield": "Skapar en skyddande aura som absorberar en explosionsträff och sedan bryts. Efter att den bryts får du kort osårbarhet för att fly. Stackar inte — extra upphämtningar förbrukas utan effekt. Ingen tidsgräns.",
+    "kick": "Gå in i en bomb för att sparka den glidande över kartan. Sparkade bomber färdas tills de träffar en vägg, en annan bomb eller en spelare. Ger en kort rörelsefördröjning efter spark.",
+    "pierce_bomb": "Dina explosioner passerar genom förstörbara väggar istället för att stoppas. Väggarna förstörs fortfarande, men explosionen fortsätter bortom dem. Förödande för att rensa stora områden.",
+    "remote_bomb": "Dina bomber detonerar inte längre automatiskt på en timer. Tryck <span class=\"help-key\">E</span> (eller <span class=\"help-key\">B</span> på gamepad) för att detonera. Säkerhetsdetonation efter 10 sekunder. Bomber visas blå med blinkande effekt. Tryck <span class=\"help-key\">E</span> utan placerade bomber för att växla mellan <b>ALLA</b> (detonera alla på en gång) och <b>FIFO</b> (detonera äldsta först) läge. Ditt nuvarande läge visas i HUD:en.",
+    "line_bomb": "Placerar en rad bomber i riktningen du tittar, upp till din återstående bombkapacitet. Utmärkt för att spärra av flyktvägar eller utlösa massiva kedjereaktioner.",
+    "bomb_throw": "Tryck <span class=\"help-key\">Q</span> (eller <span class=\"help-key\">Y</span> på gamepad) för att kasta en bomb 3 rutor i riktningen du tittar, flygande över väggar och hinder. Bomben landar på den bortersta giltiga rutan. Kombineras med genomborr-/fjärrbomber."
+  },
+
+  "gameModes": {
+    "playerRange": "{{min}}\u2013{{max}} spelare"
+  },
+
+  "modeTags": {
+    "shrinkingZone": "Krympande zon",
+    "respawn": "Respawn",
+    "zoneControl": "Zonkontroll",
+    "teams": "{{count}} lag"
+  },
+
+  "modeDetails": {
+    "ffa": "2\u20138 spelare. Klassisk eliminering — bli den sista kvar. 3 minuters rundor.",
+    "teams": "4\u20138 spelare uppdelade i Lag Röd och Lag Blå. Sista laget med en överlevande medlem vinner. Friendly fire kan konfigureras av värden. 4 minuters rundor.",
+    "battle_royale": "4\u20138 spelare. En cirkulär farozon krymper från kanterna över tid. Att stå utanför zonen ger skada varje tick. Håll dig innanför och överlev alla andra. 5 minuters rundor.",
+    "sudden_death": "2\u20138 spelare. Alla startar helt uppgraderade (8 bomber, 8 räckvidd, maxhastighet, spark). Inga power-ups spawnar. Ett träff dödar — ren skicklighet. 2 minuters rundor.",
+    "deathmatch": "2\u20138 spelare. Respawna 3 sekunder efter döden med återställda stats. Först till 10 kills vinner, eller den med flest kills när tiden går ut. 5 minuters rundor.",
+    "king_of_the_hill": "2\u20138 spelare. En lysande 3\u00d73-zon visas på kartan. Stå i den för att samla poäng. Först till 100 poäng vinner. Kullen flyttar var 30:e sekund — en spökkontur visar nästa position 5 sekunder innan den skiftar. 4 minuters rundor."
+  },
+
+  "mapFeatures": {
+    "reinforcedWalls": {
+      "heading": "Förstärkta väggar",
+      "tip": "Valfritt — växlas vid skapande av rum.",
+      "desc": "Förstörbara väggar kräver <b>2 träffar</b> för att förstöras. Den första explosionen spricker dem (synligt skadade), och den andra förstör dem helt. Planera din bombplacering därefter."
+    },
+    "dynamicEvents": {
+      "heading": "Dynamiska karthändelser",
+      "tip": "Valfritt — växlas vid skapande av rum. Lägger till slumpmässigt kaos för att hålla matcherna spännande.",
+      "meteorStrikes": "Meteorträffar",
+      "meteorStrikesDesc": "Slumpmässiga rutor träffas var 30\u201345:e sekund. Ett varningssikte visas på marken i 2 sekunder före nedslag. Meteorer förstör väggar och dödar spelare i explosionszonen.",
+      "powerUpRain": "Power-up-regn",
+      "powerUpRainDesc": "Var 60:e sekund regnar power-ups ner på slumpmässiga öppna rutor på kartan. Ett bra sätt att utrusta sig mitt i spelet.",
+      "wallCollapse": "Väggkollaps",
+      "wallCollapseDesc": "Var 45\u201360:e sekund rasar ett 3\u00d73-område av förstörbara väggar efter en 2-sekunders varning. Öppnar upp kartan och kan överraska dig.",
+      "freezeWave": "Frysvåg",
+      "freezeWaveDesc": "Var 50\u201370:e sekund fryser en rad eller kolumn av rutor till is i 6 sekunder. Att gå på is gör att du glider med momentum. En 1-sekunds varning visas innan frysningen.",
+      "bombSurge": "Bombvåg",
+      "bombSurgeDesc": "Var 40\u201355:e sekund förlorar alla bomber på kartan omedelbart 1 sekund av stubbintid, vilket gör att de detonerar tidigare än förväntat. En röd skärmpuls signalerar vågen."
+    },
+    "hazardTiles": {
+      "heading": "Farorutor",
+      "tip": "Valfritt — växlas vid skapande av rum. Placerade i fasta positioner på kartan.",
+      "teleporters": "Teleportörer",
+      "teleportersDesc": "Lysande plattor i blå/orange par. Kliv på en för att omedelbart teleporteras till den andra. Använd dem för överraskningsattacker eller snabba flyktvägar.",
+      "conveyorBelts": "Transportband",
+      "conveyorBeltsDesc": "Mörka rutor med riktningspilar. Skjuter dig automatiskt i pilriktningen när du kliver på dem. Kan användas strategiskt eller kan fånga dig i fara."
+    },
+    "themeVariants": {
+      "heading": "Temavarianter",
+      "tip": "I kampanjläge har varje värld sitt eget visuella tema. Väggar och förstörbara block ändrar utseende för att matcha."
+    }
+  },
+
+  "levelEditor": {
+    "tileReference": "Rutareferens",
+    "tileRefTip": "Det här är rutorna tillgängliga i banredigeraren. Kampanjlägets rutor inkluderar ytterligare specialtyper.",
+    "basicTiles": "Grundläggande rutor",
+    "wall": "Vägg — oförstörbar, blockerar rörelse och explosioner",
+    "destructible": "Förstörbar — brytbar vägg, kan släppa power-ups vid förstöring",
+    "destructibleCracked": "Sprucken — skadad förstörbar vägg, en träff till för att förstöra (förstärkt läge)",
+    "mechanics": "Mekaniker",
+    "teleporter": "Teleportörer — blå/orange par, kliv på en för att teleporteras till den andra",
+    "conveyor": "Transportband — skjuter spelare, bomber och fiender i pilriktningen",
+    "campaignTiles": "Rutor (bara kampanj)",
+    "exit": "Utgång — falldörrsstruktur, villkorligt passerbar (låses upp efter nödvändiga kills)",
+    "goal": "Mål — stjärnmarkör, gå på den för att slutföra banans mål",
+    "puzzleTiles": "Pusselrutor",
+    "switch": "Brytare — tryckplatta som växlar länkade grindar (4 färger: röd, blå, grön, gul)",
+    "gate": "Grind — gallerstänger som blockerar passage, länkade till brytare efter färg",
+    "crumbling": "Smulande golv — bryts till ett hål 10 tick efter att en spelare eller fiende klivit av",
+    "hazardTiles": "Farorutor (temaspecifika)",
+    "vine": "Ranka — saktar ner rörelse (Skogstema)",
+    "quicksand": "Kvicksand — saktar ner rörelse, dödar efter 2 sekunder (Ökentema)",
+    "ice": "Is — orsakar glidmomentum (Istema)",
+    "lava": "Lava — omedelbar död vid kontakt (Vulkantema)",
+    "mud": "Lera — saktar ner rörelse (Träsktema)",
+    "spikes": "Spikar — cyklande säkra/dödliga faser, 2s säkert sedan 1s dödligt (Borgtema)",
+    "darkRift": "Mörk reva — teleporterar till en slumpmässig tom ruta (Tomrumstema)",
+    "fullDocs": "Fullständig dokumentation",
+    "fullDocsDesc": "Se den fullständiga kampanjsystemdokumentationen nedan för detaljer om fiender, bossar, vinstvillkor och mer."
+  },
+
+  "guides": {
+    "campaign": "Kampanjguide",
+    "replaySystem": "Reprissystem",
+    "botAi": "Bot-AI-guide",
+    "enemyAi": "Fiende-AI-guide"
+  },
+
+  "staffDocs": {
+    "adminSystems": "Adminpanel & system",
+    "infrastructure": "Infrastruktur & säkerhet",
+    "testing": "Testning",
+    "performance": "Prestanda & interna detaljer",
+    "botAiInternals": "Bot-AI-interna detaljer",
+    "apiReference": "API-referens (OpenAPI)"
+  },
+
+  "imprint": {
+    "tab": "Impressum",
+    "loading": "Laddar impressum...",
+    "noInfo": "Ingen impressum-information tillgänglig.",
+    "failedToLoad": "Kunde inte ladda impressum."
+  }
+}

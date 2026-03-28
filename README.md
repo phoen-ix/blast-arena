@@ -194,6 +194,12 @@ Full i18n support via [i18next](https://www.i18next.com/). All UI strings are ex
 | Spanish    | `es` | Complete |
 | Italian    | `it` | Complete |
 | Portuguese | `pt` | Complete |
+| Polish     | `pl` | Complete |
+| Dutch      | `nl` | Complete |
+| Turkish    | `tr` | Complete |
+| Swedish    | `sv` | Complete |
+| Norwegian  | `nb` | Complete |
+| Danish     | `da` | Complete |
 
 - **Language selection**: Flag dropdown on login screen + Settings > Preferences dropdown. Auto-detects browser language on first visit
 - **11 namespaces** organize translations: `ui`, `admin`, `auth`, `campaign`, `editor`, `help`, `game`, `common`, `errors`, `hud`, `server`

@@ -1,0 +1,199 @@
+{
+  "title": "Hj\u00e6lp",
+  "backToLobby": "Tilbage til lobby",
+  "github": "GitHub",
+  "loading": "Indl\u00e6ser...",
+  "retry": "Pr\u00f8v igen",
+  "failedToLoad": "Kunne ikke indl\u00e6ses.",
+  "failedToLoadDoc": "Kunne ikke indl\u00e6se {{title}}.",
+  "failedToLoadLevelEditor": "Kunne ikke indl\u00e6se baneredigerings-dokumentation.",
+
+  "tabs": {
+    "gettingStarted": "Kom i gang",
+    "powerUps": "Power-ups",
+    "gameModes": "Spiltilstande",
+    "mapFeatures": "Kortfunktioner",
+    "guides": "Guider",
+    "levelEditor": "Baneredigering",
+    "adminDocs": "Admin-dokumentation"
+  },
+
+  "keyboard": {
+    "heading": "Tastaturstyring",
+    "arrowKeys": "Piletaster",
+    "space": "Mellemrum",
+    "move": "Flyt din karakter",
+    "placeBomb": "Placér en bombe p\u00e5 din nuv\u00e6rende position",
+    "detonateRemote": "Detonér alle dine fjernbomber",
+    "throwBomb": "Kast en bombe i den retning du vender",
+    "sendEmote": "Send en hurtig emote (GG, Hj\u00e6lp!, Fedt!, Ups, H\u00e5n, Tak)",
+    "spectateNth": "Se den N'te spiller (n\u00e5r d\u00f8d)"
+  },
+
+  "gamepad": {
+    "heading": "Gamepad-styring (Xbox / Standard)",
+    "tip": "Enhver standard-mapped controller virker. Tilslut bare og spil.",
+    "dpad": "D-Pad",
+    "leftStick": "Venstre styrepind",
+    "placeBomb": "Placér bombe",
+    "detonateRemote": "Detonér fjernbomber",
+    "throwBomb": "Kast bombe",
+    "cycleSpectate": "Skift tilskuerm\u00e5l (n\u00e5r d\u00f8d)",
+    "menuNavHeading": "Menunavigation",
+    "navigateMenus": "Naviger i menuer",
+    "confirm": "Bekr\u00e6ft / V\u00e6lg",
+    "back": "Tilbage / Luk"
+  },
+
+  "mechanics": {
+    "heading": "Grundl\u00e6ggende mekanikker",
+    "bombs": "Bomber",
+    "bombsDesc": "eksploderer efter 3 sekunder i 4 retninger op til deres ildr\u00e6kkevidde",
+    "chainReactions": "K\u00e6dereaktioner",
+    "chainReactionsDesc": "bomber fanget i en eksplosion detonerer \u00f8jeblikkeligt og skaber \u00f8del\u00e6ggende kombinationer",
+    "kickedBombs": "Sparkede bomber",
+    "kickedBombsDesc": "glider indtil de rammer en v\u00e6g, bombe eller spiller",
+    "shieldBreak": "Skjoldbrud",
+    "shieldBreakDesc": "efter dit skjold absorberer et hit, f\u00e5r du 10 ticks us\u00e5rbarhed til at flygte",
+    "spawnInvuln": "Spawn-us\u00e5rbarhed",
+    "spawnInvulnDesc": "2 sekunders beskyttelse efter spawn eller respawn",
+    "selfKills": "Selvdrab",
+    "selfKillsDesc": "tr\u00e6kker 1 fra din drabsscore",
+    "gracePeriod": "N\u00e5deperiode",
+    "gracePeriodDesc": "1,5 sekunder efter vinderbetingelse f\u00f8r spillet slutter; vinderen er us\u00e5rbar"
+  },
+
+  "spectator": {
+    "heading": "Tilskuertilstand",
+    "tip": "N\u00e5r du d\u00f8r, g\u00e5r du i tilskuertilstand for at se de resterende spillere.",
+    "arrows": "Pile",
+    "mouseDrag": "Musetr\u00e6k",
+    "freeCam": "Frit kamera-panorering",
+    "click": "Klik",
+    "followPlayer": "p\u00e5 en spiller for at f\u00f8lge dem",
+    "jumpToNth": "Hop til den N'te spiller",
+    "breakFollow": "Tryk p\u00e5 en bev\u00e6gelsestast eller tr\u00e6k for at stoppe f\u00f8lgning og vende tilbage til frit kamera"
+  },
+
+  "powerUps": {
+    "tip": "Droppes n\u00e5r \u00f8del\u00e6ggelige v\u00e6gge \u00f8del\u00e6gges. G\u00e5 over sv\u00e6vende felter for at samle op. Din HUD (nederst til venstre) viser dine nuv\u00e6rende stats."
+  },
+
+  "powerUpDetails": {
+    "bomb_up": "\u00d8ger dit maksimale bombeantal med 1 (maks 8). Placér flere bomber samtidigt for at f\u00e6lde fjender og skabe k\u00e6dereaktioner.",
+    "fire_up": "Udvider din eksplosionsr\u00e6kkevidde med 1 felt i hver retning (maks 8). L\u00e6ngere r\u00e6kkevidde betyder mere omr\u00e5dekontrol og nemmere drab.",
+    "speed_up": "\u00d8ger din bev\u00e6gelseshastighed (op til 5 niveauer). Bev\u00e6g dig hurtigere for at undvige eksplosioner, jage fjender og snuppe power-ups f\u00f8rst.",
+    "shield": "Skaber en beskyttende aura der absorberer \u00e9t eksplosionshit og derefter brydes. Efter brud f\u00e5r du kort us\u00e5rbarhed til at flygte. Kan ikke stakkes \u2014 ekstra opsamlinger bruges uden effekt. Ingen tidsbegr\u00e6nsning.",
+    "kick": "G\u00e5 ind i en bombe for at sparke den hen over kortet. Sparkede bomber rejser indtil de rammer en v\u00e6g, en anden bombe eller en spiller. Giver en kort bev\u00e6gelsesnedk\u00f8ling efter spark.",
+    "pierce_bomb": "Dine eksplosioner g\u00e5r gennem \u00f8del\u00e6ggelige v\u00e6gge i stedet for at stoppe. V\u00e6gge \u00f8del\u00e6gges stadig, men eksplosionen forts\u00e6tter forbi dem. \u00d8del\u00e6ggende til at rydde store omr\u00e5der.",
+    "remote_bomb": "Dine bomber detonerer ikke l\u00e6ngere automatisk p\u00e5 en timer. Tryk <span class=\"help-key\">E</span> (eller <span class=\"help-key\">B</span> p\u00e5 gamepad) for at detonere. Sikkerheds-autodetonering efter 10 sekunder. Bomber vises bl\u00e5 med en blinkende effekt. Tryk <span class=\"help-key\">E</span> uden placerede bomber for at skifte mellem <b>ALLE</b> (detonér alle p\u00e5 \u00e9n gang) og <b>FIFO</b> (detonér \u00e6ldste f\u00f8rst) tilstand. Din nuv\u00e6rende tilstand vises i HUD'en.",
+    "line_bomb": "Placerer en linje af bomber i den retning du vender, op til din resterende bombekapacitet. Fantastisk til at afsk\u00e6re flugtmuligheder eller udl\u00f8se massive k\u00e6dereaktioner.",
+    "bomb_throw": "Tryk <span class=\"help-key\">Q</span> (eller <span class=\"help-key\">Y</span> p\u00e5 gamepad) for at kaste en bombe 3 felter i den retning du vender, flyvende over v\u00e6gge og forhindringer. Bomben lander p\u00e5 det fjerneste gyldige felt. Kombineres med gennemtr\u00e6ngnings-/fjernbombetyper."
+  },
+
+  "gameModes": {
+    "playerRange": "{{min}}\u2013{{max}} spillere"
+  },
+
+  "modeTags": {
+    "shrinkingZone": "Krympende zone",
+    "respawn": "Genopliv",
+    "zoneControl": "Zonekontrol",
+    "teams": "{{count}} hold"
+  },
+
+  "modeDetails": {
+    "ffa": "2\u20138 spillere. Klassisk eliminering \u2014 v\u00e6r den sidste st\u00e5ende. 3 minutters runder.",
+    "teams": "4\u20138 spillere fordelt p\u00e5 Hold R\u00f8d og Hold Bl\u00e5. Sidste hold med et overlevende medlem vinder. Venskabsild kan konfigureres af v\u00e6rten. 4 minutters runder.",
+    "battle_royale": "4\u20138 spillere. En cirkul\u00e6r farezone krymper fra kanterne over tid. At st\u00e5 uden for zonen giver skade hvert tick. Bliv inden for og overlev alle andre. 5 minutters runder.",
+    "sudden_death": "2\u20138 spillere. Alle starter fuldt opgradet (8 bomber, 8 r\u00e6kkevidde, maks fart, spark). Ingen power-ups spawner. \u00c9t hit dr\u00e6ber \u2014 rent f\u00e6rdighed. 2 minutters runder.",
+    "deathmatch": "2\u20138 spillere. Genopliv 3 sekunder efter d\u00f8d med nulstillede stats. F\u00f8rste til 10 drab vinder, eller den med flest drab n\u00e5r tiden l\u00f8ber ud. 5 minutters runder.",
+    "king_of_the_hill": "2\u20138 spillere. En lysende 3\u00d73 zone vises p\u00e5 kortet. St\u00e5 i den for at score point. F\u00f8rste til 100 point vinder. Bakken flytter sig hvert 30. sekund \u2014 en sp\u00f8gelsekontur viser n\u00e6ste position 5 sekunder f\u00f8r den skifter. 4 minutters runder."
+  },
+
+  "mapFeatures": {
+    "reinforcedWalls": {
+      "heading": "Forst\u00e6rkede v\u00e6gge",
+      "tip": "Valgfrit \u2014 sl\u00e5s til ved oprettelse af rum.",
+      "desc": "\u00d8del\u00e6ggelige v\u00e6gge kr\u00e6ver <b>2 hits</b> for at \u00f8del\u00e6gges. Den f\u00f8rste eksplosion kn\u00e6kker dem (visuelt beskadiget), og den anden \u00f8del\u00e6gger dem helt. Plan\u00e9r din bombeplacering derefter."
+    },
+    "dynamicEvents": {
+      "heading": "Dynamiske korth\u00e6ndelser",
+      "tip": "Valgfrit \u2014 sl\u00e5s til ved oprettelse af rum. Tilf\u00f8jer tilf\u00e6ldigt kaos for at holde kampene sp\u00e6ndende.",
+      "meteorStrikes": "Meteornedslaag",
+      "meteorStrikesDesc": "Tilf\u00e6ldige felter rammes hvert 30\u201345 sekund. Et advarselssign vises p\u00e5 jorden i 2 sekunder f\u00f8r nedslag. Meteorer \u00f8del\u00e6gger v\u00e6gge og dr\u00e6ber spillere i eksplosionszonen.",
+      "powerUpRain": "Power-up-regn",
+      "powerUpRainDesc": "Hvert 60. sekund dropper power-ups p\u00e5 tilf\u00e6ldige \u00e5bne felter p\u00e5 kortet. En god m\u00e5de at opruste midt i spillet.",
+      "wallCollapse": "V\u00e6gsammenstyrtning",
+      "wallCollapseDesc": "Hvert 45\u201360 sekund smuldrer et 3\u00d73 omr\u00e5de af \u00f8del\u00e6ggelige v\u00e6gge efter 2 sekunders advarsel. \u00c5bner kortet op og kan overraske dig.",
+      "freezeWave": "Fryseb\u00f8lge",
+      "freezeWaveDesc": "Hvert 50\u201370 sekund fryser en r\u00e6kke eller kolonne af felter til is i 6 sekunder. At g\u00e5 p\u00e5 is f\u00e5r dig til at glide med momentum. 1 sekunds advarsel vises f\u00f8r frysningen.",
+      "bombSurge": "Bombeb\u00f8lge",
+      "bombSurgeDesc": "Hvert 40\u201355 sekund mister alle bomber p\u00e5 kortet \u00f8jeblikkeligt 1 sekund af deres lunteetid, s\u00e5 de detonerer tidligere end forventet. En r\u00f8d sk\u00e6rmpuls signalerer b\u00f8lgen."
+    },
+    "hazardTiles": {
+      "heading": "Farefelter",
+      "tip": "Valgfrit \u2014 sl\u00e5s til ved oprettelse af rum. Placeres p\u00e5 faste positioner p\u00e5 kortet.",
+      "teleporters": "Teleportere",
+      "teleportersDesc": "Lysende platforme i bl\u00e5/orange par. Tr\u00e6d p\u00e5 \u00e9n for at teleportere til den anden. Brug dem til overraskelsesangreb eller hurtige flugtmuligheder.",
+      "conveyorBelts": "Transportb\u00e5nd",
+      "conveyorBeltsDesc": "M\u00f8rke felter med retningspile. Skubber dig automatisk i pilens retning n\u00e5r du tr\u00e6der p\u00e5 dem. Kan bruges strategisk eller kan f\u00e6lde dig i fare."
+    },
+    "themeVariants": {
+      "heading": "Temavarianter",
+      "tip": "I kampagnetilstand har hver verden sit eget visuelle tema. V\u00e6gge og \u00f8del\u00e6ggelige blokke skifter udseende for at matche."
+    }
+  },
+
+  "levelEditor": {
+    "tileReference": "Feltreference",
+    "tileRefTip": "Dette er de felter der er tilg\u00e6ngelige i baneredigeringen. Kampagnetilstand inkluderer yderligere specialtyper.",
+    "basicTiles": "Grundl\u00e6ggende felter",
+    "wall": "V\u00e6g \u2014 u\u00f8del\u00e6ggelig, blokerer bev\u00e6gelse og eksplosioner",
+    "destructible": "\u00d8del\u00e6ggelig \u2014 v\u00e6g der kan \u00f8del\u00e6gges, kan droppe power-ups n\u00e5r \u00f8delagt",
+    "destructibleCracked": "Revnet \u2014 beskadiget \u00f8del\u00e6ggelig v\u00e6g, \u00e9t hit mere for at \u00f8del\u00e6gge (forst\u00e6rket tilstand)",
+    "mechanics": "Mekanikker",
+    "teleporter": "Teleportere \u2014 bl\u00e5/orange par, tr\u00e6d p\u00e5 \u00e9n for at teleportere til den anden",
+    "conveyor": "Transportb\u00e5nd \u2014 skubber spillere, bomber og fjender i pilens retning",
+    "campaignTiles": "Kampagne-eksklusive felter",
+    "exit": "Udgang \u2014 lem-tekstur, betinget farbar (l\u00e5ses op efter kr\u00e6vede drab)",
+    "goal": "M\u00e5l \u2014 stjernemarkering, g\u00e5 p\u00e5 det for at gennemf\u00f8re banem\u00e5let",
+    "puzzleTiles": "Puslespilsfelter",
+    "switch": "Kontakt \u2014 trykplade der skifter tilknyttede porte (4 farver: r\u00f8d, bl\u00e5, gr\u00f8n, gul)",
+    "gate": "Port \u2014 gitterst\u00e6nger der blokerer passage, knyttet til kontakter via farve",
+    "crumbling": "Smuldrende gulv \u2014 bliver til et hul 10 ticks efter en spiller eller fjende tr\u00e6der v\u00e6k",
+    "hazardTiles": "Farefelter (temaspecifikke)",
+    "vine": "Ranke \u2014 bremser bev\u00e6gelse (Skovtema)",
+    "quicksand": "Kviksand \u2014 bremser bev\u00e6gelse, dr\u00e6ber efter 2 sekunder (\u00d8rkentema)",
+    "ice": "Is \u2014 for\u00e5rsager glidende momentum (Istema)",
+    "lava": "Lava \u2014 \u00f8jeblikkelig d\u00f8d ved kontakt (Vulkantema)",
+    "mud": "Mudder \u2014 bremser bev\u00e6gelse (Sumptema)",
+    "spikes": "Pigge \u2014 cyklende sikre/d\u00f8delige faser, 2s sikker derefter 1s d\u00f8delig (Slottema)",
+    "darkRift": "M\u00f8rk rift \u2014 teleporterer til et tilf\u00e6ldigt tomt felt (Tomhedstema)",
+    "fullDocs": "Fuld dokumentation",
+    "fullDocsDesc": "Se den komplette kampagnesystem-dokumentation nedenfor for detaljer om fjender, bosser, vinderbetingelser og mere."
+  },
+
+  "guides": {
+    "campaign": "Kampagneguide",
+    "replaySystem": "Genafspilningssystem",
+    "botAi": "Bot AI-guide",
+    "enemyAi": "Fjende AI-guide"
+  },
+
+  "staffDocs": {
+    "adminSystems": "Admin-panel & systemer",
+    "infrastructure": "Infrastruktur & sikkerhed",
+    "testing": "Test",
+    "performance": "Ydeevne & interne systemer",
+    "botAiInternals": "Bot AI internt",
+    "apiReference": "API-reference (OpenAPI)"
+  },
+
+  "imprint": {
+    "tab": "Impressum",
+    "loading": "Indl\u00e6ser impressum...",
+    "noInfo": "Ingen impressum-information tilg\u00e6ngelig.",
+    "failedToLoad": "Kunne ikke indl\u00e6se impressum."
+  }
+}

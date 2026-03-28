@@ -1,0 +1,199 @@
+{
+  "title": "Help",
+  "backToLobby": "Terug naar lobby",
+  "github": "GitHub",
+  "loading": "Laden...",
+  "retry": "Opnieuw proberen",
+  "failedToLoad": "Laden mislukt.",
+  "failedToLoadDoc": "{{title}} laden mislukt.",
+  "failedToLoadLevelEditor": "Level Editor-documentatie laden mislukt.",
+
+  "tabs": {
+    "gettingStarted": "Aan de slag",
+    "powerUps": "Power-ups",
+    "gameModes": "Spelmodi",
+    "mapFeatures": "Kaartfuncties",
+    "guides": "Handleidingen",
+    "levelEditor": "Leveleditor",
+    "adminDocs": "Beheerdersdocs"
+  },
+
+  "keyboard": {
+    "heading": "Toetsenbordbesturing",
+    "arrowKeys": "Pijltjestoetsen",
+    "space": "Spatie",
+    "move": "Verplaats je personage",
+    "placeBomb": "Plaats een bom op je huidige positie",
+    "detonateRemote": "Laat al je afstandsbommen ontploffen",
+    "throwBomb": "Gooi een bom in je kijkrichting",
+    "sendEmote": "Stuur een snelle emote (GG, Help!, Mooi!, Oeps, Spot, Bedankt)",
+    "spectateNth": "Bekijk de Nde speler (wanneer dood)"
+  },
+
+  "gamepad": {
+    "heading": "Gamepadbesturing (Xbox / Standaard)",
+    "tip": "Elke standaard-controller werkt. Gewoon aansluiten en spelen.",
+    "dpad": "D-Pad",
+    "leftStick": "Linker stick",
+    "placeBomb": "Bom plaatsen",
+    "detonateRemote": "Afstandsbommen laten ontploffen",
+    "throwBomb": "Bom gooien",
+    "cycleSpectate": "Wissel toeschouwer-doel (wanneer dood)",
+    "menuNavHeading": "Menunavigatie",
+    "navigateMenus": "Door menu's navigeren",
+    "confirm": "Bevestigen / Selecteren",
+    "back": "Terug / Sluiten"
+  },
+
+  "mechanics": {
+    "heading": "Basismechanismen",
+    "bombs": "Bommen",
+    "bombsDesc": "ontploffen na 3 seconden in 4 windrichtingen tot hun vuurbereik",
+    "chainReactions": "Kettingreacties",
+    "chainReactionsDesc": "bommen die door een explosie worden geraakt ontploffen direct, wat verwoestende combo's creëert",
+    "kickedBombs": "Getrapte bommen",
+    "kickedBombsDesc": "glijden door totdat ze een muur, bom of speler raken",
+    "shieldBreak": "Schildbreuk",
+    "shieldBreakDesc": "nadat je schild een klap opvangt, krijg je 10 ticks onaantastbaarheid om te ontsnappen",
+    "spawnInvuln": "Spawn-onaantastbaarheid",
+    "spawnInvulnDesc": "2 seconden bescherming na spawnen of respawnen",
+    "selfKills": "Zelf-kills",
+    "selfKillsDesc": "trekken 1 af van je killscore",
+    "gracePeriod": "Genade-periode",
+    "gracePeriodDesc": "1,5 seconden na de winstvoorwaarde voordat het spel eindigt; winnaar is onaantastbaar"
+  },
+
+  "spectator": {
+    "heading": "Toeschouwermodus",
+    "tip": "Wanneer je sterft, ga je naar de toeschouwermodus om de overgebleven spelers te bekijken.",
+    "arrows": "Pijltjes",
+    "mouseDrag": "Muis slepen",
+    "freeCam": "Vrije camera",
+    "click": "Klik",
+    "followPlayer": "op een speler om deze te volgen",
+    "jumpToNth": "Spring naar de Nde speler",
+    "breakFollow": "Druk op een bewegingstoets of sleep om te stoppen met volgen en terug te gaan naar vrije camera"
+  },
+
+  "powerUps": {
+    "tip": "Vallen wanneer verwoestbare muren worden vernietigd. Loop over zwevende tegels om ze op te pakken. Je HUD (linksonder) toont je huidige stats."
+  },
+
+  "powerUpDetails": {
+    "bomb_up": "Verhoogt je maximale aantal bommen met 1 (max 8). Plaats meer bommen tegelijk om vijanden te vangen en kettingreacties te creëren.",
+    "fire_up": "Vergroot je explosiebereik met 1 tegel in elke richting (max 8). Groter bereik betekent meer gebiedscontrole en gemakkelijkere kills.",
+    "speed_up": "Verhoogt je bewegingssnelheid (tot 5 niveaus). Beweeg sneller om explosies te ontwijken, vijanden te achtervolgen en power-ups als eerste te pakken.",
+    "shield": "Creëert een beschermende aura die één explosie-hit opvangt en dan breekt. Na het breken krijg je korte onaantastbaarheid om te ontsnappen. Stapelt niet \u2014 extra oppakkingen worden verbruikt zonder effect. Geen tijdslimiet.",
+    "kick": "Loop tegen een bom om hem over de kaart te trappen. Getrapte bommen glijden door totdat ze een muur, andere bom of speler raken. Geeft een korte bewegingsvertraging na het trappen.",
+    "pierce_bomb": "Je explosies gaan door verwoestbare muren heen in plaats van te stoppen. Muren worden nog steeds vernietigd, maar de explosie gaat erdoorheen. Verwoestend voor het vrijmaken van grote gebieden.",
+    "remote_bomb": "Je bommen ontploffen niet meer automatisch op een timer. Druk op <span class=\"help-key\">E</span> (of <span class=\"help-key\">B</span> op gamepad) om ze te laten ontploffen. Automatische veiligheidsontploffing na 10 seconden. Bommen verschijnen blauw met een knipperend effect. Druk op <span class=\"help-key\">E</span> zonder geplaatste bommen om te schakelen tussen <b>ALLES</b> (alles tegelijk ontploffen) en <b>FIFO</b> (oudste eerst ontploffen) modus. Je huidige modus wordt in de HUD getoond.",
+    "line_bomb": "Plaatst een rij bommen in je kijkrichting, tot aan je resterende bomcapaciteit. Geweldig om vluchtroutes af te snijden of enorme kettingreacties te veroorzaken.",
+    "bomb_throw": "Druk op <span class=\"help-key\">Q</span> (of <span class=\"help-key\">Y</span> op gamepad) om een bom 3 tegels in je kijkrichting te gooien, over muren en obstakels heen. De bom landt op de verste geldige tegel. Combineerbaar met doorboor-/afstandsbomtypes."
+  },
+
+  "gameModes": {
+    "playerRange": "{{min}}\u2013{{max}} spelers"
+  },
+
+  "modeTags": {
+    "shrinkingZone": "Krimpende zone",
+    "respawn": "Respawn",
+    "zoneControl": "Zonecontrole",
+    "teams": "{{count}} teams"
+  },
+
+  "modeDetails": {
+    "ffa": "2\u20138 spelers. Klassieke eliminatie \u2014 wees de laatste die overblijft. Rondes van 3 minuten.",
+    "teams": "4\u20138 spelers verdeeld in Team Rood en Team Blauw. Het laatste team met een overlevend lid wint. Friendly fire is instelbaar door de host. Rondes van 4 minuten.",
+    "battle_royale": "4\u20138 spelers. Een cirkelvormige gevarenzone krimpt vanaf de randen. Buiten de zone staan veroorzaakt elke tick schade. Blijf binnen en overleef iedereen. Rondes van 5 minuten.",
+    "sudden_death": "2\u20138 spelers. Iedereen begint volledig uitgerust (8 bommen, 8 bereik, maximale snelheid, trap). Geen power-ups verschijnen. Eén hit doodt \u2014 puur vaardigheid. Rondes van 2 minuten.",
+    "deathmatch": "2\u20138 spelers. Respawn 3 seconden na de dood met gereset stats. Eerste tot 10 kills wint, of degene met de meeste kills als de tijd om is. Rondes van 5 minuten.",
+    "king_of_the_hill": "2\u20138 spelers. Een gloeiende 3\u00d73-zone verschijnt op de kaart. Sta erin om punten te scoren. Eerste tot 100 punten wint. De heuvel verplaatst elke 30 seconden \u2014 een spookachtige omtrek toont de volgende positie 5 seconden voordat hij verschuift. Rondes van 4 minuten."
+  },
+
+  "mapFeatures": {
+    "reinforcedWalls": {
+      "heading": "Versterkte muren",
+      "tip": "Optioneel \u2014 in te schakelen bij het aanmaken van een kamer.",
+      "desc": "Verwoestbare muren hebben <b>2 hits</b> nodig om te vernietigen. De eerste explosie scheurt ze (zichtbaar beschadigd), en de tweede vernietigt ze volledig. Plan je bomplaatsing zorgvuldig."
+    },
+    "dynamicEvents": {
+      "heading": "Dynamische kaartgebeurtenissen",
+      "tip": "Optioneel \u2014 in te schakelen bij het aanmaken van een kamer. Voegt willekeurige chaos toe om wedstrijden spannend te houden.",
+      "meteorStrikes": "Meteorietinslagen",
+      "meteorStrikesDesc": "Willekeurige tegels worden elke 30\u201345 seconden getroffen. Een waarschuwingsrichtkruis verschijnt 2 seconden voor de inslag op de grond. Meteorieten vernietigen muren en doden spelers in de explosieradius.",
+      "powerUpRain": "Power-up-regen",
+      "powerUpRainDesc": "Elke 60 seconden vallen power-ups op willekeurige open tegels op de kaart. Een geweldige manier om je mid-game uit te rusten.",
+      "wallCollapse": "Muurinstorting",
+      "wallCollapseDesc": "Elke 45\u201360 seconden stort een 3\u00d73 gebied van verwoestbare muren in na een waarschuwing van 2 seconden. Opent de kaart en kan je verrassen.",
+      "freezeWave": "Vriesgolf",
+      "freezeWaveDesc": "Elke 50\u201370 seconden bevriest een rij of kolom tegels tot ijs voor 6 seconden. Over ijs lopen zorgt voor doorglij-momentum. Een waarschuwing van 1 seconde verschijnt voor het bevriezen.",
+      "bombSurge": "Bomstoot",
+      "bombSurgeDesc": "Elke 40\u201355 seconden verliezen alle bommen op de kaart direct 1 seconde lonttijd, waardoor ze eerder ontploffen dan verwacht. Een rode schermpuls signaleert de stoot."
+    },
+    "hazardTiles": {
+      "heading": "Gevaarlijke tegels",
+      "tip": "Optioneel \u2014 in te schakelen bij het aanmaken van een kamer. Op vaste posities op de kaart geplaatst.",
+      "teleporters": "Teleporters",
+      "teleportersDesc": "Gloeiende platformen in blauw/oranje paren. Stap op één om direct naar de andere te teleporteren. Gebruik ze voor verrassingsaanvallen of snelle ontsnappingen.",
+      "conveyorBelts": "Lopende banden",
+      "conveyorBeltsDesc": "Donkere tegels met richtingspijlen. Duwen je automatisch in de pijlrichting wanneer je erop stapt. Kunnen strategisch gebruikt worden of je in gevaar brengen."
+    },
+    "themeVariants": {
+      "heading": "Themavarianten",
+      "tip": "In de campagnemodus heeft elke wereld een eigen visueel thema. Muren en verwoestbare blokken veranderen van uiterlijk om bij het thema te passen."
+    }
+  },
+
+  "levelEditor": {
+    "tileReference": "Tegelreferentie",
+    "tileRefTip": "Dit zijn de tegels die beschikbaar zijn in de leveleditor. Campagnemodus-tegels bevatten extra speciale types.",
+    "basicTiles": "Basistegels",
+    "wall": "Muur \u2014 onverwoestbaar, blokkeert beweging en explosies",
+    "destructible": "Verwoestbaar \u2014 breekbare muur, kan power-ups laten vallen bij vernietiging",
+    "destructibleCracked": "Gescheurd \u2014 beschadigde verwoestbare muur, nog één hit om te vernietigen (versterkte modus)",
+    "mechanics": "Mechanismen",
+    "teleporter": "Teleporters \u2014 blauw/oranje paren, stap op één om naar de andere te teleporteren",
+    "conveyor": "Lopende banden \u2014 duwen spelers, bommen en vijanden in de pijlrichting",
+    "campaignTiles": "Campagne-exclusieve tegels",
+    "exit": "Uitgang \u2014 valdeur-textuur, voorwaardelijk bewandelbaar (ontgrendelt na vereist aantal kills)",
+    "goal": "Doel \u2014 stermarkering, loop erop om het leveldoel te voltooien",
+    "puzzleTiles": "Puzzeltegels",
+    "switch": "Schakelaar \u2014 drukplaat die gekoppelde poorten schakelt (4 kleuren: rood, blauw, groen, geel)",
+    "gate": "Poort \u2014 valhek dat doorgang blokkeert, gekoppeld aan schakelaars op kleur",
+    "crumbling": "Afbrokkelende vloer \u2014 wordt een put 10 ticks nadat een speler of vijand eraf stapt",
+    "hazardTiles": "Gevaarlijke tegels (themaspecifiek)",
+    "vine": "Wijnrank \u2014 vertraagt beweging (Bosthema)",
+    "quicksand": "Drijfzand \u2014 vertraagt beweging, doodt na 2 seconden (Woestijnthema)",
+    "ice": "IJs \u2014 veroorzaakt doorglij-momentum (IJsthema)",
+    "lava": "Lava \u2014 directe dood bij contact (Vulkaanthema)",
+    "mud": "Modder \u2014 vertraagt beweging (Morasthema)",
+    "spikes": "Stekels \u2014 wisselende veilige/dodelijke fases, 2s veilig dan 1s dodelijk (Kasteelthema)",
+    "darkRift": "Donkere kloof \u2014 teleporteert naar een willekeurige lege tegel (Leegthema)",
+    "fullDocs": "Volledige documentatie",
+    "fullDocsDesc": "Zie de complete campagnesysteemdocumentatie hieronder voor details over vijanden, bazen, winstvoorwaarden en meer."
+  },
+
+  "guides": {
+    "campaign": "Campagnehandleiding",
+    "replaySystem": "Replaysysteem",
+    "botAi": "Bot AI-handleiding",
+    "enemyAi": "Vijand AI-handleiding"
+  },
+
+  "staffDocs": {
+    "adminSystems": "Beheerderspaneel & systemen",
+    "infrastructure": "Infrastructuur & beveiliging",
+    "testing": "Testen",
+    "performance": "Prestaties & interne werking",
+    "botAiInternals": "Bot AI-interne werking",
+    "apiReference": "API-referentie (OpenAPI)"
+  },
+
+  "imprint": {
+    "tab": "Impressum",
+    "loading": "Impressum laden...",
+    "noInfo": "Geen impressuminformatie beschikbaar.",
+    "failedToLoad": "Impressum laden mislukt."
+  }
+}

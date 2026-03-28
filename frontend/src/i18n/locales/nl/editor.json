@@ -1,0 +1,91 @@
+{
+  "title": {
+    "mapEditor": "Kaarteditor",
+    "levelEditor": "Leveleditor"
+  },
+  "tools": {
+    "tiles": "Tegels",
+    "empty": "Leeg",
+    "wall": "Muur",
+    "destructible": "Verwoestbaar",
+    "spawn": "Spawnpunt",
+    "exit": "Uitgang",
+    "goal": "Doel",
+    "eraser": "Wisser",
+    "mechanics": "Mechanismen",
+    "teleporterA": "Teleporter A",
+    "teleporterB": "Teleporter B",
+    "conveyorUp": "Lopende band \u2191",
+    "conveyorDown": "Lopende band \u2193",
+    "conveyorLeft": "Lopende band \u2190",
+    "conveyorRight": "Lopende band \u2192",
+    "puzzle": "Puzzel",
+    "switch": "Schakelaar",
+    "gate": "Poort",
+    "crumblingFloor": "Afbrokkelende vloer",
+    "themeHazards": "Thema-gevaren",
+    "noHazardsTheme": "Geen gevaarlijke tegels voor dit thema",
+    "noHazardsAvailable": "Geen gevaarlijke tegels beschikbaar",
+    "showAllThemes": "Alle thema's tonen",
+    "enemies": "Vijanden",
+    "powerUps": "Power-ups",
+    "variants": {
+      "toggle": "Schakelaar",
+      "pressure": "Drukplaat",
+      "oneshot": "Eenmalig"
+    },
+    "powerUpNames": {
+      "bomb_up": "bom extra",
+      "fire_up": "vuur extra",
+      "speed_up": "snelheid extra",
+      "shield": "schild",
+      "kick": "trap",
+      "pierce_bomb": "doorboor-bom",
+      "remote_bomb": "afstandsbom",
+      "line_bomb": "lijnbom"
+    }
+  },
+  "settings": {
+    "mapSettings": "Kaartinstellingen",
+    "levelSettings": "Levelinstellingen",
+    "width": "Breedte",
+    "height": "Hoogte",
+    "dimensionHint": "Oneven getallen, 7-51",
+    "name": "Naam",
+    "description": "Beschrijving",
+    "lives": "Levens",
+    "timeLimit": "Tijdslimiet (seconden, 0=geen)",
+    "parTime": "Streeftijd (seconden, 0=geen)",
+    "parTimeHint": "2 sterren bij voltooiing onder de streeftijd",
+    "winCondition": "Winstvoorwaarde",
+    "winConditions": {
+      "killAll": "Alle vijanden verslaan",
+      "findExit": "Uitgang vinden",
+      "reachGoal": "Doel bereiken",
+      "surviveTime": "Tijd overleven"
+    },
+    "published": "Gepubliceerd"
+  },
+  "actions": {
+    "save": "Opslaan",
+    "export": "Exporteren",
+    "back": "Terug"
+  },
+  "modals": {
+    "unsavedChanges": "Niet-opgeslagen wijzigingen",
+    "unsavedDescription": "Je hebt niet-opgeslagen wijzigingen. Wil je opslaan voordat je weggaat?",
+    "cancel": "Annuleren",
+    "discard": "Verwerpen",
+    "saveAndExit": "Opslaan en afsluiten"
+  },
+  "toasts": {
+    "needSpawns": "Minimaal 2 spawnpunten nodig",
+    "mapSaved": "Kaart opgeslagen!",
+    "levelSaved": "Level opgeslagen!",
+    "saveFailed": "Opslaan mislukt: {{error}}"
+  },
+  "defaults": {
+    "untitledLevel": "Naamloos level",
+    "untitledMap": "Naamloze kaart"
+  }
+}

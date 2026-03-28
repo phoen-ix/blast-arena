@@ -1,0 +1,80 @@
+{
+  "title": "Kampanya",
+  "titleBrand": "<span style=\"color:var(--text);\">CAMP</span>AIGN",
+  "backToLobby": "Lobiye Don",
+  "empty": "Henuz kampanya dunyasi mevcut degil.",
+  "loadFailed": "Kampanya yuklenemedi: {{error}}",
+  "loadingLevel": "Bolum yukleniyor...",
+  "startFailed": "Bolum baslatilamadi: {{error}}",
+  "stats": {
+    "enemies": "dusmanlar",
+    "life": "can",
+    "lives": "can",
+    "time": "sure"
+  },
+  "buttons": {
+    "start": "Basla",
+    "coop": "Ortaklik",
+    "localCoop": "Yerel Ortaklik",
+    "buddy": "Yardimci"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "%{{percent}} boyut"
+  },
+  "localCoopModal": {
+    "title": "Yerel Ortaklik Ayarlari",
+    "ariaLabel": "Yerel Ortaklik Ayarlari",
+    "player1Controls": "Oyuncu 1 Kontrolleri",
+    "player2": "Oyuncu 2",
+    "identity": "Kimlik:",
+    "guest": "Misafir",
+    "logIn": "Giris Yap",
+    "name": "Ad:",
+    "color": "Renk:",
+    "nameAriaLabel": "Oyuncu 2 Kullanici Adi",
+    "passwordAriaLabel": "Oyuncu 2 Sifresi",
+    "usernamePlaceholder": "Kullanici Adi",
+    "passwordPlaceholder": "Sifre",
+    "loginDurationAriaLabel": "Giris suresi",
+    "loggingIn": "Giris yapiliyor...",
+    "logInBtn": "Giris Yap",
+    "enterCredentials": "Kullanici adi ve sifre girin",
+    "loggedInAs": "<strong>{{username}}</strong> olarak giris yapildi",
+    "logout": "Cikis Yap",
+    "controls": "Kontroller",
+    "cameraMode": "Kamera Modu",
+    "controlConflict": "Iki oyuncu da ayni kontrolleri kullanamaz",
+    "cancel": "Iptal",
+    "start": "Basla",
+    "defaultPlayerName": "Oyuncu 2",
+    "duration": {
+      "session": "Yalnizca oturum",
+      "1h": "1 saat",
+      "6h": "6 saat",
+      "12h": "12 saat",
+      "24h": "24 saat"
+    },
+    "loginFailed": "Giris basarisiz",
+    "connectionError": "Baglanti hatasi"
+  },
+  "buddyModal": {
+    "title": "Yardimci Modu",
+    "ariaLabel": "Yardimci Modu",
+    "loading": "Yardimci ayarlari yukleniyor...",
+    "buddy": "Yardimci",
+    "edit": "Duzenle",
+    "done": "Tamam",
+    "name": "Ad",
+    "namePlaceholder": "Yardimci",
+    "color": "Renk",
+    "sizeLabel": "Boyut: %{{percent}}",
+    "p1Label": "O1",
+    "buddyLabel": "Yardimci",
+    "player1Controls": "Oyuncu 1 Kontrolleri",
+    "buddyControls": "Yardimci Kontrolleri",
+    "controlConflict": "Oyuncu 1 ve Yardimci ayni kontrolleri kullanamaz",
+    "cancel": "Iptal",
+    "start": "Basla"
+  }
+}

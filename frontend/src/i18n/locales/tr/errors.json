@@ -1,0 +1,14 @@
+{
+  "CONFLICT": "Kullanici adi veya e-posta zaten kullaniliyor",
+  "INVALID_CREDENTIALS": "Gecersiz kullanici adi veya sifre",
+  "DEACTIVATED": "Hesap devre disi birakilmis",
+  "INVALID_TOKEN": "Gecersiz veya suresi dolmus token",
+  "TOKEN_EXPIRED": "Oturum suresi doldu — lutfen tekrar giris yapin",
+  "TOKEN_REUSE": "Guvenlik nedeniyle oturum gecersiz kilinmis — lutfen tekrar giris yapin",
+  "VALIDATION_FAILED": "Dogrulama basarisiz",
+  "REGISTRATION_DISABLED": "Kayit su anda devre disi",
+  "FORBIDDEN": "Bu islemi gerceklestirme yetkiniz yok",
+  "NOT_FOUND": "Kaynak bulunamadi",
+  "INTERNAL_ERROR": "Beklenmeyen bir hata olustu",
+  "BAD_REQUEST": "Gecersiz istek"
+}

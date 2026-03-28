@@ -1,0 +1,30 @@
+{
+  "validation": {
+    "usernameMinLength": "Brukernavn m\u00e5 v\u00e6re minst {{min}} tegn",
+    "usernameMaxLength": "Brukernavn kan v\u00e6re maks {{max}} tegn",
+    "usernameInvalidChars": "Brukernavn kan bare inneholde bokstaver, tall, understreker og bindestreker",
+    "passwordMinLength": "Passord m\u00e5 v\u00e6re minst {{min}} tegn",
+    "passwordMaxLength": "Passord kan v\u00e6re maks {{max}} tegn",
+    "emailInvalid": "Ugyldig e-postadresse",
+    "emailMaxLength": "E-post kan v\u00e6re maks {{max}} tegn",
+    "roomNameMinLength": "Romnavn m\u00e5 v\u00e6re minst {{min}} tegn",
+    "roomNameMaxLength": "Romnavn kan v\u00e6re maks {{max}} tegn",
+    "roomNameInvalidChars": "Romnavn kan bare inneholde bokstaver, tall, mellomrom, understreker og bindestreker"
+  },
+  "actions": {
+    "save": "Lagre",
+    "cancel": "Avbryt",
+    "delete": "Slett",
+    "close": "Lukk",
+    "back": "Tilbake",
+    "confirm": "Bekreft",
+    "create": "Opprett",
+    "edit": "Rediger",
+    "loading": "Laster..."
+  },
+  "roles": {
+    "user": "Bruker",
+    "moderator": "Moderator",
+    "admin": "Administrator"
+  }
+}

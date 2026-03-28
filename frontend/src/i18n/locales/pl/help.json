@@ -1,0 +1,199 @@
+{
+  "title": "Pomoc",
+  "backToLobby": "Powr\u00f3t do lobby",
+  "github": "GitHub",
+  "loading": "\u0141adowanie...",
+  "retry": "Pon\u00f3w",
+  "failedToLoad": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107.",
+  "failedToLoadDoc": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107 {{title}}.",
+  "failedToLoadLevelEditor": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107 dokumentacji edytora poziom\u00f3w.",
+
+  "tabs": {
+    "gettingStarted": "Pierwsze kroki",
+    "powerUps": "Bonusy",
+    "gameModes": "Tryby gry",
+    "mapFeatures": "Elementy mapy",
+    "guides": "Poradniki",
+    "levelEditor": "Edytor poziom\u00f3w",
+    "adminDocs": "Dokumentacja admina"
+  },
+
+  "keyboard": {
+    "heading": "Sterowanie klawiatur\u0105",
+    "arrowKeys": "Strza\u0142ki",
+    "space": "Spacja",
+    "move": "Poruszaj swoj\u0105 postaci\u0105",
+    "placeBomb": "Po\u0142\u00f3\u017c bomb\u0119 na bie\u017c\u0105cej pozycji",
+    "detonateRemote": "Zdetonuj wszystkie zdalne bomby",
+    "throwBomb": "Rzu\u0107 bomb\u0119 w kierunku patrzenia",
+    "sendEmote": "Wy\u015blij szybki emotikon (GG, Pomocy!, Super!, Ups, Prowokacja, Dzi\u0119ki)",
+    "spectateNth": "Obserwuj N-tego gracza (po \u015bmierci)"
+  },
+
+  "gamepad": {
+    "heading": "Sterowanie padem (Xbox / Standardowy)",
+    "tip": "Ka\u017cdy standardowy kontroler dzia\u0142a. Wystarczy pod\u0142\u0105czy\u0107 i gra\u0107.",
+    "dpad": "Krzy\u017cak",
+    "leftStick": "Lewy analog",
+    "placeBomb": "Po\u0142\u00f3\u017c bomb\u0119",
+    "detonateRemote": "Zdetonuj zdalne bomby",
+    "throwBomb": "Rzu\u0107 bomb\u0119",
+    "cycleSpectate": "Prze\u0142\u0105cz obserwowanego gracza (po \u015bmierci)",
+    "menuNavHeading": "Nawigacja w menu",
+    "navigateMenus": "Nawiguj w menu",
+    "confirm": "Potwierd\u017a / Wybierz",
+    "back": "Wstecz / Zamknij"
+  },
+
+  "mechanics": {
+    "heading": "Podstawowe mechaniki",
+    "bombs": "Bomby",
+    "bombsDesc": "wybuchaj\u0105 po 3 sekundach w 4 kierunkach kardynalnych do pe\u0142nego zasi\u0119gu ognia",
+    "chainReactions": "Reakcje \u0142a\u0144cuchowe",
+    "chainReactionsDesc": "bomby trafione eksplozj\u0105 detonuj\u0105 natychmiast, tworz\u0105c niszcz\u0105ce combo",
+    "kickedBombs": "Kopni\u0119te bomby",
+    "kickedBombsDesc": "\u015blizgaj\u0105 si\u0119, a\u017c trafi\u0105 w \u015bcian\u0119, bomb\u0119 lub gracza",
+    "shieldBreak": "Z\u0142amanie tarczy",
+    "shieldBreakDesc": "po poch\u0142oni\u0119ciu trafienia przez tarcz\u0119 otrzymujesz 10 tick\u00f3w nietykalno\u015bci do ucieczki",
+    "spawnInvuln": "Nietykalno\u015b\u0107 po odrodzeniu",
+    "spawnInvulnDesc": "2 sekundy ochrony po odrodzeniu lub pojawieniu si\u0119",
+    "selfKills": "Samob\u00f3jstwa",
+    "selfKillsDesc": "odejmuj\u0105 1 od twojego wyniku zab\u00f3jstw",
+    "gracePeriod": "Okres karencji",
+    "gracePeriodDesc": "1,5 sekundy po spe\u0142nieniu warunku zwyci\u0119stwa przed zako\u0144czeniem gry; zwyci\u0119zca jest nietykalny"
+  },
+
+  "spectator": {
+    "heading": "Tryb obserwatora",
+    "tip": "Po \u015bmierci wchodzisz w tryb obserwatora, aby ogl\u0105da\u0107 pozosta\u0142ych graczy.",
+    "arrows": "Strza\u0142ki",
+    "mouseDrag": "Przeci\u0105ganie myszk\u0105",
+    "freeCam": "Swobodne przesuwanie kamery",
+    "click": "Kliknij",
+    "followPlayer": "na gracza, aby go \u015bledzi\u0107",
+    "jumpToNth": "Prze\u0142\u0105cz na N-tego gracza",
+    "breakFollow": "Naci\u015bnij dowolny klawisz ruchu lub przeci\u0105gnij, aby przerwa\u0107 \u015bledzenie i wr\u00f3ci\u0107 do swobodnej kamery"
+  },
+
+  "powerUps": {
+    "tip": "Wypadaj\u0105, gdy zniszczalne \u015bciany zostaj\u0105 zburzone. Przejd\u017a po unosz\u0105cych si\u0119 kafelkach, aby je zebra\u0107. Tw\u00f3j HUD (lewy dolny r\u00f3g) pokazuje aktualne statystyki."
+  },
+
+  "powerUpDetails": {
+    "bomb_up": "Zwi\u0119ksza maksymaln\u0105 liczb\u0119 bomb o 1 (do 8). K\u0142ad\u017a wi\u0119cej bomb jednocze\u015bnie, aby pu\u0142apkowa\u0107 wrog\u00f3w i tworzy\u0107 reakcje \u0142a\u0144cuchowe.",
+    "fire_up": "Zwi\u0119ksza zasi\u0119g eksplozji o 1 pole w ka\u017cdym kierunku (do 8). Wi\u0119kszy zasi\u0119g oznacza wi\u0119ksz\u0105 kontrol\u0119 obszaru i \u0142atwiejsze zab\u00f3jstwa.",
+    "speed_up": "Zwi\u0119ksza pr\u0119dko\u015b\u0107 poruszania (do 5 poziom\u00f3w). Poruszaj si\u0119 szybciej, aby unika\u0107 eksplozji, goni\u0107 wrog\u00f3w i zbiera\u0107 bonusy jako pierwszy.",
+    "shield": "Tworzy ochronn\u0105 aur\u0119, kt\u00f3ra poch\u0142ania jedno trafienie eksplozj\u0105, a potem p\u0119ka. Po p\u0119kni\u0119ciu otrzymujesz kr\u00f3tk\u0105 nietykalno\u015b\u0107 do ucieczki. Nie kumuluje si\u0119 \u2014 dodatkowe bonusy s\u0105 zu\u017cywane bez efektu. Bez limitu czasu.",
+    "kick": "Wejd\u017a w bomb\u0119, aby kopn\u0105\u0107 j\u0105 przez map\u0119. Kopni\u0119te bomby \u015blizgaj\u0105 si\u0119, a\u017c trafi\u0105 w \u015bcian\u0119, inn\u0105 bomb\u0119 lub gracza. Po kopni\u0119ciu nast\u0119puje kr\u00f3tki cooldown ruchu.",
+    "pierce_bomb": "Twoje eksplozje przechodz\u0105 przez zniszczalne \u015bciany, zamiast si\u0119 zatrzymywa\u0107. \u015aciany nadal s\u0105 niszczone, ale eksplozja kontynuuje za nimi. Dewastuj\u0105ce do oczyszczania du\u017cych obszar\u00f3w.",
+    "remote_bomb": "Twoje bomby nie wybuchaj\u0105 automatycznie. Naci\u015bnij <span class=\"help-key\">E</span> (lub <span class=\"help-key\">B</span> na padzie), aby zdetonowa\u0107. Automatyczna detonacja bezpiecze\u0144stwa po 10 sekundach. Bomby s\u0105 niebieskie z efektem migania. Naci\u015bnij <span class=\"help-key\">E</span> bez po\u0142o\u017conych bomb, aby prze\u0142\u0105cza\u0107 mi\u0119dzy trybem <b>WSZ</b> (detonuj wszystkie naraz) a <b>FIFO</b> (detonuj najstarsz\u0105 najpierw). Aktualny tryb jest widoczny w HUD.",
+    "line_bomb": "Ustawia lini\u0119 bomb w kierunku patrzenia, wykorzystuj\u0105c dost\u0119pny zapas bomb. \u015awietne do odcinania dr\u00f3g ucieczki lub wywo\u0142ywania masowych reakcji \u0142a\u0144cuchowych.",
+    "bomb_throw": "Naci\u015bnij <span class=\"help-key\">Q</span> (lub <span class=\"help-key\">Y</span> na padzie), aby rzuci\u0107 bomb\u0119 o 3 pola w kierunku patrzenia, przelatu\u0105c nad \u015bcianami i przeszkodami. Bomba l\u0105duje na najdalszym dost\u0119pnym polu. \u0141\u0105czy si\u0119 z bombami przebijaj\u0105cymi/zdalnymi."
+  },
+
+  "gameModes": {
+    "playerRange": "{{min}}\u2013{{max}} graczy"
+  },
+
+  "modeTags": {
+    "shrinkingZone": "Kurczaca si\u0119 strefa",
+    "respawn": "Odrodzenie",
+    "zoneControl": "Kontrola strefy",
+    "teams": "{{count}} dru\u017cyny"
+  },
+
+  "modeDetails": {
+    "ffa": "2\u20138 graczy. Klasyczna eliminacja \u2014 b\u0105d\u017a ostatnim na nogach. Rundy po 3 minuty.",
+    "teams": "4\u20138 graczy podzielonych na Dru\u017cyn\u0119 Czerwon\u0105 i Niebiesk\u0105. Ostatnia dru\u017cyna z \u017cyj\u0105cym cz\u0142onkiem wygrywa. Ogie\u0144 przyjazny konfigurowany przez gospodarza. Rundy po 4 minuty.",
+    "battle_royale": "4\u20138 graczy. Ko\u0142owa strefa zagro\u017cenia kurczy si\u0119 od kraw\u0119dzi. Przebywanie poza stref\u0105 zadaje obra\u017cenia co tick. Pozosta\u0144 w \u015brodku i przetrwaj wszystkich. Rundy po 5 minut.",
+    "sudden_death": "2\u20138 graczy. Wszyscy zaczynaj\u0105 z maks. statystykami (8 bomb, 8 zasi\u0119gu, maks. szybko\u015b\u0107, kopni\u0119cie). Brak bonus\u00f3w. Jedno trafienie zabija \u2014 czyste umiej\u0119tno\u015bci. Rundy po 2 minuty.",
+    "deathmatch": "2\u20138 graczy. Odrodzenie 3 sekundy po \u015bmierci z resetem statystyk. Pierwszy z 10 zab\u00f3jstwami wygrywa, lub ten z najwi\u0119ksz\u0105 liczb\u0105, gdy up\u0142ynie czas. Rundy po 5 minut.",
+    "king_of_the_hill": "2\u20138 graczy. \u015awiec\u0105ca strefa 3\u00d73 pojawia si\u0119 na mapie. St\u00f3j w niej, aby zdobywa\u0107 punkty. Pierwszy ze 100 punktami wygrywa. Wzg\u00f3rze przesuwa si\u0119 co 30 sekund \u2014 zarys widmo pokazuje nast\u0119pn\u0105 pozycj\u0119 5 sekund przed zmian\u0105. Rundy po 4 minuty."
+  },
+
+  "mapFeatures": {
+    "reinforcedWalls": {
+      "heading": "Wzmocnione \u015bciany",
+      "tip": "Opcjonalne \u2014 w\u0142\u0105czane przy tworzeniu pokoju.",
+      "desc": "Zniszczalne \u015bciany wymagaj\u0105 <b>2 trafie\u0144</b>, aby je zniszczy\u0107. Pierwsza eksplozja je p\u0119ka (wizualnie uszkodzone), a druga niszczy ca\u0142kowicie. Planuj rozmieszczenie bomb odpowiednio."
+    },
+    "dynamicEvents": {
+      "heading": "Dynamiczne zdarzenia na mapie",
+      "tip": "Opcjonalne \u2014 w\u0142\u0105czane przy tworzeniu pokoju. Dodaj\u0105 losowy chaos, aby mecze by\u0142y bardziej ekscytuj\u0105ce.",
+      "meteorStrikes": "Uderzenia meteor\u00f3w",
+      "meteorStrikesDesc": "Losowe pola s\u0105 celowane co 30\u201345 sekund. Ostrzegawczy celownik pojawia si\u0119 na ziemi na 2 sekundy przed uderzeniem. Meteory niszcz\u0105 \u015bciany i zabijaj\u0105 graczy w strefie wybuchu.",
+      "powerUpRain": "Deszcz bonus\u00f3w",
+      "powerUpRainDesc": "Co 60 sekund bonusy spadaj\u0105 na losowe otwarte pola na mapie. \u015awietny spos\u00f3b na dozbrojenie si\u0119 w trakcie gry.",
+      "wallCollapse": "Zawalenie \u015bcian",
+      "wallCollapseDesc": "Co 45\u201360 sekund obszar 3\u00d73 zniszczalnych \u015bcian rozpada si\u0119 po 2-sekundowym ostrze\u017ceniu. Otwiera map\u0119 i mo\u017ce ci\u0119 zaskoczy\u0107.",
+      "freezeWave": "Fala mrozu",
+      "freezeWaveDesc": "Co 50\u201370 sekund rz\u0105d lub kolumna p\u00f3l zamarza w l\u00f3d na 6 sekund. Chodzenie po lodzie powoduje po\u015blizg. 1 sekunda ostrze\u017cenia przed zamro\u017ceniem.",
+      "bombSurge": "Fala bombowa",
+      "bombSurgeDesc": "Co 40\u201355 sekund wszystkie bomby na mapie natychmiast trac\u0105 1 sekund\u0119 lontu, wybuchaj\u0105c wcze\u015bniej ni\u017c oczekiwano. Czerwony puls ekranu sygnalizuje fal\u0119."
+    },
+    "hazardTiles": {
+      "heading": "Kafelki zagro\u017ce\u0144",
+      "tip": "Opcjonalne \u2014 w\u0142\u0105czane przy tworzeniu pokoju. Umieszczone na sta\u0142ych pozycjach na mapie.",
+      "teleporters": "Teleportery",
+      "teleportersDesc": "\u015awiec\u0105ce platformy w parach niebiesko/pomara\u0144czowych. Wejd\u017a na jedn\u0105, aby natychmiast przenie\u015b\u0107 si\u0119 na drug\u0105. U\u017cywaj do niespodziewanych atak\u00f3w lub szybkich ucieczek.",
+      "conveyorBelts": "Ta\u015bmoci\u0105gi",
+      "conveyorBeltsDesc": "Ciemne kafelki ze strza\u0142kami kierunkowymi. Automatycznie pchaj\u0105 ci\u0119 w kierunku strza\u0142ki, gdy na nie wejdziesz. Mog\u0105 by\u0107 u\u017cywane strategicznie lub mog\u0105 ci\u0119 wci\u0105gn\u0105\u0107 w niebezpiecze\u0144stwo."
+    },
+    "themeVariants": {
+      "heading": "Warianty motywu",
+      "tip": "W trybie kampanii ka\u017cdy \u015bwiat ma w\u0142asny motyw wizualny. \u015aciany i zniszczalne bloki zmieniaj\u0105 wygl\u0105d, aby pasowa\u0107 do motywu."
+    }
+  },
+
+  "levelEditor": {
+    "tileReference": "Informacje o kafelkach",
+    "tileRefTip": "To s\u0105 kafelki dost\u0119pne w edytorze poziom\u00f3w. Tryb kampanii zawiera dodatkowe specjalne typy.",
+    "basicTiles": "Podstawowe kafelki",
+    "wall": "\u015aciana \u2014 niezniszczalna, blokuje ruch i eksplozje",
+    "destructible": "Zniszczalny \u2014 niszczalna \u015bciana, mo\u017ce upuszcza\u0107 bonusy po zniszczeniu",
+    "destructibleCracked": "P\u0119kni\u0119ty \u2014 uszkodzona zniszczalna \u015bciana, jeszcze jedno trafienie do zniszczenia (tryb wzmocniony)",
+    "mechanics": "Mechaniki",
+    "teleporter": "Teleportery \u2014 pary niebieska/pomara\u0144czowa, wejd\u017a na jeden, aby przenie\u015b\u0107 si\u0119 na drugi",
+    "conveyor": "Ta\u015bmoci\u0105gi \u2014 pchaj\u0105 graczy, bomby i wrog\u00f3w w kierunku strza\u0142ki",
+    "campaignTiles": "Kafelki kampanii",
+    "exit": "Wyj\u015bcie \u2014 tekstura klapy, warunkowo przej\u015bciowe (odblokowuje si\u0119 po wymaganych zab\u00f3jstwach)",
+    "goal": "Cel \u2014 znacznik gwiazdy, wejd\u017a na niego, aby uko\u0144czy\u0107 zadanie poziomu",
+    "puzzleTiles": "Kafelki \u0142amig\u0142\u00f3wek",
+    "switch": "Prze\u0142\u0105cznik \u2014 p\u0142yta naciskowa steruj\u0105ca po\u0142\u0105czonymi bramami (4 kolory: czerwony, niebieski, zielony, \u017c\u00f3\u0142ty)",
+    "gate": "Brama \u2014 kraty blokuj\u0105ce przej\u015bcie, po\u0142\u0105czone z prze\u0142\u0105cznikami wg koloru",
+    "crumbling": "Kruszywo \u2014 zapada si\u0119 po 10 tickach od momentu, gdy gracz lub wr\u00f3g zejdzie z kafelka",
+    "hazardTiles": "Kafelki zagro\u017ce\u0144 (zale\u017cne od motywu)",
+    "vine": "Wino\u015bl \u2014 spowalnia ruch (motyw Le\u015bny)",
+    "quicksand": "Ruchome piaski \u2014 spowalnia ruch, zabija po 2 sekundach (motyw Pustynny)",
+    "ice": "L\u00f3d \u2014 powoduje po\u015blizg (motyw Lodowy)",
+    "lava": "Lawa \u2014 natychmiastowa \u015bmier\u0107 przy kontakcie (motyw Wulkaniczny)",
+    "mud": "B\u0142oto \u2014 spowalnia ruch (motyw Bagienny)",
+    "spikes": "Kolce \u2014 cykliczne fazy bezpieczne/\u015bmiertelne, 2s bezpiecznie, potem 1s \u015bmiertelnie (motyw Zamkowy)",
+    "darkRift": "Mroczna szczelina \u2014 teleportuje na losowe puste pole (motyw Pustki)",
+    "fullDocs": "Pe\u0142na dokumentacja",
+    "fullDocsDesc": "Poni\u017cej znajdziesz pe\u0142n\u0105 dokumentacj\u0119 systemu kampanii ze szczeg\u00f3\u0142ami o wrogach, bossach, warunkach zwyci\u0119stwa i wi\u0119cej."
+  },
+
+  "guides": {
+    "campaign": "Poradnik kampanii",
+    "replaySystem": "System powt\u00f3rek",
+    "botAi": "Poradnik AI bot\u00f3w",
+    "enemyAi": "Poradnik AI wrog\u00f3w"
+  },
+
+  "staffDocs": {
+    "adminSystems": "Panel admina i systemy",
+    "infrastructure": "Infrastruktura i bezpiecze\u0144stwo",
+    "testing": "Testowanie",
+    "performance": "Wydajno\u015b\u0107 i mechanizmy",
+    "botAiInternals": "Wewn\u0119trzne mechanizmy AI bot\u00f3w",
+    "apiReference": "Dokumentacja API (OpenAPI)"
+  },
+
+  "imprint": {
+    "tab": "Nota prawna",
+    "loading": "\u0141adowanie noty prawnej...",
+    "noInfo": "Brak dost\u0119pnej noty prawnej.",
+    "failedToLoad": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107 noty prawnej."
+  }
+}

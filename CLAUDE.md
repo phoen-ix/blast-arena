@@ -242,7 +242,7 @@ Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-sy
 - See [docs/performance-and-internals.md](docs/performance-and-internals.md)
 
 ## Internationalization (i18n)
-Full-stack i18n via **i18next**. Frontend uses `i18next-http-backend` + `i18next-browser-languagedetector`; backend uses `i18next-fs-backend`. Supported languages: English (`en`), German (`de`), French (`fr`), Spanish (`es`), Italian (`it`), Portuguese (`pt`).
+Full-stack i18n via **i18next**. Frontend uses `i18next-http-backend` + `i18next-browser-languagedetector`; backend uses `i18next-fs-backend`. Supported languages: English (`en`), German (`de`), French (`fr`), Spanish (`es`), Italian (`it`), Portuguese (`pt`), Polish (`pl`), Dutch (`nl`), Turkish (`tr`), Swedish (`sv`), Norwegian Bokmål (`nb`), Danish (`da`).
 - **Translation pattern**: `t('namespace:section.key')` with `{{variable}}` interpolation. Import `t` from `frontend/src/i18n/index.ts` or `backend/src/i18n/index.ts`
 - **Namespaces**: shared (`common`, `game`), frontend-only (`ui`, `auth`, `hud`, `admin`, `campaign`, `help`, `editor`, `errors`), backend-only (`server`, `email`)
 - **Locale files**: `frontend/src/i18n/locales/{lng}/*.json`, `shared/src/i18n/locales/{lng}/*.json`, `backend/src/i18n/locales/{lng}/*.json`. Build scripts (`frontend/scripts/copy-locales.cjs`, `backend/scripts/copy-locales.cjs`) merge shared + workspace-specific locales into output directories

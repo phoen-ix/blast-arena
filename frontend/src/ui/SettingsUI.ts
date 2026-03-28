@@ -437,6 +437,12 @@ export class SettingsUI {
               <option value="es" ${i18n.language === 'es' ? 'selected' : ''}>Español</option>
               <option value="it" ${i18n.language === 'it' ? 'selected' : ''}>Italiano</option>
               <option value="pt" ${i18n.language === 'pt' ? 'selected' : ''}>Português</option>
+              <option value="pl" ${i18n.language === 'pl' ? 'selected' : ''}>Polski</option>
+              <option value="nl" ${i18n.language === 'nl' ? 'selected' : ''}>Nederlands</option>
+              <option value="tr" ${i18n.language === 'tr' ? 'selected' : ''}>Türkçe</option>
+              <option value="sv" ${i18n.language === 'sv' ? 'selected' : ''}>Svenska</option>
+              <option value="nb" ${i18n.language === 'nb' ? 'selected' : ''}>Norsk</option>
+              <option value="da" ${i18n.language === 'da' ? 'selected' : ''}>Dansk</option>
             </select>
             <div class="setting-row-info">
               <div class="setting-row-label">${t('settings.languageDesc')}</div>

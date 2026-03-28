@@ -1,0 +1,80 @@
+{
+  "title": "Kampanj",
+  "titleBrand": "<span style=\"color:var(--text);\">CAMP</span>AIGN",
+  "backToLobby": "Tillbaka till lobbyn",
+  "empty": "Inga kampanjvärldar tillgängliga ännu.",
+  "loadFailed": "Kunde inte ladda kampanjen: {{error}}",
+  "loadingLevel": "Laddar bana...",
+  "startFailed": "Kunde inte starta banan: {{error}}",
+  "stats": {
+    "enemies": "fiender",
+    "life": "liv",
+    "lives": "liv",
+    "time": "tid"
+  },
+  "buttons": {
+    "start": "Starta",
+    "coop": "Co-op",
+    "localCoop": "Lokalt co-op",
+    "buddy": "Kompis"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "{{percent}}% storlek"
+  },
+  "localCoopModal": {
+    "title": "Lokalt co-op-inställning",
+    "ariaLabel": "Lokalt co-op-inställning",
+    "player1Controls": "Spelare 1-kontroller",
+    "player2": "Spelare 2",
+    "identity": "Identitet:",
+    "guest": "Gäst",
+    "logIn": "Logga in",
+    "name": "Namn:",
+    "color": "Färg:",
+    "nameAriaLabel": "Spelare 2 användarnamn",
+    "passwordAriaLabel": "Spelare 2 lösenord",
+    "usernamePlaceholder": "Användarnamn",
+    "passwordPlaceholder": "Lösenord",
+    "loginDurationAriaLabel": "Inloggningslängd",
+    "loggingIn": "Loggar in...",
+    "logInBtn": "Logga in",
+    "enterCredentials": "Ange användarnamn och lösenord",
+    "loggedInAs": "Inloggad som <strong>{{username}}</strong>",
+    "logout": "Logga ut",
+    "controls": "Kontroller",
+    "cameraMode": "Kameraläge",
+    "controlConflict": "Båda spelarna kan inte använda samma kontroller",
+    "cancel": "Avbryt",
+    "start": "Starta",
+    "defaultPlayerName": "Spelare 2",
+    "duration": {
+      "session": "Bara denna session",
+      "1h": "1 timme",
+      "6h": "6 timmar",
+      "12h": "12 timmar",
+      "24h": "24 timmar"
+    },
+    "loginFailed": "Inloggning misslyckades",
+    "connectionError": "Anslutningsfel"
+  },
+  "buddyModal": {
+    "title": "Kompisläge",
+    "ariaLabel": "Kompisläge",
+    "loading": "Laddar kompisinställningar...",
+    "buddy": "Kompis",
+    "edit": "Redigera",
+    "done": "Klar",
+    "name": "Namn",
+    "namePlaceholder": "Kompis",
+    "color": "Färg",
+    "sizeLabel": "Storlek: {{percent}}%",
+    "p1Label": "S1",
+    "buddyLabel": "Kompis",
+    "player1Controls": "Spelare 1-kontroller",
+    "buddyControls": "Kompiskontroller",
+    "controlConflict": "Spelare 1 och Kompis kan inte använda samma kontroller",
+    "cancel": "Avbryt",
+    "start": "Starta"
+  }
+}

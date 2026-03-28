@@ -1,0 +1,80 @@
+{
+  "title": "Kampagne",
+  "titleBrand": "<span style=\"color:var(--text);\">CAMP</span>AIGN",
+  "backToLobby": "Tilbage til lobby",
+  "empty": "Ingen kampagne-verdener tilg\u00e6ngelige endnu.",
+  "loadFailed": "Kunne ikke indl\u00e6se kampagne: {{error}}",
+  "loadingLevel": "Indl\u00e6ser bane...",
+  "startFailed": "Kunne ikke starte bane: {{error}}",
+  "stats": {
+    "enemies": "fjender",
+    "life": "liv",
+    "lives": "liv",
+    "time": "tid"
+  },
+  "buttons": {
+    "start": "Start",
+    "coop": "Co-op",
+    "localCoop": "Lokal co-op",
+    "buddy": "Makker"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "{{percent}}% st\u00f8rrelse"
+  },
+  "localCoopModal": {
+    "title": "Lokal co-op ops\u00e6tning",
+    "ariaLabel": "Lokal co-op ops\u00e6tning",
+    "player1Controls": "Spiller 1 kontroller",
+    "player2": "Spiller 2",
+    "identity": "Identitet:",
+    "guest": "G\u00e6st",
+    "logIn": "Log ind",
+    "name": "Navn:",
+    "color": "Farve:",
+    "nameAriaLabel": "Spiller 2 brugernavn",
+    "passwordAriaLabel": "Spiller 2 adgangskode",
+    "usernamePlaceholder": "Brugernavn",
+    "passwordPlaceholder": "Adgangskode",
+    "loginDurationAriaLabel": "Login-varighed",
+    "loggingIn": "Logger ind...",
+    "logInBtn": "Log ind",
+    "enterCredentials": "Indtast brugernavn og adgangskode",
+    "loggedInAs": "Logget ind som <strong>{{username}}</strong>",
+    "logout": "Log ud",
+    "controls": "Kontroller",
+    "cameraMode": "Kameratilstand",
+    "controlConflict": "Begge spillere kan ikke bruge de samme kontroller",
+    "cancel": "Annuller",
+    "start": "Start",
+    "defaultPlayerName": "Spiller 2",
+    "duration": {
+      "session": "Kun session",
+      "1h": "1 time",
+      "6h": "6 timer",
+      "12h": "12 timer",
+      "24h": "24 timer"
+    },
+    "loginFailed": "Login mislykkedes",
+    "connectionError": "Forbindelsesfejl"
+  },
+  "buddyModal": {
+    "title": "Makkertilstand",
+    "ariaLabel": "Makkertilstand",
+    "loading": "Indl\u00e6ser makkerindstillinger...",
+    "buddy": "Makker",
+    "edit": "Rediger",
+    "done": "F\u00e6rdig",
+    "name": "Navn",
+    "namePlaceholder": "Makker",
+    "color": "Farve",
+    "sizeLabel": "St\u00f8rrelse: {{percent}}%",
+    "p1Label": "S1",
+    "buddyLabel": "Makker",
+    "player1Controls": "Spiller 1 kontroller",
+    "buddyControls": "Makker-kontroller",
+    "controlConflict": "Spiller 1 og Makker kan ikke bruge de samme kontroller",
+    "cancel": "Annuller",
+    "start": "Start"
+  }
+}

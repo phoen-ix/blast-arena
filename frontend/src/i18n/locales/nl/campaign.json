@@ -1,0 +1,80 @@
+{
+  "title": "Campagne",
+  "titleBrand": "<span style=\"color:var(--text);\">CAMP</span>AGNE",
+  "backToLobby": "Terug naar lobby",
+  "empty": "Nog geen campagnewerelden beschikbaar.",
+  "loadFailed": "Campagne laden mislukt: {{error}}",
+  "loadingLevel": "Level laden...",
+  "startFailed": "Level starten mislukt: {{error}}",
+  "stats": {
+    "enemies": "vijanden",
+    "life": "leven",
+    "lives": "levens",
+    "time": "tijd"
+  },
+  "buttons": {
+    "start": "Start",
+    "coop": "Co-op",
+    "localCoop": "Lokale co-op",
+    "buddy": "Buddy"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "{{percent}}% grootte"
+  },
+  "localCoopModal": {
+    "title": "Lokale co-op instellen",
+    "ariaLabel": "Lokale co-op instellen",
+    "player1Controls": "Speler 1 besturing",
+    "player2": "Speler 2",
+    "identity": "Identiteit:",
+    "guest": "Gast",
+    "logIn": "Inloggen",
+    "name": "Naam:",
+    "color": "Kleur:",
+    "nameAriaLabel": "Speler 2 gebruikersnaam",
+    "passwordAriaLabel": "Speler 2 wachtwoord",
+    "usernamePlaceholder": "Gebruikersnaam",
+    "passwordPlaceholder": "Wachtwoord",
+    "loginDurationAriaLabel": "Inlogduur",
+    "loggingIn": "Bezig met inloggen...",
+    "logInBtn": "Inloggen",
+    "enterCredentials": "Voer gebruikersnaam en wachtwoord in",
+    "loggedInAs": "Ingelogd als <strong>{{username}}</strong>",
+    "logout": "Uitloggen",
+    "controls": "Besturing",
+    "cameraMode": "Cameramodus",
+    "controlConflict": "Beide spelers kunnen niet dezelfde besturing gebruiken",
+    "cancel": "Annuleren",
+    "start": "Start",
+    "defaultPlayerName": "Speler 2",
+    "duration": {
+      "session": "Alleen deze sessie",
+      "1h": "1 uur",
+      "6h": "6 uur",
+      "12h": "12 uur",
+      "24h": "24 uur"
+    },
+    "loginFailed": "Inloggen mislukt",
+    "connectionError": "Verbindingsfout"
+  },
+  "buddyModal": {
+    "title": "Buddymodus",
+    "ariaLabel": "Buddymodus",
+    "loading": "Buddy-instellingen laden...",
+    "buddy": "Buddy",
+    "edit": "Bewerken",
+    "done": "Klaar",
+    "name": "Naam",
+    "namePlaceholder": "Buddy",
+    "color": "Kleur",
+    "sizeLabel": "Grootte: {{percent}}%",
+    "p1Label": "S1",
+    "buddyLabel": "Buddy",
+    "player1Controls": "Speler 1 besturing",
+    "buddyControls": "Buddy-besturing",
+    "controlConflict": "Speler 1 en Buddy kunnen niet dezelfde besturing gebruiken",
+    "cancel": "Annuleren",
+    "start": "Start"
+  }
+}

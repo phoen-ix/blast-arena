@@ -1,0 +1,80 @@
+{
+  "title": "Kampanje",
+  "titleBrand": "<span style=\"color:var(--text);\">KAMP</span>ANJE",
+  "backToLobby": "Tilbake til lobbyen",
+  "empty": "Ingen kampanjeverdener tilgjengelig enn\u00e5.",
+  "loadFailed": "Kunne ikke laste kampanje: {{error}}",
+  "loadingLevel": "Laster niv\u00e5...",
+  "startFailed": "Kunne ikke starte niv\u00e5: {{error}}",
+  "stats": {
+    "enemies": "fiender",
+    "life": "liv",
+    "lives": "liv",
+    "time": "tid"
+  },
+  "buttons": {
+    "start": "Start",
+    "coop": "Samarbeid",
+    "localCoop": "Lokalt samarbeid",
+    "buddy": "Kompis"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "{{percent}}% st\u00f8rrelse"
+  },
+  "localCoopModal": {
+    "title": "Lokalt samarbeid \u2014 oppsett",
+    "ariaLabel": "Lokalt samarbeid \u2014 oppsett",
+    "player1Controls": "Spiller 1-kontroller",
+    "player2": "Spiller 2",
+    "identity": "Identitet:",
+    "guest": "Gjest",
+    "logIn": "Logg inn",
+    "name": "Navn:",
+    "color": "Farge:",
+    "nameAriaLabel": "Spiller 2 brukernavn",
+    "passwordAriaLabel": "Spiller 2 passord",
+    "usernamePlaceholder": "Brukernavn",
+    "passwordPlaceholder": "Passord",
+    "loginDurationAriaLabel": "Innloggingsvarighet",
+    "loggingIn": "Logger inn...",
+    "logInBtn": "Logg inn",
+    "enterCredentials": "Skriv inn brukernavn og passord",
+    "loggedInAs": "Logget inn som <strong>{{username}}</strong>",
+    "logout": "Logg ut",
+    "controls": "Kontroller",
+    "cameraMode": "Kameramodus",
+    "controlConflict": "Begge spillere kan ikke bruke de samme kontrollene",
+    "cancel": "Avbryt",
+    "start": "Start",
+    "defaultPlayerName": "Spiller 2",
+    "duration": {
+      "session": "Kun denne \u00f8kten",
+      "1h": "1 time",
+      "6h": "6 timer",
+      "12h": "12 timer",
+      "24h": "24 timer"
+    },
+    "loginFailed": "Innlogging mislyktes",
+    "connectionError": "Tilkoblingsfeil"
+  },
+  "buddyModal": {
+    "title": "Kompismodus",
+    "ariaLabel": "Kompismodus",
+    "loading": "Laster kompisinnstillinger...",
+    "buddy": "Kompis",
+    "edit": "Rediger",
+    "done": "Ferdig",
+    "name": "Navn",
+    "namePlaceholder": "Kompis",
+    "color": "Farge",
+    "sizeLabel": "St\u00f8rrelse: {{percent}}%",
+    "p1Label": "S1",
+    "buddyLabel": "Kompis",
+    "player1Controls": "Spiller 1-kontroller",
+    "buddyControls": "Kompiskontroller",
+    "controlConflict": "Spiller 1 og kompis kan ikke bruke de samme kontrollene",
+    "cancel": "Avbryt",
+    "start": "Start"
+  }
+}

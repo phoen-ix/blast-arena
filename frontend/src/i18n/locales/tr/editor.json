@@ -1,0 +1,91 @@
+{
+  "title": {
+    "mapEditor": "Harita Duzenleyici",
+    "levelEditor": "Bolum Duzenleyici"
+  },
+  "tools": {
+    "tiles": "Kareler",
+    "empty": "Bos",
+    "wall": "Duvar",
+    "destructible": "Yikilabilir",
+    "spawn": "Dogma Noktasi",
+    "exit": "Cikis",
+    "goal": "Hedef",
+    "eraser": "Silgi",
+    "mechanics": "Mekanikler",
+    "teleporterA": "Isinlayici A",
+    "teleporterB": "Isinlayici B",
+    "conveyorUp": "Konveyor \u2191",
+    "conveyorDown": "Konveyor \u2193",
+    "conveyorLeft": "Konveyor \u2190",
+    "conveyorRight": "Konveyor \u2192",
+    "puzzle": "Bulmaca",
+    "switch": "Anahtar",
+    "gate": "Kapi",
+    "crumblingFloor": "Cirpinan Zemin",
+    "themeHazards": "Tema Tehlikeleri",
+    "noHazardsTheme": "Bu tema icin tehlike karesi yok",
+    "noHazardsAvailable": "Tehlike karesi mevcut degil",
+    "showAllThemes": "Tum temalari goster",
+    "enemies": "Dusmanlar",
+    "powerUps": "Guc-upler",
+    "variants": {
+      "toggle": "Acma-Kapama",
+      "pressure": "Basinc",
+      "oneshot": "Tek Kullanimlik"
+    },
+    "powerUpNames": {
+      "bomb_up": "bomba artisi",
+      "fire_up": "ates artisi",
+      "speed_up": "hiz artisi",
+      "shield": "kalkan",
+      "kick": "tekme",
+      "pierce_bomb": "delici bomba",
+      "remote_bomb": "uzaktan bomba",
+      "line_bomb": "seri bomba"
+    }
+  },
+  "settings": {
+    "mapSettings": "Harita Ayarlari",
+    "levelSettings": "Bolum Ayarlari",
+    "width": "Genislik",
+    "height": "Yukseklik",
+    "dimensionHint": "Tek sayilar, 7-51",
+    "name": "Ad",
+    "description": "Aciklama",
+    "lives": "Can",
+    "timeLimit": "Sure Siniri (saniye, 0=yok)",
+    "parTime": "Par Suresi (saniye, 0=yok)",
+    "parTimeHint": "Par suresinin altinda tamamlarsan 2 yildiz",
+    "winCondition": "Kazanma Kosulu",
+    "winConditions": {
+      "killAll": "Tum Dusmanlari Oldur",
+      "findExit": "Cikisi Bul",
+      "reachGoal": "Hedefe Ulas",
+      "surviveTime": "Sureyi Atlatir"
+    },
+    "published": "Yayinda"
+  },
+  "actions": {
+    "save": "Kaydet",
+    "export": "Disa Aktar",
+    "back": "Geri"
+  },
+  "modals": {
+    "unsavedChanges": "Kaydedilmemis Degisiklikler",
+    "unsavedDescription": "Kaydedilmemis degisiklikleriniz var. Ayrilmadan once kaydetmek ister misiniz?",
+    "cancel": "Iptal",
+    "discard": "Vazgec",
+    "saveAndExit": "Kaydet ve Cik"
+  },
+  "toasts": {
+    "needSpawns": "En az 2 dogma noktasi gerekli",
+    "mapSaved": "Harita kaydedildi!",
+    "levelSaved": "Bolum kaydedildi!",
+    "saveFailed": "Kaydetme basarisiz: {{error}}"
+  },
+  "defaults": {
+    "untitledLevel": "Isimsiz Bolum",
+    "untitledMap": "Isimsiz Harita"
+  }
+}
