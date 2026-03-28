@@ -129,6 +129,21 @@ router.put('/user/privacy', authMiddleware, validate(privacySchema), async (req,
   }
 });
 
+// --- Language Preference ---
+
+const languageSchema = z.object({
+  language: z.string().min(2).max(10),
+});
+
+router.put('/user/language', authMiddleware, validate(languageSchema), async (req, res, next) => {
+  try {
+    await userService.updateLanguage(req.user!.userId, req.body.language);
+    res.json({ language: req.body.language });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // --- Buddy Settings ---
 
 router.get('/user/buddy-settings', authMiddleware, async (req, res, next) => {

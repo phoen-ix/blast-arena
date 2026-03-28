@@ -9,6 +9,7 @@ import {
   CustomMapSummary,
 } from '@blast-arena/shared';
 import { UIGamepadNavigator } from '../../game/UIGamepadNavigator';
+import { t } from '../../i18n';
 
 export interface CreateRoomModalDeps {
   socketClient: SocketClient;
@@ -29,29 +30,29 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
   modal.className = 'modal-overlay';
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
-  modal.setAttribute('aria-label', 'Create Room');
+  modal.setAttribute('aria-label', t('ui:createRoom.title'));
   modal.innerHTML = `
     <div class="modal" style="width:760px;max-width:95vw;">
-      <h2>Create Room</h2>
+      <h2>${t('ui:createRoom.title')}</h2>
 
       <div class="form-grid">
         <div class="form-group">
-          <label for="room-name">Room Name</label>
-          <input type="text" id="room-name" placeholder="My Arena" maxlength="30">
+          <label for="room-name">${t('ui:createRoom.roomName')}</label>
+          <input type="text" id="room-name" placeholder="${t('ui:createRoom.roomNamePlaceholder')}" maxlength="30">
         </div>
         <div class="form-group">
-          <label for="room-mode">Game Mode</label>
+          <label for="room-mode">${t('ui:createRoom.gameMode')}</label>
           <select id="room-mode">
-            <option value="ffa">Free for All</option>
-            <option value="teams">Teams</option>
-            <option value="battle_royale">Battle Royale</option>
-            <option value="sudden_death">Sudden Death</option>
-            <option value="deathmatch">Deathmatch</option>
-            <option value="king_of_the_hill">King of the Hill</option>
+            <option value="ffa">${t('game:modes.ffa.name')}</option>
+            <option value="teams">${t('game:modes.teams.name')}</option>
+            <option value="battle_royale">${t('game:modes.battle_royale.name')}</option>
+            <option value="sudden_death">${t('game:modes.sudden_death.name')}</option>
+            <option value="deathmatch">${t('game:modes.deathmatch.name')}</option>
+            <option value="king_of_the_hill">${t('game:modes.king_of_the_hill.name')}</option>
           </select>
         </div>
         <div class="form-group">
-          <label for="room-max-players">Max Players</label>
+          <label for="room-max-players">${t('ui:createRoom.maxPlayers')}</label>
           <select id="room-max-players">
             <option value="2">2</option>
             <option value="4" selected>4</option>
@@ -60,82 +61,82 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
           </select>
         </div>
         <div class="form-group">
-          <label for="room-round-time">Match Time</label>
+          <label for="room-round-time">${t('ui:createRoom.matchTime')}</label>
           <select id="room-round-time">
-            <option value="60">1 min</option>
-            <option value="120">2 min</option>
-            <option value="180" selected>3 min</option>
-            <option value="300">5 min</option>
-            <option value="600">10 min</option>
+            <option value="60">${t('ui:createRoom.matchTimes.60')}</option>
+            <option value="120">${t('ui:createRoom.matchTimes.120')}</option>
+            <option value="180" selected>${t('ui:createRoom.matchTimes.180')}</option>
+            <option value="300">${t('ui:createRoom.matchTimes.300')}</option>
+            <option value="600">${t('ui:createRoom.matchTimes.600')}</option>
           </select>
         </div>
         ${
           deps.customMaps && deps.customMaps.length > 0
             ? `
         <div class="form-group">
-          <label for="room-custom-map">Map</label>
+          <label for="room-custom-map">${t('ui:createRoom.map')}</label>
           <select id="room-custom-map">
-            <option value="">Random (Generated)</option>
-            ${deps.customMaps.map((m) => `<option value="${m.id}">${m.name} (${m.mapWidth}x${m.mapHeight}, ${m.spawnCount} spawns)</option>`).join('')}
+            <option value="">${t('ui:createRoom.randomGenerated')}</option>
+            ${deps.customMaps.map((m) => `<option value="${m.id}">${t('ui:createRoom.mapOptionLabel', { name: m.name, width: m.mapWidth, height: m.mapHeight, spawns: m.spawnCount })}</option>`).join('')}
           </select>
         </div>`
             : ''
         }
         <div class="form-group">
-          <label for="room-map-size">Map Size</label>
+          <label for="room-map-size">${t('ui:createRoom.mapSize')}</label>
           <select id="room-map-size">
-            <option value="21">21x21 (Small)</option>
-            <option value="31" selected>31x31 (Normal)</option>
-            <option value="39">39x39 (Large)</option>
-            <option value="51">51x51 (Huge)</option>
-            <option value="61">61x61 (Massive)</option>
+            <option value="21">${t('ui:createRoom.mapSizes.21')}</option>
+            <option value="31" selected>${t('ui:createRoom.mapSizes.31')}</option>
+            <option value="39">${t('ui:createRoom.mapSizes.39')}</option>
+            <option value="51">${t('ui:createRoom.mapSizes.51')}</option>
+            <option value="61">${t('ui:createRoom.mapSizes.61')}</option>
           </select>
         </div>
         <div class="form-group">
-          <label for="room-wall-density">Wall Density</label>
+          <label for="room-wall-density">${t('ui:createRoom.wallDensity')}</label>
           <select id="room-wall-density">
-            <option value="0.3">Low (30%)</option>
-            <option value="0.5">Medium (50%)</option>
-            <option value="0.65" selected>High (65%)</option>
-            <option value="0.8">Very High (80%)</option>
+            <option value="0.3">${t('ui:createRoom.wallDensities.low30')}</option>
+            <option value="0.5">${t('ui:createRoom.wallDensities.med50')}</option>
+            <option value="0.65" selected>${t('ui:createRoom.wallDensities.high65')}</option>
+            <option value="0.8">${t('ui:createRoom.wallDensities.vhigh80')}</option>
           </select>
         </div>
         <div class="form-group">
-          <label for="room-powerup-rate">Power-Up Rate</label>
+          <label for="room-powerup-rate">${t('ui:createRoom.powerUpRate')}</label>
           <select id="room-powerup-rate">
-            <option value="0">None (0%)</option>
-            <option value="0.15">Low (15%)</option>
-            <option value="0.3" selected>Normal (30%)</option>
-            <option value="0.5">High (50%)</option>
-            <option value="0.8">Very High (80%)</option>
+            <option value="0">${t('ui:createRoom.puRates.none0')}</option>
+            <option value="0.15">${t('ui:createRoom.puRates.low15')}</option>
+            <option value="0.3" selected>${t('ui:createRoom.puRates.normal30')}</option>
+            <option value="0.5">${t('ui:createRoom.puRates.high50')}</option>
+            <option value="0.8">${t('ui:createRoom.puRates.vhigh80')}</option>
           </select>
         </div>
         <div class="form-group">
-          <label for="room-bots">Bots</label>
+          <label for="room-bots">${t('ui:createRoom.bots')}</label>
           <select id="room-bots">
-            <option value="0" selected>None</option>
-            <option value="1">1 Bot</option>
-            <option value="2">2 Bots</option>
-            <option value="3">3 Bots</option>
-            <option value="4">4 Bots</option>
-            <option value="5">5 Bots</option>
-            <option value="6">6 Bots</option>
-            <option value="7">7 Bots</option>
+            <option value="0" selected>${t('ui:createRoom.none')}</option>
+            <option value="1">${t('ui:createRoom.nBots', { count: 1 })}</option>
+            <option value="2">${t('ui:createRoom.nBots', { count: 2 })}</option>
+            <option value="3">${t('ui:createRoom.nBots', { count: 3 })}</option>
+            <option value="4">${t('ui:createRoom.nBots', { count: 4 })}</option>
+            <option value="5">${t('ui:createRoom.nBots', { count: 5 })}</option>
+            <option value="6">${t('ui:createRoom.nBots', { count: 6 })}</option>
+            <option value="7">${t('ui:createRoom.nBots', { count: 7 })}</option>
           </select>
         </div>
         <div class="form-group" id="bot-difficulty-row">
-          <label for="room-bot-difficulty">Bot Difficulty</label>
+          <label for="room-bot-difficulty">${t('ui:createRoom.botDifficulty')}</label>
           <select id="room-bot-difficulty" disabled>
-            <option value="easy">Easy</option>
-            <option value="normal" selected>Normal</option>
-            <option value="hard">Hard</option>
+            <option value="easy">${t('ui:createRoom.difficulty.easy')}</option>
+            <option value="normal" selected>${t('ui:createRoom.difficulty.normal')}</option>
+            <option value="hard">${t('ui:createRoom.difficulty.hard')}</option>
           </select>
         </div>
         ${
           deps.activeAIs && deps.activeAIs.length > 1
             ? `
         <div class="form-group" id="bot-ai-row">
-          <label for="room-bot-ai">Bot AI</label>
+          <label for="room-bot-ai">${t('ui:createRoom.botAI')}</label>
           <select id="room-bot-ai" disabled>
             ${deps.activeAIs.map((ai) => `<option value="${ai.id}"${ai.isBuiltin ? ' selected' : ''}>${ai.name}</option>`).join('')}
           </select>
@@ -146,37 +147,37 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
       </div>
 
       <div class="option-chips" style="margin-top:var(--sp-3);">
-        <span class="settings-title" style="margin-bottom:0;margin-right:var(--sp-1);">Options</span>
+        <span class="settings-title" style="margin-bottom:0;margin-right:var(--sp-1);">${t('ui:createRoom.options')}</span>
         <label class="option-chip">
           <input type="checkbox" id="room-reinforced-walls" style="accent-color:var(--warning);">
-          <span style="color:var(--warning);">Reinforced Walls</span>
+          <span style="color:var(--warning);">${t('ui:createRoom.reinforcedWalls')}</span>
         </label>
         <label class="option-chip">
           <input type="checkbox" id="room-map-events" style="accent-color:var(--warning);">
-          <span style="color:var(--warning);">Map Events</span>
+          <span style="color:var(--warning);">${t('ui:createRoom.mapEvents')}</span>
         </label>
         <label class="option-chip">
           <input type="checkbox" id="room-hazard-tiles" style="accent-color:var(--info);">
-          <span style="color:var(--info);">Hazard Tiles</span>
+          <span style="color:var(--info);">${t('ui:createRoom.hazardTiles')}</span>
         </label>
         ${
           deps.recordingsEnabled
             ? `<label class="option-chip">
           <input type="checkbox" id="room-record-game" checked style="accent-color:var(--accent);">
-          <span style="color:var(--accent);">Record Game</span>
+          <span style="color:var(--accent);">${t('ui:createRoom.recordGame')}</span>
         </label>`
             : ''
         }
         <span id="friendly-fire-row" style="display:none;">
           <label class="option-chip">
             <input type="checkbox" id="room-friendly-fire" checked style="accent-color:var(--danger);">
-            <span style="color:var(--danger);">Friendly Fire</span>
+            <span style="color:var(--danger);">${t('ui:createRoom.friendlyFire')}</span>
           </label>
         </span>
       </div>
 
       <div style="margin-top:var(--sp-3);">
-        <div class="settings-title">Power-Ups</div>
+        <div class="settings-title">${t('ui:createRoom.powerUps')}</div>
         <div class="option-chips">
           ${allPowerUps
             .map(
@@ -184,7 +185,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
             <label class="option-chip">
               <input type="checkbox" class="powerup-check" value="${pu.type}" checked
                 style="accent-color:${pu.color};">
-              <span style="color:${pu.color};">${pu.name}</span>
+              <span style="color:${pu.color};">${t(`game:powerups.${pu.type}.name`)}</span>
             </label>
           `,
             )
@@ -193,8 +194,8 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
       </div>
 
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
-        <button class="btn btn-primary" id="modal-create">Create</button>
+        <button class="btn btn-secondary" id="modal-cancel">${t('ui:createRoom.cancel')}</button>
+        <button class="btn btn-primary" id="modal-create">${t('ui:createRoom.create')}</button>
       </div>
     </div>
   `;
@@ -293,7 +294,7 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
     // Cap bots so total (1 host + bots) doesn't exceed maxPlayers
     const effectiveBots = Math.min(botCount, maxPlayers - 1);
     if (effectiveBots < botCount) {
-      notifications.info(`Bot count capped to ${effectiveBots} (max ${maxPlayers} players)`);
+      notifications.info(t('ui:createRoom.botsCapped', { count: effectiveBots, max: maxPlayers }));
     }
 
     const mapSize = parseInt((modal.querySelector('#room-map-size') as HTMLSelectElement).value);
@@ -339,10 +340,10 @@ export function showCreateRoomModal(deps: CreateRoomModalDeps): void {
       (response: any) => {
         if (response.success && response.room) {
           closeModal();
-          notifications.success('Room created!');
+          notifications.success(t('ui:createRoom.roomCreated'));
           onRoomCreated(response.room);
         } else {
-          notifications.error(response.error || 'Failed to create room');
+          notifications.error(response.error || t('ui:createRoom.createFailed'));
         }
       },
     );

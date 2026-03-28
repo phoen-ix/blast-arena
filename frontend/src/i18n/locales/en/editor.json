@@ -1,0 +1,91 @@
+{
+  "title": {
+    "mapEditor": "Map Editor",
+    "levelEditor": "Level Editor"
+  },
+  "tools": {
+    "tiles": "Tiles",
+    "empty": "Empty",
+    "wall": "Wall",
+    "destructible": "Destructible",
+    "spawn": "Spawn",
+    "exit": "Exit",
+    "goal": "Goal",
+    "eraser": "Eraser",
+    "mechanics": "Mechanics",
+    "teleporterA": "Teleporter A",
+    "teleporterB": "Teleporter B",
+    "conveyorUp": "Conveyor \u2191",
+    "conveyorDown": "Conveyor \u2193",
+    "conveyorLeft": "Conveyor \u2190",
+    "conveyorRight": "Conveyor \u2192",
+    "puzzle": "Puzzle",
+    "switch": "Switch",
+    "gate": "Gate",
+    "crumblingFloor": "Crumbling Floor",
+    "themeHazards": "Theme Hazards",
+    "noHazardsTheme": "No hazard tiles for this theme",
+    "noHazardsAvailable": "No hazard tiles available",
+    "showAllThemes": "Show all themes",
+    "enemies": "Enemies",
+    "powerUps": "Power-ups",
+    "variants": {
+      "toggle": "Toggle",
+      "pressure": "Pressure",
+      "oneshot": "Oneshot"
+    },
+    "powerUpNames": {
+      "bomb_up": "bomb up",
+      "fire_up": "fire up",
+      "speed_up": "speed up",
+      "shield": "shield",
+      "kick": "kick",
+      "pierce_bomb": "pierce bomb",
+      "remote_bomb": "remote bomb",
+      "line_bomb": "line bomb"
+    }
+  },
+  "settings": {
+    "mapSettings": "Map Settings",
+    "levelSettings": "Level Settings",
+    "width": "Width",
+    "height": "Height",
+    "dimensionHint": "Odd numbers, 7-51",
+    "name": "Name",
+    "description": "Description",
+    "lives": "Lives",
+    "timeLimit": "Time Limit (seconds, 0=none)",
+    "parTime": "Par Time (seconds, 0=none)",
+    "parTimeHint": "2 stars if completed under par time",
+    "winCondition": "Win Condition",
+    "winConditions": {
+      "killAll": "Kill All Enemies",
+      "findExit": "Find Exit",
+      "reachGoal": "Reach Goal",
+      "surviveTime": "Survive Time"
+    },
+    "published": "Published"
+  },
+  "actions": {
+    "save": "Save",
+    "export": "Export",
+    "back": "Back"
+  },
+  "modals": {
+    "unsavedChanges": "Unsaved Changes",
+    "unsavedDescription": "You have unsaved changes. Do you want to save before leaving?",
+    "cancel": "Cancel",
+    "discard": "Discard",
+    "saveAndExit": "Save & Exit"
+  },
+  "toasts": {
+    "needSpawns": "Need at least 2 spawn points",
+    "mapSaved": "Map saved!",
+    "levelSaved": "Level saved!",
+    "saveFailed": "Save failed: {{error}}"
+  },
+  "defaults": {
+    "untitledLevel": "Untitled Level",
+    "untitledMap": "Untitled Map"
+  }
+}

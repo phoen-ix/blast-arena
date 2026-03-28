@@ -1,18 +1,17 @@
 import { ApiClient } from '../../network/ApiClient';
 import { NotificationUI } from '../NotificationUI';
-import {
-  Season,
-  RankConfig,
-  DEFAULT_RANK_CONFIG,
-  getErrorMessage,
-} from '@blast-arena/shared';
+import { Season, RankConfig, DEFAULT_RANK_CONFIG, getErrorMessage } from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../../utils/html';
+import { t } from '../../i18n';
 
 export class SeasonsTab {
   private container: HTMLElement;
   private notifications: NotificationUI;
   private seasons: Season[] = [];
-  private rankConfig: RankConfig = { ...DEFAULT_RANK_CONFIG, tiers: [...DEFAULT_RANK_CONFIG.tiers] };
+  private rankConfig: RankConfig = {
+    ...DEFAULT_RANK_CONFIG,
+    tiers: [...DEFAULT_RANK_CONFIG.tiers],
+  };
   private showCreateForm = false;
 
   constructor(notifications: NotificationUI) {
@@ -51,9 +50,9 @@ export class SeasonsTab {
     const seasonSection = document.createElement('div');
     seasonSection.className = 'admin-section';
     seasonSection.innerHTML = `
-      <h3>Season Management</h3>
+      <h3>${t('admin:seasons.sectionTitle')}</h3>
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-        <button class="btn btn-primary" id="seasons-create-btn">Create Season</button>
+        <button class="btn btn-primary" id="seasons-create-btn">${t('admin:seasons.createSeason')}</button>
       </div>
       <div id="seasons-create-form"></div>
       <div id="seasons-table-area"></div>
@@ -72,7 +71,7 @@ export class SeasonsTab {
     // --- Rank Tier Section ---
     const rankSection = document.createElement('div');
     rankSection.className = 'admin-section';
-    rankSection.innerHTML = `<h3>Rank Tier Configuration</h3><div id="rank-tiers-area"></div>`;
+    rankSection.innerHTML = `<h3>${t('admin:seasons.rankTierTitle')}</h3><div id="rank-tiers-area"></div>`;
     this.container.appendChild(rankSection);
 
     this.renderRankTiers(rankSection.querySelector('#rank-tiers-area')!);
@@ -90,21 +89,21 @@ export class SeasonsTab {
       <div style="background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
           <div>
-            <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">Name</label>
-            <input type="text" class="admin-input" id="season-name" placeholder="Season 1" style="width:100%;">
+            <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">${t('admin:seasons.form.nameLabel')}</label>
+            <input type="text" class="admin-input" id="season-name" placeholder="${escapeAttr(t('admin:seasons.form.namePlaceholder'))}" style="width:100%;">
           </div>
           <div>
-            <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">Start Date</label>
+            <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">${t('admin:seasons.form.startDateLabel')}</label>
             <input type="date" class="admin-input" id="season-start" style="width:100%;">
           </div>
           <div>
-            <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">End Date</label>
+            <label style="display:block;color:var(--text-dim);font-size:12px;margin-bottom:4px;">${t('admin:seasons.form.endDateLabel')}</label>
             <input type="date" class="admin-input" id="season-end" style="width:100%;">
           </div>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button class="btn btn-ghost" id="season-cancel">Cancel</button>
-          <button class="btn btn-primary" id="season-submit">Create</button>
+          <button class="btn btn-ghost" id="season-cancel">${t('admin:seasons.form.cancel')}</button>
+          <button class="btn btn-primary" id="season-submit">${t('admin:seasons.form.create')}</button>
         </div>
       </div>
     `;
@@ -120,21 +119,21 @@ export class SeasonsTab {
       const endDate = (el.querySelector('#season-end') as HTMLInputElement).value;
 
       if (!name) {
-        this.notifications.error('Season name is required');
+        this.notifications.error(t('admin:seasons.errors.nameRequired'));
         return;
       }
       if (!startDate || !endDate) {
-        this.notifications.error('Start and end dates are required');
+        this.notifications.error(t('admin:seasons.errors.datesRequired'));
         return;
       }
       if (new Date(endDate) <= new Date(startDate)) {
-        this.notifications.error('End date must be after start date');
+        this.notifications.error(t('admin:seasons.errors.endAfterStart'));
         return;
       }
 
       try {
         await ApiClient.post('/admin/seasons', { name, startDate, endDate });
-        this.notifications.success('Season created');
+        this.notifications.success(t('admin:seasons.notifications.seasonCreated'));
         this.showCreateForm = false;
         await this.loadSeasons();
         this.renderContent();
@@ -148,7 +147,7 @@ export class SeasonsTab {
 
   private renderSeasonsTable(el: HTMLElement): void {
     if (this.seasons.length === 0) {
-      el.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">No seasons created yet.</p>';
+      el.innerHTML = `<p style="color:var(--text-dim);font-size:13px;">${t('admin:seasons.table.empty')}</p>`;
       return;
     }
 
@@ -156,11 +155,11 @@ export class SeasonsTab {
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Start Date</th>
-            <th>End Date</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th>${t('admin:seasons.table.name')}</th>
+            <th>${t('admin:seasons.table.startDate')}</th>
+            <th>${t('admin:seasons.table.endDate')}</th>
+            <th>${t('admin:seasons.table.status')}</th>
+            <th>${t('admin:seasons.table.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -174,27 +173,27 @@ export class SeasonsTab {
               <td>
                 ${
                   s.isActive
-                    ? '<span style="color:var(--success);font-weight:600;">Active</span>'
-                    : '<span style="color:var(--text-dim);">Inactive</span>'
+                    ? `<span style="color:var(--success);font-weight:600;">${t('admin:seasons.table.statusActive')}</span>`
+                    : `<span style="color:var(--text-dim);">${t('admin:seasons.table.statusInactive')}</span>`
                 }
               </td>
               <td>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
                   ${
                     !s.isActive
-                      ? `<button class="btn btn-primary" style="font-size:12px;padding:4px 10px;" data-activate="${s.id}">Activate</button>`
+                      ? `<button class="btn btn-primary" style="font-size:12px;padding:4px 10px;" data-activate="${s.id}">${t('admin:seasons.table.activate')}</button>`
                       : ''
                   }
                   ${
                     s.isActive
-                      ? `<button class="btn btn-ghost" style="font-size:12px;padding:4px 10px;" data-end="${s.id}">End Season</button>`
+                      ? `<button class="btn btn-ghost" style="font-size:12px;padding:4px 10px;" data-end="${s.id}">${t('admin:seasons.table.endSeason')}</button>`
                       : ''
                   }
-                  <button class="btn btn-danger" style="font-size:12px;padding:4px 10px;" data-delete="${s.id}">Delete</button>
+                  <button class="btn btn-danger" style="font-size:12px;padding:4px 10px;" data-delete="${s.id}">${t('admin:seasons.table.delete')}</button>
                 </div>
               </td>
             </tr>
-          `
+          `,
             )
             .join('')}
         </tbody>
@@ -220,7 +219,7 @@ export class SeasonsTab {
   private async activateSeason(id: number): Promise<void> {
     try {
       await ApiClient.post(`/admin/seasons/${id}/activate`, {});
-      this.notifications.success('Season activated');
+      this.notifications.success(t('admin:seasons.notifications.seasonActivated'));
       await this.loadSeasons();
       this.renderContent();
     } catch (err: unknown) {
@@ -238,15 +237,15 @@ export class SeasonsTab {
     dialog.style.cssText =
       'position:absolute;z-index:10;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:220px;';
     dialog.innerHTML = `
-      <p style="color:var(--text);font-size:13px;margin:0 0 12px 0;">How should player ratings be reset?</p>
+      <p style="color:var(--text);font-size:13px;margin:0 0 12px 0;">${t('admin:seasons.endDialog.prompt')}</p>
       <div style="display:flex;flex-direction:column;gap:8px;">
         <button class="btn btn-ghost" id="end-soft" style="font-size:12px;text-align:left;">
-          Soft Reset — ratings decay toward baseline
+          ${t('admin:seasons.endDialog.softReset')}
         </button>
         <button class="btn btn-danger" id="end-hard" style="font-size:12px;text-align:left;">
-          Hard Reset — all ratings reset to default
+          ${t('admin:seasons.endDialog.hardReset')}
         </button>
-        <button class="btn btn-ghost" id="end-cancel" style="font-size:12px;">Cancel</button>
+        <button class="btn btn-ghost" id="end-cancel" style="font-size:12px;">${t('admin:seasons.endDialog.cancel')}</button>
       </div>
     `;
 
@@ -282,7 +281,7 @@ export class SeasonsTab {
   private async endSeason(id: number, resetMode: 'hard' | 'soft'): Promise<void> {
     try {
       await ApiClient.post(`/admin/seasons/${id}/end`, { resetMode });
-      this.notifications.success(`Season ended (${resetMode} reset)`);
+      this.notifications.success(t('admin:seasons.notifications.seasonEnded', { resetMode }));
       await this.loadSeasons();
       this.renderContent();
     } catch (err: unknown) {
@@ -293,12 +292,12 @@ export class SeasonsTab {
   private async deleteSeason(id: number): Promise<void> {
     const season = this.seasons.find((s) => s.id === id);
     if (season?.isActive) {
-      this.notifications.error('Cannot delete an active season. End it first.');
+      this.notifications.error(t('admin:seasons.errors.cannotDeleteActive'));
       return;
     }
     try {
       await ApiClient.delete(`/admin/seasons/${id}`);
-      this.notifications.success('Season deleted');
+      this.notifications.success(t('admin:seasons.notifications.seasonDeleted'));
       await this.loadSeasons();
       this.renderContent();
     } catch (err: unknown) {
@@ -315,27 +314,27 @@ export class SeasonsTab {
       <div id="rank-tiers-list">
         ${tiers
           .map(
-            (t, i) => `
+            (tier, i) => `
           <div class="rank-tier-row" data-index="${i}" style="display:grid;grid-template-columns:1fr 100px 100px 60px 40px;gap:8px;align-items:center;margin-bottom:8px;">
-            <input type="text" class="admin-input tier-name" value="${escapeAttr(t.name)}" placeholder="Tier name" style="width:100%;">
-            <input type="number" class="admin-input tier-min" value="${t.minElo}" placeholder="Min" style="width:100%;">
-            <input type="number" class="admin-input tier-max" value="${t.maxElo}" placeholder="Max" style="width:100%;">
-            <input type="color" class="tier-color" value="${escapeAttr(t.color)}" style="width:40px;height:36px;border:none;background:none;cursor:pointer;">
-            <button class="btn btn-danger tier-remove" data-index="${i}" style="font-size:12px;padding:4px 8px;" title="Remove tier">&times;</button>
+            <input type="text" class="admin-input tier-name" value="${escapeAttr(tier.name)}" placeholder="${escapeAttr(t('admin:seasons.rankTiers.tierNamePlaceholder'))}" style="width:100%;">
+            <input type="number" class="admin-input tier-min" value="${tier.minElo}" placeholder="${escapeAttr(t('admin:seasons.rankTiers.minPlaceholder'))}" style="width:100%;">
+            <input type="number" class="admin-input tier-max" value="${tier.maxElo}" placeholder="${escapeAttr(t('admin:seasons.rankTiers.maxPlaceholder'))}" style="width:100%;">
+            <input type="color" class="tier-color" value="${escapeAttr(tier.color)}" style="width:40px;height:36px;border:none;background:none;cursor:pointer;">
+            <button class="btn btn-danger tier-remove" data-index="${i}" style="font-size:12px;padding:4px 8px;" title="${escapeAttr(t('admin:seasons.rankTiers.removeTier'))}">&times;</button>
           </div>
-        `
+        `,
           )
           .join('')}
       </div>
       <div style="display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap;">
-        <button class="btn btn-ghost" id="rank-add-tier" style="font-size:13px;">+ Add Tier</button>
+        <button class="btn btn-ghost" id="rank-add-tier" style="font-size:13px;">${t('admin:seasons.rankTiers.addTier')}</button>
         <label style="display:flex;align-items:center;gap:6px;color:var(--text-dim);font-size:13px;cursor:pointer;margin-left:auto;">
           <input type="checkbox" id="rank-subtiers" ${this.rankConfig.subTiersEnabled ? 'checked' : ''}>
-          Enable sub-tiers (I / II / III)
+          ${t('admin:seasons.rankTiers.enableSubTiers')}
         </label>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:16px;">
-        <button class="btn btn-primary" id="rank-save">Save Rank Configuration</button>
+        <button class="btn btn-primary" id="rank-save">${t('admin:seasons.rankTiers.saveConfig')}</button>
       </div>
     `;
 
@@ -366,13 +365,14 @@ export class SeasonsTab {
       const rows = el.querySelectorAll('.rank-tier-row');
       rows.forEach((row, i) => {
         if (!this.rankConfig.tiers[i]) return;
-        this.rankConfig.tiers[i].name =
-          (row.querySelector('.tier-name') as HTMLInputElement).value.trim();
+        this.rankConfig.tiers[i].name = (
+          row.querySelector('.tier-name') as HTMLInputElement
+        ).value.trim();
         this.rankConfig.tiers[i].minElo = Number(
-          (row.querySelector('.tier-min') as HTMLInputElement).value
+          (row.querySelector('.tier-min') as HTMLInputElement).value,
         );
         this.rankConfig.tiers[i].maxElo = Number(
-          (row.querySelector('.tier-max') as HTMLInputElement).value
+          (row.querySelector('.tier-max') as HTMLInputElement).value,
         );
         this.rankConfig.tiers[i].color = (
           row.querySelector('.tier-color') as HTMLInputElement
@@ -390,18 +390,20 @@ export class SeasonsTab {
       // Validate
       for (const tier of this.rankConfig.tiers) {
         if (!tier.name) {
-          this.notifications.error('All tiers must have a name');
+          this.notifications.error(t('admin:seasons.errors.tierNameRequired'));
           return;
         }
         if (tier.minElo > tier.maxElo) {
-          this.notifications.error(`Tier "${tier.name}": min Elo must be <= max Elo`);
+          this.notifications.error(
+            t('admin:seasons.errors.tierMinMaxInvalid', { name: tier.name }),
+          );
           return;
         }
       }
 
       try {
         await ApiClient.put('/admin/settings/rank_tiers', this.rankConfig);
-        this.notifications.success('Rank configuration saved');
+        this.notifications.success(t('admin:seasons.notifications.rankConfigSaved'));
       } catch (err: unknown) {
         this.notifications.error(getErrorMessage(err));
       }

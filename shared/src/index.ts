@@ -28,3 +28,4 @@ export * from './utils/hazard';
 export * from './utils/validation';
 export * from './utils/error';
 export * from './utils/mapValidation';
+export * from './i18n';

@@ -1,5 +1,6 @@
 import { API_URL } from '../config';
 import { AuthManager } from './AuthManager';
+import { i18n } from '../i18n';
 
 class ApiClientClass {
   private authManager: AuthManager | null = null;
@@ -86,6 +87,7 @@ class ApiClientClass {
   ): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'X-Language': i18n.language || 'en',
       ...((options.headers as Record<string, string>) || {}),
     };
     return this.fetchWithAuth<T>(path, options, headers, skipAuthRetry);

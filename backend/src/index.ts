@@ -22,6 +22,11 @@ async function main(): Promise<void> {
   // 4. Run migrations
   await runMigrations();
 
+  // 4.5. Initialize i18n
+  const { initI18n } = await import('./i18n');
+  await initI18n();
+  logger.info('i18n initialized');
+
   // 5. Initialize AI registries
   await getBotAIRegistry().initialize();
   const { getEnemyAIRegistry } = await import('./services/enemyai-registry');

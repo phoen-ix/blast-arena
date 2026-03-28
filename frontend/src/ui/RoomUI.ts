@@ -4,6 +4,7 @@ import { NotificationUI } from './NotificationUI';
 import { Room, RoomPlayer, POWERUP_DEFINITIONS } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
+import { t } from '../i18n';
 
 export class RoomUI {
   private container: HTMLElement;
@@ -72,7 +73,7 @@ export class RoomUI {
         this.room.players.push(player);
       }
       this.render();
-      this.notifications.info(`${player.user.username} joined`);
+      this.notifications.info(t('ui:room.playerJoined', { username: player.user.username }));
     });
 
     this.socketClient.on('room:playerLeft', (userId) => {
@@ -80,7 +81,7 @@ export class RoomUI {
       this.room.players = this.room.players.filter((p) => p.user.id !== userId);
       this.render();
       if (player) {
-        this.notifications.info(`${player.user.username} left`);
+        this.notifications.info(t('ui:room.playerLeft', { username: player.user.username }));
       }
     });
 
@@ -108,7 +109,7 @@ export class RoomUI {
           this.socketClient.emit('room:ready', { ready: !this.isReady() });
           break;
         case 'invite-info':
-          this.notifications.info('Use the Friends panel (lobby) to invite friends to this room');
+          this.notifications.info(t('ui:room.inviteInfo'));
           break;
       }
     });
@@ -154,18 +155,18 @@ export class RoomUI {
     const botCount = this.room.config.botCount || 0;
     const canStart = isHost && allReady && (this.room.players.length >= 2 || botCount >= 1);
 
-    const modeLabel = this.room.config.gameMode.replace('_', ' ').toUpperCase();
+    const modeLabel = t(`game:modes.${this.room.config.gameMode}.name`);
 
     this.container.innerHTML = `
       <div class="lobby-header">
         <div style="display:flex;align-items:center;gap:16px;">
-          <button class="btn btn-ghost" data-action="back" style="padding:8px 14px;">← Back</button>
+          <button class="btn btn-ghost" data-action="back" style="padding:8px 14px;">${t('ui:room.back')}</button>
           <h1>${escapeHtml(this.room.name)}</h1>
           <span class="room-mode" style="font-size:12px;padding:4px 12px;">${modeLabel}</span>
         </div>
         <div style="display:flex;gap:12px;align-items:center;">
-          <button class="btn btn-ghost" data-action="invite-info" style="padding:6px 14px;font-size:12px;color:var(--accent);">Invite Friend</button>
-          <span style="color:var(--text-dim);font-size:13px;">Room Code: <strong style="color:var(--text);letter-spacing:2px;font-family:var(--font-mono);">${this.room.code}</strong></span>
+          <button class="btn btn-ghost" data-action="invite-info" style="padding:6px 14px;font-size:12px;color:var(--accent);">${t('ui:room.inviteFriend')}</button>
+          <span style="color:var(--text-dim);font-size:13px;">${t('ui:room.roomCode')} <strong style="color:var(--text);letter-spacing:2px;font-family:var(--font-mono);">${this.room.code}</strong></span>
         </div>
       </div>
 
@@ -173,7 +174,7 @@ export class RoomUI {
         <!-- Player List -->
         <div style="flex:1;display:flex;flex-direction:column;">
           <div style="margin-bottom:12px;color:var(--text-dim);font-size:13px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">
-            Players (${this.room.players.length}/${this.room.config.maxPlayers})
+            ${t('ui:room.playersCount', { current: this.room.players.length, max: this.room.config.maxPlayers })}
           </div>
           <div style="flex:1;overflow-y:auto;" id="room-player-list">
             ${this.room.players.map((p, i) => this.renderPlayer(p, i)).join('')}
@@ -186,13 +187,13 @@ export class RoomUI {
                 ? `
               <button class="btn btn-primary" data-action="start" ${canStart ? '' : 'disabled'}
                 style="flex:1;padding:14px;font-size:16px;font-family:var(--font-display);letter-spacing:1px;text-transform:uppercase;">
-                ${this.room.players.length < 2 && botCount < 1 ? 'Need Players or Bots' : !allReady ? 'Waiting for Players...' : 'Start Game'}
+                ${this.room.players.length < 2 && botCount < 1 ? t('ui:room.needPlayers') : !allReady ? t('ui:room.waitingForPlayers') : t('ui:room.startGame')}
               </button>
             `
                 : `
               <button class="btn ${isReady ? 'btn-secondary' : 'btn-primary'}" data-action="ready"
                 style="flex:1;padding:14px;font-size:16px;font-family:var(--font-display);letter-spacing:1px;text-transform:uppercase;">
-                ${isReady ? 'Not Ready' : 'Ready'}
+                ${isReady ? t('ui:room.notReady') : t('ui:room.ready')}
               </button>
             `
             }
@@ -201,60 +202,60 @@ export class RoomUI {
 
         <!-- Room Settings -->
         <div style="width:280px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;">
-          <h3 style="margin-bottom:16px;color:var(--primary);font-family:var(--font-display);font-weight:700;letter-spacing:0.5px;">Room Settings</h3>
+          <h3 style="margin-bottom:16px;color:var(--primary);font-family:var(--font-display);font-weight:700;letter-spacing:0.5px;">${t('ui:room.roomSettings')}</h3>
           <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;">
             <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--text-dim);">Game Mode</span>
+              <span style="color:var(--text-dim);">${t('ui:room.gameMode')}</span>
               <span style="color:var(--text);">${modeLabel}</span>
             </div>
             <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--text-dim);">Max Players</span>
+              <span style="color:var(--text-dim);">${t('ui:room.maxPlayers')}</span>
               <span style="color:var(--text);">${this.room.config.maxPlayers}</span>
             </div>
             <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--text-dim);">Map Size</span>
-              <span style="color:var(--text);">${this.room.config.mapWidth}x${this.room.config.mapHeight}</span>
+              <span style="color:var(--text-dim);">${t('ui:room.mapSize')}</span>
+              <span style="color:var(--text);">${t('ui:room.mapSizeValue', { width: this.room.config.mapWidth, height: this.room.config.mapHeight })}</span>
             </div>
             <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--text-dim);">Round Time</span>
+              <span style="color:var(--text-dim);">${t('ui:room.roundTime')}</span>
               <span style="color:var(--text);">${Math.floor(this.room.config.roundTime / 60)}:${(this.room.config.roundTime % 60).toString().padStart(2, '0')}</span>
             </div>
             <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--text-dim);">Wall Density</span>
-              <span style="color:var(--text);">${Math.round((this.room.config.wallDensity ?? 0.65) * 100)}%</span>
+              <span style="color:var(--text-dim);">${t('ui:room.wallDensity')}</span>
+              <span style="color:var(--text);">${t('ui:room.wallDensityValue', { percent: Math.round((this.room.config.wallDensity ?? 0.65) * 100) })}</span>
             </div>
             <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--text-dim);">Power-Up Rate</span>
-              <span style="color:var(--text);">${Math.round((this.room.config.powerUpDropRate ?? 0.3) * 100)}%</span>
+              <span style="color:var(--text-dim);">${t('ui:room.powerUpRate')}</span>
+              <span style="color:var(--text);">${t('ui:room.powerUpRateValue', { percent: Math.round((this.room.config.powerUpDropRate ?? 0.3) * 100) })}</span>
             </div>
             <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--text-dim);">Bots</span>
-              <span style="color:var(--text);">${this.room.config.botCount || 0}${this.room.config.botCount ? ` (${(this.room.config.botDifficulty || 'normal').charAt(0).toUpperCase() + (this.room.config.botDifficulty || 'normal').slice(1)})` : ''}</span>
+              <span style="color:var(--text-dim);">${t('ui:room.bots')}</span>
+              <span style="color:var(--text);">${this.room.config.botCount || 0}${this.room.config.botCount ? ` (${t(`ui:createRoom.difficulty.${this.room.config.botDifficulty || 'normal'}`)})` : ''}</span>
             </div>
             ${
               this.room.config.gameMode === 'teams'
                 ? `
             <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--text-dim);">Friendly Fire</span>
-              <span style="color:${this.room.config.friendlyFire !== false ? 'var(--danger)' : 'var(--success)'};">${this.room.config.friendlyFire !== false ? 'ON' : 'OFF'}</span>
+              <span style="color:var(--text-dim);">${t('ui:room.friendlyFire')}</span>
+              <span style="color:${this.room.config.friendlyFire !== false ? 'var(--danger)' : 'var(--success)'};">${this.room.config.friendlyFire !== false ? t('ui:room.friendlyFireOn') : t('ui:room.friendlyFireOff')}</span>
             </div>`
                 : ''
             }
             <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--text-dim);">Host</span>
+              <span style="color:var(--text-dim);">${t('ui:room.host')}</span>
               <span style="color:var(--text);">${escapeHtml(this.room.host.username)}</span>
             </div>
             ${
               this.room.config.enabledPowerUps && this.room.config.enabledPowerUps.length > 0
                 ? `
               <div style="margin-top:4px;">
-                <span style="color:var(--text-dim);display:block;margin-bottom:6px;">Power-Ups</span>
+                <span style="color:var(--text-dim);display:block;margin-bottom:6px;">${t('ui:room.powerUps')}</span>
                 <div style="display:flex;flex-wrap:wrap;gap:4px;">
                   ${this.room.config.enabledPowerUps
                     .map((type) => {
                       const def = POWERUP_DEFINITIONS[type];
                       return def
-                        ? `<span style="font-size:11px;padding:2px 8px;background:var(--bg-deep);border:1px solid ${def.color}40;border-radius:4px;color:${def.color};">${def.name}</span>`
+                        ? `<span style="font-size:11px;padding:2px 8px;background:var(--bg-deep);border:1px solid ${def.color}40;border-radius:4px;color:${def.color};">${t(`game:powerups.${type}.name`)}</span>`
                         : '';
                     })
                     .join('')}
@@ -290,7 +291,11 @@ export class RoomUI {
     const color = isTeamsMode
       ? teamColors[playerTeam]
       : individualColors[index % individualColors.length];
-    const teamLabel = isTeamsMode ? (playerTeam === 0 ? 'Team Red' : 'Team Blue') : '';
+    const teamLabel = isTeamsMode
+      ? playerTeam === 0
+        ? t('game:teams.red')
+        : t('game:teams.blue')
+      : '';
 
     return `
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;
@@ -303,7 +308,7 @@ export class RoomUI {
         <div style="flex:1;">
           <div style="font-weight:600;color:var(--text);">
             ${escapeHtml(player.user.username)}
-            ${isPlayerHost ? '<span style="color:var(--primary);font-size:11px;margin-left:6px;font-family:var(--font-display);letter-spacing:0.5px;">HOST</span>' : ''}
+            ${isPlayerHost ? `<span style="color:var(--primary);font-size:11px;margin-left:6px;font-family:var(--font-display);letter-spacing:0.5px;">${t('ui:room.hostLabel')}</span>` : ''}
           </div>
           <div style="font-size:12px;color:var(--text-muted);">
             @${escapeHtml(player.user.username)}
@@ -313,9 +318,9 @@ export class RoomUI {
         ${
           isTeamsMode && iAmHost
             ? `
-          <select class="team-select admin-select" data-user-id="${player.user.id}" aria-label="Team assignment for ${escapeHtml(player.user.username)}">
-            <option value="0" ${playerTeam === 0 ? 'selected' : ''} style="color:#ff4466;">Team Red</option>
-            <option value="1" ${playerTeam === 1 ? 'selected' : ''} style="color:#448aff;">Team Blue</option>
+          <select class="team-select admin-select" data-user-id="${player.user.id}" aria-label="${t('ui:room.teamAssignment', { username: escapeHtml(player.user.username) })}">
+            <option value="0" ${playerTeam === 0 ? 'selected' : ''} style="color:#ff4466;">${t('game:teams.red')}</option>
+            <option value="1" ${playerTeam === 1 ? 'selected' : ''} style="color:#448aff;">${t('game:teams.blue')}</option>
           </select>
         `
             : ''
@@ -323,10 +328,10 @@ export class RoomUI {
         <div>
           ${
             isPlayerHost
-              ? '<span style="color:var(--primary);font-size:12px;font-weight:700;font-family:var(--font-display);letter-spacing:0.5px;">HOST</span>'
+              ? `<span style="color:var(--primary);font-size:12px;font-weight:700;font-family:var(--font-display);letter-spacing:0.5px;">${t('ui:room.hostLabel')}</span>`
               : player.ready
-                ? '<span style="color:var(--success);font-size:12px;font-weight:700;font-family:var(--font-display);">READY</span>'
-                : '<span style="color:var(--text-muted);font-size:12px;">Not Ready</span>'
+                ? `<span style="color:var(--success);font-size:12px;font-weight:700;font-family:var(--font-display);">${t('ui:room.readyStatus')}</span>`
+                : `<span style="color:var(--text-muted);font-size:12px;">${t('ui:room.notReady')}</span>`
           }
         </div>
       </div>
@@ -339,7 +344,14 @@ export class RoomUI {
 
     const isTeamsMode = this.room.config.gameMode === 'teams';
     const iAmHost = this.isHost();
-    const botNames = ['Bomber Bot', 'Blast Bot', 'Kaboom', 'TNT', 'Dynamite', 'Sparky'];
+    const botNames = [
+      t('ui:room.botNames.bomberBot'),
+      t('ui:room.botNames.blastBot'),
+      t('ui:room.botNames.kaboom'),
+      t('ui:room.botNames.tnt'),
+      t('ui:room.botNames.dynamite'),
+      t('ui:room.botNames.sparky'),
+    ];
     const botTeams = this.room.config.botTeams || [];
     const humanCount = this.room.players.length;
 
@@ -349,7 +361,11 @@ export class RoomUI {
       const botTeam = botTeams[i] ?? (humanCount + i) % 2;
       const teamColors = ['#ff4466', '#448aff'];
       const color = isTeamsMode ? teamColors[botTeam] : 'var(--text-muted)';
-      const teamLabel = isTeamsMode ? (botTeam === 0 ? 'Team Red' : 'Team Blue') : '';
+      const teamLabel = isTeamsMode
+        ? botTeam === 0
+          ? t('game:teams.red')
+          : t('game:teams.blue')
+        : '';
 
       html += `
         <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;
@@ -362,24 +378,24 @@ export class RoomUI {
           <div style="flex:1;">
             <div style="font-weight:600;color:var(--text);">
               ${escapeHtml(botName)}
-              <span style="color:var(--text-muted);font-size:11px;margin-left:6px;font-family:var(--font-display);letter-spacing:0.5px;">BOT</span>
+              <span style="color:var(--text-muted);font-size:11px;margin-left:6px;font-family:var(--font-display);letter-spacing:0.5px;">${t('ui:room.botLabel')}</span>
             </div>
             <div style="font-size:12px;color:var(--text-muted);">
-              ${isTeamsMode ? `<span style="color:${color};font-weight:600;">${teamLabel}</span>` : 'AI Player'}
+              ${isTeamsMode ? `<span style="color:${color};font-weight:600;">${teamLabel}</span>` : t('ui:room.aiPlayer')}
             </div>
           </div>
           ${
             isTeamsMode && iAmHost
               ? `
-            <select class="bot-team-select admin-select" data-bot-index="${i}" aria-label="Team assignment for Bot ${i + 1}">
-              <option value="0" ${botTeam === 0 ? 'selected' : ''} style="color:#ff4466;">Team Red</option>
-              <option value="1" ${botTeam === 1 ? 'selected' : ''} style="color:#448aff;">Team Blue</option>
+            <select class="bot-team-select admin-select" data-bot-index="${i}" aria-label="${t('ui:room.botTeamAssignment', { index: i + 1 })}">
+              <option value="0" ${botTeam === 0 ? 'selected' : ''} style="color:#ff4466;">${t('game:teams.red')}</option>
+              <option value="1" ${botTeam === 1 ? 'selected' : ''} style="color:#448aff;">${t('game:teams.blue')}</option>
             </select>
           `
               : ''
           }
           <div>
-            <span style="color:var(--success);font-size:12px;font-weight:700;font-family:var(--font-display);">READY</span>
+            <span style="color:var(--success);font-size:12px;font-weight:700;font-family:var(--font-display);">${t('ui:room.readyStatus')}</span>
           </div>
         </div>
       `;

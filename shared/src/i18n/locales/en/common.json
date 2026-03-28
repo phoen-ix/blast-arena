@@ -1,0 +1,30 @@
+{
+  "validation": {
+    "usernameMinLength": "Username must be at least {{min}} characters",
+    "usernameMaxLength": "Username must be at most {{max}} characters",
+    "usernameInvalidChars": "Username can only contain letters, numbers, underscores, and hyphens",
+    "passwordMinLength": "Password must be at least {{min}} characters",
+    "passwordMaxLength": "Password must be at most {{max}} characters",
+    "emailInvalid": "Invalid email address",
+    "emailMaxLength": "Email must be at most {{max}} characters",
+    "roomNameMinLength": "Room name must be at least {{min}} characters",
+    "roomNameMaxLength": "Room name must be at most {{max}} characters",
+    "roomNameInvalidChars": "Room name can only contain letters, numbers, spaces, underscores, and hyphens"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "back": "Back",
+    "confirm": "Confirm",
+    "create": "Create",
+    "edit": "Edit",
+    "loading": "Loading..."
+  },
+  "roles": {
+    "user": "User",
+    "moderator": "Moderator",
+    "admin": "Admin"
+  }
+}

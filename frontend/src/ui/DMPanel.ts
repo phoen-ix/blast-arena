@@ -9,6 +9,7 @@ import {
   DM_MAX_LENGTH,
 } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
+import { t } from '../i18n';
 
 export class DMPanel {
   private container: HTMLElement;
@@ -200,7 +201,7 @@ export class DMPanel {
       const resp = await ApiClient.get<{ conversations: DMConversation[] }>('/messages');
       this.conversations = resp.conversations;
     } catch {
-      this.notifications.error('Failed to load messages');
+      this.notifications.error(t('ui:messages.loadFailed'));
     }
     this.loadingConversations = false;
     this.renderConversationListView();
@@ -213,7 +214,7 @@ export class DMPanel {
     const header = document.createElement('div');
     header.className = 'panel-header';
     header.innerHTML = `
-      <h3 class="panel-header-title">Messages</h3>
+      <h3 class="panel-header-title">${t('ui:messages.title')}</h3>
       <button class="panel-header-close">&times;</button>
     `;
     header.querySelector('button')!.addEventListener('click', () => this.close());
@@ -224,9 +225,9 @@ export class DMPanel {
     list.className = 'dm-list';
 
     if (this.loadingConversations) {
-      list.innerHTML = '<div class="dm-empty">Loading...</div>';
+      list.innerHTML = `<div class="dm-empty">${t('ui:messages.loading')}</div>`;
     } else if (this.conversations.length === 0) {
-      list.innerHTML = '<div class="dm-empty">No conversations yet</div>';
+      list.innerHTML = `<div class="dm-empty">${t('ui:messages.noConversations')}</div>`;
     } else {
       this.conversations.forEach((conv) => {
         const item = this.createConversationItem(conv);
@@ -331,7 +332,7 @@ export class DMPanel {
       // API returns DESC order; reverse to chronological
       this.messages = resp.messages.reverse();
     } catch {
-      this.notifications.error('Failed to load messages');
+      this.notifications.error(t('ui:messages.loadFailed'));
     }
     this.loadingMessages = false;
     this.renderMessages();
@@ -385,13 +386,13 @@ export class DMPanel {
 
       const input = document.createElement('input');
       input.type = 'text';
-      input.placeholder = 'Type a message...';
+      input.placeholder = t('ui:messages.placeholder');
       input.maxLength = DM_MAX_LENGTH;
       input.className = 'dm-input';
 
       const sendBtn = document.createElement('button');
       sendBtn.className = 'dm-send-btn';
-      sendBtn.textContent = 'Send';
+      sendBtn.textContent = t('ui:messages.send');
 
       const sendMessage = () => {
         const text = input.value.trim();
@@ -414,7 +415,7 @@ export class DMPanel {
                 conv.lastMessageAt = res.message.createdAt;
               }
             } else {
-              this.notifications.error(res.error || 'Failed to send message');
+              this.notifications.error(res.error || t('ui:messages.sendFailed'));
             }
           },
         );
@@ -435,7 +436,7 @@ export class DMPanel {
     } else if (this.dmMode === 'disabled') {
       const disabledNotice = document.createElement('div');
       disabledNotice.className = 'dm-disabled-notice';
-      disabledNotice.textContent = 'Direct messages are disabled';
+      disabledNotice.textContent = t('ui:messages.chatDisabled');
       this.container.appendChild(disabledNotice);
     }
 
@@ -447,12 +448,12 @@ export class DMPanel {
     if (!messagesEl) return;
 
     if (this.loadingMessages) {
-      messagesEl.innerHTML = '<div class="dm-empty">Loading...</div>';
+      messagesEl.innerHTML = `<div class="dm-empty">${t('ui:messages.loading')}</div>`;
       return;
     }
 
     if (this.messages.length === 0) {
-      messagesEl.innerHTML = '<div class="dm-empty">No messages yet. Say hello!</div>';
+      messagesEl.innerHTML = `<div class="dm-empty">${t('ui:messages.noMessages')}</div>`;
       return;
     }
 
@@ -493,10 +494,10 @@ export class DMPanel {
     const diffHr = Math.floor(diffMs / 3600000);
     const diffDay = Math.floor(diffMs / 86400000);
 
-    if (diffMin < 1) return 'now';
-    if (diffMin < 60) return `${diffMin}m`;
-    if (diffHr < 24) return `${diffHr}h`;
-    if (diffDay < 7) return `${diffDay}d`;
+    if (diffMin < 1) return t('ui:messages.timeNow');
+    if (diffMin < 60) return t('ui:messages.timeMinutes', { count: diffMin });
+    if (diffHr < 24) return t('ui:messages.timeHours', { count: diffHr });
+    if (diffDay < 7) return t('ui:messages.timeDays', { count: diffDay });
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 

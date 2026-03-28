@@ -1,5 +1,6 @@
 import { getSettings, saveSettings, VisualSettings } from '../../game/Settings';
 import { UIGamepadNavigator } from '../../game/UIGamepadNavigator';
+import { t } from '../../i18n';
 
 export function showSettingsModal(): void {
   const settings = getSettings();
@@ -7,24 +8,24 @@ export function showSettingsModal(): void {
   modal.className = 'modal-overlay';
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
-  modal.setAttribute('aria-label', 'Visual Settings');
+  modal.setAttribute('aria-label', t('ui:settings.visualSettings'));
   modal.innerHTML = `
     <div class="modal" style="width:300px;">
-      <h2>Visual Settings</h2>
+      <h2>${t('ui:settings.visualSettings')}</h2>
       <label class="settings-option">
         <input type="checkbox" name="animations" ${settings.animations ? 'checked' : ''}>
-        <span>Animations</span>
+        <span>${t('ui:settings.animations')}</span>
       </label>
       <label class="settings-option">
         <input type="checkbox" name="screenShake" ${settings.screenShake ? 'checked' : ''}>
-        <span>Screen Shake</span>
+        <span>${t('ui:settings.screenShake')}</span>
       </label>
       <label class="settings-option">
         <input type="checkbox" name="particles" ${settings.particles ? 'checked' : ''}>
-        <span>Particles</span>
+        <span>${t('ui:settings.particles')}</span>
       </label>
       <div class="modal-actions">
-        <button class="btn btn-primary" id="modal-close">Close</button>
+        <button class="btn btn-primary" id="modal-close">${t('ui:settings.account.close')}</button>
       </div>
     </div>
   `;

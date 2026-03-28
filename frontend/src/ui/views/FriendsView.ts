@@ -2,10 +2,13 @@ import { ILobbyView, ViewDeps } from './types';
 import { ApiClient } from '../../network/ApiClient';
 import { Friend, FriendRequest, ActivityStatus } from '@blast-arena/shared';
 import { escapeHtml } from '../../utils/html';
+import { t } from '../../i18n';
 
 export class FriendsView implements ILobbyView {
   readonly viewId = 'friends';
-  readonly title = 'Friends';
+  get title() {
+    return t('ui:friends.title');
+  }
 
   private deps: ViewDeps;
   private container: HTMLElement | null = null;
@@ -62,11 +65,11 @@ export class FriendsView implements ILobbyView {
           const username = btn.dataset.username!;
           sc.emit('friend:request', { username }, (res) => {
             if (res.success) {
-              this.deps.notifications.success(`Friend request sent to ${username}`);
+              this.deps.notifications.success(t('ui:friends.requestSent', { username }));
               this.searchResults = [];
               this.loadFriends();
             } else {
-              this.deps.notifications.error(res.error || 'Failed to send request');
+              this.deps.notifications.error(res.error || t('ui:friends.requestFailed'));
             }
           });
           break;
@@ -75,11 +78,11 @@ export class FriendsView implements ILobbyView {
           const fromUserId = parseInt(btn.dataset.fromId!);
           sc.emit('friend:accept', { fromUserId }, (res) => {
             if (res.success) {
-              this.deps.notifications.success('Friend request accepted');
+              this.deps.notifications.success(t('ui:friends.accepted'));
               this.incoming = this.incoming.filter((r) => r.fromUserId !== fromUserId);
               this.loadFriends();
             } else {
-              this.deps.notifications.error(res.error || 'Failed');
+              this.deps.notifications.error(res.error || t('ui:friends.failed'));
             }
           });
           break;
@@ -128,7 +131,7 @@ export class FriendsView implements ILobbyView {
           const roomCode = btn.dataset.room!;
           sc.emit('room:join', { code: roomCode }, (res) => {
             if (!res.success) {
-              this.deps.notifications.error(res.error || 'Failed to join');
+              this.deps.notifications.error(res.error || t('ui:friends.joinFailed'));
             }
           });
           break;
@@ -143,9 +146,9 @@ export class FriendsView implements ILobbyView {
           const targetUserId = parseInt(btn.dataset.userId!);
           sc.emit('invite:room', { userId: targetUserId }, (res) => {
             if (res.success) {
-              this.deps.notifications.success('Invite sent');
+              this.deps.notifications.success(t('ui:friends.inviteSent'));
             } else {
-              this.deps.notifications.error(res.error || 'Failed to invite');
+              this.deps.notifications.error(res.error || t('ui:friends.inviteFailed'));
             }
           });
           break;
@@ -196,7 +199,9 @@ export class FriendsView implements ILobbyView {
         this.incoming.push(data);
       }
       this.renderContent();
-      this.deps.notifications.info(`${data.fromUsername} sent you a friend request`);
+      this.deps.notifications.info(
+        t('ui:friends.friendRequestReceived', { username: data.fromUsername }),
+      );
     };
     sc.on('friend:requestReceived', this.friendRequestHandler);
 
@@ -254,18 +259,18 @@ export class FriendsView implements ILobbyView {
         <div class="friends-page-header">
           <div class="tab-bar">
             <button class="tab-item ${this.activeTab === 'friends' ? 'active' : ''}" data-tab="friends">
-              Friends (${this.friends.length})
+              ${t('ui:friends.tabs.friends')} (${this.friends.length})
             </button>
             <button class="tab-item ${this.activeTab === 'requests' ? 'active' : ''}" data-tab="requests">
-              Requests${incomingCount > 0 ? ` <span class="badge">${incomingCount}</span>` : ''}
+              ${t('ui:friends.tabs.requests')}${incomingCount > 0 ? ` <span class="badge">${incomingCount}</span>` : ''}
             </button>
             <button class="tab-item ${this.activeTab === 'blocked' ? 'active' : ''}" data-tab="blocked">
-              Blocked (${this.blocked.length})
+              ${t('ui:friends.tabs.blocked')} (${this.blocked.length})
             </button>
           </div>
           <div class="friends-search-bar">
-            <input type="text" class="input" id="friend-search-input" placeholder="Search by username..." maxlength="20" aria-label="Search friends by username">
-            <button class="btn btn-primary" data-action="search">Add Friend</button>
+            <input type="text" class="input" id="friend-search-input" placeholder="${t('ui:friends.searchPlaceholder')}" maxlength="20" aria-label="${t('ui:friends.searchPlaceholder')}">
+            <button class="btn btn-primary" data-action="search">${t('ui:friends.addFriend')}</button>
           </div>
         </div>
         <div class="friends-grid" id="friends-list-content">
@@ -292,7 +297,7 @@ export class FriendsView implements ILobbyView {
 
   private renderFriendsList(): string {
     if (this.friends.length === 0) {
-      return '<div class="friends-empty">No friends yet. Search for players to add!</div>';
+      return `<div class="friends-empty">${t('ui:friends.noFriends')}</div>`;
     }
 
     const sorted = [...this.friends].sort((a, b) => {
@@ -328,10 +333,10 @@ export class FriendsView implements ILobbyView {
               <div class="friend-card-activity ${isOnline ? (f.activity === 'in_game' || f.activity === 'in_campaign' ? 'in-game' : 'active') : ''}">${activityLabel}</div>
             </div>
             <div class="friend-card-actions">
-              ${f.activity === 'in_lobby' && f.roomCode ? `<button class="btn btn-primary btn-sm" data-action="join" data-room="${escapeHtml(f.roomCode || '')}">Join</button>` : ''}
-              <button class="btn btn-ghost btn-sm" data-action="message" data-user-id="${f.userId}" data-username="${escapeHtml(f.username)}">Msg</button>
-              <button class="btn btn-ghost btn-sm" data-action="invite" data-user-id="${f.userId}">Invite</button>
-              <button class="btn btn-ghost btn-sm btn-danger-text" data-action="remove" data-friend-id="${f.userId}">Remove</button>
+              ${f.activity === 'in_lobby' && f.roomCode ? `<button class="btn btn-primary btn-sm" data-action="join" data-room="${escapeHtml(f.roomCode || '')}">${t('ui:friends.join')}</button>` : ''}
+              <button class="btn btn-ghost btn-sm" data-action="message" data-user-id="${f.userId}" data-username="${escapeHtml(f.username)}">${t('ui:friends.msg')}</button>
+              <button class="btn btn-ghost btn-sm" data-action="invite" data-user-id="${f.userId}">${t('ui:friends.invite')}</button>
+              <button class="btn btn-ghost btn-sm btn-danger-text" data-action="remove" data-friend-id="${f.userId}">${t('ui:friends.remove')}</button>
             </div>
           </div>
         `;
@@ -343,7 +348,7 @@ export class FriendsView implements ILobbyView {
     let html = '';
 
     if (this.incoming.length > 0) {
-      html += '<div class="friends-section-label">Incoming</div>';
+      html += `<div class="friends-section-label">${t('ui:friends.incoming')}</div>`;
       html += this.incoming
         .map(
           (r) => `
@@ -351,11 +356,11 @@ export class FriendsView implements ILobbyView {
             <div class="friend-card-avatar" style="background:var(--accent);">${escapeHtml(r.fromUsername.charAt(0).toUpperCase())}</div>
             <div class="friend-card-info">
               <div class="friend-card-name">${escapeHtml(r.fromUsername)}</div>
-              <div class="friend-card-activity">Wants to be friends</div>
+              <div class="friend-card-activity">${t('ui:friends.wantsToBeYourFriend')}</div>
             </div>
             <div class="friend-card-actions">
-              <button class="btn btn-primary btn-sm" data-action="accept" data-from-id="${r.fromUserId}">Accept</button>
-              <button class="btn btn-ghost btn-sm btn-danger-text" data-action="decline" data-from-id="${r.fromUserId}">Decline</button>
+              <button class="btn btn-primary btn-sm" data-action="accept" data-from-id="${r.fromUserId}">${t('ui:friends.accept')}</button>
+              <button class="btn btn-ghost btn-sm btn-danger-text" data-action="decline" data-from-id="${r.fromUserId}">${t('ui:friends.decline')}</button>
             </div>
           </div>
         `,
@@ -364,7 +369,7 @@ export class FriendsView implements ILobbyView {
     }
 
     if (this.outgoing.length > 0) {
-      html += '<div class="friends-section-label" style="margin-top:var(--sp-4);">Outgoing</div>';
+      html += `<div class="friends-section-label" style="margin-top:var(--sp-4);">${t('ui:friends.outgoing')}</div>`;
       html += this.outgoing
         .map(
           (r) => `
@@ -372,10 +377,10 @@ export class FriendsView implements ILobbyView {
             <div class="friend-card-avatar" style="background:var(--text-muted);">${escapeHtml(r.fromUsername.charAt(0).toUpperCase())}</div>
             <div class="friend-card-info">
               <div class="friend-card-name">${escapeHtml(r.fromUsername)}</div>
-              <div class="friend-card-activity">Pending</div>
+              <div class="friend-card-activity">${t('ui:friends.pending')}</div>
             </div>
             <div class="friend-card-actions">
-              <button class="btn btn-ghost btn-sm btn-danger-text" data-action="cancel" data-to-id="${r.fromUserId}">Cancel</button>
+              <button class="btn btn-ghost btn-sm btn-danger-text" data-action="cancel" data-to-id="${r.fromUserId}">${t('ui:friends.cancel')}</button>
             </div>
           </div>
         `,
@@ -384,7 +389,7 @@ export class FriendsView implements ILobbyView {
     }
 
     if (this.incoming.length === 0 && this.outgoing.length === 0) {
-      html = '<div class="friends-empty">No pending requests</div>';
+      html = `<div class="friends-empty">${t('ui:friends.noRequests')}</div>`;
     }
 
     return html;
@@ -392,7 +397,7 @@ export class FriendsView implements ILobbyView {
 
   private renderBlockedList(): string {
     if (this.blocked.length === 0) {
-      return '<div class="friends-empty">No blocked users</div>';
+      return `<div class="friends-empty">${t('ui:friends.noBlocked')}</div>`;
     }
 
     return this.blocked
@@ -404,7 +409,7 @@ export class FriendsView implements ILobbyView {
             <div class="friend-card-name">${escapeHtml(b.username)}</div>
           </div>
           <div class="friend-card-actions">
-            <button class="btn btn-ghost btn-sm" data-action="unblock" data-user-id="${b.userId}">Unblock</button>
+            <button class="btn btn-ghost btn-sm" data-action="unblock" data-user-id="${b.userId}">${t('ui:friends.unblock')}</button>
           </div>
         </div>
       `,
@@ -422,7 +427,7 @@ export class FriendsView implements ILobbyView {
             <div class="friend-card-name">${escapeHtml(u.username)}</div>
           </div>
           <div class="friend-card-actions">
-            <button class="btn btn-primary btn-sm" data-action="add" data-username="${escapeHtml(u.username)}">Add Friend</button>
+            <button class="btn btn-primary btn-sm" data-action="add" data-username="${escapeHtml(u.username)}">${t('ui:friends.addFriend')}</button>
           </div>
         </div>
       `,
@@ -449,7 +454,7 @@ export class FriendsView implements ILobbyView {
         listEl.innerHTML = this.renderSearchResults();
       }
     } catch {
-      this.deps.notifications.error('Search failed');
+      this.deps.notifications.error(t('ui:friends.searchFailed'));
     }
   }
 
@@ -459,14 +464,14 @@ export class FriendsView implements ILobbyView {
     switch (activity) {
       case 'online':
       case 'in_lobby':
-        return 'Online';
+        return t('ui:friends.online');
       case 'in_game':
-        return 'In Game';
+        return t('ui:friends.inGame');
       case 'in_campaign':
-        return 'In Campaign';
+        return t('ui:friends.inCampaign');
       case 'offline':
       default:
-        return 'Offline';
+        return t('ui:friends.offline');
     }
   }
 }

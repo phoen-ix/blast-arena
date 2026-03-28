@@ -2,6 +2,7 @@ import { ApiClient } from '../../network/ApiClient';
 import { NotificationUI } from '../NotificationUI';
 import { UserRole, getErrorMessage } from '@blast-arena/shared';
 import { escapeHtml } from '../../utils/html';
+import { t } from '../../i18n';
 
 export class AnnouncementsTab {
   private container: HTMLElement | null = null;
@@ -38,11 +39,11 @@ export class AnnouncementsTab {
 
     this.container.innerHTML = `
       <div class="admin-section">
-        <h3>Broadcast Toast</h3>
-        <p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">Send an ephemeral notification to all connected players. It will disappear after a few seconds.</p>
+        <h3>${t('admin:announcements.broadcastToastTitle')}</h3>
+        <p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">${t('admin:announcements.broadcastToastDescription')}</p>
         <div style="display:flex;gap:12px;align-items:center;">
-          <input type="text" class="admin-input" id="toast-input" placeholder="Type toast message..." aria-label="Toast message" style="flex:1;min-width:0;">
-          <button class="btn btn-primary" id="toast-send">Send Toast</button>
+          <input type="text" class="admin-input" id="toast-input" placeholder="${escapeHtml(t('admin:announcements.toastPlaceholder'))}" aria-label="${escapeHtml(t('admin:announcements.toastAriaLabel'))}" style="flex:1;min-width:0;">
+          <button class="btn btn-primary" id="toast-send">${t('admin:announcements.sendToastBtn')}</button>
         </div>
         <div id="toast-preview-area"></div>
       </div>
@@ -51,24 +52,24 @@ export class AnnouncementsTab {
         isAdmin
           ? `
         <div class="admin-section">
-          <h3>Persistent Banner</h3>
-          <p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">Set a banner that appears at the top of the lobby for all users until you clear it.</p>
+          <h3>${t('admin:announcements.persistentBannerTitle')}</h3>
+          <p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">${t('admin:announcements.persistentBannerDescription')}</p>
           ${
             currentBanner
               ? `
             <div style="margin-bottom:12px;">
-              <label style="color:var(--text-dim);font-size:12px;">Current Banner:</label>
+              <label style="color:var(--text-dim);font-size:12px;">${t('admin:announcements.currentBannerLabel')}</label>
               <div class="admin-banner" style="margin-top:6px;">
                 <span>${escapeHtml(currentBanner.message)}</span>
               </div>
-              <button class="btn-danger btn-sm" id="banner-clear" style="margin-top:8px;">Clear Banner</button>
+              <button class="btn-danger btn-sm" id="banner-clear" style="margin-top:8px;">${t('admin:announcements.clearBannerBtn')}</button>
             </div>
           `
-              : '<p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">No active banner.</p>'
+              : `<p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">${t('admin:announcements.noActiveBanner')}</p>`
           }
           <div style="display:flex;gap:12px;align-items:center;">
-            <input type="text" class="admin-input" id="banner-input" placeholder="Type banner message..." aria-label="Banner message" style="flex:1;min-width:0;">
-            <button class="btn btn-primary" id="banner-set">Set Banner</button>
+            <input type="text" class="admin-input" id="banner-input" placeholder="${escapeHtml(t('admin:announcements.bannerPlaceholder'))}" aria-label="${escapeHtml(t('admin:announcements.bannerAriaLabel'))}" style="flex:1;min-width:0;">
+            <button class="btn btn-primary" id="banner-set">${t('admin:announcements.setBannerBtn')}</button>
           </div>
         </div>
       `
@@ -82,7 +83,7 @@ export class AnnouncementsTab {
     if (toastInput && previewArea) {
       toastInput.addEventListener('input', () => {
         if (toastInput.value.trim()) {
-          previewArea.innerHTML = `<div class="toast-preview">Preview: ${escapeHtml(toastInput.value)}</div>`;
+          previewArea.innerHTML = `<div class="toast-preview">${t('admin:announcements.toastPreview', { message: escapeHtml(toastInput.value) })}</div>`;
         } else {
           previewArea.innerHTML = '';
         }
@@ -93,12 +94,12 @@ export class AnnouncementsTab {
     this.container.querySelector('#toast-send')?.addEventListener('click', async () => {
       const msg = toastInput.value.trim();
       if (!msg) {
-        this.notifications.error('Message cannot be empty');
+        this.notifications.error(t('admin:announcements.messageEmpty'));
         return;
       }
       try {
         await ApiClient.post('/admin/announcements/toast', { message: msg });
-        this.notifications.success('Toast broadcasted');
+        this.notifications.success(t('admin:announcements.toastBroadcasted'));
         toastInput.value = '';
         if (previewArea) previewArea.innerHTML = '';
       } catch (err: unknown) {
@@ -111,12 +112,12 @@ export class AnnouncementsTab {
       const input = this.container!.querySelector('#banner-input') as HTMLInputElement;
       const msg = input.value.trim();
       if (!msg) {
-        this.notifications.error('Banner message cannot be empty');
+        this.notifications.error(t('admin:announcements.bannerMessageEmpty'));
         return;
       }
       try {
         await ApiClient.post('/admin/announcements/banner', { message: msg });
-        this.notifications.success('Banner set');
+        this.notifications.success(t('admin:announcements.bannerSet'));
         await this.renderContent();
       } catch (err: unknown) {
         this.notifications.error(getErrorMessage(err));
@@ -127,7 +128,7 @@ export class AnnouncementsTab {
     this.container.querySelector('#banner-clear')?.addEventListener('click', async () => {
       try {
         await ApiClient.delete('/admin/announcements/banner');
-        this.notifications.success('Banner cleared');
+        this.notifications.success(t('admin:announcements.bannerCleared'));
         await this.renderContent();
       } catch (err: unknown) {
         this.notifications.error(getErrorMessage(err));

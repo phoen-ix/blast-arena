@@ -4,6 +4,7 @@ import { NotificationUI } from './NotificationUI';
 import { LobbyChatMessage, ChatMode, UserRole, LOBBY_CHAT_MAX_LENGTH } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
 import { getSettings } from '../game/Settings';
+import { t } from '../i18n';
 
 export class LobbyChatPanel {
   private container: HTMLElement;
@@ -153,14 +154,14 @@ export class LobbyChatPanel {
 
       const input = document.createElement('input');
       input.type = 'text';
-      input.placeholder = 'Type a message...';
+      input.placeholder = t('ui:party.chatPlaceholder');
       input.maxLength = LOBBY_CHAT_MAX_LENGTH;
       input.className = 'lobby-chat-input';
       input.setAttribute('aria-label', 'Lobby chat message');
       this.inputEl = input;
 
       const sendBtn = document.createElement('button');
-      sendBtn.textContent = 'Send';
+      sendBtn.textContent = t('ui:messages.send');
       sendBtn.className = 'btn btn-primary lobby-chat-send';
 
       const send = () => {

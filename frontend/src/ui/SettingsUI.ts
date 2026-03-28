@@ -13,6 +13,7 @@ import {
 } from '@blast-arena/shared';
 import type { ThemeId } from '@blast-arena/shared';
 import { getSettings, saveSettings, VisualSettings } from '../game/Settings';
+import { i18n, t } from '../i18n';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { themeManager } from '../themes/ThemeManager';
 import { THEME_DEFINITIONS } from '../themes/definitions';
@@ -30,12 +31,14 @@ export class SettingsUI {
   private onClose: () => void;
   private activeTabId: string;
   private contentEl: HTMLElement | null = null;
-  private tabs: Tab[] = [
-    { id: 'account', label: 'Account' },
-    { id: 'preferences', label: 'Preferences' },
-    { id: 'privacy', label: 'Privacy' },
-    { id: 'cosmetics', label: 'Cosmetics' },
-  ];
+  private get tabs(): Tab[] {
+    return [
+      { id: 'account', label: t('settings.tabs.account') },
+      { id: 'preferences', label: t('settings.tabs.preferences') },
+      { id: 'privacy', label: t('settings.tabs.privacy') },
+      { id: 'cosmetics', label: t('settings.tabs.cosmetics') },
+    ];
+  }
 
   constructor(
     authManager: AuthManager,
@@ -69,8 +72,8 @@ export class SettingsUI {
   private async render(): Promise<void> {
     this.container.innerHTML = `
       <div class="admin-header">
-        <h1>Settings</h1>
-        <button class="btn btn-secondary" id="settings-ui-close">Back to Lobby</button>
+        <h1>${t('settings.title')}</h1>
+        <button class="btn btn-secondary" id="settings-ui-close">${t('settings.backToLobby')}</button>
       </div>
       <div class="admin-tabs" id="settings-tab-bar">
         ${this.tabs
@@ -143,7 +146,7 @@ export class SettingsUI {
     try {
       profile = await ApiClient.get('/user/profile');
     } catch (err: unknown) {
-      this.contentEl.innerHTML = `<div class="error-banner">Failed to load profile: ${escapeHtml(getErrorMessage(err))}</div>`;
+      this.contentEl.innerHTML = `<div class="error-banner">${t('settings.loadProfileFailed', { error: escapeHtml(getErrorMessage(err)) })}</div>`;
       return;
     }
 
@@ -153,52 +156,52 @@ export class SettingsUI {
     this.contentEl.innerHTML = `
       <div class="settings-panel">
         <div class="content-section">
-          <h3 class="settings-section-title">Profile</h3>
+          <h3 class="settings-section-title">${t('settings.account.profile')}</h3>
           <div class="form-group">
-            <label>Username</label>
+            <label>${t('settings.account.username')}</label>
             <input type="text" class="input" id="acct-username" value="${escapeHtml(profile.username)}" maxlength="20">
-            <div class="settings-hint">Letters, numbers, underscores, hyphens. 3-20 characters.</div>
+            <div class="settings-hint">${t('settings.account.usernameHint')}</div>
           </div>
           <div id="acct-profile-status" class="settings-status"></div>
-          <button class="btn btn-primary" id="acct-save-profile">Save Username</button>
+          <button class="btn btn-primary" id="acct-save-profile">${t('settings.account.saveUsername')}</button>
         </div>
 
         <hr class="settings-separator">
 
         <div class="content-section">
-          <h3 class="settings-section-title">Email</h3>
+          <h3 class="settings-section-title">${t('settings.account.email')}</h3>
           <div class="settings-current-value">
-            Current: <strong>${escapeHtml(profile.email)}</strong>
-            ${profile.emailVerified ? '<span class="text-success ml-1">verified</span>' : '<span class="text-warning ml-1">unverified</span>'}
+            ${t('settings.account.current')} <strong>${escapeHtml(profile.email)}</strong>
+            ${profile.emailVerified ? `<span class="text-success ml-1">${t('settings.account.verified')}</span>` : `<span class="text-warning ml-1">${t('settings.account.unverified')}</span>`}
           </div>
           ${
             !isAdmin && profile.pendingEmail
               ? `
             <div class="settings-pending-banner">
-              Pending change to <strong>${escapeHtml(profile.pendingEmail)}</strong> — check that inbox for the confirmation link.
-              <button class="btn btn-secondary btn-sm ml-2" id="acct-cancel-email">Cancel</button>
+              ${t('settings.account.pendingChange')} <strong>${escapeHtml(profile.pendingEmail)}</strong> — ${t('settings.account.pendingHint')}
+              <button class="btn btn-secondary btn-sm ml-2" id="acct-cancel-email">${t('settings.account.deleteModal.cancel')}</button>
             </div>
           `
               : ''
           }
           <div class="form-group">
-            <input type="email" class="input" id="acct-new-email" placeholder="New email address" maxlength="255" aria-label="New email address">
+            <input type="email" class="input" id="acct-new-email" placeholder="${t('settings.account.newEmailPlaceholder')}" maxlength="255" aria-label="${t('settings.account.newEmailPlaceholder')}">
           </div>
           <div id="acct-email-status" class="settings-status"></div>
-          <button class="btn btn-primary" id="acct-change-email">${isAdmin ? 'Change Email' : 'Send Confirmation'}</button>
+          <button class="btn btn-primary" id="acct-change-email">${isAdmin ? t('settings.account.changeEmail') : t('settings.account.sendConfirmation')}</button>
         </div>
 
         <hr class="settings-separator">
 
         <div class="content-section">
-          <h3 class="settings-section-title">Change Password</h3>
+          <h3 class="settings-section-title">${t('settings.account.changePassword')}</h3>
           <div class="form-group settings-field-stack">
-            <input type="password" class="input" id="acct-current-password" placeholder="Current password" autocomplete="current-password" aria-label="Current password">
-            <input type="password" class="input" id="acct-new-password" placeholder="New password (min 8 characters)" autocomplete="new-password" aria-label="New password">
-            <input type="password" class="input" id="acct-confirm-password" placeholder="Confirm new password" autocomplete="new-password" aria-label="Confirm new password">
+            <input type="password" class="input" id="acct-current-password" placeholder="${t('settings.account.currentPassword')}" autocomplete="current-password" aria-label="${t('settings.account.currentPassword')}">
+            <input type="password" class="input" id="acct-new-password" placeholder="${t('settings.account.newPassword')}" autocomplete="new-password" aria-label="${t('settings.account.newPassword')}">
+            <input type="password" class="input" id="acct-confirm-password" placeholder="${t('settings.account.confirmPassword')}" autocomplete="new-password" aria-label="${t('settings.account.confirmPassword')}">
           </div>
           <div id="acct-password-status" class="settings-status"></div>
-          <button class="btn btn-primary" id="acct-change-password">Change Password</button>
+          <button class="btn btn-primary" id="acct-change-password">${t('settings.account.changePassword')}</button>
         </div>
 
         ${
@@ -207,9 +210,9 @@ export class SettingsUI {
         <hr class="settings-separator">
 
         <div class="content-section">
-          <h3 class="settings-section-title" style="color:var(--danger);">Danger Zone</h3>
-          <p class="settings-hint" style="margin-bottom:var(--sp-3);">Permanently delete your account and all associated data. This action cannot be undone.</p>
-          <button class="btn btn-sm" style="color:var(--danger);border:1px solid var(--danger);" id="acct-delete-account">Delete Account</button>
+          <h3 class="settings-section-title" style="color:var(--danger);">${t('settings.account.dangerZone')}</h3>
+          <p class="settings-hint" style="margin-bottom:var(--sp-3);">${t('settings.account.deleteWarning')}</p>
+          <button class="btn btn-sm" style="color:var(--danger);border:1px solid var(--danger);" id="acct-delete-account">${t('settings.account.deleteAccount')}</button>
         </div>
         `
             : ''
@@ -225,7 +228,7 @@ export class SettingsUI {
       ).value.trim();
 
       if (!newUsername) {
-        statusEl.innerHTML = '<span class="text-danger">Username cannot be empty.</span>';
+        statusEl.innerHTML = `<span class="text-danger">${t('settings.account.usernameEmpty')}</span>`;
         return;
       }
 
@@ -233,7 +236,7 @@ export class SettingsUI {
       if (newUsername !== profile.username) updates.username = newUsername;
 
       if (Object.keys(updates).length === 0) {
-        statusEl.innerHTML = '<span class="text-dim">No changes to save.</span>';
+        statusEl.innerHTML = `<span class="text-dim">${t('settings.account.noChanges')}</span>`;
         return;
       }
 
@@ -241,7 +244,7 @@ export class SettingsUI {
         const updated: any = await ApiClient.put('/user/profile', updates);
         profile = updated;
         this.authManager.updateUser({ username: updated.username });
-        statusEl.innerHTML = '<span class="text-success">Profile updated!</span>';
+        statusEl.innerHTML = `<span class="text-success">${t('settings.account.profileUpdated')}</span>`;
       } catch (err: unknown) {
         statusEl.innerHTML = `<span class="text-danger">${escapeHtml(getErrorMessage(err))}</span>`;
       }
@@ -255,11 +258,11 @@ export class SettingsUI {
       ).value.trim();
 
       if (!newEmail) {
-        statusEl.innerHTML = '<span class="text-danger">Enter a new email address.</span>';
+        statusEl.innerHTML = `<span class="text-danger">${t('settings.account.emailEmpty')}</span>`;
         return;
       }
       if (newEmail === profile.email) {
-        statusEl.innerHTML = '<span class="text-dim">That\'s already your current email.</span>';
+        statusEl.innerHTML = `<span class="text-dim">${t('settings.account.emailSame')}</span>`;
         return;
       }
 
@@ -285,17 +288,15 @@ export class SettingsUI {
       ).value;
 
       if (!currentPassword || !newPassword) {
-        statusEl.innerHTML =
-          '<span class="text-danger">Please fill in both password fields.</span>';
+        statusEl.innerHTML = `<span class="text-danger">${t('settings.account.passwordFieldsRequired')}</span>`;
         return;
       }
       if (newPassword.length < 8) {
-        statusEl.innerHTML =
-          '<span class="text-danger">New password must be at least 8 characters.</span>';
+        statusEl.innerHTML = `<span class="text-danger">${t('settings.account.passwordTooShort')}</span>`;
         return;
       }
       if (newPassword !== confirmPassword) {
-        statusEl.innerHTML = '<span class="text-danger">New passwords do not match.</span>';
+        statusEl.innerHTML = `<span class="text-danger">${t('settings.account.passwordMismatch')}</span>`;
         return;
       }
 
@@ -319,7 +320,7 @@ export class SettingsUI {
       cancelEmailBtn.addEventListener('click', async () => {
         try {
           await ApiClient.delete('/user/email');
-          this.notifications.success('Pending email change cancelled');
+          this.notifications.success(t('settings.account.pendingCancelled'));
           if (this.contentEl) {
             this.contentEl.innerHTML = '';
             await this.renderAccountTab();
@@ -342,19 +343,19 @@ export class SettingsUI {
     modal.className = 'modal-overlay';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Delete Account');
+    modal.setAttribute('aria-label', t('settings.account.deleteModal.title'));
     modal.innerHTML = `
       <div class="modal" style="max-width:440px;">
-        <h2 style="color:var(--danger);">Delete Account</h2>
-        <p style="margin:var(--sp-3) 0;color:var(--text-dim);">This will permanently delete your account and all associated data including stats, replays, maps, messages, and friends. This cannot be undone.</p>
+        <h2 style="color:var(--danger);">${t('settings.account.deleteModal.title')}</h2>
+        <p style="margin:var(--sp-3) 0;color:var(--text-dim);">${t('settings.account.deleteModal.description')}</p>
         <div class="form-group">
-          <label for="delete-password">Enter your password to confirm</label>
-          <input type="password" class="input" id="delete-password" placeholder="Password" autocomplete="current-password">
+          <label for="delete-password">${t('settings.account.deleteModal.passwordLabel')}</label>
+          <input type="password" class="input" id="delete-password" placeholder="${t('settings.account.deleteModal.passwordPlaceholder')}" autocomplete="current-password">
         </div>
         <div id="delete-status" class="settings-status" style="margin-bottom:var(--sp-2);"></div>
         <div class="modal-actions">
-          <button class="btn btn-secondary" id="delete-cancel">Cancel</button>
-          <button class="btn" style="background:var(--danger);color:#fff;" id="delete-confirm">Delete My Account</button>
+          <button class="btn btn-secondary" id="delete-cancel">${t('settings.account.deleteModal.cancel')}</button>
+          <button class="btn" style="background:var(--danger);color:#fff;" id="delete-confirm">${t('settings.account.deleteModal.confirm')}</button>
         </div>
       </div>
     `;
@@ -376,12 +377,12 @@ export class SettingsUI {
       const password = (modal.querySelector('#delete-password') as HTMLInputElement).value;
       const statusEl = modal.querySelector('#delete-status')!;
       if (!password) {
-        statusEl.innerHTML = '<span class="text-danger">Please enter your password.</span>';
+        statusEl.innerHTML = `<span class="text-danger">${t('settings.account.deleteModal.passwordRequired')}</span>`;
         return;
       }
       const btn = modal.querySelector('#delete-confirm') as HTMLButtonElement;
       btn.disabled = true;
-      btn.textContent = 'Deleting...';
+      btn.textContent = t('settings.account.deleteModal.deleting');
       try {
         await ApiClient.delete('/user/account', { password });
         closeModal();
@@ -389,7 +390,7 @@ export class SettingsUI {
         this.authManager.logout();
       } catch (err: unknown) {
         btn.disabled = false;
-        btn.textContent = 'Delete My Account';
+        btn.textContent = t('settings.account.deleteModal.confirm');
         statusEl.innerHTML = `<span class="text-danger">${escapeHtml(getErrorMessage(err))}</span>`;
       }
     });
@@ -405,7 +406,7 @@ export class SettingsUI {
 
     this.contentEl.innerHTML = `
       <div class="settings-panel wide">
-        <h3 class="content-section-title">Theme</h3>
+        <h3 class="content-section-title">${t('settings.theme')}</h3>
         <div class="theme-picker" id="theme-picker">
           ${THEME_IDS.map((id) => {
             const def = THEME_DEFINITIONS[id];
@@ -422,7 +423,20 @@ export class SettingsUI {
           }).join('')}
         </div>
 
-        <h3 class="content-section-title mt-6">Visual Settings</h3>
+        <h3 class="content-section-title mt-6">${t('settings.language')}</h3>
+        <div class="settings-toggle-list">
+          <div class="setting-row">
+            <select class="select" id="pref-language" style="width:180px;">
+              <option value="en" ${i18n.language === 'en' ? 'selected' : ''}>English</option>
+              <option value="de" ${i18n.language === 'de' ? 'selected' : ''}>Deutsch</option>
+            </select>
+            <div class="setting-row-info">
+              <div class="setting-row-label">${t('settings.languageDesc')}</div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="content-section-title mt-6">${t('settings.visualSettings')}</h3>
         <div class="settings-toggle-list">
           <div class="setting-row">
             <label class="toggle-switch">
@@ -430,8 +444,8 @@ export class SettingsUI {
               <span class="toggle-slider"></span>
             </label>
             <div class="setting-row-info">
-              <div class="setting-row-label">Animations</div>
-              <div class="setting-row-desc">Sprite movement tweens and transitions</div>
+              <div class="setting-row-label">${t('settings.animations')}</div>
+              <div class="setting-row-desc">${t('settings.animationsDesc')}</div>
             </div>
           </div>
           <div class="setting-row">
@@ -440,8 +454,8 @@ export class SettingsUI {
               <span class="toggle-slider"></span>
             </label>
             <div class="setting-row-info">
-              <div class="setting-row-label">Screen Shake</div>
-              <div class="setting-row-desc">Camera shake on explosions</div>
+              <div class="setting-row-label">${t('settings.screenShake')}</div>
+              <div class="setting-row-desc">${t('settings.screenShakeDesc')}</div>
             </div>
           </div>
           <div class="setting-row">
@@ -450,13 +464,13 @@ export class SettingsUI {
               <span class="toggle-slider"></span>
             </label>
             <div class="setting-row-info">
-              <div class="setting-row-label">Particles</div>
-              <div class="setting-row-desc">Fire, smoke, debris, and spark effects</div>
+              <div class="setting-row-label">${t('settings.particles')}</div>
+              <div class="setting-row-desc">${t('settings.particlesDesc')}</div>
             </div>
           </div>
         </div>
 
-        <h3 class="content-section-title mt-6">Chat</h3>
+        <h3 class="content-section-title mt-6">${t('settings.chat')}</h3>
         <div class="settings-toggle-list">
           <div class="setting-row">
             <label class="toggle-switch">
@@ -464,29 +478,29 @@ export class SettingsUI {
               <span class="toggle-slider"></span>
             </label>
             <div class="setting-row-info">
-              <div class="setting-row-label">Lobby Chat</div>
-              <div class="setting-row-desc">Show the lobby chat panel in the bottom-right corner</div>
+              <div class="setting-row-label">${t('settings.lobbyChat')}</div>
+              <div class="setting-row-desc">${t('settings.lobbyChatDesc')}</div>
             </div>
           </div>
         </div>
 
-        <h3 class="content-section-title mt-6">Buddy Mode</h3>
+        <h3 class="content-section-title mt-6">${t('settings.buddyMode')}</h3>
         <div id="buddy-settings-section" style="display:flex;flex-direction:column;gap:14px;">
           <div class="form-group">
-            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px;">Buddy Name</label>
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px;">${t('settings.buddyName')}</label>
             <input class="input" type="text" id="buddy-name-input" maxlength="20" placeholder="Buddy" style="width:100%;max-width:260px;">
           </div>
           <div class="form-group">
-            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px;">Buddy Color</label>
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px;">${t('settings.buddyColor')}</label>
             <div id="buddy-color-swatches" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
           </div>
           <div class="form-group">
-            <label id="buddy-size-label" style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px;">Buddy Size: 60%</label>
+            <label id="buddy-size-label" style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px;">${t('settings.buddySize', { percent: '60' })}</label>
             <input type="range" id="buddy-size-slider" min="40" max="80" step="5" value="60" style="width:100%;max-width:260px;accent-color:var(--primary);">
           </div>
           <div>
-            <button class="btn btn-primary btn-sm" id="buddy-save-btn">Save Buddy Settings</button>
-            <span id="buddy-save-status" style="font-size:13px;color:var(--success);margin-left:8px;display:none;">Saved!</span>
+            <button class="btn btn-primary btn-sm" id="buddy-save-btn">${t('settings.buddySave')}</button>
+            <span id="buddy-save-status" style="font-size:13px;color:var(--success);margin-left:8px;display:none;">${t('settings.buddySaved')}</span>
           </div>
         </div>
       </div>
@@ -508,6 +522,17 @@ export class SettingsUI {
       );
       btn.classList.add('active');
     });
+
+    // Language selector
+    const langSelect = this.contentEl.querySelector('#pref-language') as HTMLSelectElement;
+    if (langSelect) {
+      langSelect.addEventListener('change', () => {
+        const lang = langSelect.value;
+        i18n.changeLanguage(lang);
+        // Persist to DB for logged-in users
+        ApiClient.put('/user/language', { language: lang }).catch(() => {});
+      });
+    }
 
     // Visual settings checkboxes
     this.contentEl.addEventListener('change', (e: Event) => {
@@ -548,7 +573,10 @@ export class SettingsUI {
 
     nameInput.value = settings.name;
     sizeSlider.value = String(Math.round(settings.size * 100));
-    if (sizeLabel) sizeLabel.textContent = `Buddy Size: ${Math.round(settings.size * 100)}%`;
+    if (sizeLabel)
+      sizeLabel.textContent = t('settings.buddySize', {
+        percent: String(Math.round(settings.size * 100)),
+      });
 
     let selectedColor = settings.color;
 
@@ -575,7 +603,7 @@ export class SettingsUI {
     buildSwatches();
 
     sizeSlider.addEventListener('input', () => {
-      if (sizeLabel) sizeLabel.textContent = `Buddy Size: ${sizeSlider.value}%`;
+      if (sizeLabel) sizeLabel.textContent = t('settings.buddySize', { percent: sizeSlider.value });
     });
 
     saveBtn.addEventListener('click', async () => {
@@ -593,7 +621,7 @@ export class SettingsUI {
           }, 2000);
         }
       } catch (err: unknown) {
-        this.notifications.error('Failed to save: ' + getErrorMessage(err));
+        this.notifications.error(t('settings.buddySaveFailed', { error: getErrorMessage(err) }));
       } finally {
         saveBtn.disabled = false;
       }
@@ -607,26 +635,26 @@ export class SettingsUI {
     try {
       profile = await ApiClient.get('/user/profile');
     } catch (err: unknown) {
-      this.contentEl.innerHTML = `<div class="error-banner">Failed to load profile: ${escapeHtml(getErrorMessage(err))}</div>`;
+      this.contentEl.innerHTML = `<div class="error-banner">${t('settings.loadProfileFailed', { error: escapeHtml(getErrorMessage(err)) })}</div>`;
       return;
     }
 
     this.contentEl.innerHTML = `
       <div class="settings-panel">
-        <h3 class="settings-section-title">Privacy Settings</h3>
+        <h3 class="settings-section-title">${t('settings.privacy.settingsTitle')}</h3>
         <div class="settings-toggle-list">
           <label class="privacy-option">
             <input type="checkbox" id="privacy-public-profile" ${profile.isProfilePublic ? 'checked' : ''}>
             <div>
-              <div class="privacy-option-label">Public Profile</div>
-              <div class="privacy-option-desc">Allow other players to view your stats, rank, and achievements</div>
+              <div class="privacy-option-label">${t('settings.privacy.publicProfile')}</div>
+              <div class="privacy-option-desc">${t('settings.privacy.publicProfileDesc')}</div>
             </div>
           </label>
           <label class="privacy-option">
             <input type="checkbox" id="privacy-accept-friends" ${profile.acceptFriendRequests ? 'checked' : ''}>
             <div>
-              <div class="privacy-option-label">Accept Friend Requests</div>
-              <div class="privacy-option-desc">Allow other players to send you friend requests</div>
+              <div class="privacy-option-label">${t('settings.privacy.acceptRequests')}</div>
+              <div class="privacy-option-desc">${t('settings.privacy.acceptRequestsDesc')}</div>
             </div>
           </label>
         </div>
@@ -638,7 +666,7 @@ export class SettingsUI {
       const statusEl = this.contentEl!.querySelector('#privacy-status')!;
       try {
         await ApiClient.put('/user/privacy', { [field]: value });
-        statusEl.innerHTML = '<span class="text-success">Saved!</span>';
+        statusEl.innerHTML = `<span class="text-success">${t('settings.privacy.saved')}</span>`;
         setTimeout(() => {
           statusEl.innerHTML = '';
         }, 2000);
@@ -677,16 +705,16 @@ export class SettingsUI {
       myCosmetics = mineResp.cosmetics;
       equipped = equippedResp;
     } catch (err: unknown) {
-      this.contentEl.innerHTML = `<div class="error-banner">Failed to load cosmetics: ${escapeHtml(getErrorMessage(err))}</div>`;
+      this.contentEl.innerHTML = `<div class="error-banner">${t('settings.cosmetics.loadFailed', { error: escapeHtml(getErrorMessage(err)) })}</div>`;
       return;
     }
 
     const ownedIds = new Set(myCosmetics.map((c) => c.id));
     const slots: { key: keyof EquippedCosmetics; type: CosmeticType; label: string }[] = [
-      { key: 'colorId', type: 'color', label: 'Player Color' },
-      { key: 'eyesId', type: 'eyes', label: 'Eye Style' },
-      { key: 'trailId', type: 'trail', label: 'Movement Trail' },
-      { key: 'bombSkinId', type: 'bomb_skin', label: 'Bomb Skin' },
+      { key: 'colorId', type: 'color', label: t('settings.cosmetics.playerColor') },
+      { key: 'eyesId', type: 'eyes', label: t('settings.cosmetics.eyeStyle') },
+      { key: 'trailId', type: 'trail', label: t('settings.cosmetics.movementTrail') },
+      { key: 'bombSkinId', type: 'bomb_skin', label: t('settings.cosmetics.bombSkin') },
     ];
 
     const renderSlot = (slot: (typeof slots)[0]) => {
@@ -698,7 +726,7 @@ export class SettingsUI {
           <h4 class="cosmetic-slot-title">${slot.label}</h4>
           <div class="cosmetic-grid">
             <button class="cosmetic-item ${equippedId === null ? 'equipped' : ''}" data-slot="${slot.type}" data-cosmetic-id="null">
-              None
+              ${t('settings.cosmetics.none')}
             </button>
             ${items
               .map((c) => {
@@ -712,7 +740,7 @@ export class SettingsUI {
                   <button class="cosmetic-item ${isEquipped ? 'equipped' : ''}" data-slot="${slot.type}" data-cosmetic-id="${c.id}"
                     ${!owned ? 'disabled' : ''}>
                     ${preview}${escapeHtml(c.name)}
-                    ${!owned ? '<span class="locked-label">Locked</span>' : ''}
+                    ${!owned ? `<span class="locked-label">${t('settings.cosmetics.locked')}</span>` : ''}
                   </button>`;
               })
               .join('')}
@@ -723,7 +751,7 @@ export class SettingsUI {
 
     this.contentEl.innerHTML = `
       <div class="settings-panel wide">
-        <h3 class="settings-section-title">Cosmetics</h3>
+        <h3 class="settings-section-title">${t('settings.cosmetics.title')}</h3>
         ${slots.map(renderSlot).join('')}
         <div id="cosmetics-status" class="settings-status"></div>
       </div>
@@ -744,7 +772,7 @@ export class SettingsUI {
           equipped = newEquipped;
           // Re-render to update visual state
           await this.renderCosmeticsTab();
-          this.notifications.success('Cosmetic updated');
+          this.notifications.success(t('settings.cosmetics.updated'));
         } catch (err: unknown) {
           statusEl.innerHTML = `<span class="text-danger">${escapeHtml(getErrorMessage(err))}</span>`;
         }

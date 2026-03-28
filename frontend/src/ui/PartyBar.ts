@@ -3,6 +3,7 @@ import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
 import { Party, PartyChatMessage, PartyInvite, ChatMode, UserRole } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
+import { t } from '../i18n';
 
 export class PartyBar {
   private container: HTMLElement;
@@ -103,7 +104,7 @@ export class PartyBar {
       this.chatContainer?.remove();
       this.chatContainer = null;
       this.render();
-      this.notifications.info('Party disbanded');
+      this.notifications.info(t('ui:party.disbanded'));
     };
     this.socketClient.on('party:disbanded', this.partyDisbandedHandler);
 
@@ -150,9 +151,9 @@ export class PartyBar {
       if (response.success && response.party) {
         this.party = response.party;
         this.render();
-        this.notifications.success('Party created');
+        this.notifications.success(t('ui:party.created'));
       } else {
-        this.notifications.error(response.error || 'Failed to create party');
+        this.notifications.error(response.error || t('ui:party.createFailed'));
       }
     });
   }
@@ -167,7 +168,7 @@ export class PartyBar {
     const isLeader = this.party.leaderId === this.currentUserId;
 
     this.container.innerHTML = `
-      <span class="party-label">Party</span>
+      <span class="party-label">${t('ui:party.title')}</span>
       <div class="party-members">
         ${this.party.members
           .map((m) => {
@@ -182,15 +183,15 @@ export class PartyBar {
           })
           .join('')}
       </div>
-      ${isLeader ? '<button class="btn btn-ghost" id="party-invite-btn" style="padding:4px 12px;font-size:11px;color:var(--accent);">+ Invite</button>' : ''}
-      ${this.canChat() ? '<button class="btn btn-ghost" id="party-chat-btn" style="padding:4px 12px;font-size:11px;">Chat</button>' : ''}
-      <button class="btn btn-ghost" id="party-leave-btn" style="padding:4px 12px;font-size:11px;color:var(--danger);">Leave</button>
+      ${isLeader ? `<button class="btn btn-ghost" id="party-invite-btn" style="padding:4px 12px;font-size:11px;color:var(--accent);">${t('ui:party.invite')}</button>` : ''}
+      ${this.canChat() ? `<button class="btn btn-ghost" id="party-chat-btn" style="padding:4px 12px;font-size:11px;">${t('ui:party.chat')}</button>` : ''}
+      <button class="btn btn-ghost" id="party-leave-btn" style="padding:4px 12px;font-size:11px;color:var(--danger);">${t('ui:party.leave')}</button>
     `;
 
     const inviteBtn = this.container.querySelector('#party-invite-btn');
     if (inviteBtn) {
       inviteBtn.addEventListener('click', () => {
-        this.notifications.info('Use the Friends panel to invite players');
+        this.notifications.info(t('ui:party.useFriendsPanel'));
       });
     }
 
@@ -228,8 +229,8 @@ export class PartyBar {
     this.chatContainer.innerHTML = `
       <div class="party-chat-messages" id="party-chat-messages"></div>
       <div class="party-chat-input">
-        <input type="text" id="party-chat-input" placeholder="Type a message..." maxlength="200" aria-label="Party chat message">
-        <button class="btn btn-primary" id="party-chat-send" style="padding:6px 12px;font-size:12px;">Send</button>
+        <input type="text" id="party-chat-input" placeholder="${t('ui:party.chatPlaceholder')}" maxlength="200" aria-label="${t('ui:party.chatAriaLabel')}">
+        <button class="btn btn-primary" id="party-chat-send" style="padding:6px 12px;font-size:12px;">${t('ui:messages.send')}</button>
       </div>
     `;
 
@@ -276,12 +277,15 @@ export class PartyBar {
     const toast = document.createElement('div');
     toast.className = 'invite-toast';
 
-    const typeLabel = invite.type === 'party' ? 'their party' : 'a room';
+    const inviteMessage =
+      invite.type === 'party'
+        ? t('ui:party.invitedToParty', { username: escapeHtml(invite.fromUsername) })
+        : t('ui:party.invitedToRoom', { username: escapeHtml(invite.fromUsername) });
     toast.innerHTML = `
-      <div class="invite-text"><strong>${escapeHtml(invite.fromUsername)}</strong> invited you to ${typeLabel}</div>
+      <div class="invite-text">${inviteMessage}</div>
       <div class="invite-actions">
-        <button class="btn btn-primary invite-accept">Accept</button>
-        <button class="btn btn-ghost invite-decline" style="color:var(--danger);">Decline</button>
+        <button class="btn btn-primary invite-accept">${t('ui:party.accept')}</button>
+        <button class="btn btn-ghost invite-decline" style="color:var(--danger);">${t('ui:party.decline')}</button>
       </div>
     `;
 
@@ -302,9 +306,9 @@ export class PartyBar {
       if (invite.type === 'party') {
         this.socketClient.emit('party:acceptInvite', { inviteId: invite.inviteId }, (res) => {
           if (res.success) {
-            this.notifications.success('Joined party');
+            this.notifications.success(t('ui:party.joinedParty'));
           } else {
-            this.notifications.error(res.error || 'Failed to join party');
+            this.notifications.error(res.error || t('ui:party.joinFailed'));
           }
         });
       } else if (invite.type === 'room' && invite.roomCode) {

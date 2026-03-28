@@ -14,6 +14,7 @@ function toPublicUser(row: UserRow | RefreshTokenJoinRow): PublicUser {
     id: 'user_id' in row ? row.user_id : row.id,
     username: row.username,
     role: row.role as UserRole,
+    language: 'language' in row ? (row.language as string) : 'en',
   };
 }
 
@@ -107,7 +108,7 @@ export async function register(
     logger.error({ err }, 'Failed to send verification email');
   });
 
-  const user: PublicUser = { id: result.insertId, username, role: 'user' };
+  const user: PublicUser = { id: result.insertId, username, role: 'user', language: 'en' };
   const accessToken = generateAccessToken({ userId: user.id, username, role: 'user' });
 
   return { user, accessToken };
@@ -115,7 +116,7 @@ export async function register(
 
 export async function verifyCredentials(username: string, password: string): Promise<PublicUser> {
   const rows = await query<UserRow[]>(
-    'SELECT id, username, email, password_hash, role, is_deactivated, email_verified FROM users WHERE username = ?',
+    'SELECT id, username, email, password_hash, role, language, is_deactivated, email_verified FROM users WHERE username = ?',
     [username],
   );
 
@@ -175,7 +176,7 @@ export async function refreshAccessToken(
 
   const rows = await query<RefreshTokenJoinRow[]>(
     `SELECT rt.id, rt.user_id, rt.expires_at, rt.revoked,
-            u.username, u.role, u.is_deactivated
+            u.username, u.role, u.language, u.is_deactivated
      FROM refresh_tokens rt
      JOIN users u ON u.id = rt.user_id
      WHERE rt.token_hash = ?`,

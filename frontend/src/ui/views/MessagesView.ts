@@ -2,10 +2,13 @@ import { ILobbyView, ViewDeps } from './types';
 import { ApiClient } from '../../network/ApiClient';
 import { DirectMessage, DMConversation, ChatMode, DM_MAX_LENGTH } from '@blast-arena/shared';
 import { escapeHtml } from '../../utils/html';
+import { t } from '../../i18n';
 
 export class MessagesView implements ILobbyView {
   readonly viewId = 'messages';
-  readonly title = 'Messages';
+  get title() {
+    return t('ui:messages.title');
+  }
 
   private deps: ViewDeps;
   private container: HTMLElement | null = null;
@@ -112,7 +115,7 @@ export class MessagesView implements ILobbyView {
             conv.lastMessageAt = res.message.createdAt;
           }
         } else {
-          this.deps.notifications.error(res.error || 'Failed to send message');
+          this.deps.notifications.error(res.error || t('ui:messages.sendFailed'));
         }
       },
     );
@@ -156,7 +159,7 @@ export class MessagesView implements ILobbyView {
       const resp = await ApiClient.get<{ conversations: DMConversation[] }>('/messages');
       this.conversations = resp.conversations;
     } catch {
-      this.deps.notifications.error('Failed to load messages');
+      this.deps.notifications.error(t('ui:messages.loadFailed'));
     }
   }
 
@@ -216,7 +219,7 @@ export class MessagesView implements ILobbyView {
       }>(`/messages/${userId}`);
       this.messages = resp.messages.reverse();
     } catch {
-      this.deps.notifications.error('Failed to load messages');
+      this.deps.notifications.error(t('ui:messages.loadFailed'));
     }
     this.renderMessages();
     this.scrollToBottom();
@@ -237,7 +240,7 @@ export class MessagesView implements ILobbyView {
     this.container.innerHTML = `
       <div class="messages-page">
         <div class="messages-sidebar">
-          <div class="messages-sidebar-header">Conversations</div>
+          <div class="messages-sidebar-header">${t('ui:messages.conversations')}</div>
           <div class="messages-conv-list" data-conv-list></div>
         </div>
         <div class="messages-main">
@@ -255,13 +258,13 @@ export class MessagesView implements ILobbyView {
               this.canSend()
                 ? `
               <div class="messages-input-row">
-                <input type="text" class="input messages-input" placeholder="Type a message..." maxlength="${DM_MAX_LENGTH}" data-msg-input aria-label="Direct message">
-                <button class="btn btn-primary" data-msg-send>Send</button>
+                <input type="text" class="input messages-input" placeholder="${t('ui:messages.placeholder')}" maxlength="${DM_MAX_LENGTH}" data-msg-input aria-label="Direct message">
+                <button class="btn btn-primary" data-msg-send>${t('ui:messages.send')}</button>
               </div>
             `
                 : this.dmMode === 'disabled'
                   ? `
-              <div class="messages-disabled">Direct messages are disabled</div>
+              <div class="messages-disabled">${t('ui:messages.chatDisabled')}</div>
             `
                   : ''
             }
@@ -269,7 +272,7 @@ export class MessagesView implements ILobbyView {
               : `
             <div class="messages-empty-state">
               <div class="messages-empty-icon">&#9993;</div>
-              <div class="messages-empty-text">Select a conversation or message a friend to get started</div>
+              <div class="messages-empty-text">${t('ui:messages.emptyState')}</div>
             </div>
           `
           }
@@ -300,7 +303,7 @@ export class MessagesView implements ILobbyView {
     ];
 
     if (this.conversations.length === 0) {
-      listEl.innerHTML = '<div class="messages-conv-empty">No conversations yet</div>';
+      listEl.innerHTML = `<div class="messages-conv-empty">${t('ui:messages.noConversations')}</div>`;
       return;
     }
 
@@ -335,7 +338,7 @@ export class MessagesView implements ILobbyView {
     if (!body) return;
 
     if (this.messages.length === 0) {
-      body.innerHTML = '<div class="messages-empty-chat">No messages yet. Say hello!</div>';
+      body.innerHTML = `<div class="messages-empty-chat">${t('ui:messages.noMessages')}</div>`;
       return;
     }
 
@@ -378,10 +381,10 @@ export class MessagesView implements ILobbyView {
     const diffHr = Math.floor(diffMs / 3600000);
     const diffDay = Math.floor(diffMs / 86400000);
 
-    if (diffMin < 1) return 'now';
-    if (diffMin < 60) return `${diffMin}m`;
-    if (diffHr < 24) return `${diffHr}h`;
-    if (diffDay < 7) return `${diffDay}d`;
+    if (diffMin < 1) return t('ui:messages.timeNow');
+    if (diffMin < 60) return t('ui:messages.timeMinutes', { count: diffMin });
+    if (diffHr < 24) return t('ui:messages.timeHours', { count: diffHr });
+    if (diffDay < 7) return t('ui:messages.timeDays', { count: diffDay });
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 

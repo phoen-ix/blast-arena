@@ -3,6 +3,7 @@ import { SocketClient } from '../../network/SocketClient';
 import { NotificationUI } from '../NotificationUI';
 import { UserRole } from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../../utils/html';
+import { t } from '../../i18n';
 
 export class RoomsTab {
   private container: HTMLElement | null = null;
@@ -44,12 +45,12 @@ export class RoomsTab {
         <table class="admin-table">
           <thead>
             <tr>
-              <th>Code</th>
-              <th>Name</th>
-              <th>Mode</th>
-              <th>Players</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>${t('admin:rooms.columnCode')}</th>
+              <th>${t('admin:rooms.columnName')}</th>
+              <th>${t('admin:rooms.columnMode')}</th>
+              <th>${t('admin:rooms.columnPlayers')}</th>
+              <th>${t('admin:rooms.columnStatus')}</th>
+              <th>${t('admin:rooms.columnActions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -60,26 +61,26 @@ export class RoomsTab {
                 <td style="font-family:monospace;">${escapeHtml(r.code)}</td>
                 <td>${escapeHtml(r.name)}</td>
                 <td>${escapeHtml(r.gameMode)}</td>
-                <td>${r.playerCount}/${r.maxPlayers}</td>
+                <td>${t('admin:rooms.playerCount', { current: r.playerCount, max: r.maxPlayers })}</td>
                 <td><span class="badge badge-${r.status === 'playing' ? 'admin' : 'active'}">${r.status}</span></td>
                 <td style="display:flex;gap:4px;flex-wrap:wrap;">
-                  <button class="btn btn-secondary btn-sm" data-action="spectate" data-code="${escapeAttr(r.code)}">Spectate</button>
-                  <button class="btn btn-secondary btn-sm" data-action="message" data-code="${escapeAttr(r.code)}">Message</button>
-                  <button class="btn-warn btn-sm" data-action="kick" data-code="${escapeAttr(r.code)}">Kick</button>
-                  ${isAdmin ? `<button class="btn-danger btn-sm" data-action="close" data-code="${escapeAttr(r.code)}">Close</button>` : ''}
+                  <button class="btn btn-secondary btn-sm" data-action="spectate" data-code="${escapeAttr(r.code)}">${t('admin:rooms.spectateBtn')}</button>
+                  <button class="btn btn-secondary btn-sm" data-action="message" data-code="${escapeAttr(r.code)}">${t('admin:rooms.messageBtn')}</button>
+                  <button class="btn-warn btn-sm" data-action="kick" data-code="${escapeAttr(r.code)}">${t('admin:rooms.kickBtn')}</button>
+                  ${isAdmin ? `<button class="btn-danger btn-sm" data-action="close" data-code="${escapeAttr(r.code)}">${t('admin:rooms.closeBtn')}</button>` : ''}
                 </td>
               </tr>
             `,
               )
               .join('')}
-            ${rooms.length === 0 ? '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);">No active rooms</td></tr>' : ''}
+            ${rooms.length === 0 ? `<tr><td colspan="6" style="text-align:center;color:var(--text-dim);">${t('admin:rooms.noActiveRooms')}</td></tr>` : ''}
           </tbody>
         </table>
       `;
 
       this.container.addEventListener('click', this.handleClick);
     } catch {
-      this.container.innerHTML = '<div style="color:var(--danger);">Failed to load rooms</div>';
+      this.container.innerHTML = `<div style="color:var(--danger);">${t('admin:rooms.loadFailed')}</div>`;
     }
   }
 
@@ -92,9 +93,9 @@ export class RoomsTab {
     if (action === 'spectate') {
       this.socketClient.emit('admin:spectate', { roomCode: code }, (res) => {
         if (res.success) {
-          this.notifications.success(`Spectating room ${code}`);
+          this.notifications.success(t('admin:rooms.spectatingRoom', { code }));
         } else {
-          this.notifications.error(res.error || 'Failed to spectate');
+          this.notifications.error(res.error || t('admin:rooms.failedToSpectate'));
         }
       });
     } else if (action === 'message') {
@@ -111,14 +112,14 @@ export class RoomsTab {
     modal.className = 'modal-overlay';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Send Message to Room');
+    modal.setAttribute('aria-label', t('admin:rooms.sendMessageTitle'));
     modal.innerHTML = `
       <div class="modal" style="max-width:400px;">
-        <h2 style="margin-bottom:12px;">Send Message to Room</h2>
-        <input type="text" class="admin-input" id="room-message-input" placeholder="Type your message..." aria-label="Room message">
+        <h2 style="margin-bottom:12px;">${t('admin:rooms.sendMessageTitle')}</h2>
+        <input type="text" class="admin-input" id="room-message-input" placeholder="${escapeAttr(t('admin:rooms.messagePlaceholder'))}" aria-label="${escapeAttr(t('admin:rooms.messageAriaLabel'))}">
         <div class="modal-actions" style="margin-top:16px;">
-          <button class="btn btn-secondary" id="msg-cancel">Cancel</button>
-          <button class="btn btn-primary" id="msg-send">Send</button>
+          <button class="btn btn-secondary" id="msg-cancel">${t('admin:rooms.cancelBtn')}</button>
+          <button class="btn btn-primary" id="msg-send">${t('admin:rooms.sendBtn')}</button>
         </div>
       </div>
     `;
@@ -135,7 +136,7 @@ export class RoomsTab {
           roomCode: code,
           message: input.value.trim(),
         });
-        this.notifications.success('Message sent');
+        this.notifications.success(t('admin:rooms.messageSent'));
       }
       modal.remove();
     });
@@ -147,13 +148,13 @@ export class RoomsTab {
     try {
       rooms = await ApiClient.get<any[]>('/admin/rooms');
     } catch {
-      this.notifications.error('Failed to fetch room data');
+      this.notifications.error(t('admin:rooms.fetchRoomFailed'));
       return;
     }
 
     const room = rooms.find((r: any) => r.code === code);
     if (!room) {
-      this.notifications.error('Room not found');
+      this.notifications.error(t('admin:rooms.roomNotFound'));
       return;
     }
 
@@ -164,17 +165,17 @@ export class RoomsTab {
     modal.className = 'modal-overlay';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Kick Player');
+    modal.setAttribute('aria-label', t('admin:rooms.kickPlayerTitle', { code }));
     modal.innerHTML = `
       <div class="modal" style="max-width:400px;">
-        <h2 style="margin-bottom:12px;">Kick Player from Room ${escapeHtml(code)}</h2>
-        <label style="color:var(--text-dim);font-size:13px;">Player User ID</label>
-        <input type="number" class="admin-input" id="kick-user-id" placeholder="Enter user ID" style="margin-top:6px;">
-        <label style="color:var(--text-dim);font-size:13px;margin-top:8px;display:block;">Reason (optional)</label>
-        <input type="text" class="admin-input" id="kick-reason" placeholder="Reason..." style="margin-top:6px;">
+        <h2 style="margin-bottom:12px;">${t('admin:rooms.kickPlayerTitle', { code: escapeHtml(code) })}</h2>
+        <label style="color:var(--text-dim);font-size:13px;">${t('admin:rooms.playerUserIdLabel')}</label>
+        <input type="number" class="admin-input" id="kick-user-id" placeholder="${escapeAttr(t('admin:rooms.enterUserIdPlaceholder'))}" style="margin-top:6px;">
+        <label style="color:var(--text-dim);font-size:13px;margin-top:8px;display:block;">${t('admin:rooms.reasonLabel')}</label>
+        <input type="text" class="admin-input" id="kick-reason" placeholder="${escapeAttr(t('admin:rooms.reasonPlaceholder'))}" style="margin-top:6px;">
         <div class="modal-actions" style="margin-top:16px;">
-          <button class="btn btn-secondary" id="kick-cancel">Cancel</button>
-          <button class="btn-warn" style="padding:8px 16px;font-size:14px;" id="kick-confirm">Kick</button>
+          <button class="btn btn-secondary" id="kick-cancel">${t('admin:rooms.cancelBtn')}</button>
+          <button class="btn-warn" style="padding:8px 16px;font-size:14px;" id="kick-confirm">${t('admin:rooms.kickConfirmBtn')}</button>
         </div>
       </div>
     `;
@@ -188,16 +189,16 @@ export class RoomsTab {
       const userId = parseInt((modal.querySelector('#kick-user-id') as HTMLInputElement).value);
       const reason = (modal.querySelector('#kick-reason') as HTMLInputElement).value;
       if (!userId || isNaN(userId)) {
-        this.notifications.error('Please enter a valid user ID');
+        this.notifications.error(t('admin:rooms.invalidUserId'));
         return;
       }
       modal.remove();
       this.socketClient.emit('admin:kick', { roomCode: code, userId, reason }, (res) => {
         if (res.success) {
-          this.notifications.success('Player kicked');
+          this.notifications.success(t('admin:rooms.playerKicked'));
           this.loadRooms();
         } else {
-          this.notifications.error(res.error || 'Failed to kick');
+          this.notifications.error(res.error || t('admin:rooms.failedToKick'));
         }
       });
     });
@@ -208,14 +209,14 @@ export class RoomsTab {
     modal.className = 'modal-overlay';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Close Room');
+    modal.setAttribute('aria-label', t('admin:rooms.closeRoomTitle'));
     modal.innerHTML = `
       <div class="modal" style="max-width:380px;">
-        <h2 style="margin-bottom:12px;color:var(--danger);">Close Room</h2>
-        <p style="color:var(--text-dim);">Are you sure you want to force-close room <strong style="color:var(--text);">${escapeHtml(code)}</strong>? All players will be removed.</p>
+        <h2 style="margin-bottom:12px;color:var(--danger);">${t('admin:rooms.closeRoomTitle')}</h2>
+        <p style="color:var(--text-dim);">${t('admin:rooms.closeRoomConfirmation', { code: escapeHtml(code) })}</p>
         <div class="modal-actions" style="margin-top:16px;">
-          <button class="btn btn-secondary" id="close-cancel">Cancel</button>
-          <button class="btn-danger" style="padding:8px 16px;font-size:14px;" id="close-confirm">Close Room</button>
+          <button class="btn btn-secondary" id="close-cancel">${t('admin:rooms.cancelBtn')}</button>
+          <button class="btn-danger" style="padding:8px 16px;font-size:14px;" id="close-confirm">${t('admin:rooms.closeRoomBtn')}</button>
         </div>
       </div>
     `;
@@ -229,10 +230,10 @@ export class RoomsTab {
       modal.remove();
       this.socketClient.emit('admin:closeRoom', { roomCode: code }, (res) => {
         if (res.success) {
-          this.notifications.success('Room closed');
+          this.notifications.success(t('admin:rooms.roomClosed'));
           this.loadRooms();
         } else {
-          this.notifications.error(res.error || 'Failed to close room');
+          this.notifications.error(res.error || t('admin:rooms.failedToClose'));
         }
       });
     });

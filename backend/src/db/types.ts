@@ -17,6 +17,7 @@ export interface UserRow extends RowDataPacket {
   email: string;
   password_hash: string;
   role: string;
+  language: string;
   email_verified: boolean;
   is_deactivated: boolean;
   deactivated_at: Date | null;
@@ -36,6 +37,7 @@ export interface RefreshTokenJoinRow extends RowDataPacket {
   revoked: boolean;
   username: string;
   role: string;
+  language: string;
   is_deactivated: boolean;
 }
 

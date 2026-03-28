@@ -1,0 +1,160 @@
+{
+  "title": "Help",
+  "backToLobby": "Back to Lobby",
+  "github": "GitHub",
+  "loading": "Loading...",
+  "retry": "Retry",
+  "failedToLoad": "Failed to load.",
+  "failedToLoadDoc": "Failed to load {{title}}.",
+  "failedToLoadLevelEditor": "Failed to load Level Editor documentation.",
+
+  "tabs": {
+    "gettingStarted": "Getting Started",
+    "powerUps": "Power-Ups",
+    "gameModes": "Game Modes",
+    "mapFeatures": "Map Features",
+    "guides": "Guides",
+    "levelEditor": "Level Editor",
+    "adminDocs": "Admin Docs"
+  },
+
+  "keyboard": {
+    "heading": "Keyboard Controls",
+    "arrowKeys": "Arrow Keys",
+    "space": "Space",
+    "move": "Move your character",
+    "placeBomb": "Place a bomb at your current position",
+    "detonateRemote": "Detonate all your remote bombs",
+    "throwBomb": "Throw a bomb in your facing direction",
+    "sendEmote": "Send a quick emote (GG, Help!, Nice!, Oops, Taunt, Thanks)",
+    "spectateNth": "Spectate the Nth player (when dead)"
+  },
+
+  "gamepad": {
+    "heading": "Gamepad Controls (Xbox / Standard)",
+    "tip": "Any standard-mapped controller works. Just plug in and play.",
+    "dpad": "D-Pad",
+    "leftStick": "Left Stick",
+    "placeBomb": "Place bomb",
+    "detonateRemote": "Detonate remote bombs",
+    "throwBomb": "Throw bomb",
+    "cycleSpectate": "Cycle spectate target (when dead)",
+    "menuNavHeading": "Menu Navigation",
+    "navigateMenus": "Navigate menus",
+    "confirm": "Confirm / Select",
+    "back": "Back / Close"
+  },
+
+  "mechanics": {
+    "heading": "Basic Mechanics",
+    "bombs": "Bombs",
+    "bombsDesc": "explode after 3 seconds in 4 cardinal directions up to their fire range",
+    "chainReactions": "Chain reactions",
+    "chainReactionsDesc": "bombs caught in an explosion detonate instantly, creating devastating combos",
+    "kickedBombs": "Kicked bombs",
+    "kickedBombsDesc": "slide until hitting a wall, bomb, or player",
+    "shieldBreak": "Shield break",
+    "shieldBreakDesc": "after your shield absorbs a hit, you get 10 ticks of invulnerability to escape",
+    "spawnInvuln": "Spawn invulnerability",
+    "spawnInvulnDesc": "2 seconds of protection after spawning or respawning",
+    "selfKills": "Self-kills",
+    "selfKillsDesc": "subtract 1 from your kill score",
+    "gracePeriod": "Grace period",
+    "gracePeriodDesc": "1.5 seconds after win condition before the game ends; winner is invulnerable"
+  },
+
+  "spectator": {
+    "heading": "Spectator Mode",
+    "tip": "When you die, you enter spectator mode to watch the remaining players.",
+    "arrows": "Arrows",
+    "mouseDrag": "Mouse Drag",
+    "freeCam": "Free camera panning",
+    "click": "Click",
+    "followPlayer": "a player to follow them",
+    "jumpToNth": "Jump to the Nth player",
+    "breakFollow": "Press any movement key or drag to break follow and return to free camera"
+  },
+
+  "powerUps": {
+    "tip": "Dropped when breakable walls are destroyed. Walk over floating tiles to collect. Your HUD (bottom-left) shows your current stats."
+  },
+
+  "powerUpDetails": {
+    "bomb_up": "Increases your maximum bomb count by 1 (caps at 8). Place more bombs simultaneously to trap enemies and create chain reactions.",
+    "fire_up": "Extends your explosion range by 1 tile in each direction (caps at 8). Longer reach means more area denial and easier kills.",
+    "speed_up": "Boosts your movement speed (up to 5 levels). Move faster to dodge explosions, chase enemies, and grab power-ups first.",
+    "shield": "Creates a protective aura that absorbs one explosion hit, then breaks. After breaking, you get brief invulnerability to escape. Does not stack \u2014 extra pickups are consumed with no effect. No time limit.",
+    "kick": "Walk into a bomb to kick it sliding across the map. Kicked bombs travel until hitting a wall, another bomb, or a player. Applies a short movement cooldown after kicking.",
+    "pierce_bomb": "Your explosions pass through destructible walls instead of stopping. Walls are still destroyed, but the blast continues beyond them. Devastating for clearing large areas.",
+    "remote_bomb": "Your bombs no longer auto-detonate on a timer. Press <span class=\"help-key\">E</span> (or <span class=\"help-key\">B</span> on gamepad) to detonate all your remote bombs at once. Safety auto-detonation after 10 seconds. Bombs appear blue with a blinking effect.",
+    "line_bomb": "Places a line of bombs in your facing direction, using up to your remaining bomb capacity. Great for cutting off escape routes or triggering massive chain reactions.",
+    "bomb_throw": "Press <span class=\"help-key\">Q</span> (or <span class=\"help-key\">Y</span> on gamepad) to throw a bomb 3 tiles in your facing direction, flying over walls and obstacles. The bomb lands on the farthest valid tile. Combines with pierce/remote bomb types."
+  },
+
+  "gameModes": {
+    "playerRange": "{{min}}\u2013{{max}} players"
+  },
+
+  "modeTags": {
+    "shrinkingZone": "Shrinking Zone",
+    "respawn": "Respawn",
+    "zoneControl": "Zone Control",
+    "teams": "{{count}} Teams"
+  },
+
+  "modeDetails": {
+    "ffa": "2\u20138 players. Classic elimination \u2014 be the last one standing. 3 minute rounds.",
+    "teams": "4\u20138 players split into Team Red and Team Blue. Last team with a surviving member wins. Friendly fire is configurable by the host. 4 minute rounds.",
+    "battle_royale": "4\u20138 players. A circular danger zone shrinks from the edges over time. Standing outside the zone deals damage every tick. Stay inside and outlast everyone. 5 minute rounds.",
+    "sudden_death": "2\u20138 players. Everyone starts fully maxed out (8 bombs, 8 range, max speed, kick). No power-ups spawn. One hit kills \u2014 pure skill. 2 minute rounds.",
+    "deathmatch": "2\u20138 players. Respawn 3 seconds after death with reset stats. First to 10 kills wins, or whoever has the most kills when time runs out. 5 minute rounds.",
+    "king_of_the_hill": "2\u20138 players. A glowing 3\u00d73 zone appears in the center of the map. Stand in it to score points. First to 100 points wins. 4 minute rounds."
+  },
+
+  "mapFeatures": {
+    "reinforcedWalls": {
+      "heading": "Reinforced Walls",
+      "tip": "Optional \u2014 toggled when creating a room.",
+      "desc": "Breakable walls take <b>2 hits</b> to destroy. The first explosion cracks them (visually damaged), and the second destroys them completely. Plan your bomb placement accordingly."
+    },
+    "dynamicEvents": {
+      "heading": "Dynamic Map Events",
+      "tip": "Optional \u2014 toggled when creating a room. Adds random chaos to keep matches exciting.",
+      "meteorStrikes": "Meteor Strikes",
+      "meteorStrikesDesc": "Random tiles are targeted every 30\u201345 seconds. A warning reticle appears on the ground for 2 seconds before impact. Meteors destroy walls and kill players in the blast zone.",
+      "powerUpRain": "Power-Up Rain",
+      "powerUpRainDesc": "Every 60 seconds, power-ups drop across random open tiles on the map. A great way to gear up mid-game."
+    },
+    "hazardTiles": {
+      "heading": "Hazard Tiles",
+      "tip": "Optional \u2014 toggled when creating a room. Placed in fixed positions on the map.",
+      "teleporters": "Teleporters",
+      "teleportersDesc": "Glowing pads in blue/orange pairs. Step on one to instantly warp to the other. Use them for surprise attacks or quick escapes.",
+      "conveyorBelts": "Conveyor Belts",
+      "conveyorBeltsDesc": "Dark tiles with directional arrows. Automatically push you in the arrow direction when you step on them. Can be used strategically or can trap you in danger."
+    }
+  },
+
+  "guides": {
+    "campaign": "Campaign Guide",
+    "replaySystem": "Replay System",
+    "botAi": "Bot AI Guide",
+    "enemyAi": "Enemy AI Guide"
+  },
+
+  "staffDocs": {
+    "adminSystems": "Admin Panel & Systems",
+    "infrastructure": "Infrastructure & Security",
+    "testing": "Testing",
+    "performance": "Performance & Internals",
+    "botAiInternals": "Bot AI Internals",
+    "apiReference": "API Reference (OpenAPI)"
+  },
+
+  "imprint": {
+    "tab": "Imprint",
+    "loading": "Loading imprint...",
+    "noInfo": "No imprint information available.",
+    "failedToLoad": "Failed to load imprint."
+  }
+}

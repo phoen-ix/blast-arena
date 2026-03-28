@@ -1,0 +1,80 @@
+{
+  "title": "Kampagne",
+  "titleBrand": "<span style=\"color:var(--text);\">KAMP</span>AGNE",
+  "backToLobby": "Zurück zur Lobby",
+  "empty": "Noch keine Kampagnenwelten verfügbar.",
+  "loadFailed": "Kampagne konnte nicht geladen werden: {{error}}",
+  "loadingLevel": "Level wird geladen...",
+  "startFailed": "Level konnte nicht gestartet werden: {{error}}",
+  "stats": {
+    "enemies": "Gegner",
+    "life": "Leben",
+    "lives": "Leben",
+    "time": "Zeit"
+  },
+  "buttons": {
+    "start": "Start",
+    "coop": "Koop",
+    "localCoop": "Lokaler Koop",
+    "buddy": "Buddy"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "{{percent}}% Größe"
+  },
+  "localCoopModal": {
+    "title": "Lokaler Koop — Einrichtung",
+    "ariaLabel": "Lokaler Koop — Einrichtung",
+    "player1Controls": "Spieler 1 Steuerung",
+    "player2": "Spieler 2",
+    "identity": "Identität:",
+    "guest": "Gast",
+    "logIn": "Anmelden",
+    "name": "Name:",
+    "color": "Farbe:",
+    "nameAriaLabel": "Spieler 2 Benutzername",
+    "passwordAriaLabel": "Spieler 2 Passwort",
+    "usernamePlaceholder": "Benutzername",
+    "passwordPlaceholder": "Passwort",
+    "loginDurationAriaLabel": "Anmeldedauer",
+    "loggingIn": "Anmeldung...",
+    "logInBtn": "Anmelden",
+    "enterCredentials": "Benutzername und Passwort eingeben",
+    "loggedInAs": "Angemeldet als <strong>{{username}}</strong>",
+    "logout": "Abmelden",
+    "controls": "Steuerung",
+    "cameraMode": "Kameramodus",
+    "controlConflict": "Beide Spieler können nicht die gleiche Steuerung verwenden",
+    "cancel": "Abbrechen",
+    "start": "Start",
+    "defaultPlayerName": "Spieler 2",
+    "duration": {
+      "session": "Nur diese Sitzung",
+      "1h": "1 Stunde",
+      "6h": "6 Stunden",
+      "12h": "12 Stunden",
+      "24h": "24 Stunden"
+    },
+    "loginFailed": "Anmeldung fehlgeschlagen",
+    "connectionError": "Verbindungsfehler"
+  },
+  "buddyModal": {
+    "title": "Buddy-Modus",
+    "ariaLabel": "Buddy-Modus",
+    "loading": "Buddy-Einstellungen werden geladen...",
+    "buddy": "Buddy",
+    "edit": "Bearbeiten",
+    "done": "Fertig",
+    "name": "Name",
+    "namePlaceholder": "Buddy",
+    "color": "Farbe",
+    "sizeLabel": "Größe: {{percent}}%",
+    "p1Label": "S1",
+    "buddyLabel": "Buddy",
+    "player1Controls": "Spieler 1 Steuerung",
+    "buddyControls": "Buddy-Steuerung",
+    "controlConflict": "Spieler 1 und Buddy können nicht die gleiche Steuerung verwenden",
+    "cancel": "Abbrechen",
+    "start": "Start"
+  }
+}

@@ -3,6 +3,7 @@ import { ApiClient } from '../../network/ApiClient';
 import { Party, PartyChatMessage, ChatMode, Friend } from '@blast-arena/shared';
 import { PartyBar } from '../PartyBar';
 import { escapeHtml } from '../../utils/html';
+import { t } from '../../i18n';
 
 const AVATAR_COLORS = [
   'var(--primary)',
@@ -15,7 +16,9 @@ const AVATAR_COLORS = [
 
 export class PartyView implements ILobbyView {
   readonly viewId = 'party';
-  readonly title = 'Party';
+  get title() {
+    return t('ui:party.title');
+  }
 
   private deps: ViewDeps;
   private container: HTMLElement | null = null;
@@ -128,10 +131,10 @@ export class PartyView implements ILobbyView {
       <div class="party-page party-page-empty">
         <div class="party-empty-content">
           <div class="party-empty-icon">&#9733;</div>
-          <h2 class="party-empty-title">No Active Party</h2>
-          <p class="party-empty-text">Create a party to team up with friends before joining a room.</p>
-          <button class="btn btn-primary" id="party-create-btn">Create Party</button>
-          <p class="party-empty-tip">Tip: Invite friends from the Friends page after creating a party.</p>
+          <h2 class="party-empty-title">${t('ui:party.noPartyTitle')}</h2>
+          <p class="party-empty-text">${t('ui:party.noPartyDescription')}</p>
+          <button class="btn btn-primary" id="party-create-btn">${t('ui:party.create')}</button>
+          <p class="party-empty-tip">${t('ui:party.noPartyTip')}</p>
         </div>
       </div>
     `;
@@ -149,15 +152,15 @@ export class PartyView implements ILobbyView {
         <div class="party-page-main">
           <div class="party-page-header">
             <div class="party-page-header-info">
-              <span class="party-page-title">Party</span>
-              <span class="party-page-count">${this.party.members.length} member${this.party.members.length !== 1 ? 's' : ''}</span>
+              <span class="party-page-title">${t('ui:party.title')}</span>
+              <span class="party-page-count">${t('ui:party.memberCount', { count: this.party.members.length })}</span>
             </div>
             <div class="party-page-header-actions">
-              ${this.isLeader ? '<button class="btn btn-sm btn-primary" id="party-page-invite">+ Invite Friend</button>' : ''}
+              ${this.isLeader ? `<button class="btn btn-sm btn-primary" id="party-page-invite">${t('ui:party.inviteFriendPlus')}</button>` : ''}
               ${
                 this.isLeader
-                  ? '<button class="btn btn-sm btn-ghost" id="party-page-disband" style="color:var(--danger);">Disband</button>'
-                  : '<button class="btn btn-sm btn-ghost" id="party-page-leave" style="color:var(--danger);">Leave Party</button>'
+                  ? `<button class="btn btn-sm btn-ghost" id="party-page-disband" style="color:var(--danger);">${t('ui:party.disband')}</button>`
+                  : `<button class="btn btn-sm btn-ghost" id="party-page-leave" style="color:var(--danger);">${t('ui:party.leaveParty')}</button>`
               }
             </div>
           </div>
@@ -175,10 +178,10 @@ export class PartyView implements ILobbyView {
                     ${isLead ? '<span class="party-leader-crown">&#9733;</span>' : ''}
                   </div>
                   <div class="party-member-card-info">
-                    <span class="party-member-card-name">${escapeHtml(m.username)}${isMe ? ' <span class="text-dim">(you)</span>' : ''}</span>
-                    <span class="party-member-card-role">${isLead ? 'Leader' : 'Member'}</span>
+                    <span class="party-member-card-name">${escapeHtml(m.username)}${isMe ? ` <span class="text-dim">${t('ui:party.you')}</span>` : ''}</span>
+                    <span class="party-member-card-role">${isLead ? t('ui:party.leader') : t('ui:party.member')}</span>
                   </div>
-                  ${this.isLeader && !isMe ? '<button class="btn btn-ghost btn-sm party-kick-btn" data-kick-id="' + m.userId + '" style="color:var(--danger);padding:2px 8px;font-size:11px;">Kick</button>' : ''}
+                  ${this.isLeader && !isMe ? '<button class="btn btn-ghost btn-sm party-kick-btn" data-kick-id="' + m.userId + '" style="color:var(--danger);padding:2px 8px;font-size:11px;">' + t('ui:party.kick') + '</button>' : ''}
                 </div>
               `;
               })
@@ -190,19 +193,19 @@ export class PartyView implements ILobbyView {
           this.canChat()
             ? `
           <div class="party-page-chat">
-            <div class="party-page-chat-header">Party Chat</div>
+            <div class="party-page-chat-header">${t('ui:party.chatHeader')}</div>
             <div class="party-page-chat-messages" data-chat-messages></div>
             <div class="party-page-chat-input">
-              <input type="text" class="input" placeholder="Type a message..." maxlength="200" data-chat-input aria-label="Party chat message">
-              <button class="btn btn-primary" data-chat-send>Send</button>
+              <input type="text" class="input" placeholder="${t('ui:party.chatPlaceholder')}" maxlength="200" data-chat-input aria-label="Party chat message">
+              <button class="btn btn-primary" data-chat-send>${t('ui:party.chatSend')}</button>
             </div>
           </div>
         `
             : this.chatMode === 'disabled'
               ? `
           <div class="party-page-chat">
-            <div class="party-page-chat-header">Party Chat</div>
-            <div class="party-page-chat-disabled">Chat is disabled</div>
+            <div class="party-page-chat-header">${t('ui:party.chatHeader')}</div>
+            <div class="party-page-chat-disabled">${t('ui:party.chatDisabled')}</div>
           </div>
         `
               : ''
@@ -259,7 +262,7 @@ export class PartyView implements ILobbyView {
         const userId = parseInt((btn as HTMLElement).dataset.kickId!);
         this.deps.socketClient.emit('party:kick', { userId }, (res) => {
           if (!res.success) {
-            this.deps.notifications.error(res.error || 'Failed to kick member');
+            this.deps.notifications.error(res.error || t('ui:party.kickFailed'));
           }
         });
       });
@@ -287,7 +290,7 @@ export class PartyView implements ILobbyView {
     if (!body) return;
 
     if (this.chatMessages.length === 0) {
-      body.innerHTML = '<div class="party-page-chat-empty">No messages yet</div>';
+      body.innerHTML = `<div class="party-page-chat-empty">${t('ui:party.chatEmpty')}</div>`;
       return;
     }
 
@@ -317,7 +320,7 @@ export class PartyView implements ILobbyView {
       const resp = await ApiClient.get<{ friends: Friend[] }>('/friends');
       friends = resp.friends.filter((f) => f.status === 'accepted');
     } catch {
-      this.deps.notifications.error('Failed to load friends');
+      this.deps.notifications.error(t('ui:party.loadFriendsFailed'));
       return;
     }
 
@@ -326,7 +329,7 @@ export class PartyView implements ILobbyView {
     const available = friends.filter((f) => !memberIds.has(f.userId));
 
     if (available.length === 0) {
-      this.deps.notifications.info('No friends available to invite');
+      this.deps.notifications.info(t('ui:party.noFriendsToInvite'));
       return;
     }
 
@@ -335,11 +338,11 @@ export class PartyView implements ILobbyView {
     overlay.className = 'modal-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Invite Friend to Party');
+    overlay.setAttribute('aria-label', t('ui:party.inviteModalTitle'));
     overlay.innerHTML = `
       <div class="modal" style="max-width:400px;">
         <div class="modal-header">
-          <h3>Invite Friend to Party</h3>
+          <h3>${t('ui:party.inviteModalTitle')}</h3>
           <button class="modal-close" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body" style="max-height:300px;overflow-y:auto;padding:0;">
@@ -357,7 +360,7 @@ export class PartyView implements ILobbyView {
                 <div class="party-invite-avatar" style="background:${color};">${escapeHtml(f.username.charAt(0).toUpperCase())}</div>
                 <span class="party-invite-name">${escapeHtml(f.username)}</span>
                 <span class="party-invite-status" style="color:${statusDot};">&#9679;</span>
-                <button class="btn btn-sm btn-primary party-invite-send">Invite</button>
+                <button class="btn btn-sm btn-primary party-invite-send">${t('ui:party.inviteFriend')}</button>
               </div>
             `;
             })
@@ -387,11 +390,11 @@ export class PartyView implements ILobbyView {
         const userId = parseInt(item.dataset.inviteUserId!);
         this.deps.socketClient.emit('party:invite', { userId }, (res) => {
           if (res.success) {
-            (btn as HTMLButtonElement).textContent = 'Sent';
+            (btn as HTMLButtonElement).textContent = t('ui:party.chatSent');
             (btn as HTMLButtonElement).disabled = true;
             (btn as HTMLButtonElement).classList.remove('btn-primary');
           } else {
-            this.deps.notifications.error(res.error || 'Failed to invite');
+            this.deps.notifications.error(res.error || t('ui:party.inviteFailed'));
           }
         });
       });

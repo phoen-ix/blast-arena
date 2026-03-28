@@ -2,6 +2,7 @@ import { ApiClient } from '../../network/ApiClient';
 import { NotificationUI } from '../NotificationUI';
 import { UserRole, getErrorMessage } from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../../utils/html';
+import { t } from '../../i18n';
 
 export class UsersTab {
   private container: HTMLElement | null = null;
@@ -37,11 +38,11 @@ export class UsersTab {
     this.container.innerHTML = `
       <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;">
         <div class="admin-search" style="flex:1;margin-bottom:0;">
-          <input type="text" placeholder="Search by username or email..." id="admin-user-search" value="${escapeHtml(this.search)}">
+          <input type="text" placeholder="${escapeAttr(t('admin:users.searchPlaceholder'))}" id="admin-user-search" value="${escapeHtml(this.search)}">
         </div>
-        ${isAdmin ? '<button class="btn btn-primary" id="admin-create-user" style="flex-shrink:0;white-space:nowrap;">Create User</button>' : ''}
+        ${isAdmin ? `<button class="btn btn-primary" id="admin-create-user" style="flex-shrink:0;white-space:nowrap;">${t('admin:users.createUser')}</button>` : ''}
       </div>
-      <div id="admin-users-table">Loading...</div>
+      <div id="admin-users-table">${t('admin:users.loading')}</div>
       <div id="admin-users-pagination"></div>
     `;
 
@@ -79,15 +80,15 @@ export class UsersTab {
         <table class="admin-table">
           <thead>
             <tr>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Matches</th>
-              <th>Wins</th>
-              <th>Joined</th>
-              <th>Last Login</th>
-              <th>Actions</th>
+              <th>${t('admin:users.tableHeaders.username')}</th>
+              <th>${t('admin:users.tableHeaders.email')}</th>
+              <th>${t('admin:users.tableHeaders.role')}</th>
+              <th>${t('admin:users.tableHeaders.status')}</th>
+              <th>${t('admin:users.tableHeaders.matches')}</th>
+              <th>${t('admin:users.tableHeaders.wins')}</th>
+              <th>${t('admin:users.tableHeaders.joined')}</th>
+              <th>${t('admin:users.tableHeaders.lastLogin')}</th>
+              <th>${t('admin:users.tableHeaders.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -102,21 +103,21 @@ export class UsersTab {
                 <td>${u.total_matches}</td>
                 <td>${u.total_wins}</td>
                 <td>${new Date(u.created_at).toLocaleDateString()}</td>
-                <td>${u.last_login ? new Date(u.last_login).toLocaleDateString() : 'Never'}</td>
+                <td>${u.last_login ? new Date(u.last_login).toLocaleDateString() : t('admin:users.lastLoginNever')}</td>
                 <td style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
                   ${
                     isAdmin
                       ? `
                     <select class="admin-select" data-action="role" data-id="${u.id}">
-                      <option value="user" ${u.role === 'user' ? 'selected' : ''}>user</option>
-                      <option value="moderator" ${u.role === 'moderator' ? 'selected' : ''}>moderator</option>
-                      <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>admin</option>
+                      <option value="user" ${u.role === 'user' ? 'selected' : ''}>${t('admin:users.roles.user')}</option>
+                      <option value="moderator" ${u.role === 'moderator' ? 'selected' : ''}>${t('admin:users.roles.moderator')}</option>
+                      <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>${t('admin:users.roles.admin')}</option>
                     </select>
                     <button class="btn-warn btn-sm" data-action="deactivate" data-id="${u.id}" data-deactivated="${u.is_deactivated}">
-                      ${u.is_deactivated ? 'Reactivate' : 'Deactivate'}
+                      ${u.is_deactivated ? t('admin:users.reactivate') : t('admin:users.deactivate')}
                     </button>
-                    <button class="btn-sm" style="background:var(--accent);color:var(--bg-deep);" data-action="resetpw" data-id="${u.id}" data-username="${escapeAttr(u.username)}">Reset PW</button>
-                    <button class="btn-danger btn-sm" data-action="delete" data-id="${u.id}" data-username="${escapeAttr(u.username)}">Delete</button>
+                    <button class="btn-sm" style="background:var(--accent);color:var(--bg-deep);" data-action="resetpw" data-id="${u.id}" data-username="${escapeAttr(u.username)}">${t('admin:users.resetPw')}</button>
+                    <button class="btn-danger btn-sm" data-action="delete" data-id="${u.id}" data-username="${escapeAttr(u.username)}">${t('admin:users.delete')}</button>
                   `
                       : ''
                   }
@@ -133,9 +134,9 @@ export class UsersTab {
       const totalPages = Math.ceil(result.total / result.limit);
       pagEl.innerHTML = `
         <div class="admin-pagination">
-          <button ${this.page <= 1 ? 'disabled' : ''} data-page="${this.page - 1}">Prev</button>
-          <span class="page-info">Page ${this.page} of ${totalPages} (${result.total} users)</span>
-          <button ${this.page >= totalPages ? 'disabled' : ''} data-page="${this.page + 1}">Next</button>
+          <button ${this.page <= 1 ? 'disabled' : ''} data-page="${this.page - 1}">${t('admin:users.pagination.prev')}</button>
+          <span class="page-info">${t('admin:users.pagination.pageInfo', { page: this.page, totalPages, total: result.total })}</span>
+          <button ${this.page >= totalPages ? 'disabled' : ''} data-page="${this.page + 1}">${t('admin:users.pagination.next')}</button>
         </div>
       `;
 
@@ -143,7 +144,7 @@ export class UsersTab {
       this.container!.addEventListener('click', this.handleClick);
       this.container!.addEventListener('change', this.handleChange);
     } catch {
-      tableEl.innerHTML = '<div style="color:var(--danger);">Failed to load users</div>';
+      tableEl.innerHTML = `<div style="color:var(--danger);">${t('admin:users.loadError')}</div>`;
     }
   }
 
@@ -183,16 +184,16 @@ export class UsersTab {
     modal.className = 'modal-overlay';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Delete User');
+    modal.setAttribute('aria-label', t('admin:users.deleteModal.ariaLabel'));
     modal.innerHTML = `
       <div class="modal" style="max-width:420px;">
-        <h2 style="margin-bottom:12px;color:var(--danger);">Delete User Permanently</h2>
-        <p style="color:var(--text-dim);font-size:14px;">This will permanently delete <strong style="color:var(--text);">${escapeHtml(username)}</strong> and all their data. This action cannot be undone.</p>
-        <p style="color:var(--text-dim);font-size:13px;margin-top:8px;">Type the username to confirm:</p>
-        <input type="text" class="confirm-input" id="delete-confirm-input" placeholder="${escapeAttr(username)}" aria-label="Type username to confirm deletion">
+        <h2 style="margin-bottom:12px;color:var(--danger);">${t('admin:users.deleteModal.title')}</h2>
+        <p style="color:var(--text-dim);font-size:14px;">${t('admin:users.deleteModal.description', { username: escapeHtml(username) })}</p>
+        <p style="color:var(--text-dim);font-size:13px;margin-top:8px;">${t('admin:users.deleteModal.confirmPrompt')}</p>
+        <input type="text" class="confirm-input" id="delete-confirm-input" placeholder="${escapeAttr(username)}" aria-label="${escapeAttr(t('admin:users.deleteModal.confirmAriaLabel'))}">
         <div class="modal-actions" style="margin-top:16px;">
-          <button class="btn btn-secondary" id="delete-cancel">Cancel</button>
-          <button class="btn-danger" style="padding:8px 16px;font-size:14px;opacity:0.5;" id="delete-confirm" disabled>Delete</button>
+          <button class="btn btn-secondary" id="delete-cancel">${t('admin:users.deleteModal.cancel')}</button>
+          <button class="btn-danger" style="padding:8px 16px;font-size:14px;opacity:0.5;" id="delete-confirm" disabled>${t('admin:users.deleteModal.confirm')}</button>
         </div>
       </div>
     `;
@@ -222,36 +223,36 @@ export class UsersTab {
     modal.className = 'modal-overlay';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Create User');
+    modal.setAttribute('aria-label', t('admin:users.createModal.ariaLabel'));
     modal.innerHTML = `
       <div class="modal" style="max-width:420px;">
-        <h2 style="margin-bottom:16px;">Create User</h2>
+        <h2 style="margin-bottom:16px;">${t('admin:users.createModal.title')}</h2>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <div>
-            <label style="color:var(--text-dim);font-size:13px;">Username *</label>
-            <input type="text" class="admin-input" id="cu-username" placeholder="3-20 chars, alphanumeric, - _" style="margin-top:4px;">
+            <label style="color:var(--text-dim);font-size:13px;">${t('admin:users.createModal.usernameLabel')}</label>
+            <input type="text" class="admin-input" id="cu-username" placeholder="${escapeAttr(t('admin:users.createModal.usernamePlaceholder'))}" style="margin-top:4px;">
           </div>
           <div>
-            <label style="color:var(--text-dim);font-size:13px;">Email *</label>
-            <input type="email" class="admin-input" id="cu-email" placeholder="user@example.com" style="margin-top:4px;">
+            <label style="color:var(--text-dim);font-size:13px;">${t('admin:users.createModal.emailLabel')}</label>
+            <input type="email" class="admin-input" id="cu-email" placeholder="${escapeAttr(t('admin:users.createModal.emailPlaceholder'))}" style="margin-top:4px;">
           </div>
           <div>
-            <label style="color:var(--text-dim);font-size:13px;">Password *</label>
-            <input type="password" class="admin-input" id="cu-password" placeholder="Min 6 characters" style="margin-top:4px;">
+            <label style="color:var(--text-dim);font-size:13px;">${t('admin:users.createModal.passwordLabel')}</label>
+            <input type="password" class="admin-input" id="cu-password" placeholder="${escapeAttr(t('admin:users.createModal.passwordPlaceholder'))}" style="margin-top:4px;">
           </div>
           <div>
-            <label style="color:var(--text-dim);font-size:13px;">Role</label>
+            <label style="color:var(--text-dim);font-size:13px;">${t('admin:users.createModal.roleLabel')}</label>
             <select class="admin-select" id="cu-role" style="margin-top:4px;width:100%;padding:8px 12px;font-size:14px;">
-              <option value="user" selected>user</option>
-              <option value="moderator">moderator</option>
-              <option value="admin">admin</option>
+              <option value="user" selected>${t('admin:users.roles.user')}</option>
+              <option value="moderator">${t('admin:users.roles.moderator')}</option>
+              <option value="admin">${t('admin:users.roles.admin')}</option>
             </select>
           </div>
         </div>
         <div id="cu-error" style="color:var(--danger);font-size:13px;margin-top:8px;display:none;"></div>
         <div class="modal-actions" style="margin-top:16px;">
-          <button class="btn btn-secondary" id="cu-cancel">Cancel</button>
-          <button class="btn btn-primary" id="cu-submit">Create</button>
+          <button class="btn btn-secondary" id="cu-cancel">${t('admin:users.createModal.cancel')}</button>
+          <button class="btn btn-primary" id="cu-submit">${t('admin:users.createModal.submit')}</button>
         </div>
       </div>
     `;
@@ -269,12 +270,12 @@ export class UsersTab {
       const errorEl = modal.querySelector('#cu-error') as HTMLElement;
 
       if (!username || !email || !password) {
-        errorEl.textContent = 'Username, email, and password are required';
+        errorEl.textContent = t('admin:users.createModal.errorRequired');
         errorEl.style.display = 'block';
         return;
       }
       if (password.length < 6) {
-        errorEl.textContent = 'Password must be at least 6 characters';
+        errorEl.textContent = t('admin:users.createModal.errorPasswordLength');
         errorEl.style.display = 'block';
         return;
       }
@@ -287,7 +288,7 @@ export class UsersTab {
           role,
         });
         modal.remove();
-        this.notifications.success(`User "${username}" created`);
+        this.notifications.success(t('admin:users.createModal.successMessage', { username }));
         await this.loadUsers();
       } catch (err: unknown) {
         errorEl.textContent = getErrorMessage(err);
@@ -301,23 +302,23 @@ export class UsersTab {
     modal.className = 'modal-overlay';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Reset Password');
+    modal.setAttribute('aria-label', t('admin:users.resetPasswordModal.ariaLabel'));
     modal.innerHTML = `
       <div class="modal" style="max-width:420px;">
-        <h2 style="margin-bottom:12px;">Reset Password</h2>
-        <p style="color:var(--text-dim);font-size:14px;">Set a new password for <strong style="color:var(--text);">${escapeHtml(username)}</strong>. They will be logged out and must sign in with the new password.</p>
+        <h2 style="margin-bottom:12px;">${t('admin:users.resetPasswordModal.title')}</h2>
+        <p style="color:var(--text-dim);font-size:14px;">${t('admin:users.resetPasswordModal.description', { username: escapeHtml(username) })}</p>
         <div style="margin-top:12px;">
-          <label style="color:var(--text-dim);font-size:13px;">New Password</label>
-          <input type="password" class="admin-input" id="rp-password" placeholder="Min 6 characters" style="margin-top:4px;">
+          <label style="color:var(--text-dim);font-size:13px;">${t('admin:users.resetPasswordModal.newPasswordLabel')}</label>
+          <input type="password" class="admin-input" id="rp-password" placeholder="${escapeAttr(t('admin:users.resetPasswordModal.newPasswordPlaceholder'))}" style="margin-top:4px;">
         </div>
         <div style="margin-top:8px;">
-          <label style="color:var(--text-dim);font-size:13px;">Confirm Password</label>
-          <input type="password" class="admin-input" id="rp-confirm" placeholder="Re-enter password" style="margin-top:4px;">
+          <label style="color:var(--text-dim);font-size:13px;">${t('admin:users.resetPasswordModal.confirmPasswordLabel')}</label>
+          <input type="password" class="admin-input" id="rp-confirm" placeholder="${escapeAttr(t('admin:users.resetPasswordModal.confirmPasswordPlaceholder'))}" style="margin-top:4px;">
         </div>
         <div id="rp-error" style="color:var(--danger);font-size:13px;margin-top:8px;display:none;"></div>
         <div class="modal-actions" style="margin-top:16px;">
-          <button class="btn btn-secondary" id="rp-cancel">Cancel</button>
-          <button class="btn btn-primary" id="rp-submit">Reset Password</button>
+          <button class="btn btn-secondary" id="rp-cancel">${t('admin:users.resetPasswordModal.cancel')}</button>
+          <button class="btn btn-primary" id="rp-submit">${t('admin:users.resetPasswordModal.submit')}</button>
         </div>
       </div>
     `;
@@ -333,17 +334,17 @@ export class UsersTab {
       const errorEl = modal.querySelector('#rp-error') as HTMLElement;
 
       if (!password) {
-        errorEl.textContent = 'Password is required';
+        errorEl.textContent = t('admin:users.resetPasswordModal.errorRequired');
         errorEl.style.display = 'block';
         return;
       }
       if (password.length < 6) {
-        errorEl.textContent = 'Password must be at least 6 characters';
+        errorEl.textContent = t('admin:users.resetPasswordModal.errorPasswordLength');
         errorEl.style.display = 'block';
         return;
       }
       if (password !== confirm) {
-        errorEl.textContent = 'Passwords do not match';
+        errorEl.textContent = t('admin:users.resetPasswordModal.errorPasswordMismatch');
         errorEl.style.display = 'block';
         return;
       }
@@ -351,7 +352,9 @@ export class UsersTab {
       try {
         await ApiClient.put(`/admin/users/${userId}/password`, { password });
         modal.remove();
-        this.notifications.success(`Password reset for "${username}"`);
+        this.notifications.success(
+          t('admin:users.resetPasswordModal.successMessage', { username }),
+        );
       } catch (err: unknown) {
         errorEl.textContent = getErrorMessage(err);
         errorEl.style.display = 'block';
@@ -362,7 +365,7 @@ export class UsersTab {
   private async doRoleChange(userId: number, role: UserRole): Promise<void> {
     try {
       await ApiClient.put(`/admin/users/${userId}/role`, { role });
-      this.notifications.success(`Role changed to ${role}`);
+      this.notifications.success(t('admin:users.roleChangeSuccess', { role }));
       await this.loadUsers();
     } catch (err: unknown) {
       this.notifications.error(getErrorMessage(err));
@@ -372,7 +375,9 @@ export class UsersTab {
   private async doDeactivate(userId: number, deactivated: boolean): Promise<void> {
     try {
       await ApiClient.put(`/admin/users/${userId}/deactivate`, { deactivated });
-      this.notifications.success(deactivated ? 'User deactivated' : 'User reactivated');
+      this.notifications.success(
+        deactivated ? t('admin:users.deactivateSuccess') : t('admin:users.reactivateSuccess'),
+      );
       await this.loadUsers();
     } catch (err: unknown) {
       this.notifications.error(getErrorMessage(err));
@@ -382,7 +387,7 @@ export class UsersTab {
   private async doDelete(userId: number): Promise<void> {
     try {
       await ApiClient.delete(`/admin/users/${userId}`);
-      this.notifications.success('User deleted permanently');
+      this.notifications.success(t('admin:users.deleteSuccess'));
       await this.loadUsers();
     } catch (err: unknown) {
       this.notifications.error(getErrorMessage(err));
@@ -390,7 +395,8 @@ export class UsersTab {
   }
 
   private statusBadge(u: any): string {
-    if (u.is_deactivated) return '<span class="badge badge-deactivated">Deactivated</span>';
-    return '<span class="badge badge-active">Active</span>';
+    if (u.is_deactivated)
+      return `<span class="badge badge-deactivated">${t('admin:users.statusDeactivated')}</span>`;
+    return `<span class="badge badge-active">${t('admin:users.statusActive')}</span>`;
   }
 }

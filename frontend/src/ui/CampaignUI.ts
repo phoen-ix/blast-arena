@@ -9,6 +9,7 @@ import { getErrorMessage, CampaignGameState, CampaignLevelSummary } from '@blast
 import { showLocalCoopModal } from './modals/LocalCoopModal';
 import { showBuddyModal, BuddyLaunchConfig } from './modals/BuddyModal';
 import { LocalCoopP2Identity } from '../game/LocalCoopInput';
+import { t } from '../i18n';
 import game from '../main';
 
 interface CampaignLevel {
@@ -135,7 +136,7 @@ export class CampaignUI {
         };
       });
     } catch (err: unknown) {
-      this.notifications.error('Failed to load campaign: ' + getErrorMessage(err));
+      this.notifications.error(t('campaign:loadFailed', { error: getErrorMessage(err) }));
       this.worlds = [];
     }
   }
@@ -164,11 +165,11 @@ export class CampaignUI {
       letter-spacing: 3px;
       margin: 0;
     `;
-    title.innerHTML = '<span style="color:var(--text);">CAMP</span>AIGN';
+    title.innerHTML = t('campaign:titleBrand');
 
     const backBtn = document.createElement('button');
     backBtn.className = 'btn btn-secondary';
-    backBtn.textContent = 'Back to Lobby';
+    backBtn.textContent = t('campaign:backToLobby');
     backBtn.addEventListener('click', () => {
       this.hide();
       this.onClose();
@@ -203,7 +204,7 @@ export class CampaignUI {
         padding: 80px 20px;
         font-size: 15px;
       `;
-      empty.textContent = 'No campaign worlds available yet.';
+      empty.textContent = t('campaign:empty');
       content.appendChild(empty);
     } else {
       const worldStack = document.createElement('div');
@@ -513,10 +514,14 @@ export class CampaignUI {
     const statsArea = document.createElement('div');
     statsArea.style.cssText = 'display:flex;gap:10px;align-items:center;';
 
-    const enemyBadge = this.createStatBadge(`${level.enemyCount}`, 'enemies', 'var(--danger)');
+    const enemyBadge = this.createStatBadge(
+      `${level.enemyCount}`,
+      t('campaign:stats.enemies'),
+      'var(--danger)',
+    );
     const livesBadge = this.createStatBadge(
       `${level.lives}`,
-      level.lives === 1 ? 'life' : 'lives',
+      level.lives === 1 ? t('campaign:stats.life') : t('campaign:stats.lives'),
       'var(--success)',
     );
 
@@ -524,7 +529,7 @@ export class CampaignUI {
     const timerSecs = level.timeLimit % 60;
     const timerStr =
       timerSecs > 0 ? `${timerMins}:${timerSecs.toString().padStart(2, '0')}` : `${timerMins}m`;
-    const timerBadge = this.createStatBadge(timerStr, 'time', 'var(--warning)');
+    const timerBadge = this.createStatBadge(timerStr, t('campaign:stats.time'), 'var(--warning)');
 
     statsArea.appendChild(enemyBadge);
     statsArea.appendChild(livesBadge);
@@ -544,7 +549,7 @@ export class CampaignUI {
         font-weight: 700;
         letter-spacing: 0.5px;
       `;
-      startBtn.textContent = 'Start';
+      startBtn.textContent = t('campaign:buttons.start');
       startBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.startLevel(level.id);
@@ -562,7 +567,7 @@ export class CampaignUI {
           font-weight: 700;
           letter-spacing: 0.5px;
         `;
-        coopBtn.textContent = 'Co-op';
+        coopBtn.textContent = t('campaign:buttons.coop');
         coopBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           this.startLevel(level.id, true);
@@ -578,7 +583,7 @@ export class CampaignUI {
         padding: 8px 12px;
         font-weight: 600;
       `;
-      localCoopBtn.textContent = 'Local Co-op';
+      localCoopBtn.textContent = t('campaign:buttons.localCoop');
       localCoopBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.showLocalCoopSetup(level.id);
@@ -594,7 +599,7 @@ export class CampaignUI {
         font-weight: 600;
         color: var(--accent);
       `;
-      buddyBtn.textContent = 'Buddy';
+      buddyBtn.textContent = t('campaign:buttons.buddy');
       buddyBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.showBuddySetup(level.id);
@@ -715,7 +720,7 @@ export class CampaignUI {
     buddyMode = false,
   ): Promise<void> {
     try {
-      this.notifications.info('Loading level...');
+      this.notifications.info(t('campaign:loadingLevel'));
 
       // Fetch enemy types for texture generation
       const enemyTypesResp = await ApiClient.get<any>('/campaign/enemy-types');
@@ -773,11 +778,11 @@ export class CampaignUI {
         if (p2Id?.mode === 'loggedIn' && p2Id.loggedInUserId) {
           startData.localP2 = {
             userId: p2Id.loggedInUserId,
-            username: p2Id.loggedInUsername || 'Player 2',
+            username: p2Id.loggedInUsername || t('campaign:localCoopModal.defaultPlayerName'),
           };
         } else {
           startData.localP2 = {
-            username: p2Id?.guestName || 'Player 2',
+            username: p2Id?.guestName || t('campaign:localCoopModal.defaultPlayerName'),
             guestColor: p2Id?.guestColor,
           };
         }
@@ -791,7 +796,7 @@ export class CampaignUI {
         }
       });
     } catch (err: unknown) {
-      this.notifications.error('Failed to start level: ' + getErrorMessage(err));
+      this.notifications.error(t('campaign:startFailed', { error: getErrorMessage(err) }));
     }
   }
 }

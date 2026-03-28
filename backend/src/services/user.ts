@@ -209,6 +209,10 @@ export async function updatePrivacySettings(
   await execute(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`, params);
 }
 
+export async function updateLanguage(userId: number, language: string): Promise<void> {
+  await execute('UPDATE users SET language = ? WHERE id = ?', [language, userId]);
+}
+
 export async function deleteAccount(userId: number, password: string): Promise<void> {
   const rows = await query<UserRow[]>('SELECT password_hash, role FROM users WHERE id = ?', [
     userId,

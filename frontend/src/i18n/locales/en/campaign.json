@@ -1,0 +1,80 @@
+{
+  "title": "Campaign",
+  "titleBrand": "<span style=\"color:var(--text);\">CAMP</span>AIGN",
+  "backToLobby": "Back to Lobby",
+  "empty": "No campaign worlds available yet.",
+  "loadFailed": "Failed to load campaign: {{error}}",
+  "loadingLevel": "Loading level...",
+  "startFailed": "Failed to start level: {{error}}",
+  "stats": {
+    "enemies": "enemies",
+    "life": "life",
+    "lives": "lives",
+    "time": "time"
+  },
+  "buttons": {
+    "start": "Start",
+    "coop": "Co-op",
+    "localCoop": "Local Co-op",
+    "buddy": "Buddy"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "{{percent}}% size"
+  },
+  "localCoopModal": {
+    "title": "Local Co-Op Setup",
+    "ariaLabel": "Local Co-Op Setup",
+    "player1Controls": "Player 1 Controls",
+    "player2": "Player 2",
+    "identity": "Identity:",
+    "guest": "Guest",
+    "logIn": "Log In",
+    "name": "Name:",
+    "color": "Color:",
+    "nameAriaLabel": "Player 2 Username",
+    "passwordAriaLabel": "Player 2 Password",
+    "usernamePlaceholder": "Username",
+    "passwordPlaceholder": "Password",
+    "loginDurationAriaLabel": "Login duration",
+    "loggingIn": "Logging in...",
+    "logInBtn": "Log In",
+    "enterCredentials": "Enter username and password",
+    "loggedInAs": "Logged in as <strong>{{username}}</strong>",
+    "logout": "Logout",
+    "controls": "Controls",
+    "cameraMode": "Camera Mode",
+    "controlConflict": "Both players cannot use the same controls",
+    "cancel": "Cancel",
+    "start": "Start",
+    "defaultPlayerName": "Player 2",
+    "duration": {
+      "session": "Session only",
+      "1h": "1 hour",
+      "6h": "6 hours",
+      "12h": "12 hours",
+      "24h": "24 hours"
+    },
+    "loginFailed": "Login failed",
+    "connectionError": "Connection error"
+  },
+  "buddyModal": {
+    "title": "Buddy Mode",
+    "ariaLabel": "Buddy Mode",
+    "loading": "Loading buddy settings...",
+    "buddy": "Buddy",
+    "edit": "Edit",
+    "done": "Done",
+    "name": "Name",
+    "namePlaceholder": "Buddy",
+    "color": "Color",
+    "sizeLabel": "Size: {{percent}}%",
+    "p1Label": "P1",
+    "buddyLabel": "Buddy",
+    "player1Controls": "Player 1 Controls",
+    "buddyControls": "Buddy Controls",
+    "controlConflict": "Player 1 and Buddy cannot use the same controls",
+    "cancel": "Cancel",
+    "start": "Start"
+  }
+}

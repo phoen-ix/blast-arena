@@ -2,6 +2,7 @@ import { io, Socket } from 'socket.io-client';
 import { SOCKET_URL, API_URL } from '../config';
 import { ClientToServerEvents, ServerToClientEvents } from '@blast-arena/shared';
 import { AuthManager } from './AuthManager';
+import { i18n } from '../i18n';
 
 /** Extract parameter types from an event handler function type */
 type EventParams<T> = T extends (...args: infer P) => void ? P : never;
@@ -30,7 +31,7 @@ export class SocketClient {
     if (!token) return;
 
     this.socket = io(SOCKET_URL, {
-      auth: { token },
+      auth: { token, locale: i18n.language },
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,

@@ -11,6 +11,7 @@ import {
 } from '@blast-arena/shared';
 import { themeManager } from '../themes/ThemeManager';
 import { LocalCoopP2Identity } from '../game/LocalCoopInput';
+import { t } from '../i18n';
 
 const DEADZONE = 0.3;
 
@@ -132,7 +133,7 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     const gameText = this.add
-      .text(0, 45, 'GAME ', {
+      .text(0, 45, t('ui:gameOver.gameWord') + ' ', {
         fontSize: '42px',
         color: colors.textHex,
         fontFamily: 'Chakra Petch, sans-serif',
@@ -140,7 +141,7 @@ export class GameOverScene extends Phaser.Scene {
       })
       .setOrigin(1, 0.5);
     const overText = this.add
-      .text(0, 45, 'OVER', {
+      .text(0, 45, t('ui:gameOver.overWord'), {
         fontSize: '42px',
         color: colors.primaryHex,
         fontFamily: 'Chakra Petch, sans-serif',
@@ -171,7 +172,7 @@ export class GameOverScene extends Phaser.Scene {
     if (isSolo) {
       // Solo with bots: direct Play Again (no voting needed)
       actionBtn = this.add
-        .text(width / 2 - 100, height - 40, '[ Play Again ]', {
+        .text(width / 2 - 100, height - 40, t('ui:gameOver.playAgain'), {
           fontSize: '20px',
           color: colors.textHex,
           fontFamily: 'Chakra Petch, sans-serif',
@@ -193,7 +194,7 @@ export class GameOverScene extends Phaser.Scene {
     } else {
       // Multiplayer: Vote Rematch button
       actionBtn = this.add
-        .text(width / 2 - 100, height - 40, '[ Vote Rematch ]', {
+        .text(width / 2 - 100, height - 40, t('ui:gameOver.voteRematch'), {
           fontSize: '20px',
           color: colors.textHex,
           fontFamily: 'Chakra Petch, sans-serif',
@@ -211,7 +212,9 @@ export class GameOverScene extends Phaser.Scene {
       actionBtn.on('pointerdown', () => {
         this.hasVoted = !this.hasVoted;
         socketClient.emit('rematch:vote', { vote: this.hasVoted }, () => {});
-        actionBtn.setText(this.hasVoted ? '[ Rematch ✓ ]' : '[ Vote Rematch ]');
+        actionBtn.setText(
+          this.hasVoted ? t('ui:gameOver.rematchVoted') : t('ui:gameOver.voteRematch'),
+        );
         actionBtn.setColor(this.hasVoted ? colors.successHex : colors.textHex);
       });
 
@@ -228,7 +231,7 @@ export class GameOverScene extends Phaser.Scene {
 
     // Back to lobby button
     const backBtn = this.add
-      .text(width / 2 + 100, height - 40, '[ Back to Lobby ]', {
+      .text(width / 2 + 100, height - 40, t('ui:gameOver.backToLobby'), {
         fontSize: '20px',
         color: colors.primaryHex,
         fontFamily: 'Chakra Petch, sans-serif',
@@ -262,7 +265,7 @@ export class GameOverScene extends Phaser.Scene {
       // Check if team mode (winnerTeam is set)
       const isTeamMode = data.winnerTeam !== null && data.winnerTeam !== undefined;
       const teamColors = ['#ff4466', '#448aff'];
-      const teamNames = ['Red', 'Blue'];
+      const teamNames = [t('ui:gameOver.teamRed'), t('ui:gameOver.teamBlue')];
 
       // Column layout
       const colName = width * 0.22;
@@ -280,11 +283,11 @@ export class GameOverScene extends Phaser.Scene {
         fontFamily: 'Chakra Petch, sans-serif',
         fontStyle: 'bold',
       } as Phaser.Types.GameObjects.Text.TextStyle;
-      this.add.text(colName, 115, 'PLAYER', hs).setOrigin(0.5);
-      if (isTeamMode) this.add.text(colTeam, 115, 'TEAM', hs).setOrigin(0.5);
-      this.add.text(colScore, 115, 'SCORE', hs).setOrigin(0.5);
-      this.add.text(colElo, 115, 'ELO', hs).setOrigin(0.5);
-      this.add.text(colXp, 115, 'XP', hs).setOrigin(0.5);
+      this.add.text(colName, 115, t('ui:gameOver.player'), hs).setOrigin(0.5);
+      if (isTeamMode) this.add.text(colTeam, 115, t('ui:gameOver.team'), hs).setOrigin(0.5);
+      this.add.text(colScore, 115, t('ui:gameOver.score'), hs).setOrigin(0.5);
+      this.add.text(colElo, 115, t('ui:gameOver.elo'), hs).setOrigin(0.5);
+      this.add.text(colXp, 115, t('ui:gameOver.xp'), hs).setOrigin(0.5);
 
       list.forEach((p: any, i: number) => {
         const y = startY + i * spacing;
@@ -336,7 +339,7 @@ export class GameOverScene extends Phaser.Scene {
     const success = data.success;
     let hasNextLevel = false;
     const titleColor = success ? colors.successHex : colors.dangerHex;
-    const titleText = success ? 'LEVEL COMPLETE!' : 'LEVEL FAILED';
+    const titleText = success ? t('ui:gameOver.levelComplete') : t('ui:gameOver.levelFailed');
 
     this.add
       .text(width / 2, 50, titleText, {
@@ -363,18 +366,23 @@ export class GameOverScene extends Phaser.Scene {
       const mins = Math.floor((data.timeSeconds || 0) / 60);
       const secs = (data.timeSeconds || 0) % 60;
       this.add
-        .text(width / 2, 145, `Time: ${mins}:${secs.toString().padStart(2, '0')}`, {
-          fontSize: '18px',
-          color: colors.textDimHex,
-          fontFamily: 'DM Sans, sans-serif',
-        })
+        .text(
+          width / 2,
+          145,
+          t('ui:gameOver.timeResult', { time: `${mins}:${secs.toString().padStart(2, '0')}` }),
+          {
+            fontSize: '18px',
+            color: colors.textDimHex,
+            fontFamily: 'DM Sans, sans-serif',
+          },
+        )
         .setOrigin(0.5);
 
       // Next Level button
       if (data.nextLevelId) {
         hasNextLevel = true;
         const nextBtn = this.add
-          .text(width / 2, height - 40, '[ Next Level ]', {
+          .text(width / 2, height - 40, t('ui:gameOver.nextLevel'), {
             fontSize: '20px',
             color: colors.successHex,
             fontFamily: 'Chakra Petch, sans-serif',
@@ -406,7 +414,7 @@ export class GameOverScene extends Phaser.Scene {
 
     // Play Again (on success) / Retry (on failure)
     // When 3 buttons (next level exists): spread evenly; otherwise 2 buttons
-    const retryLabel = success ? '[ Play Again ]' : '[ Retry ]';
+    const retryLabel = success ? t('ui:gameOver.playAgain') : t('ui:gameOver.retry');
     const retryX = hasNextLevel ? width / 2 - 160 : width / 2 - 100;
     const backX = hasNextLevel ? width / 2 + 160 : width / 2 + 100;
     const retryBtn = this.add
@@ -430,7 +438,7 @@ export class GameOverScene extends Phaser.Scene {
 
     // Back to Campaign button
     const backBtn = this.add
-      .text(backX, height - 40, '[ Campaign ]', {
+      .text(backX, height - 40, t('ui:gameOver.campaign'), {
         fontSize: '20px',
         color: colors.primaryHex,
         fontFamily: 'Chakra Petch, sans-serif',
@@ -695,7 +703,7 @@ export class GameOverScene extends Phaser.Scene {
       // Level up toast
       if (result.newLevel > result.oldLevel) {
         const lvlToast = this.add
-          .text(width / 2, 0, `LEVEL UP! → Level ${result.newLevel}`, {
+          .text(width / 2, 0, t('ui:gameOver.levelUp', { level: result.newLevel }), {
             fontSize: '18px',
             color: '#ffdd44',
             fontFamily: 'Chakra Petch, sans-serif',
@@ -740,7 +748,9 @@ export class GameOverScene extends Phaser.Scene {
   }): void {
     if (!this.voteTallyText) return;
     const yesCount = data.votes.filter((v) => v.vote).length;
-    this.voteTallyText.setText(`${yesCount}/${data.totalPlayers} voted rematch`);
+    this.voteTallyText.setText(
+      t('ui:gameOver.rematchTally', { current: yesCount, total: data.totalPlayers }),
+    );
   }
 
   private updateButtonHighlight(): void {

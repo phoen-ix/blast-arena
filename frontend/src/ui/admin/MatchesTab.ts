@@ -3,6 +3,7 @@ import { NotificationUI } from '../NotificationUI';
 import { escapeHtml } from '../../utils/html';
 import { GameState, ReplayData } from '@blast-arena/shared';
 import game from '../../main';
+import { t } from '../../i18n';
 
 export class MatchesTab {
   private container: HTMLElement | null = null;
@@ -39,22 +40,22 @@ export class MatchesTab {
         ${
           this.isAdmin && result.total > 0
             ? `<div style="margin-bottom:10px;display:flex;justify-content:flex-end;">
-          <button class="btn btn-secondary" id="delete-all-matches" style="font-size:12px;padding:5px 12px;color:var(--danger);border-color:var(--danger);">Delete All Matches</button>
+          <button class="btn btn-secondary" id="delete-all-matches" style="font-size:12px;padding:5px 12px;color:var(--danger);border-color:var(--danger);">${t('admin:matches.deleteAllMatches')}</button>
         </div>`
             : ''
         }
         <table class="admin-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Room Code</th>
-              <th>Game Mode</th>
-              <th>Players</th>
-              <th>Duration</th>
-              <th>Winner</th>
-              <th>Status</th>
-              <th>Started</th>
-              ${this.isAdmin ? '<th>Actions</th>' : ''}
+              <th>${t('admin:matches.columnId')}</th>
+              <th>${t('admin:matches.columnRoomCode')}</th>
+              <th>${t('admin:matches.columnGameMode')}</th>
+              <th>${t('admin:matches.columnPlayers')}</th>
+              <th>${t('admin:matches.columnDuration')}</th>
+              <th>${t('admin:matches.columnWinner')}</th>
+              <th>${t('admin:matches.columnStatus')}</th>
+              <th>${t('admin:matches.columnStarted')}</th>
+              ${this.isAdmin ? `<th>${t('admin:matches.columnActions')}</th>` : ''}
             </tr>
           </thead>
           <tbody>
@@ -66,28 +67,28 @@ export class MatchesTab {
                 <td>${escapeHtml(m.room_code)}</td>
                 <td>${escapeHtml(m.game_mode)}</td>
                 <td>${m.player_count}</td>
-                <td>${m.duration ? `${m.duration}s` : '-'}</td>
+                <td>${m.duration ? t('admin:matches.durationSeconds', { duration: m.duration }) : '-'}</td>
                 <td>${m.winner_username ? escapeHtml(m.winner_username) : '-'}</td>
                 <td><span class="badge badge-${this.statusBadgeClass(m)}">${this.statusLabel(m)}</span></td>
                 <td>${m.started_at ? new Date(m.started_at).toLocaleString() : '-'}</td>
-                ${this.isAdmin ? `<td><button class="btn btn-secondary delete-match-btn" data-delete-match="${m.id}" style="font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);">Delete</button></td>` : ''}
+                ${this.isAdmin ? `<td><button class="btn btn-secondary delete-match-btn" data-delete-match="${m.id}" style="font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);">${t('admin:matches.deleteButton')}</button></td>` : ''}
               </tr>
             `,
               )
               .join('')}
-            ${result.matches.length === 0 ? `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-dim);">No matches found</td></tr>` : ''}
+            ${result.matches.length === 0 ? `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-dim);">${t('admin:matches.noMatchesFound')}</td></tr>` : ''}
           </tbody>
         </table>
         <div class="admin-pagination">
-          <button ${this.page <= 1 ? 'disabled' : ''} data-page="${this.page - 1}">Prev</button>
-          <span class="page-info">Page ${this.page} of ${totalPages} (${result.total} matches)</span>
-          <button ${this.page >= totalPages ? 'disabled' : ''} data-page="${this.page + 1}">Next</button>
+          <button ${this.page <= 1 ? 'disabled' : ''} data-page="${this.page - 1}">${t('admin:matches.prevPage')}</button>
+          <span class="page-info">${t('admin:matches.pageInfo', { page: this.page, totalPages, total: result.total })}</span>
+          <button ${this.page >= totalPages ? 'disabled' : ''} data-page="${this.page + 1}">${t('admin:matches.nextPage')}</button>
         </div>
       `;
 
       this.container.addEventListener('click', this.handleClick);
     } catch {
-      this.container.innerHTML = '<div style="color:var(--danger);">Failed to load matches</div>';
+      this.container.innerHTML = `<div style="color:var(--danger);">${t('admin:matches.failedToLoad')}</div>`;
     }
   }
 
@@ -104,32 +105,34 @@ export class MatchesTab {
     if (target.dataset.deleteMatch) {
       e.stopPropagation();
       const matchId = parseInt(target.dataset.deleteMatch);
-      if (!confirm(`Delete match #${matchId}? This will also delete its replay if one exists.`))
-        return;
+      if (!confirm(t('admin:matches.confirmDeleteMatch', { matchId }))) return;
       try {
         await ApiClient.delete(`/admin/matches/${matchId}`);
-        this.notifications.success(`Match #${matchId} deleted`);
+        this.notifications.success(t('admin:matches.matchDeleted', { matchId }));
         await this.loadMatches();
       } catch {
-        this.notifications.error('Failed to delete match');
+        this.notifications.error(t('admin:matches.failedToDeleteMatch'));
       }
       return;
     }
 
     // Delete all matches
     if (target.id === 'delete-all-matches' || target.closest('#delete-all-matches')) {
-      if (!confirm('Delete ALL matches and their replays? This cannot be undone.')) return;
+      if (!confirm(t('admin:matches.confirmDeleteAll'))) return;
       try {
         const result = await ApiClient.delete<{ count: number; replaysCleaned: number }>(
           '/admin/matches',
         );
         this.notifications.success(
-          `Deleted ${result.count} matches, ${result.replaysCleaned} replays cleaned`,
+          t('admin:matches.deletedMatchesResult', {
+            count: result.count,
+            replaysCleaned: result.replaysCleaned,
+          }),
         );
         this.page = 1;
         await this.loadMatches();
       } catch {
-        this.notifications.error('Failed to delete matches');
+        this.notifications.error(t('admin:matches.failedToDeleteMatches'));
       }
       return;
     }
@@ -162,7 +165,9 @@ export class MatchesTab {
           const isWinner = (p.userId ?? p.id) === match.winnerId || (placement === 1 && alive);
           const displayName =
             escapeHtml(name) +
-            (isBot ? ' <span style="color:var(--text-dim);">(bot)</span>' : '') +
+            (isBot
+              ? ` <span style="color:var(--text-dim);">${t('admin:matches.botLabel')}</span>`
+              : '') +
             (isWinner ? ' <span style="color:var(--warning);">&#9733;</span>' : '');
           const rowStyle = !alive ? 'color:var(--text-dim);' : '';
 
@@ -170,7 +175,7 @@ export class MatchesTab {
             <tr style="${rowStyle}">
               <td>${placement}</td>
               <td>${displayName}</td>
-              <td>${team !== null && team !== undefined ? `Team ${team + 1}` : '-'}</td>
+              <td>${team !== null && team !== undefined ? t('admin:matches.teamLabel', { team: team + 1 }) : '-'}</td>
               <td>${kills}${selfKills > 0 ? ` <span style="color:var(--danger);font-size:11px;">(-${selfKills})</span>` : ''}</td>
             </tr>`;
         })
@@ -180,28 +185,28 @@ export class MatchesTab {
       modal.className = 'modal-overlay';
       modal.setAttribute('role', 'dialog');
       modal.setAttribute('aria-modal', 'true');
-      modal.setAttribute('aria-label', `Match ${match.id} Details`);
+      modal.setAttribute('aria-label', t('admin:matches.detailAriaLabel', { matchId: match.id }));
       modal.innerHTML = `
         <div class="modal" style="max-width:520px;">
-          <h2 style="margin-bottom:16px;">Match #${match.id} Details</h2>
+          <h2 style="margin-bottom:16px;">${t('admin:matches.detailTitle', { matchId: match.id })}</h2>
           <div style="margin-bottom:16px;">
-            <div class="match-detail-row"><span class="label">Room Code:</span><span class="value">${escapeHtml(match.roomCode)}</span></div>
-            <div class="match-detail-row"><span class="label">Game Mode:</span><span class="value">${escapeHtml(match.gameMode)}</span></div>
-            <div class="match-detail-row"><span class="label">Map:</span><span class="value">${match.mapWidth}x${match.mapHeight} (seed: ${match.mapSeed})</span></div>
-            <div class="match-detail-row"><span class="label">Status:</span><span class="value">${match.status}</span></div>
-            <div class="match-detail-row"><span class="label">Duration:</span><span class="value">${match.duration ? `${match.duration}s` : '-'}</span></div>
-            <div class="match-detail-row"><span class="label">Started:</span><span class="value">${match.startedAt ? new Date(match.startedAt).toLocaleString() : '-'}</span></div>
-            <div class="match-detail-row"><span class="label">Finished:</span><span class="value">${match.finishedAt ? new Date(match.finishedAt).toLocaleString() : '-'}</span></div>
+            <div class="match-detail-row"><span class="label">${t('admin:matches.detailRoomCode')}</span><span class="value">${escapeHtml(match.roomCode)}</span></div>
+            <div class="match-detail-row"><span class="label">${t('admin:matches.detailGameMode')}</span><span class="value">${escapeHtml(match.gameMode)}</span></div>
+            <div class="match-detail-row"><span class="label">${t('admin:matches.detailMap')}</span><span class="value">${t('admin:matches.detailMapValue', { width: match.mapWidth, height: match.mapHeight, seed: match.mapSeed })}</span></div>
+            <div class="match-detail-row"><span class="label">${t('admin:matches.detailStatus')}</span><span class="value">${match.status}</span></div>
+            <div class="match-detail-row"><span class="label">${t('admin:matches.detailDuration')}</span><span class="value">${match.duration ? t('admin:matches.durationSeconds', { duration: match.duration }) : '-'}</span></div>
+            <div class="match-detail-row"><span class="label">${t('admin:matches.detailStarted')}</span><span class="value">${match.startedAt ? new Date(match.startedAt).toLocaleString() : '-'}</span></div>
+            <div class="match-detail-row"><span class="label">${t('admin:matches.detailFinished')}</span><span class="value">${match.finishedAt ? new Date(match.finishedAt).toLocaleString() : '-'}</span></div>
           </div>
-          <h3 style="margin-bottom:8px;">Players</h3>
+          <h3 style="margin-bottom:8px;">${t('admin:matches.playersHeading')}</h3>
           <div style="overflow-x:auto;">
             <table class="admin-table" style="font-size:13px;">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Player</th>
-                  <th>Team</th>
-                  <th>Kills</th>
+                  <th>${t('admin:matches.columnPlacement')}</th>
+                  <th>${t('admin:matches.columnPlayer')}</th>
+                  <th>${t('admin:matches.columnTeam')}</th>
+                  <th>${t('admin:matches.columnKills')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -210,8 +215,8 @@ export class MatchesTab {
             </table>
           </div>
           <div class="modal-actions" style="margin-top:16px;">
-            ${match.hasReplay ? '<button class="btn btn-primary" id="match-watch-replay" style="margin-right:8px;">Watch Replay</button>' : ''}
-            <button class="btn btn-secondary" id="match-detail-close">Close</button>
+            ${match.hasReplay ? `<button class="btn btn-primary" id="match-watch-replay" style="margin-right:8px;">${t('admin:matches.watchReplay')}</button>` : ''}
+            <button class="btn btn-secondary" id="match-detail-close">${t('admin:matches.close')}</button>
           </div>
         </div>
       `;
@@ -229,17 +234,17 @@ export class MatchesTab {
         });
       }
     } catch {
-      this.notifications.error('Failed to load match details');
+      this.notifications.error(t('admin:matches.failedToLoadDetails'));
     }
   }
 
   private async launchReplay(matchId: number): Promise<void> {
     try {
-      this.notifications.info('Loading replay...');
+      this.notifications.info(t('admin:matches.loadingReplay'));
       const replayData = await ApiClient.get<ReplayData>(`/admin/replays/${matchId}`);
 
       if (!replayData || !replayData.frames || replayData.frames.length === 0) {
-        this.notifications.error('Replay data is empty or corrupted');
+        this.notifications.error(t('admin:matches.replayEmptyOrCorrupted'));
         return;
       }
 
@@ -283,7 +288,7 @@ export class MatchesTab {
         activeScene.scene.launch('HUDScene');
       }
     } catch {
-      this.notifications.error('Failed to load replay');
+      this.notifications.error(t('admin:matches.failedToLoadReplay'));
     }
   }
 
@@ -296,7 +301,8 @@ export class MatchesTab {
   }
 
   private statusLabel(m: any): string {
-    if ((m.status === 'playing' || m.status === 'countdown') && !m.finished_at) return 'abandoned';
+    if ((m.status === 'playing' || m.status === 'countdown') && !m.finished_at)
+      return t('admin:matches.statusAbandoned');
     return m.status;
   }
 }

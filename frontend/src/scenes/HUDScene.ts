@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameState, PlayerState, CampaignGameState } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
 import { SpectatorChat } from '../game/SpectatorChat';
+import { t } from '../i18n';
 
 export class HUDScene extends Phaser.Scene {
   private hudContainer!: HTMLElement;
@@ -102,7 +103,7 @@ export class HUDScene extends Phaser.Scene {
         <div class="hud-timer" id="hud-timer">${noTimeLimit ? '0:00' : '3:00'}</div>
       </div>
       <div class="hud-spectator-banner" id="hud-spectator" style="display:none;">
-        SPECTATOR — WASD/Arrows/D-Pad to pan, 1-9/LB/RB or click to follow
+        ${t('ui:hud.spectator')}
       </div>
     `;
 
@@ -199,9 +200,12 @@ export class HUDScene extends Phaser.Scene {
 
     let text: string;
     if (killer && killer.id !== data.playerId) {
-      text = `${escapeHtml(killer.username)} eliminated ${escapeHtml(victim?.username || '???')}`;
+      text = t('ui:hud.eliminated', {
+        killer: escapeHtml(killer.username),
+        victim: escapeHtml(victim?.username || '???'),
+      });
     } else {
-      text = `${escapeHtml(victim?.username || '???')} was eliminated`;
+      text = t('ui:hud.selfEliminated', { player: escapeHtml(victim?.username || '???') });
     }
 
     this.killFeedEntries.push({ text, time: Date.now() });
@@ -342,7 +346,7 @@ export class HUDScene extends Phaser.Scene {
         if (!prev || prev.remoteDetonateMode !== me.remoteDetonateMode) {
           if (me.hasRemoteBomb && me.remoteDetonateMode) {
             els.remoteMode.style.display = '';
-            els.remoteMode.textContent = `🎯 ${me.remoteDetonateMode === 'fifo' ? '1st' : 'ALL'}`;
+            els.remoteMode.textContent = `🎯 ${me.remoteDetonateMode === 'fifo' ? t('ui:hud.remoteMode.fifo') : t('ui:hud.remoteMode.all')}`;
           } else {
             els.remoteMode.style.display = 'none';
           }
@@ -391,7 +395,7 @@ export class HUDScene extends Phaser.Scene {
           let teamHeader = '';
           if (isTeamMode && p.team !== lastTeam) {
             lastTeam = p.team ?? -1;
-            const teamName = p.team === 0 ? 'Team Red' : 'Team Blue';
+            const teamName = p.team === 0 ? t('ui:hud.teamRed') : t('ui:hud.teamBlue');
             teamHeader = `<div style="font-size:11px;font-weight:600;color:${teamColors[p.team ?? 0]};padding:4px 8px 2px;margin-top:${(p.team ?? 0) > 0 ? '6px' : '0'};">${teamName}</div>`;
           }
           const teamDot = isTeamMode
@@ -443,7 +447,8 @@ export class HUDScene extends Phaser.Scene {
       this.lastCampaignEnemyCount = aliveEnemies;
       const enemiesEl = document.getElementById('campaign-enemies');
       if (enemiesEl) {
-        enemiesEl.textContent = aliveEnemies > 0 ? `Enemies: ${aliveEnemies}` : '';
+        enemiesEl.textContent =
+          aliveEnemies > 0 ? t('ui:hud.enemies', { count: aliveEnemies }) : '';
       }
     }
 

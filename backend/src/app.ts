@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { registerRoutes } from './routes';
 import { errorHandler } from './middleware/errorHandler';
+import { localeMiddleware } from './middleware/locale';
 import { getConfig } from './config';
 
 export function createApp(): express.Express {
@@ -17,6 +18,7 @@ export function createApp(): express.Express {
   );
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
+  app.use(localeMiddleware);
 
   // Trust proxy (behind nginx)
   app.set('trust proxy', 1);

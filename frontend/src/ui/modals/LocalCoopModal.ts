@@ -14,17 +14,20 @@ import { UIGamepadNavigator } from '../../game/UIGamepadNavigator';
 import { PLAYER_COLORS } from '../../scenes/BootScene';
 import { AuthManager } from '../../network/AuthManager';
 import { PlayerCosmeticData } from '@blast-arena/shared';
+import { t } from '../../i18n';
 
 const ALL_PRESETS: ControlPreset[] = ['wasd', 'arrows', 'numpad', 'gamepad1', 'gamepad2'];
 const ALL_CAMERA_MODES: CameraMode[] = ['shared', 'split-h', 'split-v'];
 
-const DURATION_OPTIONS: { value: number; label: string }[] = [
-  { value: 0, label: 'Session only' },
-  { value: 1, label: '1 hour' },
-  { value: 6, label: '6 hours' },
-  { value: 12, label: '12 hours' },
-  { value: 24, label: '24 hours' },
-];
+function getDurationOptions(): { value: number; label: string }[] {
+  return [
+    { value: 0, label: t('campaign:localCoopModal.duration.session') },
+    { value: 1, label: t('campaign:localCoopModal.duration.1h') },
+    { value: 6, label: t('campaign:localCoopModal.duration.6h') },
+    { value: 12, label: t('campaign:localCoopModal.duration.12h') },
+    { value: 24, label: t('campaign:localCoopModal.duration.24h') },
+  ];
+}
 
 const SECTION_HEADING_STYLE = `
   font-family: var(--font-display);
@@ -65,7 +68,7 @@ export function showLocalCoopModal(
   overlay.className = 'modal-overlay';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Local Co-Op Setup');
+  overlay.setAttribute('aria-label', t('campaign:localCoopModal.ariaLabel'));
 
   const escHandler = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -95,7 +98,7 @@ export function showLocalCoopModal(
     }
     return {
       mode: 'guest',
-      guestName: p2.guestName || 'Player 2',
+      guestName: p2.guestName || t('campaign:localCoopModal.defaultPlayerName'),
       guestColor: p2.guestColor,
     };
   }
@@ -119,7 +122,7 @@ export function showLocalCoopModal(
 
       const data = await resp.json();
       if (!resp.ok) {
-        p2.loginError = data.error || 'Login failed';
+        p2.loginError = data.error || t('campaign:localCoopModal.loginFailed');
         p2.loginLoading = false;
         render();
         return;
@@ -132,7 +135,7 @@ export function showLocalCoopModal(
       p2.loginLoading = false;
       render();
     } catch {
-      p2.loginError = 'Connection error';
+      p2.loginError = t('campaign:localCoopModal.connectionError');
       p2.loginLoading = false;
       render();
     }
@@ -165,7 +168,7 @@ export function showLocalCoopModal(
 
     const title = document.createElement('h2');
     title.style.cssText = 'margin:0;font-size:20px;';
-    title.textContent = 'Local Co-Op Setup';
+    title.textContent = t('campaign:localCoopModal.title');
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'btn btn-ghost btn-sm';
@@ -189,7 +192,7 @@ export function showLocalCoopModal(
     // Player 1 Controls
     body.appendChild(
       createControlsSection(
-        'Player 1 Controls',
+        t('campaign:localCoopModal.player1Controls'),
         config.p1Controls,
         (preset) => {
           config.p1Controls = preset;
@@ -223,7 +226,7 @@ export function showLocalCoopModal(
         border-radius: var(--radius);
         border: 1px solid rgba(255,180,0,0.3);
       `;
-      warning.textContent = 'Both players cannot use the same controls';
+      warning.textContent = t('campaign:localCoopModal.controlConflict');
       body.appendChild(warning);
     }
 
@@ -237,7 +240,7 @@ export function showLocalCoopModal(
 
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn btn-secondary';
-    cancelBtn.textContent = 'Cancel';
+    cancelBtn.textContent = t('campaign:localCoopModal.cancel');
     cancelBtn.addEventListener('click', () => {
       closeModal();
       onCancel();
@@ -245,7 +248,7 @@ export function showLocalCoopModal(
 
     const startBtn = document.createElement('button');
     startBtn.className = 'btn btn-primary';
-    startBtn.textContent = 'Start';
+    startBtn.textContent = t('campaign:localCoopModal.start');
     startBtn.disabled = hasConflict();
     if (hasConflict()) {
       startBtn.style.opacity = '0.5';
@@ -289,7 +292,7 @@ export function showLocalCoopModal(
 
     const sectionTitle = document.createElement('div');
     sectionTitle.style.cssText = SECTION_HEADING_STYLE + 'font-size: 16px; margin-bottom: 0;';
-    sectionTitle.textContent = 'Player 2';
+    sectionTitle.textContent = t('campaign:localCoopModal.player2');
     section.appendChild(sectionTitle);
 
     // Mode toggle (Guest / Log In)
@@ -298,7 +301,7 @@ export function showLocalCoopModal(
 
     const modeLabel = document.createElement('span');
     modeLabel.style.cssText = 'font-size:13px;color:var(--text-dim);margin-right:4px;';
-    modeLabel.textContent = 'Identity:';
+    modeLabel.textContent = t('campaign:localCoopModal.identity');
     modeRow.appendChild(modeLabel);
 
     for (const mode of ['guest', 'loggedIn'] as const) {
@@ -310,7 +313,8 @@ export function showLocalCoopModal(
         chip.style.background = 'rgba(var(--primary-rgb, 255,107,53), 0.15)';
         chip.style.color = 'var(--primary)';
       }
-      chip.textContent = mode === 'guest' ? 'Guest' : 'Log In';
+      chip.textContent =
+        mode === 'guest' ? t('campaign:localCoopModal.guest') : t('campaign:localCoopModal.logIn');
       chip.addEventListener('click', () => {
         if (p2.mode !== mode) {
           p2.mode = mode;
@@ -334,7 +338,7 @@ export function showLocalCoopModal(
     // Controls (always shown)
     section.appendChild(
       createControlsSection(
-        'Controls',
+        t('campaign:localCoopModal.controls'),
         config.p2Controls,
         (preset) => {
           config.p2Controls = preset;
@@ -357,7 +361,7 @@ export function showLocalCoopModal(
 
     const nameLabel = document.createElement('span');
     nameLabel.style.cssText = 'font-size:13px;color:var(--text-dim);white-space:nowrap;';
-    nameLabel.textContent = 'Name:';
+    nameLabel.textContent = t('campaign:localCoopModal.name');
     nameRow.appendChild(nameLabel);
 
     const nameInput = document.createElement('input');
@@ -366,7 +370,7 @@ export function showLocalCoopModal(
     nameInput.style.cssText = 'flex:1;padding:6px 10px;font-size:14px;';
     nameInput.maxLength = 20;
     nameInput.value = p2.guestName;
-    nameInput.placeholder = 'Player 2';
+    nameInput.placeholder = t('campaign:localCoopModal.defaultPlayerName');
     nameInput.addEventListener('input', () => {
       p2.guestName = nameInput.value;
     });
@@ -379,7 +383,7 @@ export function showLocalCoopModal(
 
     const colorLabel = document.createElement('span');
     colorLabel.style.cssText = 'font-size:13px;color:var(--text-dim);white-space:nowrap;';
-    colorLabel.textContent = 'Color:';
+    colorLabel.textContent = t('campaign:localCoopModal.color');
     colorRow.appendChild(colorLabel);
 
     const swatches = document.createElement('div');
@@ -417,8 +421,8 @@ export function showLocalCoopModal(
     const usernameInput = document.createElement('input');
     usernameInput.type = 'text';
     usernameInput.className = 'input';
-    usernameInput.placeholder = 'Username';
-    usernameInput.setAttribute('aria-label', 'Player 2 Username');
+    usernameInput.placeholder = t('campaign:localCoopModal.usernamePlaceholder');
+    usernameInput.setAttribute('aria-label', t('campaign:localCoopModal.nameAriaLabel'));
     usernameInput.style.cssText = 'padding:6px 10px;font-size:14px;';
     usernameInput.autocomplete = 'off';
     container.appendChild(usernameInput);
@@ -427,8 +431,8 @@ export function showLocalCoopModal(
     const passwordInput = document.createElement('input');
     passwordInput.type = 'password';
     passwordInput.className = 'input';
-    passwordInput.placeholder = 'Password';
-    passwordInput.setAttribute('aria-label', 'Player 2 Password');
+    passwordInput.placeholder = t('campaign:localCoopModal.passwordPlaceholder');
+    passwordInput.setAttribute('aria-label', t('campaign:localCoopModal.passwordAriaLabel'));
     passwordInput.style.cssText = 'padding:6px 10px;font-size:14px;';
     passwordInput.autocomplete = 'off';
     container.appendChild(passwordInput);
@@ -439,9 +443,9 @@ export function showLocalCoopModal(
 
     const durationSelect = document.createElement('select');
     durationSelect.className = 'select';
-    durationSelect.setAttribute('aria-label', 'Login duration');
+    durationSelect.setAttribute('aria-label', t('campaign:localCoopModal.loginDurationAriaLabel'));
     durationSelect.style.cssText = 'padding:6px 8px;font-size:13px;flex:1;';
-    for (const opt of DURATION_OPTIONS) {
+    for (const opt of getDurationOptions()) {
       const option = document.createElement('option');
       option.value = String(opt.value);
       option.textContent = opt.label;
@@ -454,13 +458,15 @@ export function showLocalCoopModal(
 
     const loginBtn = document.createElement('button');
     loginBtn.className = 'btn btn-primary btn-sm';
-    loginBtn.textContent = p2.loginLoading ? 'Logging in...' : 'Log In';
+    loginBtn.textContent = p2.loginLoading
+      ? t('campaign:localCoopModal.loggingIn')
+      : t('campaign:localCoopModal.logInBtn');
     loginBtn.disabled = !!p2.loginLoading;
     loginBtn.addEventListener('click', () => {
       const username = usernameInput.value.trim();
       const password = passwordInput.value;
       if (!username || !password) {
-        p2.loginError = 'Enter username and password';
+        p2.loginError = t('campaign:localCoopModal.enterCredentials');
         render();
         return;
       }
@@ -494,11 +500,13 @@ export function showLocalCoopModal(
 
     const info = document.createElement('span');
     info.style.cssText = 'font-size:14px;color:var(--text);';
-    info.innerHTML = `Logged in as <strong>${escapeHtml(p2.loggedInUser!.username)}</strong>`;
+    info.innerHTML = t('campaign:localCoopModal.loggedInAs', {
+      username: escapeHtml(p2.loggedInUser!.username),
+    });
 
     const logoutBtn = document.createElement('button');
     logoutBtn.className = 'btn btn-ghost btn-sm';
-    logoutBtn.textContent = 'Logout';
+    logoutBtn.textContent = t('campaign:localCoopModal.logout');
     logoutBtn.style.cssText = 'color:var(--danger);';
     logoutBtn.addEventListener('click', () => doLogout());
 
@@ -592,7 +600,7 @@ export function createCameraModeSection(
 
   const heading = document.createElement('div');
   heading.style.cssText = SECTION_HEADING_STYLE;
-  heading.textContent = 'Camera Mode';
+  heading.textContent = t('campaign:localCoopModal.cameraMode');
   section.appendChild(heading);
 
   const chips = document.createElement('div');

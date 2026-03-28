@@ -14,6 +14,7 @@ import { AITab } from './admin/AITab';
 import { CampaignTab } from './admin/CampaignTab';
 import { SeasonsTab } from './admin/SeasonsTab';
 import { AchievementsTab } from './admin/AchievementsTab';
+import { t } from '../i18n';
 
 interface Tab {
   id: string;
@@ -52,62 +53,67 @@ export class AdminUI {
     this.tabs = [
       {
         id: 'dashboard',
-        label: 'Dashboard',
+        label: t('admin:tabs.dashboard'),
         adminOnly: true,
         instance: new DashboardTab(notifications),
       },
       {
         id: 'users',
-        label: 'Users',
+        label: t('admin:tabs.users'),
         adminOnly: false,
         instance: new UsersTab(notifications, role),
       },
       {
         id: 'matches',
-        label: 'Matches',
+        label: t('admin:tabs.matches'),
         adminOnly: false,
         instance: new MatchesTab(notifications, isAdmin),
       },
       {
         id: 'rooms',
-        label: 'Rooms',
+        label: t('admin:tabs.rooms'),
         adminOnly: false,
         instance: new RoomsTab(notifications, socketClient, role),
       },
-      { id: 'logs', label: 'Logs', adminOnly: true, instance: new LogsTab(notifications) },
+      {
+        id: 'logs',
+        label: t('admin:tabs.logs'),
+        adminOnly: true,
+        instance: new LogsTab(notifications),
+      },
       {
         id: 'simulations',
-        label: 'Simulations',
+        label: t('admin:tabs.simulations'),
         adminOnly: true,
         instance: new SimulationsTab(notifications, socketClient),
       },
       {
         id: 'ai',
-        label: 'AI',
+        label: t('admin:tabs.ai'),
         adminOnly: true,
         instance: new AITab(notifications),
       },
       {
         id: 'announcements',
-        label: 'Announcements',
+        label: t('admin:tabs.announcements'),
         adminOnly: false,
         instance: new AnnouncementsTab(notifications, role),
       },
       {
         id: 'campaign',
-        label: 'Campaign',
+        label: t('admin:tabs.campaign'),
         adminOnly: true,
         instance: new CampaignTab(notifications),
       },
       {
         id: 'seasons',
-        label: 'Seasons',
+        label: t('admin:tabs.seasons'),
         adminOnly: true,
         instance: new SeasonsTab(notifications),
       },
       {
         id: 'achievements',
-        label: 'Achievements',
+        label: t('admin:tabs.achievements'),
         adminOnly: true,
         instance: new AchievementsTab(notifications),
       },
@@ -115,11 +121,11 @@ export class AdminUI {
 
     // Filter tabs based on role
     if (!isAdmin) {
-      this.tabs = this.tabs.filter((t) => !t.adminOnly);
+      this.tabs = this.tabs.filter((tab) => !tab.adminOnly);
     }
 
     this.activeTabId =
-      (initialTab && this.tabs.find((t) => t.id === initialTab) ? initialTab : null) ||
+      (initialTab && this.tabs.find((tab) => tab.id === initialTab) ? initialTab : null) ||
       this.tabs[0]?.id ||
       'users';
   }
@@ -136,7 +142,7 @@ export class AdminUI {
   hide(): void {
     UIGamepadNavigator.getInstance().popContext('admin');
     // Destroy active tab
-    const activeTab = this.tabs.find((t) => t.id === this.activeTabId);
+    const activeTab = this.tabs.find((tab) => tab.id === this.activeTabId);
     activeTab?.instance.destroy();
     this.container.remove();
   }
@@ -144,14 +150,14 @@ export class AdminUI {
   private async render(): Promise<void> {
     this.container.innerHTML = `
       <div class="admin-header">
-        <h1 style="color:var(--primary);margin:0;">Admin Panel</h1>
-        <button class="btn btn-secondary" id="admin-close">Back to Lobby</button>
+        <h1 style="color:var(--primary);margin:0;">${t('admin:title')}</h1>
+        <button class="btn btn-secondary" id="admin-close">${t('admin:backToLobby')}</button>
       </div>
       <div class="admin-tabs" id="admin-tab-bar">
         ${this.tabs
           .map(
-            (t) => `
-          <button class="admin-tab ${t.id === this.activeTabId ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>
+            (tab) => `
+          <button class="admin-tab ${tab.id === this.activeTabId ? 'active' : ''}" data-tab="${tab.id}">${tab.label}</button>
         `,
           )
           .join('')}
@@ -177,7 +183,7 @@ export class AdminUI {
 
   private async switchTab(tabId: string): Promise<void> {
     // Destroy current tab
-    const currentTab = this.tabs.find((t) => t.id === this.activeTabId);
+    const currentTab = this.tabs.find((tab) => tab.id === this.activeTabId);
     currentTab?.instance.destroy();
 
     this.activeTabId = tabId;
@@ -199,7 +205,7 @@ export class AdminUI {
   }
 
   private async renderActiveTab(): Promise<void> {
-    const tab = this.tabs.find((t) => t.id === this.activeTabId);
+    const tab = this.tabs.find((tab) => tab.id === this.activeTabId);
     if (tab && this.contentEl) {
       await tab.instance.render(this.contentEl);
     }
@@ -217,8 +223,8 @@ export class AdminUI {
       <div class="admin-tabs" id="admin-tab-bar">
         ${this.tabs
           .map(
-            (t) => `
-          <button class="admin-tab ${t.id === this.activeTabId ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>
+            (tab) => `
+          <button class="admin-tab ${tab.id === this.activeTabId ? 'active' : ''}" data-tab="${tab.id}">${tab.label}</button>
         `,
           )
           .join('')}
@@ -241,7 +247,7 @@ export class AdminUI {
   }
 
   destroy(): void {
-    const activeTab = this.tabs.find((t) => t.id === this.activeTabId);
+    const activeTab = this.tabs.find((tab) => tab.id === this.activeTabId);
     activeTab?.instance.destroy();
     UIGamepadNavigator.getInstance().popContext('admin');
   }

@@ -315,6 +315,8 @@ export interface SocketData {
   userId: number;
   username: string;
   role: UserRole;
+  /** User's preferred locale for i18n */
+  locale: string;
   /** Cached room code for fast game:input dispatch (avoids Redis lookup per input) */
   activeRoomCode?: string;
   /** Cached campaign session ID for fast campaign:input dispatch */

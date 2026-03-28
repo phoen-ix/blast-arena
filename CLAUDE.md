@@ -241,6 +241,20 @@ Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-sy
 - `friendships(user_id, status)` composite index for friend queries
 - See [docs/performance-and-internals.md](docs/performance-and-internals.md)
 
+## Internationalization (i18n)
+Full-stack i18n via **i18next**. Frontend uses `i18next-http-backend` + `i18next-browser-languagedetector`; backend uses `i18next-fs-backend`. Supported languages: English (`en`), German (`de`).
+- **Translation pattern**: `t('namespace:section.key')` with `{{variable}}` interpolation. Import `t` from `frontend/src/i18n/index.ts` or `backend/src/i18n/index.ts`
+- **Namespaces**: shared (`common`, `game`), frontend-only (`ui`, `auth`, `hud`, `admin`, `campaign`, `help`, `editor`, `errors`), backend-only (`server`, `email`)
+- **Locale files**: `frontend/src/i18n/locales/{lng}/*.json`, `shared/src/i18n/locales/{lng}/*.json`, `backend/src/i18n/locales/{lng}/*.json`. Build scripts (`frontend/scripts/copy-locales.cjs`, `backend/scripts/copy-locales.cjs`) merge shared + workspace-specific locales into output directories
+- **Key conventions**: `namespace:section.subsection.key`. Dots are key separators — never use decimal numbers as JSON keys (use descriptive names like `"low30"` not `"0.3"`). View titles use getter: `get title() { return t('ui:...'); }` (not static `readonly`)
+- **Adding a language**: Create `{lng}/` dirs in all three locale paths, translate all JSON files (must have 1:1 key parity with `en/`), add language code to `supportedLngs` in both `frontend/src/i18n/index.ts` and `backend/src/i18n/index.ts`, add `<option>` in `SettingsUI.ts` language selector
+- **Variable shadowing**: When importing `{ t }` from i18n, lambda parameters named `t` must be renamed (e.g., `(tab) =>` not `(t) =>`)
+- **Lazy evaluation**: Module-level constants that use `t()` must be converted to functions/getters (e.g., `getOptions()` instead of `const OPTIONS = [...]`) because `t()` returns the key before i18n initializes
+- **Frontend init**: `await initI18n()` in `main.ts` before creating the Phaser game. Locale detection: localStorage (`blast-arena-lang`) → browser navigator → fallback `en`
+- **Backend**: `localeMiddleware` extracts locale from `X-Language` header → `Accept-Language` → `'en'`. Socket reads `locale` from `socket.handshake.auth`
+- **DB**: `users.language` column (migration 027), default `'en'`. Synced to frontend on login via `i18n.changeLanguage(user.language)`
+- **RTL foundation**: `document.documentElement.dir` set dynamically based on language (RTL list: `ar`, `he`, `fa`, `ur`)
+
 ## Code Quality & Tooling
 - ESLint v10 + `@typescript-eslint/recommended` via flat config (`eslint.config.mjs`); `no-explicit-any` as warning, `no-unused-vars` as error
 - Prettier with single quotes, trailing commas, 100 char width

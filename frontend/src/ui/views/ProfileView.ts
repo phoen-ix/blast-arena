@@ -2,11 +2,12 @@ import { ILobbyView, ViewDeps } from './types';
 import { ApiClient } from '../../network/ApiClient';
 import { escapeHtml } from '../../utils/html';
 import { drawPlayerSprite, getPlayerColorHex } from '../../utils/playerCanvas';
+import { t } from '../../i18n';
 import type { PublicProfile, AchievementProgress } from '@blast-arena/shared';
 
 export class ProfileView implements ILobbyView {
   readonly viewId = 'profile';
-  readonly title = 'Profile';
+  readonly title = t('ui:profile.title');
 
   private deps: ViewDeps;
   private container: HTMLElement | null = null;
@@ -22,8 +23,7 @@ export class ProfileView implements ILobbyView {
 
   async render(container: HTMLElement): Promise<void> {
     this.container = container;
-    this.container.innerHTML =
-      '<div class="profile-page"><div class="profile-page-loading">Loading profile...</div></div>';
+    this.container.innerHTML = `<div class="profile-page"><div class="profile-page-loading">${t('ui:profile.loading')}</div></div>`;
 
     try {
       const profile = await ApiClient.get<PublicProfile>(`/user/${this.userId}/public`);
@@ -46,7 +46,7 @@ export class ProfileView implements ILobbyView {
       <div class="profile-page">
         <div class="profile-page-empty">
           <div class="profile-page-empty-icon">&#128274;</div>
-          <div class="profile-page-empty-text">Profile is private or does not exist.</div>
+          <div class="profile-page-empty-text">${t('ui:profile.notFound')}</div>
         </div>
       </div>
     `;
@@ -95,7 +95,7 @@ export class ProfileView implements ILobbyView {
               <canvas id="profile-avatar-canvas" width="56" height="56" style="width:56px;height:56px;border-radius:var(--radius);flex-shrink:0;"></canvas>
               <div class="profile-page-name-group">
                 <div class="profile-page-username">${escapeHtml(p.username)}${roleBadge}</div>
-                <div class="profile-page-join">Joined ${joinDate}</div>
+                <div class="profile-page-join">${t('ui:profile.joined', { date: joinDate })}</div>
               </div>
             </div>
             <div class="profile-page-rank-group">
@@ -149,17 +149,17 @@ export class ProfileView implements ILobbyView {
 
   private renderStats(p: PublicProfile, kd: string, playtime: string): string {
     const items = [
-      { label: 'Matches', value: p.stats.totalMatches.toString() },
-      { label: 'Wins', value: p.stats.totalWins.toString() },
-      { label: 'K/D', value: kd },
-      { label: 'Est. Playtime', value: playtime },
-      { label: 'Win Streak', value: p.stats.winStreak.toString() },
-      { label: 'Best Streak', value: p.stats.bestWinStreak.toString() },
+      { label: t('ui:profile.matches'), value: p.stats.totalMatches.toString() },
+      { label: t('ui:profile.wins'), value: p.stats.totalWins.toString() },
+      { label: t('ui:profile.kd'), value: kd },
+      { label: t('ui:profile.playtime'), value: playtime },
+      { label: t('ui:profile.winStreak'), value: p.stats.winStreak.toString() },
+      { label: t('ui:profile.bestStreak'), value: p.stats.bestWinStreak.toString() },
     ];
 
     return `
       <div class="profile-page-section">
-        <div class="profile-page-section-title">Statistics</div>
+        <div class="profile-page-section-title">${t('ui:profile.statistics')}</div>
         <div class="profile-page-stats-grid">
           ${items
             .map(
@@ -181,7 +181,7 @@ export class ProfileView implements ILobbyView {
 
     return `
       <div class="profile-page-section">
-        <div class="profile-page-section-title">Season History</div>
+        <div class="profile-page-section-title">${t('ui:profile.seasonHistory')}</div>
         <table class="data-table" style="font-size:13px;">
           <thead>
             <tr>
@@ -215,7 +215,7 @@ export class ProfileView implements ILobbyView {
 
     return `
       <div class="profile-page-section">
-        <div class="profile-page-section-title">Achievements (${p.achievements.length})</div>
+        <div class="profile-page-section-title">${t('ui:profile.achievements')} (${p.achievements.length})</div>
         <div class="profile-page-achievements">
           ${p.achievements
             .slice(0, 20)
@@ -245,7 +245,7 @@ export class ProfileView implements ILobbyView {
 
     return `
       <div class="profile-page-section">
-        <div class="profile-page-section-title">Equipped Cosmetics</div>
+        <div class="profile-page-section-title">${t('ui:profile.equippedCosmetics')}</div>
         <div class="profile-page-cosmetics">${slots.join('')}</div>
       </div>
     `;
@@ -261,7 +261,7 @@ export class ProfileView implements ILobbyView {
     return `
       <div class="profile-page-section">
         <button class="btn btn-primary profile-page-add-friend" data-user-id="${p.id}" data-username="${escapeHtml(p.username)}">
-          Add Friend
+          ${t('ui:profile.addFriend')}
         </button>
       </div>
     `;
@@ -274,10 +274,10 @@ export class ProfileView implements ILobbyView {
       const btn = e.currentTarget as HTMLButtonElement;
       const username = btn.getAttribute('data-username')!;
       ApiClient.post('/friends/search', { query: username }).catch(() => {});
-      btn.textContent = 'Request Sent';
+      btn.textContent = t('ui:profile.requestSent', { username });
       btn.disabled = true;
       btn.style.opacity = '0.6';
-      this.deps.notifications.success(`Friend request sent to ${username}`);
+      this.deps.notifications.success(t('ui:profile.requestSent', { username }));
     });
   }
 
@@ -296,7 +296,7 @@ export class ProfileView implements ILobbyView {
 
       progressContainer.innerHTML = `
         <div class="profile-page-section">
-          <div class="profile-page-section-title">In Progress (${locked.length})</div>
+          <div class="profile-page-section-title">${t('ui:profile.inProgress')} (${locked.length})</div>
           <div class="profile-page-progress-list">
             ${locked
               .slice(0, 12)

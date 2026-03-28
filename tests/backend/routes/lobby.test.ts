@@ -168,7 +168,7 @@ describe('POST /lobby/rooms', () => {
     await handler(req, res as unknown as Response, next as NextFunction);
 
     expect(mockCreateRoom).toHaveBeenCalledWith(
-      { id: 42, username: 'bob', role: 'admin' },
+      { id: 42, username: 'bob', role: 'admin', language: 'en' },
       'Admin Room',
       { gameMode: 'teams', maxPlayers: 8 },
     );
@@ -212,7 +212,7 @@ describe('POST /lobby/rooms', () => {
     await handler(req, res as unknown as Response, next as NextFunction);
 
     const userArg = mockCreateRoom.mock.calls[0][0];
-    expect(userArg).toEqual({ id: 77, username: 'charlie', role: 'moderator' });
+    expect(userArg).toEqual({ id: 77, username: 'charlie', role: 'moderator', language: 'en' });
     expect(userArg).not.toHaveProperty('userId');
   });
 
@@ -259,9 +259,7 @@ describe('Middleware presence', () => {
     const stack = (lobbyRouter as any).stack as RouteLayer[];
 
     const getLayer = stack.find((l) => l.route?.path === '/lobby/rooms' && l.route.methods.get);
-    const postLayer = stack.find(
-      (l) => l.route?.path === '/lobby/rooms' && l.route.methods.post,
-    );
+    const postLayer = stack.find((l) => l.route?.path === '/lobby/rooms' && l.route.methods.post);
     expect(postLayer).toBeDefined();
 
     // GET has 2 handlers (authMiddleware + handler), POST has 3 (authMiddleware + validate + handler)

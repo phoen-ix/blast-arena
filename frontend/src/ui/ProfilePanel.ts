@@ -2,6 +2,7 @@ import { NotificationUI } from './NotificationUI';
 import { ApiClient } from '../network/ApiClient';
 import { escapeHtml } from '../utils/html';
 import { drawPlayerSprite, getPlayerColorHex } from '../utils/playerCanvas';
+import { t } from '../i18n';
 import type { PublicProfile, AchievementProgress } from '@blast-arena/shared';
 
 export class ProfilePanel {
@@ -58,13 +59,16 @@ export class ProfilePanel {
   }
 
   private renderLoading(): string {
-    return this.renderHeader('Profile') + '<div class="profile-empty-msg">Loading profile...</div>';
+    return (
+      this.renderHeader(t('ui:profile.title')) +
+      `<div class="profile-empty-msg">${t('ui:profile.loading')}</div>`
+    );
   }
 
   private renderPrivate(): string {
     return (
-      this.renderHeader('Profile') +
-      '<div class="profile-empty-msg muted">Profile is private or does not exist.</div>'
+      this.renderHeader(t('ui:profile.title')) +
+      `<div class="profile-empty-msg muted">${t('ui:profile.notFound')}</div>`
     );
   }
 
@@ -86,7 +90,7 @@ export class ProfilePanel {
         : '';
 
     return (
-      this.renderHeader('Player Profile') +
+      this.renderHeader(t('ui:profile.playerProfile')) +
       `
       <div class="panel-content">
         ${this.renderIdentity(p, roleBadge)}
@@ -118,7 +122,7 @@ export class ProfilePanel {
           <div class="profile-username">
             ${escapeHtml(p.username)}${roleBadge}
           </div>
-          <div class="profile-join-date">Joined ${joinDate}</div>
+          <div class="profile-join-date">${t('ui:profile.joined', { date: joinDate })}</div>
         </div>
       </div>`;
   }
@@ -136,21 +140,21 @@ export class ProfilePanel {
       <div class="profile-rank-card">
         <div class="profile-rank-row">
           <div>
-            <div class="profile-rank-label">Rank</div>
+            <div class="profile-rank-label">${t('ui:profile.rank')}</div>
             <div class="profile-rank-value" style="color:${p.rankColor}">${escapeHtml(p.rankTier)}</div>
           </div>
           <div style="text-align:center">
-            <div class="profile-rank-label">Level</div>
+            <div class="profile-rank-label">${t('ui:profile.level')}</div>
             <div class="profile-level-value">${level}</div>
           </div>
           <div style="text-align:right">
             <div class="profile-elo-value">${p.stats.eloRating}</div>
-            <div class="profile-elo-peak">Peak: ${p.stats.peakElo}</div>
+            <div class="profile-elo-peak">${t('ui:profile.peak', { elo: p.stats.peakElo })}</div>
           </div>
         </div>
         <div class="profile-xp-bar">
           <div class="profile-xp-labels">
-            <span>XP: ${xpProgress}/${xpToNext}</span>
+            <span>${t('ui:profile.xpProgress', { current: xpProgress, total: xpToNext })}</span>
             <span>${pct}%</span>
           </div>
           <div class="profile-xp-track">
@@ -162,12 +166,12 @@ export class ProfilePanel {
 
   private renderStats(p: PublicProfile, kd: string, playtime: string): string {
     const items = [
-      { label: 'Matches', value: p.stats.totalMatches.toString() },
-      { label: 'Wins', value: p.stats.totalWins.toString() },
-      { label: 'K/D', value: kd },
-      { label: 'Est. Playtime', value: playtime },
-      { label: 'Win Streak', value: p.stats.winStreak.toString() },
-      { label: 'Best Streak', value: p.stats.bestWinStreak.toString() },
+      { label: t('ui:profile.matches'), value: p.stats.totalMatches.toString() },
+      { label: t('ui:profile.wins'), value: p.stats.totalWins.toString() },
+      { label: t('ui:profile.kd'), value: kd },
+      { label: t('ui:profile.playtime'), value: playtime },
+      { label: t('ui:profile.winStreak'), value: p.stats.winStreak.toString() },
+      { label: t('ui:profile.bestStreak'), value: p.stats.bestWinStreak.toString() },
     ];
     const grid = items
       .map(
@@ -180,7 +184,7 @@ export class ProfilePanel {
       .join('');
 
     return `
-      <div class="profile-section-title">Statistics</div>
+      <div class="profile-section-title">${t('ui:profile.statistics')}</div>
       <div class="profile-stats-grid">${grid}</div>`;
   }
 
@@ -199,15 +203,15 @@ export class ProfilePanel {
       .join('');
 
     return `
-      <div class="profile-section-title">Season History</div>
+      <div class="profile-section-title">${t('ui:profile.seasonHistory')}</div>
       <div class="profile-season-card">
         <table class="profile-season-table">
           <thead>
             <tr>
-              <th>Season</th>
-              <th class="col-center">Elo</th>
-              <th class="col-center">Peak</th>
-              <th class="col-center">Games</th>
+              <th>${t('ui:profile.season')}</th>
+              <th class="col-center">${t('ui:profile.elo')}</th>
+              <th class="col-center">${t('ui:profile.peakHeader')}</th>
+              <th class="col-center">${t('ui:profile.games')}</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -232,7 +236,7 @@ export class ProfilePanel {
 
     return `
       <div class="profile-section-title">
-        Achievements (${p.achievements.length})
+        ${t('ui:profile.achievementsCount', { count: p.achievements.length })}
       </div>
       <div class="profile-achievements-grid">${items}</div>`;
   }
@@ -242,13 +246,14 @@ export class ProfilePanel {
     if (!c || (!c.colorId && !c.eyesId && !c.trailId && !c.bombSkinId)) return '';
 
     const slots: string[] = [];
-    if (c.colorId) slots.push(this.cosmeticChip('\uD83C\uDFA8', 'Color'));
-    if (c.eyesId) slots.push(this.cosmeticChip('\uD83D\uDC41\uFE0F', 'Eyes'));
-    if (c.trailId) slots.push(this.cosmeticChip('\u2728', 'Trail'));
-    if (c.bombSkinId) slots.push(this.cosmeticChip('\uD83D\uDCA3', 'Bomb Skin'));
+    if (c.colorId) slots.push(this.cosmeticChip('\uD83C\uDFA8', t('ui:profile.cosmeticColor')));
+    if (c.eyesId) slots.push(this.cosmeticChip('\uD83D\uDC41\uFE0F', t('ui:profile.cosmeticEyes')));
+    if (c.trailId) slots.push(this.cosmeticChip('\u2728', t('ui:profile.cosmeticTrail')));
+    if (c.bombSkinId)
+      slots.push(this.cosmeticChip('\uD83D\uDCA3', t('ui:profile.cosmeticBombSkin')));
 
     return `
-      <div class="profile-section-title">Equipped Cosmetics</div>
+      <div class="profile-section-title">${t('ui:profile.equippedCosmetics')}</div>
       <div class="profile-cosmetics">${slots.join('')}</div>`;
   }
 
@@ -262,7 +267,7 @@ export class ProfilePanel {
     return `
       <div class="profile-actions">
         <button class="profile-add-friend btn btn-primary" data-user-id="${p.id}" data-username="${escapeHtml(p.username)}">
-          Add Friend
+          ${t('ui:profile.addFriend')}
         </button>
       </div>`;
   }
@@ -278,10 +283,10 @@ export class ProfilePanel {
 
       ApiClient.post('/friends/search', { query: username }).catch(() => {});
       // Use the friends socket event pattern — import dynamically to avoid circular deps
-      btn.textContent = 'Request Sent';
+      btn.textContent = t('ui:profile.requestSentBtn');
       btn.setAttribute('disabled', 'true');
       (btn as HTMLButtonElement).style.opacity = '0.6';
-      this.notifications.success(`Friend request sent to ${username}`);
+      this.notifications.success(t('ui:profile.requestSent', { username }));
     });
   }
 
@@ -319,7 +324,7 @@ export class ProfilePanel {
 
       progressContainer.innerHTML = `
         <div class="profile-section-title">
-          In Progress (${locked.length})
+          ${t('ui:profile.inProgressCount', { count: locked.length })}
         </div>
         <div class="profile-progress-grid">${items}</div>`;
     } catch {

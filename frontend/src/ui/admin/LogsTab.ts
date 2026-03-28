@@ -1,6 +1,7 @@
 import { ApiClient } from '../../network/ApiClient';
 import { NotificationUI } from '../NotificationUI';
 import { escapeHtml } from '../../utils/html';
+import { t } from '../../i18n';
 
 export class LogsTab {
   private container: HTMLElement | null = null;
@@ -37,27 +38,27 @@ export class LogsTab {
 
       this.container.innerHTML = `
         <div class="admin-filters">
-          <label style="color:var(--text-dim);font-size:13px;">Filter by action:</label>
-          <select id="action-filter" aria-label="Filter by action">
-            <option value="">All</option>
-            <option value="role_change" ${this.actionFilter === 'role_change' ? 'selected' : ''}>Role Change</option>
-            <option value="deactivate" ${this.actionFilter === 'deactivate' ? 'selected' : ''}>Deactivate</option>
-            <option value="reactivate" ${this.actionFilter === 'reactivate' ? 'selected' : ''}>Reactivate</option>
-            <option value="delete" ${this.actionFilter === 'delete' ? 'selected' : ''}>Delete</option>
-            <option value="toast" ${this.actionFilter === 'toast' ? 'selected' : ''}>Toast</option>
-            <option value="set_banner" ${this.actionFilter === 'set_banner' ? 'selected' : ''}>Set Banner</option>
-            <option value="clear_banner" ${this.actionFilter === 'clear_banner' ? 'selected' : ''}>Clear Banner</option>
+          <label style="color:var(--text-dim);font-size:13px;">${t('admin:logs.filterByAction')}</label>
+          <select id="action-filter" aria-label="${t('admin:logs.filterByAction')}">
+            <option value="">${t('admin:logs.filterAll')}</option>
+            <option value="role_change" ${this.actionFilter === 'role_change' ? 'selected' : ''}>${t('admin:logs.filterRoleChange')}</option>
+            <option value="deactivate" ${this.actionFilter === 'deactivate' ? 'selected' : ''}>${t('admin:logs.filterDeactivate')}</option>
+            <option value="reactivate" ${this.actionFilter === 'reactivate' ? 'selected' : ''}>${t('admin:logs.filterReactivate')}</option>
+            <option value="delete" ${this.actionFilter === 'delete' ? 'selected' : ''}>${t('admin:logs.filterDelete')}</option>
+            <option value="toast" ${this.actionFilter === 'toast' ? 'selected' : ''}>${t('admin:logs.filterToast')}</option>
+            <option value="set_banner" ${this.actionFilter === 'set_banner' ? 'selected' : ''}>${t('admin:logs.filterSetBanner')}</option>
+            <option value="clear_banner" ${this.actionFilter === 'clear_banner' ? 'selected' : ''}>${t('admin:logs.filterClearBanner')}</option>
           </select>
         </div>
         <table class="admin-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Admin</th>
-              <th>Action</th>
-              <th>Target Type</th>
-              <th>Target ID</th>
-              <th>Details</th>
+              <th>${t('admin:logs.columnDate')}</th>
+              <th>${t('admin:logs.columnAdmin')}</th>
+              <th>${t('admin:logs.columnAction')}</th>
+              <th>${t('admin:logs.columnTargetType')}</th>
+              <th>${t('admin:logs.columnTargetId')}</th>
+              <th>${t('admin:logs.columnDetails')}</th>
             </tr>
           </thead>
           <tbody>
@@ -73,18 +74,18 @@ export class LogsTab {
                 <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(a.details || '-')}</td>
               </tr>
               <tr class="log-detail-row" data-detail-index="${i}" style="display:none;">
-                <td colspan="6" style="padding:12px 16px;background:var(--bg-card);white-space:pre-wrap;word-break:break-word;font-size:13px;color:var(--text-dim);border-top:none;">${escapeHtml(a.details || 'No details')}</td>
+                <td colspan="6" style="padding:12px 16px;background:var(--bg-card);white-space:pre-wrap;word-break:break-word;font-size:13px;color:var(--text-dim);border-top:none;">${escapeHtml(a.details || t('admin:logs.noDetails'))}</td>
               </tr>
             `,
               )
               .join('')}
-            ${result.actions.length === 0 ? '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);">No actions found</td></tr>' : ''}
+            ${result.actions.length === 0 ? `<tr><td colspan="6" style="text-align:center;color:var(--text-dim);">${t('admin:logs.noActionsFound')}</td></tr>` : ''}
           </tbody>
         </table>
         <div class="admin-pagination">
-          <button ${this.page <= 1 ? 'disabled' : ''} data-page="${this.page - 1}">Prev</button>
-          <span class="page-info">Page ${this.page} of ${totalPages} (${result.total} actions)</span>
-          <button ${this.page >= totalPages ? 'disabled' : ''} data-page="${this.page + 1}">Next</button>
+          <button ${this.page <= 1 ? 'disabled' : ''} data-page="${this.page - 1}">${t('admin:logs.prevPage')}</button>
+          <span class="page-info">${t('admin:logs.pageInfo', { page: this.page, totalPages, total: result.total })}</span>
+          <button ${this.page >= totalPages ? 'disabled' : ''} data-page="${this.page + 1}">${t('admin:logs.nextPage')}</button>
         </div>
       `;
 
@@ -115,8 +116,7 @@ export class LogsTab {
         }
       });
     } catch {
-      this.container.innerHTML =
-        '<div style="color:var(--danger);">Failed to load admin actions</div>';
+      this.container.innerHTML = `<div style="color:var(--danger);">${t('admin:logs.failedToLoad')}</div>`;
     }
   }
 

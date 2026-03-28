@@ -3,6 +3,7 @@ import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { getErrorMessage } from '@blast-arena/shared';
+import { t } from '../i18n';
 
 export class AuthUI {
   private overlay: HTMLElement;
@@ -96,26 +97,26 @@ export class AuthUI {
   private renderLogin(): void {
     this.overlay.innerHTML = `
       <div class="auth-form">
-        <h2><span>BLAST</span>ARENA</h2>
+        <h2><span>${t('auth:login.title')}</span>${t('auth:login.titleAccent')}</h2>
         <div class="form-group">
-          <label for="login-username">Username</label>
-          <input type="text" id="login-username" placeholder="Enter username" autocomplete="username">
+          <label for="login-username">${t('auth:login.username')}</label>
+          <input type="text" id="login-username" placeholder="${t('auth:login.usernamePlaceholder')}" autocomplete="username">
         </div>
         <div class="form-group">
-          <label for="login-password">Password</label>
-          <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password">
+          <label for="login-password">${t('auth:login.password')}</label>
+          <input type="password" id="login-password" placeholder="${t('auth:login.passwordPlaceholder')}" autocomplete="current-password">
         </div>
         <div class="form-error" id="login-error"></div>
-        <button class="btn btn-primary" id="login-btn">Login</button>
+        <button class="btn btn-primary" id="login-btn">${t('auth:login.submit')}</button>
         ${
           this.registrationEnabled
             ? `<div class="auth-switch">
-          Don't have an account? <a id="switch-register">Register</a>
+          ${t('auth:login.noAccount')} <a id="switch-register">${t('auth:login.register')}</a>
         </div>`
             : ''
         }
         <div class="auth-switch">
-          <a id="switch-forgot">Forgot password?</a>
+          <a id="switch-forgot">${t('auth:login.forgotPassword')}</a>
         </div>
         ${this.renderFooterLinks()}
       </div>
@@ -147,20 +148,20 @@ export class AuthUI {
       const resp = await ApiClient.get<{ enabled: boolean; text: string }>(
         '/admin/settings/imprint',
       );
-      text = resp.text || 'No imprint information available.';
+      text = resp.text || t('auth:imprint.noInfo');
     } catch {
-      text = 'Failed to load imprint.';
+      text = t('auth:imprint.loadFailed');
     }
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Imprint');
+    overlay.setAttribute('aria-label', t('auth:imprint.title'));
     overlay.innerHTML = `
       <div class="modal" style="max-width:600px;">
         <div class="modal-header">
-          <h3>Imprint</h3>
-          <button class="modal-close" aria-label="Close">&times;</button>
+          <h3>${t('auth:imprint.title')}</h3>
+          <button class="modal-close" aria-label="${t('common:actions.close')}">&times;</button>
         </div>
         <div class="modal-body" style="white-space:pre-wrap;font-size:14px;line-height:1.6;max-height:60vh;overflow-y:auto;">${this.escapeHtml(text)}</div>
       </div>
@@ -184,23 +185,23 @@ export class AuthUI {
   private renderRegister(): void {
     this.overlay.innerHTML = `
       <div class="auth-form">
-        <h2>CREATE <span>ACCOUNT</span></h2>
+        <h2>${t('auth:register.title')} <span>${t('auth:register.titleAccent')}</span></h2>
         <div class="form-group">
-          <label for="reg-username">Username</label>
-          <input type="text" id="reg-username" placeholder="3-20 chars, letters/numbers/_/-" autocomplete="username">
+          <label for="reg-username">${t('auth:register.username')}</label>
+          <input type="text" id="reg-username" placeholder="${t('auth:register.usernamePlaceholder')}" autocomplete="username">
         </div>
         <div class="form-group">
-          <label for="reg-email">Email</label>
-          <input type="email" id="reg-email" placeholder="your@email.com" autocomplete="email">
+          <label for="reg-email">${t('auth:register.email')}</label>
+          <input type="email" id="reg-email" placeholder="${t('auth:register.emailPlaceholder')}" autocomplete="email">
         </div>
         <div class="form-group">
-          <label for="reg-password">Password</label>
-          <input type="password" id="reg-password" placeholder="Min 8 characters" autocomplete="new-password">
+          <label for="reg-password">${t('auth:register.password')}</label>
+          <input type="password" id="reg-password" placeholder="${t('auth:register.passwordPlaceholder')}" autocomplete="new-password">
         </div>
         <div class="form-error" id="reg-error"></div>
-        <button class="btn btn-primary" id="reg-btn">Register</button>
+        <button class="btn btn-primary" id="reg-btn">${t('auth:register.submit')}</button>
         <div class="auth-switch">
-          Already have an account? <a id="switch-login">Login</a>
+          ${t('auth:register.hasAccount')} <a id="switch-login">${t('auth:register.login')}</a>
         </div>
       </div>
     `;
@@ -220,15 +221,15 @@ export class AuthUI {
   private renderForgotPassword(): void {
     this.overlay.innerHTML = `
       <div class="auth-form">
-        <h2>RESET <span>PASSWORD</span></h2>
+        <h2>${t('auth:forgotPassword.title')} <span>${t('auth:forgotPassword.titleAccent')}</span></h2>
         <div class="form-group">
-          <label for="forgot-email">Email</label>
-          <input type="email" id="forgot-email" placeholder="your@email.com">
+          <label for="forgot-email">${t('auth:forgotPassword.email')}</label>
+          <input type="email" id="forgot-email" placeholder="${t('auth:forgotPassword.emailPlaceholder')}">
         </div>
         <div class="form-error" id="forgot-error"></div>
-        <button class="btn btn-primary" id="forgot-btn">Send Reset Link</button>
+        <button class="btn btn-primary" id="forgot-btn">${t('auth:forgotPassword.submit')}</button>
         <div class="auth-switch">
-          <a id="switch-login-back">Back to Login</a>
+          <a id="switch-login-back">${t('auth:forgotPassword.backToLogin')}</a>
         </div>
       </div>
     `;
@@ -248,11 +249,11 @@ export class AuthUI {
     const links: string[] = [];
     if (this.displayGithub) {
       links.push(
-        '<a href="https://github.com/phoen-ix/blastarena/" target="_blank" rel="noopener">GitHub</a>',
+        `<a href="https://github.com/phoen-ix/blastarena/" target="_blank" rel="noopener">${t('auth:footer.github')}</a>`,
       );
     }
     if (this.displayImprint) {
-      links.push('<a id="auth-imprint-link" href="#">Imprint</a>');
+      links.push(`<a id="auth-imprint-link" href="#">${t('auth:footer.imprint')}</a>`);
     }
     if (links.length === 0) return '';
     return `<div class="auth-footer-links">${links.join('<span class="auth-footer-sep">&middot;</span>')}</div>`;
@@ -265,24 +266,24 @@ export class AuthUI {
     const btn = document.getElementById('login-btn') as HTMLButtonElement;
 
     if (!username || !password) {
-      errorEl.textContent = 'Please fill in all fields';
+      errorEl.textContent = t('auth:login.fillAllFields');
       return;
     }
 
     btn.disabled = true;
-    btn.textContent = 'Logging in...';
+    btn.textContent = t('auth:login.submitting');
     errorEl.textContent = '';
 
     try {
       await this.authManager.login(username, password);
-      this.notifications.success('Welcome back!');
+      this.notifications.success(t('auth:login.welcomeBack'));
       this.hide();
       this.onAuthenticated();
     } catch (err: unknown) {
-      errorEl.textContent = getErrorMessage(err);
+      errorEl.textContent = this.translateError(err);
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Login';
+      btn.textContent = t('auth:login.submit');
     }
   }
 
@@ -294,24 +295,24 @@ export class AuthUI {
     const btn = document.getElementById('reg-btn') as HTMLButtonElement;
 
     if (!username || !email || !password) {
-      errorEl.textContent = 'Please fill in all required fields';
+      errorEl.textContent = t('auth:register.fillAllFields');
       return;
     }
 
     btn.disabled = true;
-    btn.textContent = 'Creating account...';
+    btn.textContent = t('auth:register.submitting');
     errorEl.textContent = '';
 
     try {
       await this.authManager.register(username, email, password);
-      this.notifications.success('Account created! Check your email to verify.');
+      this.notifications.success(t('auth:register.success'));
       this.hide();
       this.onAuthenticated();
     } catch (err: unknown) {
-      errorEl.textContent = getErrorMessage(err);
+      errorEl.textContent = this.translateError(err);
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Register';
+      btn.textContent = t('auth:register.submit');
     }
   }
 
@@ -321,12 +322,12 @@ export class AuthUI {
     const btn = document.getElementById('forgot-btn') as HTMLButtonElement;
 
     if (!email) {
-      errorEl.textContent = 'Please enter your email';
+      errorEl.textContent = t('auth:forgotPassword.enterEmail');
       return;
     }
 
     btn.disabled = true;
-    btn.textContent = 'Sending...';
+    btn.textContent = t('auth:forgotPassword.submitting');
 
     try {
       await (
@@ -336,14 +337,29 @@ export class AuthUI {
           body: JSON.stringify({ email }),
         })
       ).json();
-      this.notifications.info('If the email exists, a reset link has been sent');
+      this.notifications.info(t('auth:forgotPassword.success'));
       this.mode = 'login';
       this.render();
     } catch (err: unknown) {
-      errorEl.textContent = getErrorMessage(err);
+      errorEl.textContent = this.translateError(err);
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Send Reset Link';
+      btn.textContent = t('auth:forgotPassword.submit');
     }
+  }
+
+  /**
+   * Translate backend error: try error code from errors namespace,
+   * fall back to the raw error message.
+   */
+  private translateError(err: unknown): string {
+    const message = getErrorMessage(err);
+    // Try to extract error code from the error message or object
+    if (err && typeof err === 'object' && 'code' in err) {
+      const code = (err as { code: string }).code;
+      const translated = t(`errors:${code}`, { defaultValue: '' });
+      if (translated) return translated;
+    }
+    return message;
   }
 }

@@ -1,0 +1,14 @@
+{
+  "CONFLICT": "Benutzername oder E-Mail bereits vergeben",
+  "INVALID_CREDENTIALS": "Ungültiger Benutzername oder Passwort",
+  "DEACTIVATED": "Konto wurde deaktiviert",
+  "INVALID_TOKEN": "Ungültiger oder abgelaufener Token",
+  "TOKEN_EXPIRED": "Sitzung abgelaufen — bitte erneut anmelden",
+  "TOKEN_REUSE": "Sitzung aus Sicherheitsgründen ungültig — bitte erneut anmelden",
+  "VALIDATION_FAILED": "Validierung fehlgeschlagen",
+  "REGISTRATION_DISABLED": "Registrierung ist derzeit deaktiviert",
+  "FORBIDDEN": "Sie haben keine Berechtigung für diese Aktion",
+  "NOT_FOUND": "Ressource nicht gefunden",
+  "INTERNAL_ERROR": "Ein unerwarteter Fehler ist aufgetreten",
+  "BAD_REQUEST": "Ungültige Anfrage"
+}

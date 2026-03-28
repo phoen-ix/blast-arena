@@ -1,5 +1,6 @@
 import { ApiClient } from '../../network/ApiClient';
 import { escapeAttr, escapeHtml } from '../../utils/html';
+import { t } from '../../i18n';
 import { NotificationUI } from '../NotificationUI';
 import {
   GameDefaults,
@@ -131,104 +132,104 @@ export class DashboardTab {
     card.id = 'server-settings-card';
     card.className = 'settings-card';
     card.innerHTML = `
-      <h3>Server Settings</h3>
+      <h3>${t('admin:dashboard.serverSettings')}</h3>
       <div class="settings-grid">
         <div class="setting-item">
           <label class="setting-item-checkbox">
             <input type="checkbox" id="toggle-recordings" ${this.recordingsEnabled ? 'checked' : ''}>
-            <span class="setting-item-label">Match Recordings</span>
+            <span class="setting-item-label">${t('admin:dashboard.matchRecordings')}</span>
           </label>
-          <span class="setting-item-desc">Enable replay recording for all new games</span>
+          <span class="setting-item-desc">${t('admin:dashboard.matchRecordingsDesc')}</span>
         </div>
         <div class="setting-item">
           <label class="setting-item-checkbox">
             <input type="checkbox" id="toggle-registration" ${this.registrationEnabled ? 'checked' : ''}>
-            <span class="setting-item-label">User Registration</span>
+            <span class="setting-item-label">${t('admin:dashboard.userRegistration')}</span>
           </label>
-          <span class="setting-item-desc">Allow new users to create accounts</span>
+          <span class="setting-item-desc">${t('admin:dashboard.userRegistrationDesc')}</span>
         </div>
         <div class="setting-item">
-          <span class="setting-item-label">Party Chat</span>
-          <select id="select-chat-mode" class="admin-select" aria-label="Party Chat mode">
-            <option value="everyone" ${this.chatMode === 'everyone' ? 'selected' : ''}>Everyone</option>
-            <option value="staff" ${this.chatMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
-            <option value="admin_only" ${this.chatMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
-            <option value="disabled" ${this.chatMode === 'disabled' ? 'selected' : ''}>Disabled</option>
+          <span class="setting-item-label">${t('admin:dashboard.partyChat')}</span>
+          <select id="select-chat-mode" class="admin-select" aria-label="${t('admin:dashboard.partyChat')}">
+            <option value="everyone" ${this.chatMode === 'everyone' ? 'selected' : ''}>${t('admin:dashboard.chatModeEveryone')}</option>
+            <option value="staff" ${this.chatMode === 'staff' ? 'selected' : ''}>${t('admin:dashboard.chatModeStaff')}</option>
+            <option value="admin_only" ${this.chatMode === 'admin_only' ? 'selected' : ''}>${t('admin:dashboard.chatModeAdminOnly')}</option>
+            <option value="disabled" ${this.chatMode === 'disabled' ? 'selected' : ''}>${t('admin:dashboard.chatModeDisabled')}</option>
           </select>
-          <span class="setting-item-desc">Who can use party chat</span>
+          <span class="setting-item-desc">${t('admin:dashboard.partyChatDesc')}</span>
         </div>
         <div class="setting-item">
-          <span class="setting-item-label">Lobby Chat</span>
-          <select id="select-lobby-chat-mode" class="admin-select" aria-label="Lobby Chat mode">
-            <option value="everyone" ${this.lobbyChatMode === 'everyone' ? 'selected' : ''}>Everyone</option>
-            <option value="staff" ${this.lobbyChatMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
-            <option value="admin_only" ${this.lobbyChatMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
-            <option value="disabled" ${this.lobbyChatMode === 'disabled' ? 'selected' : ''}>Disabled</option>
+          <span class="setting-item-label">${t('admin:dashboard.lobbyChat')}</span>
+          <select id="select-lobby-chat-mode" class="admin-select" aria-label="${t('admin:dashboard.lobbyChat')}">
+            <option value="everyone" ${this.lobbyChatMode === 'everyone' ? 'selected' : ''}>${t('admin:dashboard.chatModeEveryone')}</option>
+            <option value="staff" ${this.lobbyChatMode === 'staff' ? 'selected' : ''}>${t('admin:dashboard.chatModeStaff')}</option>
+            <option value="admin_only" ${this.lobbyChatMode === 'admin_only' ? 'selected' : ''}>${t('admin:dashboard.chatModeAdminOnly')}</option>
+            <option value="disabled" ${this.lobbyChatMode === 'disabled' ? 'selected' : ''}>${t('admin:dashboard.chatModeDisabled')}</option>
           </select>
-          <span class="setting-item-desc">Global lobby chat</span>
+          <span class="setting-item-desc">${t('admin:dashboard.lobbyChatDesc')}</span>
         </div>
         <div class="setting-item">
-          <span class="setting-item-label">Direct Messages</span>
-          <select id="select-dm-mode" class="admin-select" aria-label="Direct Messages mode">
-            <option value="everyone" ${this.dmMode === 'everyone' ? 'selected' : ''}>Everyone</option>
-            <option value="staff" ${this.dmMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
-            <option value="admin_only" ${this.dmMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
-            <option value="disabled" ${this.dmMode === 'disabled' ? 'selected' : ''}>Disabled</option>
+          <span class="setting-item-label">${t('admin:dashboard.directMessages')}</span>
+          <select id="select-dm-mode" class="admin-select" aria-label="${t('admin:dashboard.directMessages')}">
+            <option value="everyone" ${this.dmMode === 'everyone' ? 'selected' : ''}>${t('admin:dashboard.chatModeEveryone')}</option>
+            <option value="staff" ${this.dmMode === 'staff' ? 'selected' : ''}>${t('admin:dashboard.chatModeStaff')}</option>
+            <option value="admin_only" ${this.dmMode === 'admin_only' ? 'selected' : ''}>${t('admin:dashboard.chatModeAdminOnly')}</option>
+            <option value="disabled" ${this.dmMode === 'disabled' ? 'selected' : ''}>${t('admin:dashboard.chatModeDisabled')}</option>
           </select>
-          <span class="setting-item-desc">Friend-to-friend messaging</span>
+          <span class="setting-item-desc">${t('admin:dashboard.directMessagesDesc')}</span>
         </div>
         <div class="setting-item">
-          <span class="setting-item-label">In-Game Emotes</span>
-          <select id="select-emote-mode" class="admin-select" aria-label="In-Game Emotes mode">
-            <option value="everyone" ${this.emoteMode === 'everyone' ? 'selected' : ''}>Everyone</option>
-            <option value="staff" ${this.emoteMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
-            <option value="admin_only" ${this.emoteMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
-            <option value="disabled" ${this.emoteMode === 'disabled' ? 'selected' : ''}>Disabled</option>
+          <span class="setting-item-label">${t('admin:dashboard.inGameEmotes')}</span>
+          <select id="select-emote-mode" class="admin-select" aria-label="${t('admin:dashboard.inGameEmotes')}">
+            <option value="everyone" ${this.emoteMode === 'everyone' ? 'selected' : ''}>${t('admin:dashboard.chatModeEveryone')}</option>
+            <option value="staff" ${this.emoteMode === 'staff' ? 'selected' : ''}>${t('admin:dashboard.chatModeStaff')}</option>
+            <option value="admin_only" ${this.emoteMode === 'admin_only' ? 'selected' : ''}>${t('admin:dashboard.chatModeAdminOnly')}</option>
+            <option value="disabled" ${this.emoteMode === 'disabled' ? 'selected' : ''}>${t('admin:dashboard.chatModeDisabled')}</option>
           </select>
-          <span class="setting-item-desc">Quick emotes during games</span>
+          <span class="setting-item-desc">${t('admin:dashboard.inGameEmotesDesc')}</span>
         </div>
         <div class="setting-item">
-          <span class="setting-item-label">Spectator Chat</span>
-          <select id="select-spectator-chat-mode" class="admin-select" aria-label="Spectator Chat mode">
-            <option value="everyone" ${this.spectatorChatMode === 'everyone' ? 'selected' : ''}>Everyone</option>
-            <option value="staff" ${this.spectatorChatMode === 'staff' ? 'selected' : ''}>Staff Only (Admin + Mod)</option>
-            <option value="admin_only" ${this.spectatorChatMode === 'admin_only' ? 'selected' : ''}>Admin Only</option>
-            <option value="disabled" ${this.spectatorChatMode === 'disabled' ? 'selected' : ''}>Disabled</option>
+          <span class="setting-item-label">${t('admin:dashboard.spectatorChat')}</span>
+          <select id="select-spectator-chat-mode" class="admin-select" aria-label="${t('admin:dashboard.spectatorChat')}">
+            <option value="everyone" ${this.spectatorChatMode === 'everyone' ? 'selected' : ''}>${t('admin:dashboard.chatModeEveryone')}</option>
+            <option value="staff" ${this.spectatorChatMode === 'staff' ? 'selected' : ''}>${t('admin:dashboard.chatModeStaff')}</option>
+            <option value="admin_only" ${this.spectatorChatMode === 'admin_only' ? 'selected' : ''}>${t('admin:dashboard.chatModeAdminOnly')}</option>
+            <option value="disabled" ${this.spectatorChatMode === 'disabled' ? 'selected' : ''}>${t('admin:dashboard.chatModeDisabled')}</option>
           </select>
-          <span class="setting-item-desc">Dead player chat during games</span>
+          <span class="setting-item-desc">${t('admin:dashboard.spectatorChatDesc')}</span>
         </div>
         <div class="setting-item">
-          <span class="setting-item-label">XP Multiplier</span>
+          <span class="setting-item-label">${t('admin:dashboard.xpMultiplier')}</span>
           <input id="input-xp-multiplier" type="number" min="0" max="10" step="0.1" value="${this.xpMultiplier}"
-            class="admin-select" style="width:60px;" aria-label="XP Multiplier">
-          <button id="btn-save-xp-multiplier" class="btn btn-primary btn-sm">Save</button>
-          <span class="setting-item-desc">XP earned per match (default: 1.0)</span>
+            class="admin-select" style="width:60px;" aria-label="${t('admin:dashboard.xpMultiplier')}">
+          <button id="btn-save-xp-multiplier" class="btn btn-primary btn-sm">${t('admin:dashboard.save')}</button>
+          <span class="setting-item-desc">${t('admin:dashboard.xpMultiplierDesc')}</span>
         </div>
         <div class="setting-item">
-          <span class="setting-item-label">Default Theme</span>
-          <select id="select-default-theme" class="admin-select" aria-label="Default Theme">
+          <span class="setting-item-label">${t('admin:dashboard.defaultTheme')}</span>
+          <select id="select-default-theme" class="admin-select" aria-label="${t('admin:dashboard.defaultTheme')}">
             ${THEME_IDS.map((id) => `<option value="${id}" ${this.defaultTheme === id ? 'selected' : ''}>${THEME_NAMES[id]}</option>`).join('')}
           </select>
-          <span class="setting-item-desc">Theme for users without a preference</span>
+          <span class="setting-item-desc">${t('admin:dashboard.defaultThemeDesc')}</span>
         </div>
         <div class="setting-item">
           <label class="setting-item-checkbox">
             <input type="checkbox" id="toggle-display-github" ${this.displayGithub ? 'checked' : ''}>
-            <span class="setting-item-label">Display GitHub Link</span>
+            <span class="setting-item-label">${t('admin:dashboard.displayGithubLink')}</span>
           </label>
-          <span class="setting-item-desc">Show GitHub repo link on login page and in Help</span>
+          <span class="setting-item-desc">${t('admin:dashboard.displayGithubLinkDesc')}</span>
         </div>
         <div class="setting-item">
           <label class="setting-item-checkbox">
             <input type="checkbox" id="toggle-display-imprint" ${this.displayImprint ? 'checked' : ''}>
-            <span class="setting-item-label">Display Imprint</span>
+            <span class="setting-item-label">${t('admin:dashboard.displayImprint')}</span>
           </label>
-          <span class="setting-item-desc">Show imprint link on login page and in Help</span>
+          <span class="setting-item-desc">${t('admin:dashboard.displayImprintDesc')}</span>
         </div>
         <div class="setting-item" id="imprint-text-group" style="${this.displayImprint ? '' : 'display:none;'}">
-          <span class="setting-item-label">Imprint Text</span>
-          <textarea id="input-imprint-text" class="admin-select" rows="4" aria-label="Imprint Text" style="width:100%;resize:vertical;font-family:var(--font-body);font-size:13px;padding:var(--sp-2) var(--sp-3);background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);">${escapeHtml(this.imprintText)}</textarea>
-          <button id="btn-save-imprint" class="btn btn-primary btn-sm" style="margin-top:var(--sp-2);">Save Imprint</button>
+          <span class="setting-item-label">${t('admin:dashboard.imprintText')}</span>
+          <textarea id="input-imprint-text" class="admin-select" rows="4" aria-label="${t('admin:dashboard.imprintText')}" style="width:100%;resize:vertical;font-family:var(--font-body);font-size:13px;padding:var(--sp-2) var(--sp-3);background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);">${escapeHtml(this.imprintText)}</textarea>
+          <button id="btn-save-imprint" class="btn btn-primary btn-sm" style="margin-top:var(--sp-2);">${t('admin:dashboard.saveImprint')}</button>
         </div>
       </div>
 
@@ -243,10 +244,14 @@ export class DashboardTab {
       try {
         await ApiClient.put('/admin/settings/recordings_enabled', { enabled });
         this.recordingsEnabled = enabled;
-        this.notifications.success(`Match recordings ${enabled ? 'enabled' : 'disabled'}`);
+        this.notifications.success(
+          t('admin:dashboard.recordingsToggled', {
+            status: enabled ? t('admin:dashboard.enabled') : t('admin:dashboard.disabled'),
+          }),
+        );
       } catch {
         (e.target as HTMLInputElement).checked = !enabled;
-        this.notifications.error('Failed to update setting');
+        this.notifications.error(t('admin:dashboard.failedUpdateSetting'));
       }
     });
 
@@ -255,10 +260,14 @@ export class DashboardTab {
       try {
         await ApiClient.put('/admin/settings/registration_enabled', { enabled });
         this.registrationEnabled = enabled;
-        this.notifications.success(`User registration ${enabled ? 'enabled' : 'disabled'}`);
+        this.notifications.success(
+          t('admin:dashboard.registrationToggled', {
+            status: enabled ? t('admin:dashboard.enabled') : t('admin:dashboard.disabled'),
+          }),
+        );
       } catch {
         (e.target as HTMLInputElement).checked = !enabled;
-        this.notifications.error('Failed to update setting');
+        this.notifications.error(t('admin:dashboard.failedUpdateSetting'));
       }
     });
 
@@ -270,15 +279,15 @@ export class DashboardTab {
         await ApiClient.put('/admin/settings/party_chat_mode', { mode });
         this.chatMode = mode;
         const labels: Record<ChatMode, string> = {
-          everyone: 'Everyone',
-          staff: 'Staff Only',
-          admin_only: 'Admin Only',
-          disabled: 'Disabled',
+          everyone: t('admin:dashboard.chatModeEveryone'),
+          staff: t('admin:dashboard.chatModeStaffShort'),
+          admin_only: t('admin:dashboard.chatModeAdminOnly'),
+          disabled: t('admin:dashboard.chatModeDisabled'),
         };
-        this.notifications.success(`Party chat set to: ${labels[mode]}`);
+        this.notifications.success(t('admin:dashboard.partyChatSetTo', { mode: labels[mode] }));
       } catch {
         chatModeSelect.value = prevChatMode;
-        this.notifications.error('Failed to update setting');
+        this.notifications.error(t('admin:dashboard.failedUpdateSetting'));
       }
     });
 
@@ -286,22 +295,34 @@ export class DashboardTab {
       card,
       '#select-lobby-chat-mode',
       'lobby_chat_mode',
-      'Lobby chat',
+      t('admin:dashboard.lobbyChatLabel'),
       (m) => {
         this.lobbyChatMode = m;
       },
     );
-    this.attachChatModeListener(card, '#select-dm-mode', 'dm_mode', 'Direct messages', (m) => {
-      this.dmMode = m;
-    });
-    this.attachChatModeListener(card, '#select-emote-mode', 'emote_mode', 'In-game emotes', (m) => {
-      this.emoteMode = m;
-    });
+    this.attachChatModeListener(
+      card,
+      '#select-dm-mode',
+      'dm_mode',
+      t('admin:dashboard.directMessagesLabel'),
+      (m) => {
+        this.dmMode = m;
+      },
+    );
+    this.attachChatModeListener(
+      card,
+      '#select-emote-mode',
+      'emote_mode',
+      t('admin:dashboard.inGameEmotesLabel'),
+      (m) => {
+        this.emoteMode = m;
+      },
+    );
     this.attachChatModeListener(
       card,
       '#select-spectator-chat-mode',
       'spectator_chat_mode',
-      'Spectator chat',
+      t('admin:dashboard.spectatorChatLabel'),
       (m) => {
         this.spectatorChatMode = m;
       },
@@ -313,15 +334,15 @@ export class DashboardTab {
     xpSaveBtn?.addEventListener('click', async () => {
       const val = parseFloat(xpInput.value);
       if (isNaN(val) || val < 0 || val > 10) {
-        this.notifications.error('Multiplier must be between 0 and 10');
+        this.notifications.error(t('admin:dashboard.xpMultiplierRange'));
         return;
       }
       try {
         await ApiClient.put('/admin/settings/xp_multiplier', { multiplier: val });
         this.xpMultiplier = val;
-        this.notifications.success(`XP multiplier set to ${val}`);
+        this.notifications.success(t('admin:dashboard.xpMultiplierSet', { value: val }));
       } catch {
-        this.notifications.error('Failed to update XP multiplier');
+        this.notifications.error(t('admin:dashboard.failedUpdateXpMultiplier'));
       }
     });
 
@@ -331,9 +352,11 @@ export class DashboardTab {
       try {
         await ApiClient.put('/admin/settings/default_theme', { theme: val });
         this.defaultTheme = val as ThemeId;
-        this.notifications.success(`Default theme set to ${THEME_NAMES[val as ThemeId]}`);
+        this.notifications.success(
+          t('admin:dashboard.defaultThemeSet', { theme: THEME_NAMES[val as ThemeId] }),
+        );
       } catch {
-        this.notifications.error('Failed to update default theme');
+        this.notifications.error(t('admin:dashboard.failedUpdateDefaultTheme'));
       }
     });
 
@@ -343,10 +366,14 @@ export class DashboardTab {
       try {
         await ApiClient.put('/admin/settings/display_github', { enabled });
         this.displayGithub = enabled;
-        this.notifications.success(`GitHub link ${enabled ? 'enabled' : 'disabled'}`);
+        this.notifications.success(
+          t('admin:dashboard.githubLinkToggled', {
+            status: enabled ? t('admin:dashboard.enabled') : t('admin:dashboard.disabled'),
+          }),
+        );
       } catch {
         (e.target as HTMLInputElement).checked = !enabled;
-        this.notifications.error('Failed to update setting');
+        this.notifications.error(t('admin:dashboard.failedUpdateSetting'));
       }
     });
 
@@ -361,10 +388,14 @@ export class DashboardTab {
         this.displayImprint = enabled;
         this.imprintText = text;
         imprintTextGroup.style.display = enabled ? '' : 'none';
-        this.notifications.success(`Imprint ${enabled ? 'enabled' : 'disabled'}`);
+        this.notifications.success(
+          t('admin:dashboard.imprintToggled', {
+            status: enabled ? t('admin:dashboard.enabled') : t('admin:dashboard.disabled'),
+          }),
+        );
       } catch {
         imprintToggle.checked = !enabled;
-        this.notifications.error('Failed to update setting');
+        this.notifications.error(t('admin:dashboard.failedUpdateSetting'));
       }
     });
 
@@ -373,9 +404,9 @@ export class DashboardTab {
       try {
         await ApiClient.put('/admin/settings/imprint', { enabled: this.displayImprint, text });
         this.imprintText = text;
-        this.notifications.success('Imprint text saved');
+        this.notifications.success(t('admin:dashboard.imprintTextSaved'));
       } catch {
-        this.notifications.error('Failed to save imprint text');
+        this.notifications.error(t('admin:dashboard.failedSaveImprintText'));
       }
     });
 
@@ -399,16 +430,18 @@ export class DashboardTab {
       try {
         await ApiClient.put(`/admin/settings/${settingKey}`, { mode });
         onSuccess(mode);
-        const labels: Record<ChatMode, string> = {
-          everyone: 'Everyone',
-          staff: 'Staff Only',
-          admin_only: 'Admin Only',
-          disabled: 'Disabled',
+        const modeLabels: Record<ChatMode, string> = {
+          everyone: t('admin:dashboard.chatModeEveryone'),
+          staff: t('admin:dashboard.chatModeStaffShort'),
+          admin_only: t('admin:dashboard.chatModeAdminOnly'),
+          disabled: t('admin:dashboard.chatModeDisabled'),
         };
-        this.notifications.success(`${label} set to: ${labels[mode]}`);
+        this.notifications.success(
+          t('admin:dashboard.chatModeSetTo', { label, mode: modeLabels[mode] }),
+        );
       } catch {
         select.value = prev;
-        this.notifications.error('Failed to update setting');
+        this.notifications.error(t('admin:dashboard.failedUpdateSetting'));
       }
     });
   }
@@ -417,52 +450,52 @@ export class DashboardTab {
     const s = this.emailSettings;
     const configured = !!s.smtpHost;
     const statusDot = configured
-      ? '<span class="status-indicator active" title="SMTP configured"></span>'
-      : '<span class="status-indicator inactive" title="SMTP not configured"></span>';
+      ? `<span class="status-indicator active" title="${escapeAttr(t('admin:dashboard.smtpConfigured'))}"></span>`
+      : `<span class="status-indicator inactive" title="${escapeAttr(t('admin:dashboard.smtpNotConfigured'))}"></span>`;
 
     return `
       <div class="collapsible-section">
         <button id="email-toggle" class="collapsible-toggle">
-          <span>${statusDot}Email / SMTP Settings</span>
+          <span>${statusDot}${t('admin:dashboard.emailSmtpSettings')}</span>
           <span id="email-arrow" class="collapsible-arrow">&#9654;</span>
         </button>
         <div id="email-body" class="collapsible-body">
           <div class="form-grid-2col">
             <div class="form-group">
-              <label>SMTP Host</label>
-              <input type="text" id="email-smtpHost" value="${escapeAttr(s.smtpHost ?? '')}" placeholder="smtp.example.com">
+              <label>${t('admin:dashboard.smtpHost')}</label>
+              <input type="text" id="email-smtpHost" value="${escapeAttr(s.smtpHost ?? '')}" placeholder="${escapeAttr(t('admin:dashboard.smtpHostPlaceholder'))}">
             </div>
             <div class="form-group">
-              <label>SMTP Port</label>
+              <label>${t('admin:dashboard.smtpPort')}</label>
               <input type="number" id="email-smtpPort" value="${s.smtpPort ?? ''}" placeholder="587" min="1" max="65535">
             </div>
             <div class="form-group">
-              <label>SMTP User</label>
-              <input type="text" id="email-smtpUser" value="${escapeAttr(s.smtpUser ?? '')}" placeholder="user@example.com">
+              <label>${t('admin:dashboard.smtpUser')}</label>
+              <input type="text" id="email-smtpUser" value="${escapeAttr(s.smtpUser ?? '')}" placeholder="${escapeAttr(t('admin:dashboard.smtpUserPlaceholder'))}">
             </div>
             <div class="form-group">
-              <label>SMTP Password</label>
+              <label>${t('admin:dashboard.smtpPassword')}</label>
               <div class="pw-field">
-                <input type="password" id="email-smtpPassword" value="${escapeAttr(s.smtpPassword ?? '')}" placeholder="No password set">
-                <button id="email-togglePw" type="button" class="pw-toggle">Show</button>
+                <input type="password" id="email-smtpPassword" value="${escapeAttr(s.smtpPassword ?? '')}" placeholder="${escapeAttr(t('admin:dashboard.noPasswordSet'))}">
+                <button id="email-togglePw" type="button" class="pw-toggle">${t('admin:dashboard.showPassword')}</button>
               </div>
             </div>
             <div class="form-group">
-              <label>From Email</label>
-              <input type="text" id="email-fromEmail" value="${escapeAttr(s.fromEmail ?? '')}" placeholder="noreply@example.com">
+              <label>${t('admin:dashboard.fromEmail')}</label>
+              <input type="text" id="email-fromEmail" value="${escapeAttr(s.fromEmail ?? '')}" placeholder="${escapeAttr(t('admin:dashboard.fromEmailPlaceholder'))}">
             </div>
             <div class="form-group">
-              <label>From Name</label>
-              <input type="text" id="email-fromName" value="${escapeAttr(s.fromName ?? '')}" placeholder="BlastArena">
+              <label>${t('admin:dashboard.fromName')}</label>
+              <input type="text" id="email-fromName" value="${escapeAttr(s.fromName ?? '')}" placeholder="${escapeAttr(t('admin:dashboard.fromNamePlaceholder'))}">
             </div>
           </div>
 
           <div class="flex-row mt-md">
-            <button id="email-save" class="btn btn-primary btn-sm">Save</button>
-            <button id="email-reset" class="btn btn-secondary btn-sm">Reset to Defaults</button>
+            <button id="email-save" class="btn btn-primary btn-sm">${t('admin:dashboard.save')}</button>
+            <button id="email-reset" class="btn btn-secondary btn-sm">${t('admin:dashboard.resetToDefaults')}</button>
             <div class="flex-row ml-auto flex-gap-sm">
-              <input type="email" id="email-testAddr" placeholder="test@example.com" class="admin-select" style="width:180px;">
-              <button id="email-test" class="btn btn-secondary btn-sm nowrap">Send Test</button>
+              <input type="email" id="email-testAddr" placeholder="${escapeAttr(t('admin:dashboard.testEmailPlaceholder'))}" class="admin-select" style="width:180px;">
+              <button id="email-test" class="btn btn-secondary btn-sm nowrap">${t('admin:dashboard.sendTest')}</button>
             </div>
           </div>
         </div>
@@ -488,7 +521,9 @@ export class DashboardTab {
     pwToggle?.addEventListener('click', () => {
       const show = pwInput.type === 'password';
       pwInput.type = show ? 'text' : 'password';
-      pwToggle.textContent = show ? 'Hide' : 'Show';
+      pwToggle.textContent = show
+        ? t('admin:dashboard.hidePassword')
+        : t('admin:dashboard.showPassword');
     });
 
     // Save
@@ -509,7 +544,7 @@ export class DashboardTab {
 
       try {
         await ApiClient.put('/admin/settings/email_settings', settings);
-        this.notifications.success('Email settings saved');
+        this.notifications.success(t('admin:dashboard.emailSettingsSaved'));
         // Reload to get masked password back
         const resp = await ApiClient.get<{ settings: EmailSettings }>(
           '/admin/settings/email_settings',
@@ -517,7 +552,7 @@ export class DashboardTab {
         this.emailSettings = resp.settings ?? {};
         this.renderSettingsCard();
       } catch {
-        this.notifications.error('Failed to save email settings');
+        this.notifications.error(t('admin:dashboard.failedSaveEmailSettings'));
       }
     });
 
@@ -525,14 +560,14 @@ export class DashboardTab {
     card.querySelector('#email-reset')!.addEventListener('click', async () => {
       try {
         await ApiClient.put('/admin/settings/email_settings', {});
-        this.notifications.success('Email settings reset to .env defaults');
+        this.notifications.success(t('admin:dashboard.emailSettingsReset'));
         const resp = await ApiClient.get<{ settings: EmailSettings }>(
           '/admin/settings/email_settings',
         );
         this.emailSettings = resp.settings ?? {};
         this.renderSettingsCard();
       } catch {
-        this.notifications.error('Failed to reset email settings');
+        this.notifications.error(t('admin:dashboard.failedResetEmailSettings'));
       }
     });
 
@@ -540,14 +575,14 @@ export class DashboardTab {
     card.querySelector('#email-test')!.addEventListener('click', async () => {
       const addr = (card.querySelector('#email-testAddr') as HTMLInputElement).value.trim();
       if (!addr) {
-        this.notifications.error('Enter an email address for the test');
+        this.notifications.error(t('admin:dashboard.enterTestEmailAddress'));
         return;
       }
       try {
         await ApiClient.post('/admin/settings/email_settings/test', { to: addr });
-        this.notifications.success(`Test email sent to ${addr}`);
+        this.notifications.success(t('admin:dashboard.testEmailSent', { address: addr }));
       } catch (err: any) {
-        const msg = err?.error || err?.message || 'Failed to send test email';
+        const msg = err?.error || err?.message || t('admin:dashboard.failedSendTestEmail');
         this.notifications.error(msg);
       }
     });
@@ -555,14 +590,17 @@ export class DashboardTab {
 
   private renderDefaultsSection(type: 'game' | 'simulation'): string {
     const prefix = type === 'game' ? 'gd' : 'sd';
-    const title = type === 'game' ? 'Game Creation Defaults' : 'Simulation Defaults';
+    const title =
+      type === 'game'
+        ? t('admin:dashboard.gameCreationDefaults')
+        : t('admin:dashboard.simulationDefaults');
     const defaults = type === 'game' ? this.gameDefaults : this.simulationDefaults;
     const hasOverrides = Object.keys(defaults).length > 0;
 
     return `
       <div class="collapsible-section">
         <button id="${prefix}-toggle" class="collapsible-toggle">
-          <span>${title} ${hasOverrides ? `<span class="override-badge">(${Object.keys(defaults).length} overrides)</span>` : ''}</span>
+          <span>${title} ${hasOverrides ? `<span class="override-badge">${t('admin:dashboard.overridesCount', { count: Object.keys(defaults).length })}</span>` : ''}</span>
           <span id="${prefix}-arrow" class="collapsible-arrow">&#9654;</span>
         </button>
         <div id="${prefix}-body" class="collapsible-body">
@@ -585,7 +623,7 @@ export class DashboardTab {
     ) => {
       const val = current !== undefined ? String(current) : '';
       return `<select id="${id}" class="admin-select w-full">
-        <option value="">— Default —</option>
+        <option value="">${t('admin:dashboard.defaultOption')}</option>
         ${options.map((o) => `<option value="${o.value}" ${val === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
       </select>`;
     };
@@ -596,25 +634,25 @@ export class DashboardTab {
       return `<label class="option-label">
         <input type="checkbox" id="${id}" ${checked} ${indeterminate ? 'data-indeterminate="true"' : ''} style="accent-color:${color};">
         <span style="color:${color};font-weight:600;">${label}</span>
-        ${indeterminate ? '<span class="default-indicator">(default)</span>' : ''}
+        ${indeterminate ? `<span class="default-indicator">${t('admin:dashboard.defaultIndicator')}</span>` : ''}
       </label>`;
     };
 
     const gameModes = [
-      { value: 'ffa', label: 'Free for All' },
-      { value: 'teams', label: 'Teams' },
-      { value: 'battle_royale', label: 'Battle Royale' },
-      { value: 'sudden_death', label: 'Sudden Death' },
-      { value: 'deathmatch', label: 'Deathmatch' },
-      { value: 'king_of_the_hill', label: 'King of the Hill' },
+      { value: 'ffa', label: t('admin:dashboard.gameModeFfa') },
+      { value: 'teams', label: t('admin:dashboard.gameModeTeams') },
+      { value: 'battle_royale', label: t('admin:dashboard.gameModeBattleRoyale') },
+      { value: 'sudden_death', label: t('admin:dashboard.gameModeSuddenDeath') },
+      { value: 'deathmatch', label: t('admin:dashboard.gameModeDeathmatch') },
+      { value: 'king_of_the_hill', label: t('admin:dashboard.gameModeKoth') },
     ];
     const maxPlayersOpts = [2, 4, 6, 8].map((n) => ({ value: String(n), label: String(n) }));
     const roundTimeOpts = [
-      { value: '60', label: '1 min' },
-      { value: '120', label: '2 min' },
-      { value: '180', label: '3 min' },
-      { value: '300', label: '5 min' },
-      { value: '600', label: '10 min' },
+      { value: '60', label: t('admin:dashboard.roundTime1min') },
+      { value: '120', label: t('admin:dashboard.roundTime2min') },
+      { value: '180', label: t('admin:dashboard.roundTime3min') },
+      { value: '300', label: t('admin:dashboard.roundTime5min') },
+      { value: '600', label: t('admin:dashboard.roundTime10min') },
     ];
     const mapSizeOpts = [
       { value: '21', label: '21x21' },
@@ -630,7 +668,7 @@ export class DashboardTab {
       { value: '0.8', label: '80%' },
     ];
     const powerUpRateOpts = [
-      { value: '0', label: 'None' },
+      { value: '0', label: t('admin:dashboard.none') },
       { value: '0.15', label: '15%' },
       { value: '0.3', label: '30%' },
       { value: '0.5', label: '50%' },
@@ -640,38 +678,38 @@ export class DashboardTab {
     const maxBots = type === 'simulation' ? 8 : 7;
     const botCountOpts = Array.from({ length: maxBots - minBots + 1 }, (_, i) => {
       const n = i + minBots;
-      return { value: String(n), label: n === 0 ? 'None' : `${n}` };
+      return { value: String(n), label: n === 0 ? t('admin:dashboard.none') : `${n}` };
     });
     const botDiffOpts = [
-      { value: 'easy', label: 'Easy' },
-      { value: 'normal', label: 'Normal' },
-      { value: 'hard', label: 'Hard' },
+      { value: 'easy', label: t('admin:dashboard.botDiffEasy') },
+      { value: 'normal', label: t('admin:dashboard.botDiffNormal') },
+      { value: 'hard', label: t('admin:dashboard.botDiffHard') },
     ];
 
     let simExtra = '';
     if (type === 'simulation') {
       const sd = defaults as SimulationDefaults;
       const speedOpts = [
-        { value: 'fast', label: 'Fast' },
-        { value: 'realtime', label: 'Real-time' },
+        { value: 'fast', label: t('admin:dashboard.speedFast') },
+        { value: 'realtime', label: t('admin:dashboard.speedRealtime') },
       ];
       const verbOpts = [
-        { value: 'normal', label: 'Normal' },
-        { value: 'detailed', label: 'Detailed' },
-        { value: 'full', label: 'Full' },
+        { value: 'normal', label: t('admin:dashboard.verbosityNormal') },
+        { value: 'detailed', label: t('admin:dashboard.verbosityDetailed') },
+        { value: 'full', label: t('admin:dashboard.verbosityFull') },
       ];
       simExtra = `
         <div class="form-group">
-          <label>Total Games</label>
-          <input type="number" id="${prefix}-totalGames" value="${sd.totalGames ?? ''}" min="1" max="1000" placeholder="Default (10)"
+          <label>${t('admin:dashboard.totalGames')}</label>
+          <input type="number" id="${prefix}-totalGames" value="${sd.totalGames ?? ''}" min="1" max="1000" placeholder="${escapeAttr(t('admin:dashboard.totalGamesPlaceholder'))}"
             class="admin-select w-full">
         </div>
         <div class="form-group">
-          <label>Speed</label>
+          <label>${t('admin:dashboard.speed')}</label>
           ${sel(`${prefix}-speed`, speedOpts, sd.speed)}
         </div>
         <div class="form-group">
-          <label>Log Verbosity</label>
+          <label>${t('admin:dashboard.logVerbosity')}</label>
           ${sel(`${prefix}-logVerbosity`, verbOpts, sd.logVerbosity)}
         </div>
       `;
@@ -682,45 +720,45 @@ export class DashboardTab {
     return `
       <div class="form-grid">
         <div class="form-group">
-          <label>Game Mode</label>
+          <label>${t('admin:dashboard.gameMode')}</label>
           ${sel(`${prefix}-gameMode`, gameModes, defaults.gameMode)}
         </div>
         ${
           type === 'game'
             ? `<div class="form-group">
-          <label>Max Players</label>
+          <label>${t('admin:dashboard.maxPlayers')}</label>
           ${sel(`${prefix}-maxPlayers`, maxPlayersOpts, defaults.maxPlayers)}
         </div>`
             : ''
         }
         <div class="form-group">
-          <label>Match Time</label>
+          <label>${t('admin:dashboard.matchTime')}</label>
           ${sel(`${prefix}-roundTime`, roundTimeOpts, defaults.roundTime)}
         </div>
         <div class="form-group">
-          <label>Map Size</label>
+          <label>${t('admin:dashboard.mapSize')}</label>
           ${sel(`${prefix}-mapWidth`, mapSizeOpts, defaults.mapWidth)}
         </div>
         <div class="form-group">
-          <label>Wall Density</label>
+          <label>${t('admin:dashboard.wallDensity')}</label>
           ${sel(`${prefix}-wallDensity`, wallDensityOpts, defaults.wallDensity)}
         </div>
         <div class="form-group">
-          <label>Power-Up Rate</label>
+          <label>${t('admin:dashboard.powerUpRate')}</label>
           ${sel(`${prefix}-powerUpDropRate`, powerUpRateOpts, defaults.powerUpDropRate)}
         </div>
         <div class="form-group">
-          <label>Bots</label>
+          <label>${t('admin:dashboard.bots')}</label>
           ${sel(`${prefix}-botCount`, botCountOpts, defaults.botCount)}
         </div>
         <div class="form-group">
-          <label>Bot Difficulty</label>
+          <label>${t('admin:dashboard.botDifficulty')}</label>
           ${sel(`${prefix}-botDifficulty`, botDiffOpts, defaults.botDifficulty)}
         </div>
         ${
           activeAIs.length > 1
             ? `<div class="form-group">
-          <label>Bot AI</label>
+          <label>${t('admin:dashboard.botAi')}</label>
           ${sel(
             `${prefix}-botAiId`,
             activeAIs.map((ai) => ({ value: ai.id, label: ai.name })),
@@ -733,15 +771,15 @@ export class DashboardTab {
       </div>
 
       <div class="flex-wrap mt-sm">
-        ${chk(`${prefix}-reinforcedWalls`, 'Reinforced Walls', '#b8884d', defaults.reinforcedWalls)}
-        ${chk(`${prefix}-enableMapEvents`, 'Map Events', 'var(--warning)', defaults.enableMapEvents)}
-        ${chk(`${prefix}-hazardTiles`, 'Hazard Tiles', 'var(--info)', defaults.hazardTiles)}
-        ${chk(`${prefix}-friendlyFire`, 'Friendly Fire', 'var(--danger)', defaults.friendlyFire)}
-        ${type === 'simulation' ? chk(`${prefix}-recordReplays`, 'Record Replays', 'var(--accent)', (defaults as SimulationDefaults).recordReplays) : ''}
+        ${chk(`${prefix}-reinforcedWalls`, t('admin:dashboard.reinforcedWalls'), '#b8884d', defaults.reinforcedWalls)}
+        ${chk(`${prefix}-enableMapEvents`, t('admin:dashboard.mapEvents'), 'var(--warning)', defaults.enableMapEvents)}
+        ${chk(`${prefix}-hazardTiles`, t('admin:dashboard.hazardTiles'), 'var(--info)', defaults.hazardTiles)}
+        ${chk(`${prefix}-friendlyFire`, t('admin:dashboard.friendlyFire'), 'var(--danger)', defaults.friendlyFire)}
+        ${type === 'simulation' ? chk(`${prefix}-recordReplays`, t('admin:dashboard.recordReplays'), 'var(--accent)', (defaults as SimulationDefaults).recordReplays) : ''}
       </div>
 
       <div class="mt-sm">
-        <div class="subsection-label">Power-Ups</div>
+        <div class="subsection-label">${t('admin:dashboard.powerUps')}</div>
         <div class="flex-wrap flex-gap-sm">
           ${ALL_POWER_UPS.map((pu) => {
             const checked = enabledSet ? enabledSet.has(pu.type) : true;
@@ -756,8 +794,8 @@ export class DashboardTab {
       </div>
 
       <div class="flex-row mt-md">
-        <button id="${prefix}-save" class="btn btn-primary btn-sm">Save</button>
-        <button id="${prefix}-reset" class="btn btn-secondary btn-sm">Reset to Defaults</button>
+        <button id="${prefix}-save" class="btn btn-primary btn-sm">${t('admin:dashboard.save')}</button>
+        <button id="${prefix}-reset" class="btn btn-secondary btn-sm">${t('admin:dashboard.resetToDefaults')}</button>
       </div>
     `;
   }
@@ -787,11 +825,19 @@ export class DashboardTab {
         } else {
           this.simulationDefaults = defaults;
         }
-        this.notifications.success(`${type === 'game' ? 'Game' : 'Simulation'} defaults saved`);
+        this.notifications.success(
+          type === 'game'
+            ? t('admin:dashboard.gameDefaultsSaved')
+            : t('admin:dashboard.simulationDefaultsSaved'),
+        );
         // Re-render to update override count
         this.renderSettingsCard();
       } catch {
-        this.notifications.error(`Failed to save ${type} defaults`);
+        this.notifications.error(
+          type === 'game'
+            ? t('admin:dashboard.failedSaveGameDefaults')
+            : t('admin:dashboard.failedSaveSimDefaults'),
+        );
       }
     });
 
@@ -804,10 +850,18 @@ export class DashboardTab {
         } else {
           this.simulationDefaults = {};
         }
-        this.notifications.success(`${type === 'game' ? 'Game' : 'Simulation'} defaults reset`);
+        this.notifications.success(
+          type === 'game'
+            ? t('admin:dashboard.gameDefaultsReset')
+            : t('admin:dashboard.simulationDefaultsReset'),
+        );
         this.renderSettingsCard();
       } catch {
-        this.notifications.error(`Failed to reset ${type} defaults`);
+        this.notifications.error(
+          type === 'game'
+            ? t('admin:dashboard.failedResetGameDefaults')
+            : t('admin:dashboard.failedResetSimDefaults'),
+        );
       }
     });
   }
@@ -908,23 +962,23 @@ export class DashboardTab {
       statsDiv.innerHTML = `
         <div class="stat-card">
           <div class="stat-value">${stats.totalUsers}</div>
-          <div class="stat-label">Total Users</div>
+          <div class="stat-label">${t('admin:dashboard.statTotalUsers')}</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${stats.activeUsers24h}</div>
-          <div class="stat-label">Active (24h)</div>
+          <div class="stat-label">${t('admin:dashboard.statActive24h')}</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${stats.totalMatches}</div>
-          <div class="stat-label">Total Matches</div>
+          <div class="stat-label">${t('admin:dashboard.statTotalMatches')}</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${stats.activeRooms}</div>
-          <div class="stat-label">Active Rooms</div>
+          <div class="stat-label">${t('admin:dashboard.statActiveRooms')}</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${stats.activePlayers}</div>
-          <div class="stat-label">Online Players</div>
+          <div class="stat-label">${t('admin:dashboard.statOnlinePlayers')}</div>
         </div>
       `;
 
@@ -936,7 +990,7 @@ export class DashboardTab {
         this.container.appendChild(statsDiv);
       }
     } catch {
-      this.notifications.error('Failed to load stats');
+      this.notifications.error(t('admin:dashboard.failedLoadStats'));
     }
   }
 }

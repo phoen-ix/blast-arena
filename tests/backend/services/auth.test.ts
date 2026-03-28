@@ -65,7 +65,7 @@ describe('Auth Service', () => {
 
       const result = await authService.register('newuser', 'new@test.com', 'password123');
 
-      expect(result.user).toEqual({ id: 42, username: 'newuser', role: 'user' });
+      expect(result.user).toEqual({ id: 42, username: 'newuser', role: 'user', language: 'en' });
       expect(result.accessToken).toBeDefined();
       expect(typeof result.accessToken).toBe('string');
     });
@@ -110,6 +110,7 @@ describe('Auth Service', () => {
       email: 'test@test.com',
       password_hash: 'hashed',
       role: 'user',
+      language: 'en',
       is_deactivated: false,
       email_verified: true,
     };
@@ -120,7 +121,12 @@ describe('Auth Service', () => {
 
       const result = await authService.login('testuser', 'password');
 
-      expect(result.auth.user).toEqual({ id: 10, username: 'testuser', role: 'user' });
+      expect(result.auth.user).toEqual({
+        id: 10,
+        username: 'testuser',
+        role: 'user',
+        language: 'en',
+      });
       expect(result.auth.accessToken).toBeDefined();
       expect(result.refreshToken).toBeDefined();
     });
@@ -171,8 +177,7 @@ describe('Auth Service', () => {
       // First execute: UPDATE last_login, second: INSERT refresh token
       const insertCall = mockExecute.mock.calls.find(
         (call) =>
-          typeof call[0] === 'string' &&
-          (call[0] as string).includes('INSERT INTO refresh_tokens'),
+          typeof call[0] === 'string' && (call[0] as string).includes('INSERT INTO refresh_tokens'),
       );
       expect(insertCall).toBeDefined();
       expect(insertCall![1]).toEqual(expect.arrayContaining([10, 'hashed-token']));
@@ -187,6 +192,7 @@ describe('Auth Service', () => {
       revoked: false,
       username: 'testuser',
       role: 'user',
+      language: 'en',
       is_deactivated: false,
     };
 
@@ -196,7 +202,12 @@ describe('Auth Service', () => {
 
       const result = await authService.refreshAccessToken('old-token');
 
-      expect(result.auth.user).toEqual({ id: 10, username: 'testuser', role: 'user' });
+      expect(result.auth.user).toEqual({
+        id: 10,
+        username: 'testuser',
+        role: 'user',
+        language: 'en',
+      });
       expect(result.auth.accessToken).toBeDefined();
       expect(result.refreshToken).toBeDefined();
       // Should revoke old token and insert new one
@@ -236,9 +247,7 @@ describe('Auth Service', () => {
     });
 
     it('should throw 401 on expired token', async () => {
-      mockQuery.mockResolvedValue([
-        { ...mockRefreshRow, expires_at: new Date(Date.now() - 1000) },
-      ]);
+      mockQuery.mockResolvedValue([{ ...mockRefreshRow, expires_at: new Date(Date.now() - 1000) }]);
 
       try {
         await authService.refreshAccessToken('expired-token');

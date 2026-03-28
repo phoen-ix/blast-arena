@@ -10,10 +10,13 @@ import {
 } from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../../utils/html';
 import { showCreateRoomModal } from '../modals/CreateRoomModal';
+import { t } from '../../i18n';
 
 export class RoomsView implements ILobbyView {
   readonly viewId = 'rooms';
-  readonly title = 'Available Rooms';
+  get title() {
+    return t('ui:rooms.title');
+  }
 
   private deps: ViewDeps;
   private container: HTMLElement | null = null;
@@ -26,7 +29,7 @@ export class RoomsView implements ILobbyView {
   }
 
   getHeaderActions(): string {
-    return '<button class="btn btn-primary btn-sm" id="create-room-btn">+ New Room</button>';
+    return `<button class="btn btn-primary btn-sm" id="create-room-btn">${t('ui:rooms.create')}</button>`;
   }
 
   async render(container: HTMLElement): Promise<void> {
@@ -34,7 +37,7 @@ export class RoomsView implements ILobbyView {
     container.innerHTML = `
       <div id="lobby-banner-area" style="padding:0 var(--sp-6);"></div>
       <div class="room-list empty" id="room-list">
-        <div class="room-list-empty-state">Loading rooms...</div>
+        <div class="room-list-empty-state">${t('ui:rooms.loading')}</div>
       </div>
     `;
 
@@ -74,7 +77,7 @@ export class RoomsView implements ILobbyView {
       this.cachedRooms = rooms;
       this.renderRooms(rooms);
     } catch (err: unknown) {
-      this.deps.notifications.error('Failed to load rooms: ' + getErrorMessage(err));
+      this.deps.notifications.error(t('ui:rooms.loadFailed', { error: getErrorMessage(err) }));
     }
   }
 
@@ -84,8 +87,7 @@ export class RoomsView implements ILobbyView {
 
     if (rooms.length === 0) {
       list.classList.add('empty');
-      list.innerHTML =
-        '<div class="room-list-empty-state">No rooms yet — create one to get started!</div>';
+      list.innerHTML = `<div class="room-list-empty-state">${t('ui:rooms.empty')}</div>`;
       return;
     }
 
@@ -96,11 +98,11 @@ export class RoomsView implements ILobbyView {
       <div class="room-card ${room.status === 'waiting' ? 'waiting' : 'playing'}" data-code="${escapeAttr(room.code)}">
         <h3>${escapeHtml(room.name)}</h3>
         <div class="room-info">
-          <span>${room.playerCount}/${room.maxPlayers} players</span>
+          <span>${t('ui:rooms.players', { current: room.playerCount, max: room.maxPlayers })}</span>
           <span class="room-mode">${room.gameMode.replace('_', ' ').toUpperCase()}</span>
         </div>
         <div class="room-info" style="margin-top:6px;">
-          <span>Host: ${escapeHtml(room.host)}</span>
+          <span>${t('ui:rooms.host', { name: escapeHtml(room.host) })}</span>
           <span style="color:${room.status === 'playing' ? 'var(--warning)' : 'var(--success)'};">${room.status}</span>
         </div>
       </div>
@@ -112,10 +114,10 @@ export class RoomsView implements ILobbyView {
   private async joinRoom(code: string): Promise<void> {
     this.deps.socketClient.emit('room:join', { code }, (response: any) => {
       if (response.success && response.room) {
-        this.deps.notifications.success(`Joined room: ${response.room.name}`);
+        this.deps.notifications.success(t('ui:rooms.joined', { name: response.room.name }));
         this.onJoinRoom(response.room);
       } else {
-        this.deps.notifications.error(response.error || 'Failed to join room');
+        this.deps.notifications.error(response.error || t('ui:rooms.joinFailed'));
       }
     });
   }

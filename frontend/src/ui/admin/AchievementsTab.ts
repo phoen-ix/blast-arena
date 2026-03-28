@@ -13,6 +13,7 @@ import {
   getErrorMessage,
 } from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../../utils/html';
+import { t } from '../../i18n';
 
 const CONDITION_TYPES: AchievementConditionType[] = [
   'cumulative',
@@ -21,12 +22,8 @@ const CONDITION_TYPES: AchievementConditionType[] = [
   'campaign',
 ];
 
-const CONDITION_LABELS: Record<AchievementConditionType, string> = {
-  cumulative: 'Cumulative',
-  per_game: 'Per Game',
-  mode_specific: 'Mode Specific',
-  campaign: 'Campaign',
-};
+const getConditionLabel = (type: AchievementConditionType): string =>
+  t(`admin:achievements.conditionTypes.${type}`);
 
 const CUMULATIVE_STATS = [
   'total_kills',
@@ -101,10 +98,10 @@ export class AchievementsTab {
 
     this.container.innerHTML = `
       <div class="section-header">
-        <h3 class="admin-section-title">Achievements &amp; Cosmetics</h3>
+        <h3 class="admin-section-title">${t('admin:achievements.sectionTitle')}</h3>
         <div class="btn-group">
-          <button class="btn ${this.currentView === 'achievements' ? 'btn-primary' : 'btn-ghost'}" id="ach-view-achievements">Achievements</button>
-          <button class="btn ${this.currentView === 'cosmetics' ? 'btn-primary' : 'btn-ghost'}" id="ach-view-cosmetics">Cosmetics</button>
+          <button class="btn ${this.currentView === 'achievements' ? 'btn-primary' : 'btn-ghost'}" id="ach-view-achievements">${t('admin:achievements.achievementsBtn')}</button>
+          <button class="btn ${this.currentView === 'cosmetics' ? 'btn-primary' : 'btn-ghost'}" id="ach-view-cosmetics">${t('admin:achievements.cosmeticsBtn')}</button>
         </div>
       </div>
       <div id="ach-content"></div>
@@ -148,23 +145,23 @@ export class AchievementsTab {
     content.innerHTML = `
       <div class="admin-section">
         <div class="section-header">
-          <span class="admin-count">${this.achievements.length} achievement${this.achievements.length !== 1 ? 's' : ''}</span>
+          <span class="admin-count">${t('admin:achievements.achievementCount', { count: this.achievements.length })}</span>
           <div class="btn-group">
-            <button class="btn btn-secondary" id="ach-export-all">Export All</button>
-            <button class="btn btn-secondary" id="ach-import">Import</button>
-            <button class="btn btn-primary" id="ach-create">Create Achievement</button>
+            <button class="btn btn-secondary" id="ach-export-all">${t('admin:achievements.exportAll')}</button>
+            <button class="btn btn-secondary" id="ach-import">${t('admin:achievements.import')}</button>
+            <button class="btn btn-primary" id="ach-create">${t('admin:achievements.createAchievement')}</button>
           </div>
         </div>
         <table class="admin-table">
           <thead>
             <tr>
-              <th>Icon</th>
-              <th>Name</th>
-              <th>Description</th>
-              <th>Condition</th>
-              <th>Reward</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>${t('admin:achievements.tableHeaders.icon')}</th>
+              <th>${t('admin:achievements.tableHeaders.name')}</th>
+              <th>${t('admin:achievements.tableHeaders.description')}</th>
+              <th>${t('admin:achievements.tableHeaders.condition')}</th>
+              <th>${t('admin:achievements.tableHeaders.reward')}</th>
+              <th>${t('admin:achievements.tableHeaders.status')}</th>
+              <th>${t('admin:achievements.tableHeaders.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -188,11 +185,11 @@ export class AchievementsTab {
 
   private renderAchievementRow(a: Achievement): string {
     const statusBadge = a.isActive
-      ? '<span class="text-success font-semibold">Active</span>'
-      : '<span class="text-dim">Inactive</span>';
+      ? `<span class="text-success font-semibold">${t('admin:achievements.statusActive')}</span>`
+      : `<span class="text-dim">${t('admin:achievements.statusInactive')}</span>`;
     const rewardLabel =
       a.rewardType === 'none'
-        ? '<span class="text-dim">None</span>'
+        ? `<span class="text-dim">${t('admin:achievements.rewardNone')}</span>`
         : `<span class="text-accent">${escapeHtml(a.rewardType)}${a.rewardId ? ` #${a.rewardId}` : ''}</span>`;
 
     return `
@@ -200,14 +197,14 @@ export class AchievementsTab {
         <td class="icon-cell">${escapeHtml(a.icon)}</td>
         <td>${escapeHtml(a.name)}</td>
         <td class="truncate-cell">${escapeHtml(a.description)}</td>
-        <td><span class="badge">${escapeHtml(CONDITION_LABELS[a.conditionType] || a.conditionType)}</span></td>
+        <td><span class="badge">${escapeHtml(getConditionLabel(a.conditionType) || a.conditionType)}</span></td>
         <td>${rewardLabel}</td>
         <td>${statusBadge}</td>
         <td>
           <div class="actions-cell">
-            <button class="btn-sm btn-secondary ach-edit" data-id="${a.id}">Edit</button>
-            <button class="btn-sm btn-secondary ach-export" data-id="${a.id}">Export</button>
-            <button class="btn-sm btn-danger ach-delete" data-id="${a.id}" data-name="${escapeAttr(a.name)}">Delete</button>
+            <button class="btn-sm btn-secondary ach-edit" data-id="${a.id}">${t('admin:achievements.editBtn')}</button>
+            <button class="btn-sm btn-secondary ach-export" data-id="${a.id}">${t('admin:achievements.exportBtn')}</button>
+            <button class="btn-sm btn-danger ach-delete" data-id="${a.id}" data-name="${escapeAttr(a.name)}">${t('admin:achievements.deleteBtn')}</button>
           </div>
         </td>
       </tr>
@@ -231,7 +228,7 @@ export class AchievementsTab {
             `/admin/achievements/${id}/export`,
           );
           this.downloadExport(data, `achievement-${id}.json`);
-          this.notifications.success('Achievement exported');
+          this.notifications.success(t('admin:achievements.achievementExported'));
         } catch (err: unknown) {
           this.notifications.error(getErrorMessage(err));
         }
@@ -244,7 +241,7 @@ export class AchievementsTab {
         const name = (btn as HTMLElement).dataset.name!;
         this.confirmDelete('achievement', id, name, async () => {
           await ApiClient.delete(`/admin/achievements/${id}`);
-          this.notifications.success('Achievement deleted');
+          this.notifications.success(t('admin:achievements.achievementDeleted'));
           await this.loadAchievements();
         });
       });
@@ -257,63 +254,68 @@ export class AchievementsTab {
     overlay.className = 'modal-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', isEdit ? 'Edit Achievement' : 'Create Achievement');
+    overlay.setAttribute(
+      'aria-label',
+      isEdit
+        ? t('admin:achievements.editAchievement')
+        : t('admin:achievements.createAchievementTitle'),
+    );
 
     const condCfg = existing?.conditionConfig || {};
     const currentCondType = existing?.conditionType || 'cumulative';
 
     overlay.innerHTML = `
       <div class="modal modal-scroll" style="max-width:520px;">
-        <h2>${isEdit ? 'Edit' : 'Create'} Achievement</h2>
+        <h2>${isEdit ? t('admin:achievements.editAchievement') : t('admin:achievements.createAchievementTitle')}</h2>
         <div class="form-stack">
           <div>
-            <label class="field-label">Name *</label>
-            <input type="text" class="admin-input mt-label" id="am-name" value="${escapeAttr(existing?.name || '')}" placeholder="Achievement name">
+            <label class="field-label">${t('admin:achievements.nameLabel')}</label>
+            <input type="text" class="admin-input mt-label" id="am-name" value="${escapeAttr(existing?.name || '')}" placeholder="${t('admin:achievements.namePlaceholder')}">
           </div>
           <div>
-            <label class="field-label">Description *</label>
-            <input type="text" class="admin-input mt-label" id="am-desc" value="${escapeAttr(existing?.description || '')}" placeholder="Short description">
+            <label class="field-label">${t('admin:achievements.descriptionLabel')}</label>
+            <input type="text" class="admin-input mt-label" id="am-desc" value="${escapeAttr(existing?.description || '')}" placeholder="${t('admin:achievements.descriptionPlaceholder')}">
           </div>
           <div class="form-row">
             <div>
-              <label class="field-label">Icon</label>
-              <input type="text" class="admin-input mt-label" id="am-icon" value="${escapeAttr(existing?.icon || '')}" placeholder="Emoji or text">
+              <label class="field-label">${t('admin:achievements.iconLabel')}</label>
+              <input type="text" class="admin-input mt-label" id="am-icon" value="${escapeAttr(existing?.icon || '')}" placeholder="${t('admin:achievements.iconPlaceholder')}">
             </div>
             <div>
-              <label class="field-label">Category</label>
-              <input type="text" class="admin-input mt-label" id="am-category" value="${escapeAttr(existing?.category || '')}" placeholder="e.g. combat, survival">
+              <label class="field-label">${t('admin:achievements.categoryLabel')}</label>
+              <input type="text" class="admin-input mt-label" id="am-category" value="${escapeAttr(existing?.category || '')}" placeholder="${t('admin:achievements.categoryPlaceholder')}">
             </div>
           </div>
           <div>
-            <label class="field-label">Condition Type *</label>
+            <label class="field-label">${t('admin:achievements.conditionTypeLabel')}</label>
             <select class="admin-select w-full mt-label" id="am-condType">
-              ${CONDITION_TYPES.map((t) => `<option value="${t}" ${currentCondType === t ? 'selected' : ''}>${CONDITION_LABELS[t]}</option>`).join('')}
+              ${CONDITION_TYPES.map((ct) => `<option value="${ct}" ${currentCondType === ct ? 'selected' : ''}>${getConditionLabel(ct)}</option>`).join('')}
             </select>
           </div>
           <div id="am-cond-fields"></div>
           <div class="form-row">
             <div>
-              <label class="field-label">Reward Type</label>
+              <label class="field-label">${t('admin:achievements.rewardTypeLabel')}</label>
               <select class="admin-select w-full mt-label" id="am-rewardType">
-                <option value="none" ${!existing || existing.rewardType === 'none' ? 'selected' : ''}>None</option>
-                <option value="cosmetic" ${existing?.rewardType === 'cosmetic' ? 'selected' : ''}>Cosmetic</option>
-                <option value="title" ${existing?.rewardType === 'title' ? 'selected' : ''}>Title</option>
+                <option value="none" ${!existing || existing.rewardType === 'none' ? 'selected' : ''}>${t('admin:achievements.rewardTypes.none')}</option>
+                <option value="cosmetic" ${existing?.rewardType === 'cosmetic' ? 'selected' : ''}>${t('admin:achievements.rewardTypes.cosmetic')}</option>
+                <option value="title" ${existing?.rewardType === 'title' ? 'selected' : ''}>${t('admin:achievements.rewardTypes.title')}</option>
               </select>
             </div>
             <div id="am-reward-id-wrap">
-              <label class="field-label">Reward Cosmetic ID</label>
-              <input type="number" class="admin-input mt-label" id="am-rewardId" value="${existing?.rewardId ?? ''}" placeholder="Cosmetic ID" min="0">
+              <label class="field-label">${t('admin:achievements.rewardCosmeticIdLabel')}</label>
+              <input type="number" class="admin-input mt-label" id="am-rewardId" value="${existing?.rewardId ?? ''}" placeholder="${t('admin:achievements.rewardCosmeticIdPlaceholder')}" min="0">
             </div>
           </div>
           <div>
-            <label class="field-label">Sort Order</label>
+            <label class="field-label">${t('admin:achievements.sortOrderLabel')}</label>
             <input type="number" class="admin-input mt-label" id="am-sortOrder" value="${existing?.sortOrder ?? 0}" min="0">
           </div>
         </div>
         <div id="am-error" class="modal-error"></div>
         <div class="modal-actions">
-          <button class="btn btn-secondary" id="am-cancel">Cancel</button>
-          <button class="btn btn-primary" id="am-submit">${isEdit ? 'Save' : 'Create'}</button>
+          <button class="btn btn-secondary" id="am-cancel">${t('admin:achievements.cancel')}</button>
+          <button class="btn btn-primary" id="am-submit">${isEdit ? t('admin:achievements.save') : t('admin:achievements.create')}</button>
         </div>
       </div>
     `;
@@ -362,7 +364,7 @@ export class AchievementsTab {
       const errorEl = overlay.querySelector('#am-error') as HTMLElement;
 
       if (!name || !description) {
-        errorEl.textContent = 'Name and description are required';
+        errorEl.textContent = t('admin:achievements.errorNameDescRequired');
         errorEl.style.display = 'block';
         return;
       }
@@ -384,10 +386,10 @@ export class AchievementsTab {
       try {
         if (isEdit) {
           await ApiClient.put(`/admin/achievements/${existing!.id}`, payload);
-          this.notifications.success('Achievement updated');
+          this.notifications.success(t('admin:achievements.achievementUpdated'));
         } else {
           await ApiClient.post('/admin/achievements', payload);
-          this.notifications.success('Achievement created');
+          this.notifications.success(t('admin:achievements.achievementCreated'));
         }
         overlay.remove();
         await this.loadAchievements();
@@ -407,13 +409,13 @@ export class AchievementsTab {
       container.innerHTML = `
         <div class="form-row">
           <div>
-            <label class="field-label">Stat</label>
+            <label class="field-label">${t('admin:achievements.conditionFields.stat')}</label>
             <select class="admin-select w-full mt-label" id="am-cond-stat">
               ${CUMULATIVE_STATS.map((s) => `<option value="${s}" ${cfg.stat === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
           <div>
-            <label class="field-label">Threshold</label>
+            <label class="field-label">${t('admin:achievements.conditionFields.threshold')}</label>
             <input type="number" class="admin-input mt-label" id="am-cond-threshold" value="${cfg.threshold ?? 1}" min="1">
           </div>
         </div>
@@ -422,19 +424,19 @@ export class AchievementsTab {
       container.innerHTML = `
         <div class="form-row">
           <div>
-            <label class="field-label">Stat</label>
+            <label class="field-label">${t('admin:achievements.conditionFields.stat')}</label>
             <select class="admin-select w-full mt-label" id="am-cond-stat">
               ${PER_GAME_STATS.map((s) => `<option value="${s}" ${cfg.stat === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
           <div class="form-row-half">
-            <label class="field-label">Operator</label>
+            <label class="field-label">${t('admin:achievements.conditionFields.operator')}</label>
             <select class="admin-select w-full mt-label" id="am-cond-operator">
               ${PER_GAME_OPERATORS.map((o) => `<option value="${escapeAttr(o)}" ${cfg.operator === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}
             </select>
           </div>
           <div class="form-row-half">
-            <label class="field-label">Threshold</label>
+            <label class="field-label">${t('admin:achievements.conditionFields.threshold')}</label>
             <input type="number" class="admin-input mt-label" id="am-cond-threshold" value="${cfg.threshold ?? 1}" min="0">
           </div>
         </div>
@@ -443,19 +445,19 @@ export class AchievementsTab {
       container.innerHTML = `
         <div class="form-row">
           <div>
-            <label class="field-label">Game Mode</label>
+            <label class="field-label">${t('admin:achievements.conditionFields.gameMode')}</label>
             <select class="admin-select w-full mt-label" id="am-cond-mode">
               ${GAME_MODES.map((m) => `<option value="${m}" ${cfg.mode === m ? 'selected' : ''}>${m}</option>`).join('')}
             </select>
           </div>
           <div>
-            <label class="field-label">Stat</label>
+            <label class="field-label">${t('admin:achievements.conditionFields.stat')}</label>
             <select class="admin-select w-full mt-label" id="am-cond-stat">
               ${MODE_SPECIFIC_STATS.map((s) => `<option value="${s}" ${cfg.stat === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
           <div class="form-row-half">
-            <label class="field-label">Threshold</label>
+            <label class="field-label">${t('admin:achievements.conditionFields.threshold')}</label>
             <input type="number" class="admin-input mt-label" id="am-cond-threshold" value="${cfg.threshold ?? 1}" min="1">
           </div>
         </div>
@@ -464,13 +466,13 @@ export class AchievementsTab {
       container.innerHTML = `
         <div class="form-row">
           <div>
-            <label class="field-label">Sub-Type</label>
+            <label class="field-label">${t('admin:achievements.conditionFields.subType')}</label>
             <select class="admin-select w-full mt-label" id="am-cond-subType">
               ${CAMPAIGN_SUBTYPES.map((s) => `<option value="${s}" ${cfg.subType === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
           <div>
-            <label class="field-label">Threshold</label>
+            <label class="field-label">${t('admin:achievements.conditionFields.threshold')}</label>
             <input type="number" class="admin-input mt-label" id="am-cond-threshold" value="${cfg.threshold ?? 1}" min="1">
           </div>
         </div>
@@ -526,21 +528,21 @@ export class AchievementsTab {
     content.innerHTML = `
       <div class="admin-section">
         <div class="section-header">
-          <span class="admin-count">${this.cosmetics.length} cosmetic${this.cosmetics.length !== 1 ? 's' : ''}</span>
+          <span class="admin-count">${t('admin:achievements.cosmeticCount', { count: this.cosmetics.length })}</span>
           <div class="btn-group">
-            <button class="btn btn-secondary" id="cos-import">Import</button>
-            <button class="btn btn-primary" id="cos-create">Create Cosmetic</button>
+            <button class="btn btn-secondary" id="cos-import">${t('admin:achievements.importCosmetic')}</button>
+            <button class="btn btn-primary" id="cos-create">${t('admin:achievements.createCosmetic')}</button>
           </div>
         </div>
         <table class="admin-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Rarity</th>
-              <th>Unlock</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>${t('admin:achievements.cosmeticTableHeaders.name')}</th>
+              <th>${t('admin:achievements.cosmeticTableHeaders.type')}</th>
+              <th>${t('admin:achievements.cosmeticTableHeaders.rarity')}</th>
+              <th>${t('admin:achievements.cosmeticTableHeaders.unlock')}</th>
+              <th>${t('admin:achievements.cosmeticTableHeaders.status')}</th>
+              <th>${t('admin:achievements.cosmeticTableHeaders.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -561,8 +563,8 @@ export class AchievementsTab {
 
   private renderCosmeticRow(c: Cosmetic): string {
     const statusBadge = c.isActive
-      ? '<span class="text-success font-semibold">Active</span>'
-      : '<span class="text-dim">Inactive</span>';
+      ? `<span class="text-success font-semibold">${t('admin:achievements.statusActive')}</span>`
+      : `<span class="text-dim">${t('admin:achievements.statusInactive')}</span>`;
     const rarityColor = RARITY_COLORS[c.rarity] || 'var(--text)';
 
     return `
@@ -574,9 +576,9 @@ export class AchievementsTab {
         <td>${statusBadge}</td>
         <td>
           <div class="actions-cell">
-            <button class="btn-sm btn-secondary cos-edit" data-id="${c.id}">Edit</button>
-            <button class="btn-sm btn-secondary cos-export" data-id="${c.id}">Export</button>
-            <button class="btn-sm btn-danger cos-delete" data-id="${c.id}" data-name="${escapeAttr(c.name)}">Delete</button>
+            <button class="btn-sm btn-secondary cos-edit" data-id="${c.id}">${t('admin:achievements.editBtn')}</button>
+            <button class="btn-sm btn-secondary cos-export" data-id="${c.id}">${t('admin:achievements.exportBtn')}</button>
+            <button class="btn-sm btn-danger cos-delete" data-id="${c.id}" data-name="${escapeAttr(c.name)}">${t('admin:achievements.deleteBtn')}</button>
           </div>
         </td>
       </tr>
@@ -600,7 +602,7 @@ export class AchievementsTab {
             `/admin/cosmetics/${id}/export`,
           );
           this.downloadExport(data, `cosmetic-${id}.json`);
-          this.notifications.success('Cosmetic exported');
+          this.notifications.success(t('admin:achievements.cosmeticExported'));
         } catch (err: unknown) {
           this.notifications.error(getErrorMessage(err));
         }
@@ -613,7 +615,7 @@ export class AchievementsTab {
         const name = (btn as HTMLElement).dataset.name!;
         this.confirmDelete('cosmetic', id, name, async () => {
           await ApiClient.delete(`/admin/cosmetics/${id}`);
-          this.notifications.success('Cosmetic deleted');
+          this.notifications.success(t('admin:achievements.cosmeticDeleted'));
           await this.loadCosmetics();
         });
       });
@@ -626,28 +628,31 @@ export class AchievementsTab {
     overlay.className = 'modal-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', isEdit ? 'Edit Cosmetic' : 'Create Cosmetic');
+    overlay.setAttribute(
+      'aria-label',
+      isEdit ? t('admin:achievements.editCosmetic') : t('admin:achievements.createCosmeticTitle'),
+    );
 
     const currentType = existing?.type || 'color';
     const cfg = existing?.config || {};
 
     overlay.innerHTML = `
       <div class="modal modal-scroll" style="max-width:520px;">
-        <h2>${isEdit ? 'Edit' : 'Create'} Cosmetic</h2>
+        <h2>${isEdit ? t('admin:achievements.editCosmetic') : t('admin:achievements.createCosmeticTitle')}</h2>
         <div class="form-stack">
           <div>
-            <label class="field-label">Name *</label>
-            <input type="text" class="admin-input mt-label" id="cm-name" value="${escapeAttr(existing?.name || '')}" placeholder="Cosmetic name">
+            <label class="field-label">${t('admin:achievements.cosmeticNameLabel')}</label>
+            <input type="text" class="admin-input mt-label" id="cm-name" value="${escapeAttr(existing?.name || '')}" placeholder="${t('admin:achievements.cosmeticNamePlaceholder')}">
           </div>
           <div class="form-row">
             <div>
-              <label class="field-label">Type *</label>
+              <label class="field-label">${t('admin:achievements.cosmeticTypeLabel')}</label>
               <select class="admin-select w-full mt-label" id="cm-type">
-                ${COSMETIC_TYPES.map((t) => `<option value="${t}" ${currentType === t ? 'selected' : ''}>${t}</option>`).join('')}
+                ${COSMETIC_TYPES.map((ct) => `<option value="${ct}" ${currentType === ct ? 'selected' : ''}>${ct}</option>`).join('')}
               </select>
             </div>
             <div>
-              <label class="field-label">Rarity</label>
+              <label class="field-label">${t('admin:achievements.rarityLabel')}</label>
               <select class="admin-select w-full mt-label" id="cm-rarity">
                 ${RARITY_OPTIONS.map((r) => `<option value="${r}" ${existing?.rarity === r ? 'selected' : ''}>${r}</option>`).join('')}
               </select>
@@ -656,25 +661,25 @@ export class AchievementsTab {
           <div id="cm-config-fields"></div>
           <div class="form-row">
             <div>
-              <label class="field-label">Unlock Type</label>
+              <label class="field-label">${t('admin:achievements.unlockTypeLabel')}</label>
               <select class="admin-select w-full mt-label" id="cm-unlockType">
                 ${UNLOCK_TYPES.map((u) => `<option value="${u}" ${existing?.unlockType === u ? 'selected' : ''}>${u}</option>`).join('')}
               </select>
             </div>
             <div id="cm-unlock-req-wrap">
-              <label class="field-label">Unlock Requirement</label>
+              <label class="field-label">${t('admin:achievements.unlockRequirementLabel')}</label>
               <textarea class="admin-input admin-textarea-mono" id="cm-unlockReq" rows="2" placeholder='{"threshold": 50}'>${existing?.unlockRequirement ? JSON.stringify(existing.unlockRequirement, null, 2) : ''}</textarea>
             </div>
           </div>
           <div>
-            <label class="field-label">Sort Order</label>
+            <label class="field-label">${t('admin:achievements.sortOrderLabel')}</label>
             <input type="number" class="admin-input mt-label" id="cm-sortOrder" value="${existing?.sortOrder ?? 0}" min="0">
           </div>
         </div>
         <div id="cm-error" class="modal-error"></div>
         <div class="modal-actions">
-          <button class="btn btn-secondary" id="cm-cancel">Cancel</button>
-          <button class="btn btn-primary" id="cm-submit">${isEdit ? 'Save' : 'Create'}</button>
+          <button class="btn btn-secondary" id="cm-cancel">${t('admin:achievements.cancel')}</button>
+          <button class="btn btn-primary" id="cm-submit">${isEdit ? t('admin:achievements.save') : t('admin:achievements.create')}</button>
         </div>
       </div>
     `;
@@ -716,14 +721,14 @@ export class AchievementsTab {
       const errorEl = overlay.querySelector('#cm-error') as HTMLElement;
 
       if (!name) {
-        errorEl.textContent = 'Name is required';
+        errorEl.textContent = t('admin:achievements.errorNameRequired');
         errorEl.style.display = 'block';
         return;
       }
 
       const config = this.readCosmeticConfig(overlay, type);
       if (config === null) {
-        errorEl.textContent = 'Invalid config values';
+        errorEl.textContent = t('admin:achievements.errorInvalidConfig');
         errorEl.style.display = 'block';
         return;
       }
@@ -735,7 +740,7 @@ export class AchievementsTab {
           try {
             unlockRequirement = JSON.parse(reqStr);
           } catch {
-            errorEl.textContent = 'Unlock requirement must be valid JSON';
+            errorEl.textContent = t('admin:achievements.errorInvalidJson');
             errorEl.style.display = 'block';
             return;
           }
@@ -755,10 +760,10 @@ export class AchievementsTab {
       try {
         if (isEdit) {
           await ApiClient.put(`/admin/cosmetics/${existing!.id}`, payload);
-          this.notifications.success('Cosmetic updated');
+          this.notifications.success(t('admin:achievements.cosmeticUpdated'));
         } else {
           await ApiClient.post('/admin/cosmetics', payload);
-          this.notifications.success('Cosmetic created');
+          this.notifications.success(t('admin:achievements.cosmeticCreated'));
         }
         overlay.remove();
         await this.loadCosmetics();
@@ -778,7 +783,7 @@ export class AchievementsTab {
       const hex = typeof cfg.hex === 'string' ? cfg.hex : '#ff6b35';
       container.innerHTML = `
         <div>
-          <label class="field-label">Hex Color</label>
+          <label class="field-label">${t('admin:achievements.configFields.hexColor')}</label>
           <div class="color-picker-row">
             <input type="color" id="cm-cfg-hex" value="${escapeAttr(hex)}" class="color-picker-swatch">
             <input type="text" class="admin-input flex-1" id="cm-cfg-hex-text" value="${escapeAttr(hex)}" placeholder="#ff6b35">
@@ -799,24 +804,24 @@ export class AchievementsTab {
       const style = typeof cfg.style === 'string' ? cfg.style : 'round';
       container.innerHTML = `
         <div>
-          <label class="field-label">Eye Style</label>
-          <input type="text" class="admin-input mt-label" id="cm-cfg-style" value="${escapeAttr(style)}" placeholder="e.g. round, angry, cute">
+          <label class="field-label">${t('admin:achievements.configFields.eyeStyle')}</label>
+          <input type="text" class="admin-input mt-label" id="cm-cfg-style" value="${escapeAttr(style)}" placeholder="${t('admin:achievements.configFields.eyeStylePlaceholder')}">
         </div>
       `;
     } else if (type === 'trail') {
       container.innerHTML = `
         <div class="form-row">
           <div>
-            <label class="field-label">Particle Key</label>
+            <label class="field-label">${t('admin:achievements.configFields.particleKey')}</label>
             <input type="text" class="admin-input mt-label" id="cm-cfg-particleKey" value="${escapeAttr(String(cfg.particleKey || 'particle_fire'))}" placeholder="particle_fire">
           </div>
           <div>
-            <label class="field-label">Tint (hex number)</label>
+            <label class="field-label">${t('admin:achievements.configFields.tintHex')}</label>
             <input type="text" class="admin-input mt-label" id="cm-cfg-tint" value="${cfg.tint != null ? '0x' + (Number(cfg.tint) >>> 0).toString(16).padStart(6, '0') : '0xff6b35'}" placeholder="0xff6b35">
           </div>
         </div>
         <div>
-          <label class="field-label">Frequency</label>
+          <label class="field-label">${t('admin:achievements.configFields.frequency')}</label>
           <input type="number" class="admin-input mt-label" id="cm-cfg-frequency" value="${cfg.frequency ?? 100}" min="1" max="1000">
         </div>
       `;
@@ -824,17 +829,17 @@ export class AchievementsTab {
       container.innerHTML = `
         <div class="form-row">
           <div>
-            <label class="field-label">Base Color (hex number)</label>
+            <label class="field-label">${t('admin:achievements.configFields.baseColor')}</label>
             <input type="text" class="admin-input mt-label" id="cm-cfg-baseColor" value="${cfg.baseColor != null ? '0x' + (Number(cfg.baseColor) >>> 0).toString(16).padStart(6, '0') : '0x333333'}" placeholder="0x333333">
           </div>
           <div>
-            <label class="field-label">Fuse Color (hex number)</label>
+            <label class="field-label">${t('admin:achievements.configFields.fuseColor')}</label>
             <input type="text" class="admin-input mt-label" id="cm-cfg-fuseColor" value="${cfg.fuseColor != null ? '0x' + (Number(cfg.fuseColor) >>> 0).toString(16).padStart(6, '0') : '0xff4400'}" placeholder="0xff4400">
           </div>
         </div>
         <div>
-          <label class="field-label">Label</label>
-          <input type="text" class="admin-input mt-label" id="cm-cfg-label" value="${escapeAttr(String(cfg.label || ''))}" placeholder="Short label">
+          <label class="field-label">${t('admin:achievements.configFields.label')}</label>
+          <input type="text" class="admin-input mt-label" id="cm-cfg-label" value="${escapeAttr(String(cfg.label || ''))}" placeholder="${t('admin:achievements.configFields.labelPlaceholder')}">
         </div>
       `;
     }
@@ -896,7 +901,7 @@ export class AchievementsTab {
         '/admin/achievements/export-all',
       );
       this.downloadExport(data, 'achievements-bundle.json');
-      this.notifications.success('Achievement bundle exported');
+      this.notifications.success(t('admin:achievements.bundleExported'));
     } catch (err: unknown) {
       this.notifications.error(getErrorMessage(err));
     }
@@ -907,20 +912,20 @@ export class AchievementsTab {
     overlay.className = 'modal-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Import Achievements');
+    overlay.setAttribute('aria-label', t('admin:achievements.importAchievements'));
 
     overlay.innerHTML = `
       <div class="modal" style="max-width:520px;">
-        <h2>Import Achievements</h2>
+        <h2>${t('admin:achievements.importAchievements')}</h2>
         <p class="modal-desc">
-          Select a JSON file (single achievement or achievement bundle).
+          ${t('admin:achievements.importFileDesc')}
         </p>
         <input type="file" accept=".json" id="ach-import-file" class="file-input">
         <div id="ach-import-error" class="modal-error" style="margin-bottom:8px;"></div>
         <div id="ach-import-preview" class="import-preview"></div>
         <div class="modal-actions">
-          <button class="btn btn-secondary" id="ach-import-cancel">Cancel</button>
-          <button class="btn btn-primary" id="ach-import-submit" disabled>Import</button>
+          <button class="btn btn-secondary" id="ach-import-cancel">${t('admin:achievements.cancel')}</button>
+          <button class="btn btn-primary" id="ach-import-submit" disabled>${t('admin:achievements.import')}</button>
         </div>
       </div>
     `;
@@ -949,7 +954,7 @@ export class AchievementsTab {
 
         if (json._format === 'blast-arena-achievement-bundle') {
           parsedData = json;
-          previewEl.innerHTML = `<span class="text-accent">Bundle: ${json.achievements?.length || 0} achievements, ${json.cosmetics?.length || 0} cosmetics</span>`;
+          previewEl.innerHTML = `<span class="text-accent">${t('admin:achievements.importBundlePreview', { achievements: json.achievements?.length || 0, cosmetics: json.cosmetics?.length || 0 })}</span>`;
         } else if (json._format === 'blast-arena-achievement') {
           // Wrap single achievement into bundle format
           parsedData = {
@@ -977,10 +982,9 @@ export class AchievementsTab {
                 ]
               : [],
           };
-          previewEl.innerHTML = `<span class="text-accent">Single achievement: ${escapeHtml(json.name)}</span>`;
+          previewEl.innerHTML = `<span class="text-accent">${t('admin:achievements.importSinglePreview', { name: escapeHtml(json.name) })}</span>`;
         } else {
-          errorEl.textContent =
-            'Invalid file format. Expected blast-arena-achievement or blast-arena-achievement-bundle.';
+          errorEl.textContent = t('admin:achievements.importInvalidFormat');
           errorEl.style.display = 'block';
           return;
         }
@@ -988,7 +992,7 @@ export class AchievementsTab {
         previewEl.style.display = 'block';
         submitBtn.disabled = false;
       } catch {
-        errorEl.textContent = 'Invalid JSON file';
+        errorEl.textContent = t('admin:achievements.importInvalidJson');
         errorEl.style.display = 'block';
       }
     });
@@ -1019,7 +1023,7 @@ export class AchievementsTab {
         } else {
           // No conflicts, or no cosmetics — all imported directly
           overlay.remove();
-          this.notifications.success(result.message || 'Achievements imported');
+          this.notifications.success(result.message || t('admin:achievements.importSuccess'));
           await this.loadAchievements();
         }
       } catch (err: unknown) {
@@ -1038,13 +1042,13 @@ export class AchievementsTab {
     overlay.className = 'modal-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Resolve Cosmetic Conflicts');
+    overlay.setAttribute('aria-label', t('admin:achievements.resolveConflicts'));
 
     const rows = conflicts
       .map((c, i) => {
         const existingInfo = c.existingId
-          ? `<span class="text-accent">Existing: "${escapeHtml(c.existingName || '')}" (ID ${c.existingId})</span>`
-          : '<span class="text-dim">No existing match</span>';
+          ? `<span class="text-accent">${t('admin:achievements.conflictExisting', { name: escapeHtml(c.existingName || ''), id: c.existingId })}</span>`
+          : `<span class="text-dim">${t('admin:achievements.conflictNoMatch')}</span>`;
 
         return `
         <div class="conflict-card">
@@ -1052,17 +1056,17 @@ export class AchievementsTab {
           <div class="conflict-card-info">${existingInfo}</div>
           <div class="conflict-card-options">
             <label>
-              <input type="radio" name="conflict-${i}" value="create" checked> Create new
+              <input type="radio" name="conflict-${i}" value="create" checked> ${t('admin:achievements.conflictCreateNew')}
             </label>
             ${
               c.existingId
                 ? `<label>
-              <input type="radio" name="conflict-${i}" value="${c.existingId}"> Use existing
+              <input type="radio" name="conflict-${i}" value="${c.existingId}"> ${t('admin:achievements.conflictUseExisting')}
             </label>`
                 : ''
             }
             <label>
-              <input type="radio" name="conflict-${i}" value="skip"> Skip (no reward)
+              <input type="radio" name="conflict-${i}" value="skip"> ${t('admin:achievements.conflictSkip')}
             </label>
           </div>
         </div>
@@ -1072,14 +1076,14 @@ export class AchievementsTab {
 
     overlay.innerHTML = `
       <div class="modal modal-scroll" style="max-width:560px;">
-        <h2>Resolve Cosmetic Conflicts</h2>
+        <h2>${t('admin:achievements.resolveConflicts')}</h2>
         <p class="modal-desc" style="margin-bottom:16px;">
-          The following cosmetics are referenced by achievements in the import. Choose how to handle each:
+          ${t('admin:achievements.conflictDesc')}
         </p>
         ${rows}
         <div class="modal-actions">
-          <button class="btn btn-secondary" id="conflict-cancel">Cancel</button>
-          <button class="btn btn-primary" id="conflict-submit">Import</button>
+          <button class="btn btn-secondary" id="conflict-cancel">${t('admin:achievements.cancel')}</button>
+          <button class="btn btn-primary" id="conflict-submit">${t('admin:achievements.import')}</button>
         </div>
       </div>
     `;
@@ -1137,12 +1141,12 @@ export class AchievementsTab {
         const json = JSON.parse(text);
 
         if (json._format && json._format !== 'blast-arena-cosmetic') {
-          this.notifications.error('Invalid file format. Expected blast-arena-cosmetic.');
+          this.notifications.error(t('admin:achievements.cosmeticImportInvalidFormat'));
           return;
         }
 
         await ApiClient.post('/admin/cosmetics/import', json);
-        this.notifications.success('Cosmetic imported');
+        this.notifications.success(t('admin:achievements.cosmeticImported'));
         await this.loadCosmetics();
       } catch (err: unknown) {
         this.notifications.error(getErrorMessage(err));
@@ -1163,17 +1167,17 @@ export class AchievementsTab {
     overlay.className = 'modal-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', `Delete ${entity}`);
+    overlay.setAttribute('aria-label', t('admin:achievements.deleteEntity', { entity }));
 
     overlay.innerHTML = `
       <div class="modal" style="max-width:420px;">
-        <h2 class="text-danger">Delete ${escapeHtml(entity)}</h2>
-        <p class="modal-desc" style="font-size:14px;">This will permanently delete <strong>${escapeHtml(name)}</strong>. This action cannot be undone.</p>
-        <p class="modal-hint">Type the name to confirm:</p>
-        <input type="text" class="admin-input mt-label" id="del-confirm-input" placeholder="${escapeAttr(name)}" aria-label="Type name to confirm deletion">
+        <h2 class="text-danger">${t('admin:achievements.deleteEntity', { entity: escapeHtml(entity) })}</h2>
+        <p class="modal-desc" style="font-size:14px;">${t('admin:achievements.deleteConfirmMessage', { name: escapeHtml(name) })}</p>
+        <p class="modal-hint">${t('admin:achievements.deleteTypePrompt')}</p>
+        <input type="text" class="admin-input mt-label" id="del-confirm-input" placeholder="${escapeAttr(name)}" aria-label="${t('admin:achievements.deleteConfirmAriaLabel')}">
         <div class="modal-actions">
-          <button class="btn btn-secondary" id="del-cancel">Cancel</button>
-          <button class="btn-danger btn-confirm" id="del-confirm" style="opacity:0.5;" disabled>Delete</button>
+          <button class="btn btn-secondary" id="del-cancel">${t('admin:achievements.cancel')}</button>
+          <button class="btn-danger btn-confirm" id="del-confirm" style="opacity:0.5;" disabled>${t('admin:achievements.deleteBtn')}</button>
         </div>
       </div>
     `;

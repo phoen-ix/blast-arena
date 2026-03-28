@@ -9,10 +9,13 @@ import {
   CustomMapSummary,
 } from '@blast-arena/shared';
 import game from '../../main';
+import { t } from '../../i18n';
 
 export class CreateRoomView implements ILobbyView {
   readonly viewId = 'create-room';
-  readonly title = 'Create Room';
+  get title() {
+    return t('ui:createRoom.title');
+  }
 
   private deps: ViewDeps;
   private container: HTMLElement | null = null;
@@ -68,25 +71,25 @@ export class CreateRoomView implements ILobbyView {
       <div class="create-room-page">
         <div class="create-room-content">
           <div class="create-room-section">
-            <h3 class="create-room-section-title">General</h3>
+            <h3 class="create-room-section-title">${t('ui:createRoom.general')}</h3>
             <div class="create-room-grid">
               <div class="form-group">
-                <label>Room Name</label>
-                <input type="text" class="input" id="cr-name" placeholder="Leave blank for random name" maxlength="30">
+                <label>${t('ui:createRoom.roomName')}</label>
+                <input type="text" class="input" id="cr-name" placeholder="${t('ui:createRoom.roomNamePlaceholder')}" maxlength="30">
               </div>
               <div class="form-group">
-                <label>Game Mode</label>
+                <label>${t('ui:createRoom.gameMode')}</label>
                 <select class="select" id="cr-mode">
-                  <option value="ffa">Free for All</option>
-                  <option value="teams">Teams</option>
-                  <option value="battle_royale">Battle Royale</option>
-                  <option value="sudden_death">Sudden Death</option>
-                  <option value="deathmatch">Deathmatch</option>
-                  <option value="king_of_the_hill">King of the Hill</option>
+                  <option value="ffa">${t('game:modes.ffa.name')}</option>
+                  <option value="teams">${t('game:modes.teams.name')}</option>
+                  <option value="battle_royale">${t('game:modes.battle_royale.name')}</option>
+                  <option value="sudden_death">${t('game:modes.sudden_death.name')}</option>
+                  <option value="deathmatch">${t('game:modes.deathmatch.name')}</option>
+                  <option value="king_of_the_hill">${t('game:modes.king_of_the_hill.name')}</option>
                 </select>
               </div>
               <div class="form-group">
-                <label>Max Players</label>
+                <label>${t('ui:createRoom.maxPlayers')}</label>
                 <select class="select" id="cr-max-players">
                   <option value="2">2</option>
                   <option value="4" selected>4</option>
@@ -95,93 +98,93 @@ export class CreateRoomView implements ILobbyView {
                 </select>
               </div>
               <div class="form-group">
-                <label>Match Time</label>
+                <label>${t('ui:createRoom.matchTime')}</label>
                 <select class="select" id="cr-round-time">
-                  <option value="60">1 min</option>
-                  <option value="120">2 min</option>
-                  <option value="180" selected>3 min</option>
-                  <option value="300">5 min</option>
-                  <option value="600">10 min</option>
+                  <option value="60">${t('ui:createRoom.matchTimes.60')}</option>
+                  <option value="120">${t('ui:createRoom.matchTimes.120')}</option>
+                  <option value="180" selected>${t('ui:createRoom.matchTimes.180')}</option>
+                  <option value="300">${t('ui:createRoom.matchTimes.300')}</option>
+                  <option value="600">${t('ui:createRoom.matchTimes.600')}</option>
                 </select>
               </div>
             </div>
           </div>
 
           <div class="create-room-section">
-            <h3 class="create-room-section-title">Map</h3>
+            <h3 class="create-room-section-title">${t('ui:createRoom.map')}</h3>
             <div class="create-room-grid">
               <div class="form-group" style="grid-column:1/-1;">
                 <div style="display:flex;align-items:center;gap:6px;">
-                  <label style="flex:1;">Map</label>
-                  <button class="btn btn-sm btn-ghost" id="cr-new-map" style="font-size:11px;padding:2px 8px;">+ New Map</button>
+                  <label style="flex:1;">${t('ui:createRoom.map')}</label>
+                  <button class="btn btn-sm btn-ghost" id="cr-new-map" style="font-size:11px;padding:2px 8px;">${t('ui:createRoom.newMap')}</button>
                 </div>
                 <select class="select" id="cr-custom-map">
-                  <option value="">Random (Generated)</option>
+                  <option value="">${t('ui:createRoom.randomGenerated')}</option>
                   ${this.buildMapOptions()}
                 </select>
                 <div id="cr-map-hint" style="font-size:10px;color:var(--text-dim);margin-top:2px;display:none;"></div>
               </div>
               <div class="form-group">
-                <label>Map Size</label>
+                <label>${t('ui:createRoom.mapSize')}</label>
                 <select class="select" id="cr-map-size">
-                  <option value="21">21x21 (Small)</option>
-                  <option value="31" selected>31x31 (Normal)</option>
-                  <option value="39">39x39 (Large)</option>
-                  <option value="51">51x51 (Huge)</option>
-                  <option value="61">61x61 (Massive)</option>
+                  <option value="21">${t('ui:createRoom.mapSizes.21')}</option>
+                  <option value="31" selected>${t('ui:createRoom.mapSizes.31')}</option>
+                  <option value="39">${t('ui:createRoom.mapSizes.39')}</option>
+                  <option value="51">${t('ui:createRoom.mapSizes.51')}</option>
+                  <option value="61">${t('ui:createRoom.mapSizes.61')}</option>
                 </select>
               </div>
               <div class="form-group">
-                <label>Wall Density</label>
+                <label>${t('ui:createRoom.wallDensity')}</label>
                 <select class="select" id="cr-wall-density">
-                  <option value="0.3">Low (30%)</option>
-                  <option value="0.5">Medium (50%)</option>
-                  <option value="0.65" selected>High (65%)</option>
-                  <option value="0.8">Very High (80%)</option>
+                  <option value="0.3">${t('ui:createRoom.wallDensities.low30')}</option>
+                  <option value="0.5">${t('ui:createRoom.wallDensities.med50')}</option>
+                  <option value="0.65" selected>${t('ui:createRoom.wallDensities.high65')}</option>
+                  <option value="0.8">${t('ui:createRoom.wallDensities.vhigh80')}</option>
                 </select>
               </div>
               <div class="form-group">
-                <label>Power-Up Rate</label>
+                <label>${t('ui:createRoom.powerUpRate')}</label>
                 <select class="select" id="cr-powerup-rate">
-                  <option value="0">None (0%)</option>
-                  <option value="0.15">Low (15%)</option>
-                  <option value="0.3" selected>Normal (30%)</option>
-                  <option value="0.5">High (50%)</option>
-                  <option value="0.8">Very High (80%)</option>
+                  <option value="0">${t('ui:createRoom.puRates.none0')}</option>
+                  <option value="0.15">${t('ui:createRoom.puRates.low15')}</option>
+                  <option value="0.3" selected>${t('ui:createRoom.puRates.normal30')}</option>
+                  <option value="0.5">${t('ui:createRoom.puRates.high50')}</option>
+                  <option value="0.8">${t('ui:createRoom.puRates.vhigh80')}</option>
                 </select>
               </div>
             </div>
           </div>
 
           <div class="create-room-section">
-            <h3 class="create-room-section-title">Bots</h3>
+            <h3 class="create-room-section-title">${t('ui:createRoom.bots')}</h3>
             <div class="create-room-grid">
               <div class="form-group">
-                <label>Bot Count</label>
+                <label>${t('ui:createRoom.botCount')}</label>
                 <select class="select" id="cr-bots">
-                  <option value="0" selected>None</option>
-                  <option value="1">1 Bot</option>
-                  <option value="2">2 Bots</option>
-                  <option value="3">3 Bots</option>
-                  <option value="4">4 Bots</option>
-                  <option value="5">5 Bots</option>
-                  <option value="6">6 Bots</option>
-                  <option value="7">7 Bots</option>
+                  <option value="0" selected>${t('ui:createRoom.none')}</option>
+                  <option value="1">${t('ui:createRoom.nBots', { count: 1 })}</option>
+                  <option value="2">${t('ui:createRoom.nBots', { count: 2 })}</option>
+                  <option value="3">${t('ui:createRoom.nBots', { count: 3 })}</option>
+                  <option value="4">${t('ui:createRoom.nBots', { count: 4 })}</option>
+                  <option value="5">${t('ui:createRoom.nBots', { count: 5 })}</option>
+                  <option value="6">${t('ui:createRoom.nBots', { count: 6 })}</option>
+                  <option value="7">${t('ui:createRoom.nBots', { count: 7 })}</option>
                 </select>
               </div>
               <div class="form-group">
-                <label>Bot Difficulty</label>
+                <label>${t('ui:createRoom.botDifficulty')}</label>
                 <select class="select" id="cr-bot-difficulty" disabled>
-                  <option value="easy">Easy</option>
-                  <option value="normal" selected>Normal</option>
-                  <option value="hard">Hard</option>
+                  <option value="easy">${t('ui:createRoom.difficulty.easy')}</option>
+                  <option value="normal" selected>${t('ui:createRoom.difficulty.normal')}</option>
+                  <option value="hard">${t('ui:createRoom.difficulty.hard')}</option>
                 </select>
               </div>
               ${
                 hasMultipleAIs
                   ? `
               <div class="form-group">
-                <label>Bot AI</label>
+                <label>${t('ui:createRoom.botAI')}</label>
                 <select class="select" id="cr-bot-ai" disabled>
                   ${this.activeAIs.map((ai) => `<option value="${ai.id}"${ai.isBuiltin ? ' selected' : ''}>${ai.name}</option>`).join('')}
                 </select>
@@ -193,47 +196,47 @@ export class CreateRoomView implements ILobbyView {
           </div>
 
           <div class="create-room-section">
-            <h3 class="create-room-section-title">Options</h3>
+            <h3 class="create-room-section-title">${t('ui:createRoom.options')}</h3>
             <div class="create-room-options">
               <label class="option-chip">
                 <input type="checkbox" id="cr-reinforced-walls" style="accent-color:var(--warning);">
-                <span style="color:var(--warning);">Reinforced Walls</span>
+                <span style="color:var(--warning);">${t('ui:createRoom.reinforcedWalls')}</span>
               </label>
               <label class="option-chip">
                 <input type="checkbox" id="cr-map-events" style="accent-color:var(--warning);">
-                <span style="color:var(--warning);">Map Events</span>
+                <span style="color:var(--warning);">${t('ui:createRoom.mapEvents')}</span>
               </label>
               <label class="option-chip">
                 <input type="checkbox" id="cr-hazard-tiles" style="accent-color:var(--info);">
-                <span style="color:var(--info);">Hazard Tiles</span>
+                <span style="color:var(--info);">${t('ui:createRoom.hazardTiles')}</span>
               </label>
               ${
                 this.recordingsEnabled
                   ? `
               <label class="option-chip">
                 <input type="checkbox" id="cr-record-game" checked style="accent-color:var(--accent);">
-                <span style="color:var(--accent);">Record Game</span>
+                <span style="color:var(--accent);">${t('ui:createRoom.recordGame')}</span>
               </label>`
                   : ''
               }
               <span id="cr-ff-row" style="display:none;">
                 <label class="option-chip">
                   <input type="checkbox" id="cr-friendly-fire" checked style="accent-color:var(--danger);">
-                  <span style="color:var(--danger);">Friendly Fire</span>
+                  <span style="color:var(--danger);">${t('ui:createRoom.friendlyFire')}</span>
                 </label>
               </span>
             </div>
           </div>
 
           <div class="create-room-section">
-            <h3 class="create-room-section-title">Power-Ups</h3>
+            <h3 class="create-room-section-title">${t('ui:createRoom.powerUps')}</h3>
             <div class="create-room-options">
               ${allPowerUps
                 .map(
                   (pu) => `
                 <label class="option-chip">
                   <input type="checkbox" class="powerup-check" value="${pu.type}" checked style="accent-color:${pu.color};">
-                  <span style="color:${pu.color};">${pu.name}</span>
+                  <span style="color:${pu.color};">${t(`game:powerups.${pu.type}.name`)}</span>
                 </label>
               `,
                 )
@@ -242,8 +245,8 @@ export class CreateRoomView implements ILobbyView {
           </div>
 
           <div class="create-room-actions">
-            <button class="btn btn-ghost" id="cr-cancel">Cancel</button>
-            <button class="btn btn-primary" id="cr-submit">Create Room</button>
+            <button class="btn btn-ghost" id="cr-cancel">${t('ui:createRoom.cancel')}</button>
+            <button class="btn btn-primary" id="cr-submit">${t('ui:createRoom.create')}</button>
           </div>
         </div>
       </div>
@@ -351,11 +354,14 @@ export class CreateRoomView implements ILobbyView {
         if (map) {
           const maxP = parseInt(maxPlayersSelect.value);
           if (map.spawnCount < maxP) {
-            mapHint.textContent = `This map has ${map.spawnCount} spawn points (${map.spawnCount} players max)`;
+            mapHint.textContent = t('ui:createRoom.mapSpawnHint', { count: map.spawnCount });
             mapHint.style.display = 'block';
             mapHint.style.color = 'var(--warning)';
           } else {
-            mapHint.textContent = `${map.mapWidth}x${map.mapHeight} map`;
+            mapHint.textContent = t('ui:createRoom.mapDimensions', {
+              width: map.mapWidth,
+              height: map.mapHeight,
+            });
             mapHint.style.display = 'block';
             mapHint.style.color = 'var(--text-dim)';
           }
@@ -425,7 +431,7 @@ export class CreateRoomView implements ILobbyView {
     const effectiveBots = Math.min(botCount, maxPlayers - 1);
     if (effectiveBots < botCount) {
       this.deps.notifications.info(
-        `Bot count capped to ${effectiveBots} (max ${maxPlayers} players)`,
+        t('ui:createRoom.botsCapped', { count: effectiveBots, max: maxPlayers }),
       );
     }
 
@@ -470,10 +476,10 @@ export class CreateRoomView implements ILobbyView {
       },
       (response: any) => {
         if (response.success && response.room) {
-          this.deps.notifications.success('Room created!');
+          this.deps.notifications.success(t('ui:createRoom.roomCreated'));
           this.onRoomCreated(response.room);
         } else {
-          this.deps.notifications.error(response.error || 'Failed to create room');
+          this.deps.notifications.error(response.error || t('ui:createRoom.createFailed'));
         }
       },
     );
@@ -485,14 +491,14 @@ export class CreateRoomView implements ILobbyView {
     const communityMaps = this.publishedMaps.filter((m) => !myMapIds.has(m.id));
     let html = '';
     if (this.myMaps.length > 0) {
-      html += '<optgroup label="My Maps">';
+      html += `<optgroup label="${t('ui:createRoom.myMaps')}">`;
       for (const m of this.myMaps) {
         html += `<option value="${m.id}">${m.name} (${m.mapWidth}x${m.mapHeight}, ${m.spawnCount} spawns)</option>`;
       }
       html += '</optgroup>';
     }
     if (communityMaps.length > 0) {
-      html += '<optgroup label="Community Maps">';
+      html += `<optgroup label="${t('ui:createRoom.communityMaps')}">`;
       for (const m of communityMaps) {
         const by = m.creatorUsername ? ` by ${m.creatorUsername}` : '';
         html += `<option value="${m.id}">${m.name}${by} (${m.mapWidth}x${m.mapHeight}, ${m.spawnCount} spawns)</option>`;

@@ -8,6 +8,7 @@ import { escapeHtml } from '../utils/html';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { ILobbyView, ViewDeps } from './views/types';
 import { RoomsView } from './views/RoomsView';
+import { t } from '../i18n';
 
 const SIDEBAR_COLLAPSED_KEY = 'blast-arena-sidebar-collapsed';
 
@@ -267,56 +268,56 @@ export class LobbyUI {
         </div>
 
         <div class="sidebar-nav">
-          <div class="sidebar-section-label">Play</div>
+          <div class="sidebar-section-label">${t('ui:sidebar.play')}</div>
           <button class="sidebar-nav-item active" id="nav-rooms">
             <span class="nav-icon">&#9776;</span>
-            <span class="nav-label">Rooms</span>
+            <span class="nav-label">${t('ui:sidebar.rooms')}</span>
           </button>
           <button class="sidebar-nav-item" id="nav-campaign">
             <span class="nav-icon">&#9876;</span>
-            <span class="nav-label">Campaign</span>
+            <span class="nav-label">${t('ui:sidebar.campaign')}</span>
           </button>
           <button class="sidebar-nav-item" id="nav-maps">
             <span class="nav-icon">&#9638;</span>
-            <span class="nav-label">My Maps</span>
+            <span class="nav-label">${t('ui:sidebar.myMaps')}</span>
           </button>
 
-          <div class="sidebar-section-label">Social</div>
+          <div class="sidebar-section-label">${t('ui:sidebar.social')}</div>
           <button class="sidebar-nav-item" id="nav-friends">
             <span class="nav-icon">&#9829;</span>
-            <span class="nav-label">Friends</span>
+            <span class="nav-label">${t('ui:sidebar.friends')}</span>
           </button>
           <button class="sidebar-nav-item" id="nav-messages">
             <span class="nav-icon">&#9993;</span>
-            <span class="nav-label">Messages</span>
+            <span class="nav-label">${t('ui:sidebar.messages')}</span>
           </button>
           <button class="sidebar-nav-item" id="nav-party">
             <span class="nav-icon">&#9733;</span>
-            <span class="nav-label">Party</span>
+            <span class="nav-label">${t('ui:sidebar.party')}</span>
           </button>
 
-          <div class="sidebar-section-label">Progress</div>
+          <div class="sidebar-section-label">${t('ui:sidebar.progress')}</div>
           <button class="sidebar-nav-item" id="nav-leaderboard">
             <span class="nav-icon">&#9818;</span>
-            <span class="nav-label">Leaderboard</span>
+            <span class="nav-label">${t('ui:sidebar.leaderboard')}</span>
           </button>
 
           <div class="sidebar-divider"></div>
 
           <button class="sidebar-nav-item" id="nav-settings">
             <span class="nav-icon">&#9881;</span>
-            <span class="nav-label">Settings</span>
+            <span class="nav-label">${t('ui:sidebar.settings')}</span>
           </button>
           <button class="sidebar-nav-item" id="nav-help">
             <span class="nav-icon">?</span>
-            <span class="nav-label">Help</span>
+            <span class="nav-label">${t('ui:sidebar.help')}</span>
           </button>
           ${
             isStaff
               ? `
           <button class="sidebar-nav-item" id="nav-admin">
             <span class="nav-icon">&#9888;</span>
-            <span class="nav-label">Admin</span>
+            <span class="nav-label">${t('ui:sidebar.admin')}</span>
           </button>
           `
               : ''
@@ -324,7 +325,7 @@ export class LobbyUI {
         </div>
 
         <div class="sidebar-footer">
-          <div class="sidebar-user" id="sidebar-user-profile" style="cursor:pointer;" title="View profile">
+          <div class="sidebar-user" id="sidebar-user-profile" style="cursor:pointer;" title="${t('ui:sidebar.viewProfile')}">
             <div class="sidebar-user-avatar">${initial}</div>
             <div class="sidebar-user-info">
               <div class="sidebar-user-name">${username}</div>
@@ -336,11 +337,11 @@ export class LobbyUI {
           </div>
           <button class="sidebar-nav-item" id="nav-logout">
             <span class="nav-icon">&#10132;</span>
-            <span class="nav-label">Logout</span>
+            <span class="nav-label">${t('ui:sidebar.logout')}</span>
           </button>
         </div>
       </nav>
-      <button class="sidebar-ear" id="sidebar-toggle" title="${this.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}">
+      <button class="sidebar-ear" id="sidebar-toggle" title="${this.sidebarCollapsed ? t('ui:sidebar.expand') : t('ui:sidebar.collapse')}">
         <span class="sidebar-ear-icon">${this.sidebarCollapsed ? '&#9654;' : '&#9664;'}</span>
       </button>
 

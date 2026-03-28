@@ -2,11 +2,14 @@ import { ILobbyView, ViewDeps } from './types';
 import { ApiClient } from '../../network/ApiClient';
 import { CustomMapSummary } from '@blast-arena/shared';
 import { escapeHtml } from '../../utils/html';
+import { t } from '../../i18n';
 import game from '../../main';
 
 export class MapsView implements ILobbyView {
   readonly viewId = 'maps';
-  readonly title = 'My Maps';
+  get title() {
+    return t('ui:maps.title');
+  }
 
   private deps: ViewDeps;
   private container: HTMLElement | null = null;
@@ -17,7 +20,7 @@ export class MapsView implements ILobbyView {
   }
 
   getHeaderActions(): string {
-    return '<button class="btn btn-primary btn-sm" id="create-map-btn">+ New Map</button>';
+    return `<button class="btn btn-primary btn-sm" id="create-map-btn">${t('ui:maps.create')}</button>`;
   }
 
   async render(container: HTMLElement): Promise<void> {
@@ -46,9 +49,9 @@ export class MapsView implements ILobbyView {
       this.container.innerHTML = `
         <div style="text-align:center;padding:40px 20px;color:var(--text-dim);">
           <div style="font-size:48px;margin-bottom:16px;">&#9638;</div>
-          <h3 style="margin:0 0 8px 0;color:var(--text);">No Maps Yet</h3>
-          <p style="margin:0 0 16px 0;">Create custom maps to use in multiplayer rooms.</p>
-          <button class="btn btn-primary" id="empty-create-map">Create Your First Map</button>
+          <h3 style="margin:0 0 8px 0;color:var(--text);">${t('ui:maps.noMapsYet')}</h3>
+          <p style="margin:0 0 16px 0;">${t('ui:maps.emptyDescription')}</p>
+          <button class="btn btn-primary" id="empty-create-map">${t('ui:maps.createFirst')}</button>
         </div>
       `;
       this.container.querySelector('#empty-create-map')?.addEventListener('click', () => {
@@ -61,12 +64,12 @@ export class MapsView implements ILobbyView {
       <table class="data-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Size</th>
-            <th>Spawns</th>
-            <th>Plays</th>
-            <th>Published</th>
-            <th>Actions</th>
+            <th>${t('ui:maps.name')}</th>
+            <th>${t('ui:maps.size')}</th>
+            <th>${t('ui:maps.spawns')}</th>
+            <th>${t('ui:maps.plays')}</th>
+            <th>${t('ui:maps.published')}</th>
+            <th>${t('ui:maps.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -78,11 +81,11 @@ export class MapsView implements ILobbyView {
               <td>${m.mapWidth}x${m.mapHeight}</td>
               <td>${m.spawnCount}</td>
               <td>${m.playCount}</td>
-              <td>${m.isPublished ? '<span style="color:var(--primary);">Yes</span>' : '<span style="color:var(--text-dim);">No</span>'}</td>
+              <td>${m.isPublished ? `<span style="color:var(--primary);">${t('ui:maps.yes')}</span>` : `<span style="color:var(--text-dim);">${t('ui:maps.no')}</span>`}</td>
               <td style="display:flex;gap:4px;">
-                <button class="btn btn-sm btn-ghost map-edit" data-id="${m.id}">Edit</button>
-                <button class="btn btn-sm btn-ghost map-toggle-pub" data-id="${m.id}" data-published="${m.isPublished}">${m.isPublished ? 'Unpublish' : 'Publish'}</button>
-                <button class="btn btn-sm btn-ghost" style="color:var(--danger);" data-id="${m.id}" data-action="delete">Delete</button>
+                <button class="btn btn-sm btn-ghost map-edit" data-id="${m.id}">${t('ui:maps.edit')}</button>
+                <button class="btn btn-sm btn-ghost map-toggle-pub" data-id="${m.id}" data-published="${m.isPublished}">${m.isPublished ? t('ui:maps.unpublish') : t('ui:maps.publish')}</button>
+                <button class="btn btn-sm btn-ghost" style="color:var(--danger);" data-id="${m.id}" data-action="delete">${t('ui:maps.delete')}</button>
               </td>
             </tr>
           `,
@@ -156,11 +159,13 @@ export class MapsView implements ILobbyView {
         spawnPoints: full.spawnPoints,
         isPublished: publish,
       });
-      this.deps.notifications.success(publish ? 'Map published!' : 'Map unpublished');
+      this.deps.notifications.success(
+        publish ? t('ui:maps.mapPublished') : t('ui:maps.mapUnpublished'),
+      );
       await this.loadMaps();
       this.renderContent();
     } catch (err) {
-      this.deps.notifications.error('Failed to update map: ' + (err as Error).message);
+      this.deps.notifications.error(t('ui:maps.failedUpdate', { error: (err as Error).message }));
     }
   }
 
@@ -168,15 +173,15 @@ export class MapsView implements ILobbyView {
     const map = this.maps.find((m) => m.id === id);
     if (!map) return;
 
-    if (!confirm(`Delete map "${map.name}"? This cannot be undone.`)) return;
+    if (!confirm(t('ui:maps.confirmDeleteNamed', { name: map.name }))) return;
 
     try {
       await ApiClient.delete(`/maps/${id}`);
-      this.deps.notifications.success('Map deleted');
+      this.deps.notifications.success(t('ui:maps.mapDeleted'));
       await this.loadMaps();
       this.renderContent();
     } catch (err) {
-      this.deps.notifications.error('Failed to delete map: ' + (err as Error).message);
+      this.deps.notifications.error(t('ui:maps.failedDelete', { error: (err as Error).message }));
     }
   }
 }

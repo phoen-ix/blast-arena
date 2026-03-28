@@ -9,6 +9,7 @@ import { PLAYER_COLORS } from '../../scenes/BootScene';
 import { ApiClient } from '../../network/ApiClient';
 import { drawPlayerSprite, playerColorToHex } from '../../utils/playerCanvas';
 import type { BuddySettings } from '@blast-arena/shared';
+import { t } from '../../i18n';
 
 const SECTION_HEADING_STYLE = `
   font-family: var(--font-display);
@@ -42,7 +43,7 @@ export function showBuddyModal(
   overlay.className = 'modal-overlay';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.setAttribute('aria-label', 'Buddy Mode');
+  overlay.setAttribute('aria-label', t('campaign:buddyModal.ariaLabel'));
 
   const escHandler = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -85,12 +86,14 @@ export function showBuddyModal(
 
     const sectionTitle = document.createElement('div');
     sectionTitle.style.cssText = SECTION_HEADING_STYLE + 'margin-bottom:0;font-size:16px;';
-    sectionTitle.textContent = 'Buddy';
+    sectionTitle.textContent = t('campaign:buddyModal.buddy');
     headerRow.appendChild(sectionTitle);
 
     const editBtn = document.createElement('button');
     editBtn.className = 'btn btn-ghost btn-sm';
-    editBtn.textContent = editingBuddy ? 'Done' : 'Edit';
+    editBtn.textContent = editingBuddy
+      ? t('campaign:buddyModal.done')
+      : t('campaign:buddyModal.edit');
     editBtn.addEventListener('click', () => {
       editingBuddy = !editingBuddy;
       if (!editingBuddy) {
@@ -138,7 +141,9 @@ export function showBuddyModal(
       nameSpan.textContent = buddySettings.name;
       const sizeSpan = document.createElement('span');
       sizeSpan.style.cssText = 'margin-left:6px;';
-      sizeSpan.textContent = `${Math.round(buddySettings.size * 100)}% size`;
+      sizeSpan.textContent = t('campaign:progress.size', {
+        percent: Math.round(buddySettings.size * 100),
+      });
       textCol.appendChild(nameSpan);
       textCol.appendChild(sizeSpan);
       summary.appendChild(textCol);
@@ -158,7 +163,7 @@ export function showBuddyModal(
     const nameLabel = document.createElement('label');
     nameLabel.style.cssText =
       'font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px;';
-    nameLabel.textContent = 'Name';
+    nameLabel.textContent = t('campaign:buddyModal.name');
     nameGroup.appendChild(nameLabel);
 
     const nameInput = document.createElement('input');
@@ -166,10 +171,10 @@ export function showBuddyModal(
     nameInput.type = 'text';
     nameInput.maxLength = 20;
     nameInput.value = buddySettings.name;
-    nameInput.placeholder = 'Buddy';
+    nameInput.placeholder = t('campaign:buddyModal.namePlaceholder');
     nameInput.style.cssText = 'width:100%;';
     nameInput.addEventListener('input', () => {
-      buddySettings.name = nameInput.value || 'Buddy';
+      buddySettings.name = nameInput.value || t('campaign:buddyModal.namePlaceholder');
     });
     nameGroup.appendChild(nameInput);
     editor.appendChild(nameGroup);
@@ -179,7 +184,7 @@ export function showBuddyModal(
     const colorLabel = document.createElement('label');
     colorLabel.style.cssText =
       'font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px;';
-    colorLabel.textContent = 'Color';
+    colorLabel.textContent = t('campaign:buddyModal.color');
     colorGroup.appendChild(colorLabel);
 
     const swatches = document.createElement('div');
@@ -209,7 +214,9 @@ export function showBuddyModal(
     const sizeLabel = document.createElement('label');
     sizeLabel.style.cssText =
       'font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px;';
-    sizeLabel.textContent = `Size: ${Math.round(buddySettings.size * 100)}%`;
+    sizeLabel.textContent = t('campaign:buddyModal.sizeLabel', {
+      percent: Math.round(buddySettings.size * 100),
+    });
     sizeGroup.appendChild(sizeLabel);
 
     const slider = document.createElement('input');
@@ -225,7 +232,7 @@ export function showBuddyModal(
       'display:flex;align-items:flex-end;gap:8px;justify-content:center;padding:8px 0;';
     const previewLabel = document.createElement('span');
     previewLabel.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:2px;';
-    previewLabel.textContent = 'P1';
+    previewLabel.textContent = t('campaign:buddyModal.p1Label');
     previewRow.appendChild(previewLabel);
 
     const previewCanvas = document.createElement('canvas');
@@ -249,12 +256,12 @@ export function showBuddyModal(
 
     const buddyLabel = document.createElement('span');
     buddyLabel.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:2px;';
-    buddyLabel.textContent = 'Buddy';
+    buddyLabel.textContent = t('campaign:buddyModal.buddyLabel');
     previewRow.appendChild(buddyLabel);
 
     slider.addEventListener('input', () => {
       buddySettings.size = parseInt(slider.value, 10) / 100;
-      sizeLabel.textContent = `Size: ${slider.value}%`;
+      sizeLabel.textContent = t('campaign:buddyModal.sizeLabel', { percent: slider.value });
       updatePreview();
     });
     sizeGroup.appendChild(slider);
@@ -279,7 +286,7 @@ export function showBuddyModal(
 
     const title = document.createElement('h2');
     title.style.cssText = 'margin:0;font-size:20px;';
-    title.textContent = 'Buddy Mode';
+    title.textContent = t('campaign:buddyModal.title');
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'btn btn-ghost btn-sm';
@@ -303,7 +310,7 @@ export function showBuddyModal(
     if (loading) {
       const loadingText = document.createElement('div');
       loadingText.style.cssText = 'text-align:center;color:var(--text-dim);padding:20px;';
-      loadingText.textContent = 'Loading buddy settings...';
+      loadingText.textContent = t('campaign:buddyModal.loading');
       body.appendChild(loadingText);
     } else {
       // Buddy summary/editor
@@ -312,7 +319,7 @@ export function showBuddyModal(
       // Player 1 Controls
       body.appendChild(
         createControlsSection(
-          'Player 1 Controls',
+          t('campaign:buddyModal.player1Controls'),
           config.p1Controls,
           (preset) => {
             config.p1Controls = preset;
@@ -325,7 +332,7 @@ export function showBuddyModal(
       // Buddy Controls
       body.appendChild(
         createControlsSection(
-          'Buddy Controls',
+          t('campaign:buddyModal.buddyControls'),
           config.p2Controls,
           (preset) => {
             config.p2Controls = preset;
@@ -356,7 +363,7 @@ export function showBuddyModal(
           border-radius: var(--radius);
           border: 1px solid rgba(255,180,0,0.3);
         `;
-        warning.textContent = 'Player 1 and Buddy cannot use the same controls';
+        warning.textContent = t('campaign:buddyModal.controlConflict');
         body.appendChild(warning);
       }
     }
@@ -371,7 +378,7 @@ export function showBuddyModal(
 
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn btn-secondary';
-    cancelBtn.textContent = 'Cancel';
+    cancelBtn.textContent = t('campaign:buddyModal.cancel');
     cancelBtn.addEventListener('click', () => {
       closeModal();
       onCancel();
@@ -379,7 +386,7 @@ export function showBuddyModal(
 
     const startBtn = document.createElement('button');
     startBtn.className = 'btn btn-primary';
-    startBtn.textContent = 'Start';
+    startBtn.textContent = t('campaign:buddyModal.start');
     startBtn.disabled = hasConflict() || loading;
     if (hasConflict() || loading) {
       startBtn.style.opacity = '0.5';

@@ -4,6 +4,7 @@ import { NotificationUI } from '../NotificationUI';
 import { escapeHtml } from '../../utils/html';
 import { getErrorMessage } from '@blast-arena/shared';
 import { UIGamepadNavigator } from '../../game/UIGamepadNavigator';
+import { t } from '../../i18n';
 
 export interface AccountModalDeps {
   authManager: AuthManager;
@@ -19,7 +20,7 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
   try {
     profile = await ApiClient.get('/user/profile');
   } catch (err: unknown) {
-    notifications.error('Failed to load profile: ' + getErrorMessage(err));
+    notifications.error(t('settings.loadProfileFailed', { error: getErrorMessage(err) }));
     return;
   }
 
@@ -30,69 +31,69 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
   modal.className = 'modal-overlay';
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
-  modal.setAttribute('aria-label', 'Account Settings');
+  modal.setAttribute('aria-label', t('settings.account.title'));
   modal.innerHTML = `
     <div class="modal" style="width:420px;">
-      <h2>Account Settings</h2>
+      <h2>${t('settings.account.title')}</h2>
 
       <div class="form-group">
-        <label for="acct-username">Username</label>
+        <label for="acct-username">${t('settings.account.username')}</label>
         <input type="text" id="acct-username" value="${escapeHtml(profile.username)}" maxlength="20">
-        <div id="acct-username-hint" style="font-size:11px;color:var(--text-muted);margin-top:4px;">Letters, numbers, underscores, hyphens. 3-20 characters.</div>
+        <div id="acct-username-hint" style="font-size:11px;color:var(--text-muted);margin-top:4px;">${t('settings.account.usernameHint')}</div>
       </div>
 
       <div id="acct-profile-status" style="margin-bottom:12px;"></div>
 
       <div class="modal-actions" style="margin-bottom:20px;">
-        <button class="btn btn-primary" id="acct-save-profile">Save</button>
+        <button class="btn btn-primary" id="acct-save-profile">${t('settings.account.save')}</button>
       </div>
 
       <hr style="border-color:var(--border);margin:16px 0;">
 
       <div class="form-group">
-        <label for="acct-new-email">Email Address</label>
+        <label for="acct-new-email">${t('settings.account.email')}</label>
         <div style="color:var(--text-dim);font-size:13px;margin-bottom:6px;">
-          Current: <strong style="color:var(--text);">${escapeHtml(profile.email)}</strong>
-          ${profile.emailVerified ? '<span style="color:var(--success);margin-left:6px;">verified</span>' : '<span style="color:var(--warning);margin-left:6px;">unverified</span>'}
+          ${t('settings.account.current')} <strong style="color:var(--text);">${escapeHtml(profile.email)}</strong>
+          ${profile.emailVerified ? `<span style="color:var(--success);margin-left:6px;">${t('settings.account.verified')}</span>` : `<span style="color:var(--warning);margin-left:6px;">${t('settings.account.unverified')}</span>`}
         </div>
         ${
           !isAdmin && profile.pendingEmail
             ? `
           <div style="color:var(--warning);font-size:13px;margin-bottom:8px;padding:10px;background:var(--warning-dim);border:1px solid var(--warning);border-radius:8px;">
-            Pending change to <strong>${escapeHtml(profile.pendingEmail)}</strong> — check that inbox for the confirmation link.
-            <button class="btn btn-secondary" id="acct-cancel-email" style="margin-left:8px;padding:2px 8px;font-size:11px;">Cancel</button>
+            ${t('settings.account.pendingChange')} <strong>${escapeHtml(profile.pendingEmail)}</strong> — ${t('settings.account.pendingHint')}
+            <button class="btn btn-secondary" id="acct-cancel-email" style="margin-left:8px;padding:2px 8px;font-size:11px;">${t('settings.account.cancel')}</button>
           </div>
         `
             : ''
         }
-        <input type="email" id="acct-new-email" placeholder="New email address" maxlength="255" aria-label="New email address">
+        <input type="email" id="acct-new-email" placeholder="${t('settings.account.newEmailPlaceholder')}" maxlength="255" aria-label="${t('settings.account.newEmailPlaceholder')}">
       </div>
 
       <div id="acct-email-status" style="margin-bottom:12px;"></div>
 
       <div class="modal-actions" style="margin-bottom:8px;">
-        <button class="btn btn-primary" id="acct-change-email">${isAdmin ? 'Change Email' : 'Send Confirmation'}</button>
+        <button class="btn btn-primary" id="acct-change-email">${isAdmin ? t('settings.account.changeEmail') : t('settings.account.sendConfirmation')}</button>
       </div>
 
       <hr style="border-color:var(--border);margin:16px 0;">
 
       <div class="form-group">
-        <label>Change Password</label>
-        <input type="password" id="acct-current-password" placeholder="Current password" autocomplete="current-password" aria-label="Current password" style="margin-bottom:8px;">
-        <input type="password" id="acct-new-password" placeholder="New password (min 8 characters)" autocomplete="new-password" aria-label="New password" style="margin-bottom:8px;">
-        <input type="password" id="acct-confirm-password" placeholder="Confirm new password" autocomplete="new-password" aria-label="Confirm new password">
+        <label>${t('settings.account.changePassword')}</label>
+        <input type="password" id="acct-current-password" placeholder="${t('settings.account.currentPassword')}" autocomplete="current-password" aria-label="${t('settings.account.currentPassword')}" style="margin-bottom:8px;">
+        <input type="password" id="acct-new-password" placeholder="${t('settings.account.newPassword')}" autocomplete="new-password" aria-label="${t('settings.account.newPassword')}" style="margin-bottom:8px;">
+        <input type="password" id="acct-confirm-password" placeholder="${t('settings.account.confirmPassword')}" autocomplete="new-password" aria-label="${t('settings.account.confirmPassword')}">
       </div>
 
       <div id="acct-password-status" style="margin-bottom:12px;"></div>
 
       <div class="modal-actions" style="margin-bottom:20px;">
-        <button class="btn btn-primary" id="acct-change-password">Change Password</button>
+        <button class="btn btn-primary" id="acct-change-password">${t('settings.account.changePassword')}</button>
       </div>
 
       <hr style="border-color:var(--border);margin:16px 0;">
 
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="acct-close">Close</button>
+        <button class="btn btn-secondary" id="acct-close">${t('settings.account.close')}</button>
       </div>
     </div>
   `;
@@ -103,7 +104,7 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
     const newUsername = (modal.querySelector('#acct-username') as HTMLInputElement).value.trim();
 
     if (!newUsername) {
-      statusEl.innerHTML = '<span style="color:var(--danger);">Username cannot be empty.</span>';
+      statusEl.innerHTML = `<span style="color:var(--danger);">${t('settings.account.usernameEmpty')}</span>`;
       return;
     }
 
@@ -111,7 +112,7 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
     if (newUsername !== profile.username) updates.username = newUsername;
 
     if (Object.keys(updates).length === 0) {
-      statusEl.innerHTML = '<span style="color:var(--text-dim);">No changes to save.</span>';
+      statusEl.innerHTML = `<span style="color:var(--text-dim);">${t('settings.account.noChanges')}</span>`;
       return;
     }
 
@@ -121,7 +122,7 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
       authManager.updateUser({
         username: updated.username,
       });
-      statusEl.innerHTML = '<span style="color:var(--success);">Profile updated!</span>';
+      statusEl.innerHTML = `<span style="color:var(--success);">${t('settings.account.profileUpdated')}</span>`;
       // Re-render lobby header to show new name
       onUpdate();
     } catch (err: unknown) {
@@ -135,12 +136,11 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
     const newEmail = (modal.querySelector('#acct-new-email') as HTMLInputElement).value.trim();
 
     if (!newEmail) {
-      statusEl.innerHTML = '<span style="color:var(--danger);">Enter a new email address.</span>';
+      statusEl.innerHTML = `<span style="color:var(--danger);">${t('settings.account.emailEmpty')}</span>`;
       return;
     }
     if (newEmail === profile.email) {
-      statusEl.innerHTML =
-        '<span style="color:var(--text-dim);">That\'s already your current email.</span>';
+      statusEl.innerHTML = `<span style="color:var(--text-dim);">${t('settings.account.emailSame')}</span>`;
       return;
     }
 
@@ -164,17 +164,15 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
       .value;
 
     if (!currentPassword || !newPassword) {
-      statusEl.innerHTML =
-        '<span style="color:var(--danger);">Please fill in both password fields.</span>';
+      statusEl.innerHTML = `<span style="color:var(--danger);">${t('settings.account.passwordFieldsRequired')}</span>`;
       return;
     }
     if (newPassword.length < 8) {
-      statusEl.innerHTML =
-        '<span style="color:var(--danger);">New password must be at least 8 characters.</span>';
+      statusEl.innerHTML = `<span style="color:var(--danger);">${t('settings.account.passwordTooShort')}</span>`;
       return;
     }
     if (newPassword !== confirmPassword) {
-      statusEl.innerHTML = '<span style="color:var(--danger);">New passwords do not match.</span>';
+      statusEl.innerHTML = `<span style="color:var(--danger);">${t('settings.account.passwordMismatch')}</span>`;
       return;
     }
 
@@ -195,7 +193,7 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
     cancelEmailBtn.addEventListener('click', async () => {
       try {
         await ApiClient.delete('/user/email');
-        notifications.success('Pending email change cancelled');
+        notifications.success(t('settings.account.pendingCancelled'));
         closeModal();
         showAccountModal(deps);
       } catch (err: unknown) {

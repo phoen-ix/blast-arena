@@ -15,6 +15,7 @@ export interface PublicUser {
   id: number;
   username: string;
   role: UserRole;
+  language: string;
 }
 
 export interface AuthPayload {

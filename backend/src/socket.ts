@@ -145,6 +145,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       socket.data.userId = payload.userId;
       socket.data.username = payload.username;
       socket.data.role = payload.role;
+      socket.data.locale = (socket.handshake.auth.locale as string) || 'en';
       next();
     } catch {
       next(new Error('Invalid token'));
@@ -188,6 +189,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       id: socket.data.userId,
       username: socket.data.username,
       role: socket.data.role,
+      language: socket.data.locale || 'en',
     };
 
     // Auto-join admin room for simulation broadcasts

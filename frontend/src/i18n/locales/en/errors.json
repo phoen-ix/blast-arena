@@ -1,0 +1,14 @@
+{
+  "CONFLICT": "Username or email already taken",
+  "INVALID_CREDENTIALS": "Invalid username or password",
+  "DEACTIVATED": "Account has been deactivated",
+  "INVALID_TOKEN": "Invalid or expired token",
+  "TOKEN_EXPIRED": "Session expired — please log in again",
+  "TOKEN_REUSE": "Session invalidated for security — please log in again",
+  "VALIDATION_FAILED": "Validation failed",
+  "REGISTRATION_DISABLED": "Registration is currently disabled",
+  "FORBIDDEN": "You do not have permission to perform this action",
+  "NOT_FOUND": "Resource not found",
+  "INTERNAL_ERROR": "An unexpected error occurred",
+  "BAD_REQUEST": "Invalid request"
+}

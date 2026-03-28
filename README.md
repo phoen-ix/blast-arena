@@ -182,6 +182,20 @@ Documentation served via backend API from `docs/` directory (bind-mounted in dev
 - **Monorepo**: npm workspaces — `shared/` (types + constants), `backend/` (server), `frontend/` (client)
 - **Self-hosted assets**: All fonts and static resources served locally — no external CDN dependencies
 
+## Internationalization
+
+Full i18n support via [i18next](https://www.i18next.com/). All UI strings are extracted into JSON locale files — no hardcoded text in source code.
+
+| Language | Code | Status |
+|----------|------|--------|
+| English  | `en` | Complete |
+| German   | `de` | Complete |
+
+- **Language selection**: Settings > Preferences > Language dropdown. Auto-detects browser language on first visit
+- **11 namespaces** organize translations: `ui`, `admin`, `auth`, `campaign`, `editor`, `help`, `game`, `common`, `errors`, `hud`, `server`
+- **Adding a new language**: Create translated JSON files in `frontend/src/i18n/locales/{code}/`, `shared/src/i18n/locales/{code}/`, and `backend/src/i18n/locales/{code}/`, then register the language code in the i18n config files
+- **RTL ready**: Document direction attribute set dynamically for RTL languages
+
 ## SEO & Web Standards
 
 - Meta tags: description, keywords, Open Graph, Twitter Card for social media previews

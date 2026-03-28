@@ -2,6 +2,7 @@ import { ApiClient } from '../network/ApiClient';
 import { NotificationUI } from './NotificationUI';
 import { escapeHtml } from '../utils/html';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
+import { t } from '../i18n';
 import {
   LeaderboardResponse,
   LeaderboardEntry,
@@ -53,13 +54,13 @@ export class LeaderboardUI {
     this.container.innerHTML = `
       <div class="view-content">
         <div class="lb-filter-bar">
-          <label>Season:</label>
+          <label>${t('ui:leaderboard.season')}</label>
           <select id="lb-season-select" class="admin-select">
-            <option value="">Loading...</option>
+            <option value="">${t('ui:leaderboard.loading')}</option>
           </select>
         </div>
         <div id="lb-table-container" class="lb-content">
-          <div class="lb-status">Loading...</div>
+          <div class="lb-status">${t('ui:leaderboard.loading')}</div>
         </div>
         <div id="lb-pagination" class="admin-pagination"></div>
       </div>
@@ -107,17 +108,17 @@ export class LeaderboardUI {
   private renderShell(): void {
     this.container.innerHTML = `
       <div class="admin-header">
-        <h1>Leaderboard</h1>
-        <button class="btn btn-secondary" id="lb-back">Back to Lobby</button>
+        <h1>${t('ui:leaderboard.title')}</h1>
+        <button class="btn btn-secondary" id="lb-back">${t('ui:leaderboard.backToLobby')}</button>
       </div>
       <div class="lb-filter-bar">
-        <label>Season:</label>
+        <label>${t('ui:leaderboard.season')}</label>
         <select id="lb-season-select" class="admin-select">
-          <option value="">Loading...</option>
+          <option value="">${t('ui:leaderboard.loading')}</option>
         </select>
       </div>
       <div id="lb-table-container" class="lb-content">
-        <div class="lb-status">Loading...</div>
+        <div class="lb-status">${t('ui:leaderboard.loading')}</div>
       </div>
       <div id="lb-pagination" class="admin-pagination"></div>
     `;
@@ -175,14 +176,14 @@ export class LeaderboardUI {
     select.innerHTML = this.seasons
       .map(
         (s) =>
-          `<option value="${s.id}" ${s.id === this.currentSeasonId ? 'selected' : ''}>${escapeHtml(s.name)}${s.isActive ? ' (Current)' : ''}</option>`,
+          `<option value="${s.id}" ${s.id === this.currentSeasonId ? 'selected' : ''}>${escapeHtml(s.name)}${s.isActive ? t('ui:leaderboard.currentSeason') : ''}</option>`,
       )
       .join('');
   }
 
   private async loadLeaderboard(): Promise<void> {
     const tableContainer = this.container.querySelector('#lb-table-container')!;
-    tableContainer.innerHTML = '<div class="lb-status">Loading...</div>';
+    tableContainer.innerHTML = `<div class="lb-status">${t('ui:leaderboard.loading')}</div>`;
 
     try {
       let url = `/leaderboard?page=${this.currentPage}&limit=${PAGE_LIMIT}`;
@@ -191,7 +192,7 @@ export class LeaderboardUI {
       this.renderTable(data);
       this.renderPagination(data);
     } catch (err: unknown) {
-      tableContainer.innerHTML = `<div class="lb-status error">Failed to load leaderboard: ${escapeHtml(getErrorMessage(err))}</div>`;
+      tableContainer.innerHTML = `<div class="lb-status error">${escapeHtml(t('ui:leaderboard.loadFailed', { error: getErrorMessage(err) }))}</div>`;
     }
   }
 
@@ -199,7 +200,7 @@ export class LeaderboardUI {
     const tableContainer = this.container.querySelector('#lb-table-container')!;
 
     if (data.entries.length === 0) {
-      tableContainer.innerHTML = '<div class="lb-status">No entries yet for this season.</div>';
+      tableContainer.innerHTML = `<div class="lb-status">${t('ui:leaderboard.noEntries')}</div>`;
       return;
     }
 
@@ -207,13 +208,13 @@ export class LeaderboardUI {
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width:50px;">#</th>
-            <th>Player</th>
-            <th style="width:60px;">Lvl</th>
-            <th style="width:70px;">Elo</th>
-            <th style="width:110px;">Rank</th>
-            <th style="width:60px;">Wins</th>
-            <th style="width:60px;">Kills</th>
+            <th style="width:50px;">${t('ui:leaderboard.hashSymbol')}</th>
+            <th>${t('ui:leaderboard.player')}</th>
+            <th style="width:60px;">${t('ui:leaderboard.level')}</th>
+            <th style="width:70px;">${t('ui:leaderboard.elo')}</th>
+            <th style="width:110px;">${t('ui:leaderboard.rank')}</th>
+            <th style="width:60px;">${t('ui:leaderboard.wins')}</th>
+            <th style="width:60px;">${t('ui:leaderboard.kills')}</th>
           </tr>
         </thead>
         <tbody>
@@ -251,9 +252,9 @@ export class LeaderboardUI {
     }
 
     paginationEl.innerHTML = `
-      <button class="btn btn-secondary btn-sm" id="lb-prev" ${this.currentPage <= 1 ? 'disabled' : ''}>Prev</button>
-      <span class="page-info">Page ${this.currentPage} of ${totalPages}</span>
-      <button class="btn btn-secondary btn-sm" id="lb-next" ${this.currentPage >= totalPages ? 'disabled' : ''}>Next</button>
+      <button class="btn btn-secondary btn-sm" id="lb-prev" ${this.currentPage <= 1 ? 'disabled' : ''}>${t('ui:leaderboard.prev')}</button>
+      <span class="page-info">${t('ui:leaderboard.pageInfo', { current: this.currentPage, total: totalPages })}</span>
+      <button class="btn btn-secondary btn-sm" id="lb-next" ${this.currentPage >= totalPages ? 'disabled' : ''}>${t('ui:leaderboard.next')}</button>
     `;
 
     paginationEl.querySelector('#lb-prev')?.addEventListener('click', () => {

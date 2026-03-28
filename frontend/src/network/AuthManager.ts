@@ -1,5 +1,6 @@
 import { ApiClient } from './ApiClient';
 import { AuthResponse, PublicUser } from '@blast-arena/shared';
+import { i18n } from '../i18n';
 
 export type AuthChangeCallback = (user: PublicUser | null) => void;
 
@@ -27,7 +28,7 @@ export class AuthManager {
   onChange(callback: AuthChangeCallback): () => void {
     this.listeners.push(callback);
     return () => {
-      this.listeners = this.listeners.filter(l => l !== callback);
+      this.listeners = this.listeners.filter((l) => l !== callback);
     };
   }
 
@@ -40,23 +41,35 @@ export class AuthManager {
   private setAuth(response: AuthResponse): void {
     this.accessToken = response.accessToken;
     this.currentUser = response.user;
+    // Sync i18n language with user's stored preference
+    if (response.user.language && response.user.language !== i18n.language) {
+      i18n.changeLanguage(response.user.language);
+    }
     this.notify();
   }
 
   async register(username: string, email: string, password: string): Promise<void> {
-    const response = await ApiClient.post<AuthResponse>('/auth/register', {
-      username,
-      email,
-      password,
-    }, true);
+    const response = await ApiClient.post<AuthResponse>(
+      '/auth/register',
+      {
+        username,
+        email,
+        password,
+      },
+      true,
+    );
     this.setAuth(response);
   }
 
   async login(username: string, password: string): Promise<void> {
-    const response = await ApiClient.post<AuthResponse>('/auth/login', {
-      username,
-      password,
-    }, true);
+    const response = await ApiClient.post<AuthResponse>(
+      '/auth/login',
+      {
+        username,
+        password,
+      },
+      true,
+    );
     this.setAuth(response);
   }
 

@@ -2,6 +2,7 @@ import { SocketClient } from '../network/SocketClient';
 import { ApiClient } from '../network/ApiClient';
 import { escapeHtml } from '../utils/html';
 import type { ChatMode, UserRole } from '@blast-arena/shared';
+import { t } from '../i18n';
 
 interface SpectatorChatMessage {
   fromUserId: number;
@@ -117,7 +118,7 @@ export class SpectatorChat {
           color:var(--text-dim);padding:6px 12px;border-radius:8px;
           cursor:pointer;font-size:12px;font-family:DM Sans,sans-serif;
           transition:color 0.15s;
-        ">Spectator Chat</button>
+        ">${t('ui:spectatorChat.title')}</button>
       `;
       this.toggleBtn = this.container.querySelector('#spec-chat-toggle');
       this.toggleBtn?.addEventListener('click', () => {
@@ -137,7 +138,7 @@ export class SpectatorChat {
           display:flex;justify-content:space-between;align-items:center;
           padding:6px 10px;background:var(--bg-surface);border-bottom:1px solid var(--border);
         ">
-          <span style="color:var(--text-dim);font-size:12px;font-weight:600;">Spectator Chat</span>
+          <span style="color:var(--text-dim);font-size:12px;font-weight:600;">${t('ui:spectatorChat.title')}</span>
           <button id="spec-chat-close" style="
             background:none;border:none;color:var(--text-dim);cursor:pointer;
             font-size:16px;padding:0 4px;
@@ -150,14 +151,14 @@ export class SpectatorChat {
           canSend
             ? `
           <div style="padding:6px 8px;border-top:1px solid var(--border);display:flex;gap:4px;">
-            <input id="spec-chat-input" type="text" maxlength="200" placeholder="Type a message..."
+            <input id="spec-chat-input" type="text" maxlength="200" placeholder="${t('ui:spectatorChat.placeholder')}"
               style="flex:1;background:var(--bg-surface);border:1px solid var(--border);
               color:var(--text);padding:4px 8px;border-radius:6px;font-size:12px;
               font-family:DM Sans,sans-serif;outline:none;">
             <button id="spec-chat-send" style="
               background:var(--primary);border:none;color:white;padding:4px 10px;
               border-radius:6px;cursor:pointer;font-size:12px;font-family:DM Sans,sans-serif;
-            ">Send</button>
+            ">${t('ui:messages.send')}</button>
           </div>
         `
             : ''

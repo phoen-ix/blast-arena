@@ -17,6 +17,7 @@ import {
   HAZARD_TILE_NAMES,
   CustomMap,
 } from '@blast-arena/shared';
+import { t } from '../i18n';
 import { EnemyTextureGenerator } from '../game/EnemyTextureGenerator';
 import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { ApiClient } from '../network/ApiClient';
@@ -97,7 +98,7 @@ export class LevelEditorScene extends Phaser.Scene {
   private selectedPowerUpType: string = 'bomb_up';
 
   // Level settings
-  private levelName = 'Untitled Level';
+  private levelName = t('editor:defaults.untitledLevel');
   private levelLives = 3;
   private levelTimeLimit = 0;
   private levelParTime = 0;
@@ -1033,19 +1034,19 @@ export class LevelEditorScene extends Phaser.Scene {
     overlay.className = 'modal-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Unsaved Changes');
+    overlay.setAttribute('aria-label', t('editor:modals.unsavedChanges'));
     overlay.innerHTML = `
       <div class="modal" style="max-width:400px;">
         <div class="modal-header">
-          <h2>Unsaved Changes</h2>
+          <h2>${t('editor:modals.unsavedChanges')}</h2>
         </div>
         <div class="modal-body">
-          <p style="color:var(--text-dim);margin:0;">You have unsaved changes. Do you want to save before leaving?</p>
+          <p style="color:var(--text-dim);margin:0;">${t('editor:modals.unsavedDescription')}</p>
         </div>
         <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
-          <button class="btn btn-ghost" id="unsaved-cancel">Cancel</button>
-          <button class="btn btn-secondary" id="unsaved-discard">Discard</button>
-          <button class="btn btn-primary" id="unsaved-save">Save &amp; Exit</button>
+          <button class="btn btn-ghost" id="unsaved-cancel">${t('editor:modals.cancel')}</button>
+          <button class="btn btn-secondary" id="unsaved-discard">${t('editor:modals.discard')}</button>
+          <button class="btn btn-primary" id="unsaved-save">${t('editor:modals.saveAndExit')}</button>
         </div>
       </div>
     `;
@@ -1298,32 +1299,35 @@ export class LevelEditorScene extends Phaser.Scene {
       'position:fixed;top:0;left:0;width:200px;height:100%;background:var(--bg-base);border-right:1px solid var(--bg-hover);overflow-y:auto;z-index:200;font-family:"DM Sans",sans-serif;color:var(--text);padding:8px;box-sizing:border-box;';
 
     const title = document.createElement('h3');
-    title.textContent = this.editorMode === 'custom_map' ? 'Map Editor' : 'Level Editor';
+    title.textContent =
+      this.editorMode === 'custom_map'
+        ? t('editor:title.mapEditor')
+        : t('editor:title.levelEditor');
     title.style.cssText =
       'margin:0 0 8px 0;font-family:"Chakra Petch",sans-serif;color:var(--primary);font-size:16px;';
     this.editorContainer.appendChild(title);
 
     // Tool sections - filter tools based on editor mode
     const tileTools: { label: string; tool: EditorTool }[] = [
-      { label: 'Empty', tool: 'empty' },
-      { label: 'Wall', tool: 'wall' },
-      { label: 'Destructible', tool: 'destructible' },
-      { label: 'Spawn', tool: 'spawn' },
+      { label: t('editor:tools.empty'), tool: 'empty' },
+      { label: t('editor:tools.wall'), tool: 'wall' },
+      { label: t('editor:tools.destructible'), tool: 'destructible' },
+      { label: t('editor:tools.spawn'), tool: 'spawn' },
     ];
     if (this.editorMode === 'campaign') {
-      tileTools.push({ label: 'Exit', tool: 'exit' });
-      tileTools.push({ label: 'Goal', tool: 'goal' });
+      tileTools.push({ label: t('editor:tools.exit'), tool: 'exit' });
+      tileTools.push({ label: t('editor:tools.goal'), tool: 'goal' });
     }
-    tileTools.push({ label: 'Eraser', tool: 'eraser' });
-    this.addToolSection('Tiles', tileTools);
+    tileTools.push({ label: t('editor:tools.eraser'), tool: 'eraser' });
+    this.addToolSection(t('editor:tools.tiles'), tileTools);
 
-    this.addToolSection('Mechanics', [
-      { label: 'Teleporter A', tool: 'teleporter_a' },
-      { label: 'Teleporter B', tool: 'teleporter_b' },
-      { label: 'Conveyor \u2191', tool: 'conveyor_up' },
-      { label: 'Conveyor \u2193', tool: 'conveyor_down' },
-      { label: 'Conveyor \u2190', tool: 'conveyor_left' },
-      { label: 'Conveyor \u2192', tool: 'conveyor_right' },
+    this.addToolSection(t('editor:tools.mechanics'), [
+      { label: t('editor:tools.teleporterA'), tool: 'teleporter_a' },
+      { label: t('editor:tools.teleporterB'), tool: 'teleporter_b' },
+      { label: t('editor:tools.conveyorUp'), tool: 'conveyor_up' },
+      { label: t('editor:tools.conveyorDown'), tool: 'conveyor_down' },
+      { label: t('editor:tools.conveyorLeft'), tool: 'conveyor_left' },
+      { label: t('editor:tools.conveyorRight'), tool: 'conveyor_right' },
     ]);
 
     // Puzzle tools section (campaign only)
@@ -1331,7 +1335,7 @@ export class LevelEditorScene extends Phaser.Scene {
       const puzzleSection = document.createElement('div');
       puzzleSection.style.marginTop = '8px';
       const puzzleLabel = document.createElement('div');
-      puzzleLabel.textContent = 'Puzzle';
+      puzzleLabel.textContent = t('editor:tools.puzzle');
       puzzleLabel.style.cssText =
         'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
       puzzleSection.appendChild(puzzleLabel);
@@ -1368,7 +1372,7 @@ export class LevelEditorScene extends Phaser.Scene {
       const variants: SwitchVariant[] = ['toggle', 'pressure', 'oneshot'];
       for (const v of variants) {
         const btn = document.createElement('button');
-        btn.textContent = v.charAt(0).toUpperCase() + v.slice(1);
+        btn.textContent = t(`editor:tools.variants.${v}`);
         btn.style.cssText = `flex:1;padding:2px 4px;font-size:10px;background:${this.switchVariant === v ? 'var(--bg-elevated)' : 'var(--bg-surface)'};border:1px solid ${this.switchVariant === v ? 'var(--primary)' : 'var(--bg-hover)'};color:var(--text);cursor:pointer;border-radius:3px;`;
         btn.classList.add('puzzle-variant-btn');
         btn.addEventListener('click', () => {
@@ -1386,7 +1390,7 @@ export class LevelEditorScene extends Phaser.Scene {
 
       // Puzzle tile buttons
       const switchBtn = document.createElement('button');
-      switchBtn.textContent = 'Switch';
+      switchBtn.textContent = t('editor:tools.switch');
       switchBtn.style.cssText =
         'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
       switchBtn.addEventListener('click', () => {
@@ -1396,7 +1400,7 @@ export class LevelEditorScene extends Phaser.Scene {
       puzzleSection.appendChild(switchBtn);
 
       const gateBtn = document.createElement('button');
-      gateBtn.textContent = 'Gate';
+      gateBtn.textContent = t('editor:tools.gate');
       gateBtn.style.cssText =
         'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
       gateBtn.addEventListener('click', () => {
@@ -1406,7 +1410,7 @@ export class LevelEditorScene extends Phaser.Scene {
       puzzleSection.appendChild(gateBtn);
 
       const crumbleBtn = document.createElement('button');
-      crumbleBtn.textContent = 'Crumbling Floor';
+      crumbleBtn.textContent = t('editor:tools.crumblingFloor');
       crumbleBtn.style.cssText =
         'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
       crumbleBtn.addEventListener('click', () => {
@@ -1426,7 +1430,7 @@ export class LevelEditorScene extends Phaser.Scene {
         const hazardSection = document.createElement('div');
         hazardSection.style.marginTop = '8px';
         const hazardLabel = document.createElement('div');
-        hazardLabel.textContent = 'Theme Hazards';
+        hazardLabel.textContent = t('editor:tools.themeHazards');
         hazardLabel.style.cssText =
           'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
         hazardSection.appendChild(hazardLabel);
@@ -1441,8 +1445,8 @@ export class LevelEditorScene extends Phaser.Scene {
             const noTiles = document.createElement('div');
             noTiles.textContent =
               this.worldTheme === 'classic' || this.worldTheme === 'sky'
-                ? 'No hazard tiles for this theme'
-                : 'No hazard tiles available';
+                ? t('editor:tools.noHazardsTheme')
+                : t('editor:tools.noHazardsAvailable');
             noTiles.style.cssText = 'font-size:10px;color:var(--text-dim);padding:2px 0;';
             hazardBtnsContainer.appendChild(noTiles);
             return;
@@ -1477,7 +1481,7 @@ export class LevelEditorScene extends Phaser.Scene {
           });
           const lbl = document.createElement('label');
           lbl.htmlFor = 'hazard-show-all';
-          lbl.textContent = 'Show all themes';
+          lbl.textContent = t('editor:tools.showAllThemes');
           lbl.style.cssText = 'font-size:10px;color:var(--text-dim);cursor:pointer;';
           toggleRow.appendChild(checkbox);
           toggleRow.appendChild(lbl);
@@ -1493,7 +1497,7 @@ export class LevelEditorScene extends Phaser.Scene {
       const enemySection = document.createElement('div');
       enemySection.style.marginTop = '8px';
       const enemyLabel = document.createElement('div');
-      enemyLabel.textContent = 'Enemies';
+      enemyLabel.textContent = t('editor:tools.enemies');
       enemyLabel.style.cssText =
         'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
       enemySection.appendChild(enemyLabel);
@@ -1528,13 +1532,13 @@ export class LevelEditorScene extends Phaser.Scene {
       const puSection = document.createElement('div');
       puSection.style.marginTop = '8px';
       const puLabel = document.createElement('div');
-      puLabel.textContent = 'Power-ups';
+      puLabel.textContent = t('editor:tools.powerUps');
       puLabel.style.cssText =
         'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
       puSection.appendChild(puLabel);
       for (const type of puTypes) {
         const btn = document.createElement('button');
-        btn.textContent = type.replace(/_/g, ' ');
+        btn.textContent = t(`editor:tools.powerUpNames.${type}`);
         btn.style.cssText =
           'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
         btn.addEventListener('click', () => {
@@ -1555,7 +1559,7 @@ export class LevelEditorScene extends Phaser.Scene {
     actionSection.style.cssText = 'margin-top:16px;display:flex;flex-direction:column;gap:6px;';
 
     const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save';
+    saveBtn.textContent = t('editor:actions.save');
     saveBtn.className = 'btn btn-primary';
     saveBtn.style.cssText = 'padding:6px 12px;font-size:13px;';
     saveBtn.addEventListener('click', () => this.saveLevel());
@@ -1563,7 +1567,7 @@ export class LevelEditorScene extends Phaser.Scene {
 
     if (this.editorMode === 'campaign') {
       const exportBtn = document.createElement('button');
-      exportBtn.textContent = 'Export';
+      exportBtn.textContent = t('editor:actions.export');
       exportBtn.className = 'btn btn-secondary';
       exportBtn.style.cssText = 'padding:6px 12px;font-size:13px;';
       exportBtn.addEventListener('click', () => this.exportLevel());
@@ -1571,7 +1575,7 @@ export class LevelEditorScene extends Phaser.Scene {
     }
 
     const backBtn = document.createElement('button');
-    backBtn.textContent = 'Back';
+    backBtn.textContent = t('editor:actions.back');
     backBtn.className = 'btn btn-ghost';
     backBtn.style.cssText = 'padding:6px 12px;font-size:13px;';
     backBtn.addEventListener('click', () => this.navigateBack());
@@ -1590,13 +1594,13 @@ export class LevelEditorScene extends Phaser.Scene {
       'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:4px;';
     section.appendChild(sectionLabel);
 
-    for (const t of tools) {
+    for (const toolDef of tools) {
       const btn = document.createElement('button');
-      btn.textContent = t.label;
+      btn.textContent = toolDef.label;
       btn.style.cssText =
         'display:block;width:100%;padding:4px 6px;margin-bottom:2px;background:var(--bg-surface);border:1px solid var(--bg-hover);color:var(--text);cursor:pointer;text-align:left;font-size:11px;border-radius:3px;';
       btn.addEventListener('click', () => {
-        this.currentTool = t.tool;
+        this.currentTool = toolDef.tool;
         this.highlightActiveTool(btn);
       });
       section.appendChild(btn);
@@ -1609,7 +1613,10 @@ export class LevelEditorScene extends Phaser.Scene {
     section.style.cssText = 'margin-top:12px;border-top:1px solid var(--bg-hover);padding-top:8px;';
 
     const label = document.createElement('div');
-    label.textContent = this.editorMode === 'custom_map' ? 'Map Settings' : 'Level Settings';
+    label.textContent =
+      this.editorMode === 'custom_map'
+        ? t('editor:settings.mapSettings')
+        : t('editor:settings.levelSettings');
     label.style.cssText =
       'font-weight:bold;font-size:12px;color:var(--text-dim);margin-bottom:6px;';
     section.appendChild(label);
@@ -1625,7 +1632,7 @@ export class LevelEditorScene extends Phaser.Scene {
     const wCol = document.createElement('div');
     wCol.style.cssText = 'flex:1;';
     const wLabel = document.createElement('div');
-    wLabel.textContent = 'Width';
+    wLabel.textContent = t('editor:settings.width');
     wLabel.style.cssText = labelStyle;
     wCol.appendChild(wLabel);
     this.widthInput = document.createElement('input');
@@ -1644,7 +1651,7 @@ export class LevelEditorScene extends Phaser.Scene {
     const hCol = document.createElement('div');
     hCol.style.cssText = 'flex:1;';
     const hLabel = document.createElement('div');
-    hLabel.textContent = 'Height';
+    hLabel.textContent = t('editor:settings.height');
     hLabel.style.cssText = labelStyle;
     hCol.appendChild(hLabel);
     this.heightInput = document.createElement('input');
@@ -1662,13 +1669,13 @@ export class LevelEditorScene extends Phaser.Scene {
     section.appendChild(dimRow);
 
     const dimHint = document.createElement('div');
-    dimHint.textContent = 'Odd numbers, 7-51';
+    dimHint.textContent = t('editor:settings.dimensionHint');
     dimHint.style.cssText = 'font-size:9px;color:var(--text-dim);margin-top:1px;margin-bottom:2px;';
     section.appendChild(dimHint);
 
     // Name
     const nameLabel = document.createElement('div');
-    nameLabel.textContent = 'Name';
+    nameLabel.textContent = t('editor:settings.name');
     nameLabel.style.cssText = labelStyle;
     section.appendChild(nameLabel);
     const nameInput = document.createElement('input');
@@ -1684,7 +1691,7 @@ export class LevelEditorScene extends Phaser.Scene {
     // Description (custom map mode only)
     if (this.editorMode === 'custom_map') {
       const descLabel = document.createElement('div');
-      descLabel.textContent = 'Description';
+      descLabel.textContent = t('editor:settings.description');
       descLabel.style.cssText = labelStyle;
       section.appendChild(descLabel);
       const descInput = document.createElement('textarea');
@@ -1703,7 +1710,7 @@ export class LevelEditorScene extends Phaser.Scene {
     if (this.editorMode === 'campaign') {
       // Lives
       const livesLabel = document.createElement('div');
-      livesLabel.textContent = 'Lives';
+      livesLabel.textContent = t('editor:settings.lives');
       livesLabel.style.cssText = labelStyle;
       section.appendChild(livesLabel);
       const livesInput = document.createElement('input');
@@ -1720,7 +1727,7 @@ export class LevelEditorScene extends Phaser.Scene {
 
       // Time Limit
       const timeLabel = document.createElement('div');
-      timeLabel.textContent = 'Time Limit (seconds, 0=none)';
+      timeLabel.textContent = t('editor:settings.timeLimit');
       timeLabel.style.cssText = labelStyle;
       section.appendChild(timeLabel);
       const timeInput = document.createElement('input');
@@ -1737,7 +1744,7 @@ export class LevelEditorScene extends Phaser.Scene {
 
       // Par Time
       const parLabel = document.createElement('div');
-      parLabel.textContent = 'Par Time (seconds, 0=none)';
+      parLabel.textContent = t('editor:settings.parTime');
       parLabel.style.cssText = labelStyle;
       section.appendChild(parLabel);
       const parInput = document.createElement('input');
@@ -1752,22 +1759,22 @@ export class LevelEditorScene extends Phaser.Scene {
       });
       section.appendChild(parInput);
       const parHint = document.createElement('div');
-      parHint.textContent = '2 stars if completed under par time';
+      parHint.textContent = t('editor:settings.parTimeHint');
       parHint.style.cssText = 'font-size:9px;color:var(--text-dim);margin-top:1px;';
       section.appendChild(parHint);
 
       // Win Condition
       const winLabel = document.createElement('div');
-      winLabel.textContent = 'Win Condition';
+      winLabel.textContent = t('editor:settings.winCondition');
       winLabel.style.cssText = labelStyle;
       section.appendChild(winLabel);
       const winSelect = document.createElement('select');
       winSelect.style.cssText = inputStyle;
       const conditions = [
-        { value: 'kill_all', label: 'Kill All Enemies' },
-        { value: 'find_exit', label: 'Find Exit' },
-        { value: 'reach_goal', label: 'Reach Goal' },
-        { value: 'survive_time', label: 'Survive Time' },
+        { value: 'kill_all', label: t('editor:settings.winConditions.killAll') },
+        { value: 'find_exit', label: t('editor:settings.winConditions.findExit') },
+        { value: 'reach_goal', label: t('editor:settings.winConditions.reachGoal') },
+        { value: 'survive_time', label: t('editor:settings.winConditions.surviveTime') },
       ];
       for (const c of conditions) {
         const opt = document.createElement('option');
@@ -1795,7 +1802,7 @@ export class LevelEditorScene extends Phaser.Scene {
     });
     pubRow.appendChild(pubCheck);
     const pubLabel = document.createElement('span');
-    pubLabel.textContent = 'Published';
+    pubLabel.textContent = t('editor:settings.published');
     pubLabel.style.cssText = 'font-size:11px;';
     pubRow.appendChild(pubLabel);
     section.appendChild(pubRow);
@@ -1864,12 +1871,12 @@ export class LevelEditorScene extends Phaser.Scene {
     }
 
     if (spawnPoints.length < 2) {
-      this.showToast('Need at least 2 spawn points', 'error');
+      this.showToast(t('editor:toasts.needSpawns'), 'error');
       return;
     }
 
     const mapData = {
-      name: this.levelName || 'Untitled Map',
+      name: this.levelName || t('editor:defaults.untitledMap'),
       description: this.customMapDescription,
       mapWidth: this.mapWidth,
       mapHeight: this.mapHeight,
@@ -1888,9 +1895,9 @@ export class LevelEditorScene extends Phaser.Scene {
       }
       this.savedState = this.serializeState();
       this.isDirty = false;
-      this.showToast('Map saved!', 'success');
+      this.showToast(t('editor:toasts.mapSaved'), 'success');
     } catch (err) {
-      this.showToast('Save failed: ' + (err as Error).message, 'error');
+      this.showToast(t('editor:toasts.saveFailed', { error: (err as Error).message }), 'error');
     }
   }
 
@@ -1949,9 +1956,9 @@ export class LevelEditorScene extends Phaser.Scene {
       }
       this.savedState = this.serializeState();
       this.isDirty = false;
-      this.showToast('Level saved!', 'success');
+      this.showToast(t('editor:toasts.levelSaved'), 'success');
     } catch (err) {
-      this.showToast('Save failed: ' + (err as Error).message, 'error');
+      this.showToast(t('editor:toasts.saveFailed', { error: (err as Error).message }), 'error');
     }
   }
 

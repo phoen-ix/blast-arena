@@ -1,0 +1,91 @@
+{
+  "title": {
+    "mapEditor": "Karten-Editor",
+    "levelEditor": "Level-Editor"
+  },
+  "tools": {
+    "tiles": "Kacheln",
+    "empty": "Leer",
+    "wall": "Wand",
+    "destructible": "Zerstörbar",
+    "spawn": "Startpunkt",
+    "exit": "Ausgang",
+    "goal": "Ziel",
+    "eraser": "Radierer",
+    "mechanics": "Mechaniken",
+    "teleporterA": "Teleporter A",
+    "teleporterB": "Teleporter B",
+    "conveyorUp": "Fließband \u2191",
+    "conveyorDown": "Fließband \u2193",
+    "conveyorLeft": "Fließband \u2190",
+    "conveyorRight": "Fließband \u2192",
+    "puzzle": "Rätsel",
+    "switch": "Schalter",
+    "gate": "Tor",
+    "crumblingFloor": "Brüchiger Boden",
+    "themeHazards": "Thema-Gefahren",
+    "noHazardsTheme": "Keine Gefahrenkacheln für dieses Thema",
+    "noHazardsAvailable": "Keine Gefahrenkacheln verfügbar",
+    "showAllThemes": "Alle Themen anzeigen",
+    "enemies": "Gegner",
+    "powerUps": "Power-ups",
+    "variants": {
+      "toggle": "Umschalten",
+      "pressure": "Druck",
+      "oneshot": "Einmalig"
+    },
+    "powerUpNames": {
+      "bomb_up": "Bombe+",
+      "fire_up": "Feuer+",
+      "speed_up": "Tempo+",
+      "shield": "Schild",
+      "kick": "Tritt",
+      "pierce_bomb": "Durchschlagsbombe",
+      "remote_bomb": "Fernbombe",
+      "line_bomb": "Reihenbombe"
+    }
+  },
+  "settings": {
+    "mapSettings": "Karteneinstellungen",
+    "levelSettings": "Leveleinstellungen",
+    "width": "Breite",
+    "height": "Höhe",
+    "dimensionHint": "Ungerade Zahlen, 7-51",
+    "name": "Name",
+    "description": "Beschreibung",
+    "lives": "Leben",
+    "timeLimit": "Zeitlimit (Sekunden, 0=keins)",
+    "parTime": "Bestzeit (Sekunden, 0=keine)",
+    "parTimeHint": "2 Sterne bei Abschluss unter der Bestzeit",
+    "winCondition": "Siegbedingung",
+    "winConditions": {
+      "killAll": "Alle Gegner besiegen",
+      "findExit": "Ausgang finden",
+      "reachGoal": "Ziel erreichen",
+      "surviveTime": "Zeit überleben"
+    },
+    "published": "Veröffentlicht"
+  },
+  "actions": {
+    "save": "Speichern",
+    "export": "Exportieren",
+    "back": "Zurück"
+  },
+  "modals": {
+    "unsavedChanges": "Ungespeicherte Änderungen",
+    "unsavedDescription": "Du hast ungespeicherte Änderungen. Möchtest du vor dem Verlassen speichern?",
+    "cancel": "Abbrechen",
+    "discard": "Verwerfen",
+    "saveAndExit": "Speichern & Beenden"
+  },
+  "toasts": {
+    "needSpawns": "Mindestens 2 Startpunkte erforderlich",
+    "mapSaved": "Karte gespeichert!",
+    "levelSaved": "Level gespeichert!",
+    "saveFailed": "Speichern fehlgeschlagen: {{error}}"
+  },
+  "defaults": {
+    "untitledLevel": "Unbenanntes Level",
+    "untitledMap": "Unbenannte Karte"
+  }
+}
