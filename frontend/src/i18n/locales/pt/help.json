@@ -1,0 +1,199 @@
+{
+  "title": "Ajuda",
+  "backToLobby": "Voltar ao Lobby",
+  "github": "GitHub",
+  "loading": "Carregando...",
+  "retry": "Tentar novamente",
+  "failedToLoad": "Falha ao carregar.",
+  "failedToLoadDoc": "Falha ao carregar {{title}}.",
+  "failedToLoadLevelEditor": "Falha ao carregar a documenta\u00e7\u00e3o do Editor de Fases.",
+
+  "tabs": {
+    "gettingStarted": "Primeiros Passos",
+    "powerUps": "Power-Ups",
+    "gameModes": "Modos de Jogo",
+    "mapFeatures": "Recursos do Mapa",
+    "guides": "Guias",
+    "levelEditor": "Editor de Fases",
+    "adminDocs": "Docs do Admin"
+  },
+
+  "keyboard": {
+    "heading": "Controles do Teclado",
+    "arrowKeys": "Setas",
+    "space": "Espa\u00e7o",
+    "move": "Mover seu personagem",
+    "placeBomb": "Colocar uma bomba na sua posi\u00e7\u00e3o atual",
+    "detonateRemote": "Detonar todas as suas bombas remotas",
+    "throwBomb": "Lan\u00e7ar uma bomba na dire\u00e7\u00e3o que est\u00e1 olhando",
+    "sendEmote": "Enviar um emote r\u00e1pido (GG, Ajuda!, Bom!, Ops, Provoca\u00e7\u00e3o, Obrigado)",
+    "spectateNth": "Assistir o en\u00e9simo jogador (quando morto)"
+  },
+
+  "gamepad": {
+    "heading": "Controles do Gamepad (Xbox / Padr\u00e3o)",
+    "tip": "Qualquer controle padr\u00e3o funciona. Basta conectar e jogar.",
+    "dpad": "D-Pad",
+    "leftStick": "Anal\u00f3gico Esquerdo",
+    "placeBomb": "Colocar bomba",
+    "detonateRemote": "Detonar bombas remotas",
+    "throwBomb": "Lan\u00e7ar bomba",
+    "cycleSpectate": "Alternar alvo de espectador (quando morto)",
+    "menuNavHeading": "Navega\u00e7\u00e3o de Menus",
+    "navigateMenus": "Navegar pelos menus",
+    "confirm": "Confirmar / Selecionar",
+    "back": "Voltar / Fechar"
+  },
+
+  "mechanics": {
+    "heading": "Mec\u00e2nicas B\u00e1sicas",
+    "bombs": "Bombas",
+    "bombsDesc": "explodem ap\u00f3s 3 segundos em 4 dire\u00e7\u00f5es cardeais at\u00e9 o alcance de fogo",
+    "chainReactions": "Rea\u00e7\u00f5es em cadeia",
+    "chainReactionsDesc": "bombas atingidas por uma explos\u00e3o detonam instantaneamente, criando combos devastadores",
+    "kickedBombs": "Bombas chutadas",
+    "kickedBombsDesc": "deslizam at\u00e9 atingir uma parede, bomba ou jogador",
+    "shieldBreak": "Quebra de escudo",
+    "shieldBreakDesc": "ap\u00f3s o escudo absorver um golpe, voc\u00ea ganha 10 ticks de invulnerabilidade para escapar",
+    "spawnInvuln": "Invulnerabilidade ao nascer",
+    "spawnInvulnDesc": "2 segundos de prote\u00e7\u00e3o ap\u00f3s nascer ou renascer",
+    "selfKills": "Auto-elimina\u00e7\u00f5es",
+    "selfKillsDesc": "subtraem 1 da sua pontua\u00e7\u00e3o de elimina\u00e7\u00f5es",
+    "gracePeriod": "Per\u00edodo de gra\u00e7a",
+    "gracePeriodDesc": "1,5 segundos ap\u00f3s a condi\u00e7\u00e3o de vit\u00f3ria antes do jogo terminar; o vencedor fica invulner\u00e1vel"
+  },
+
+  "spectator": {
+    "heading": "Modo Espectador",
+    "tip": "Quando voc\u00ea morre, entra no modo espectador para assistir os jogadores restantes.",
+    "arrows": "Setas",
+    "mouseDrag": "Arrastar Mouse",
+    "freeCam": "Movimento livre da c\u00e2mera",
+    "click": "Clique",
+    "followPlayer": "em um jogador para segui-lo",
+    "jumpToNth": "Ir para o en\u00e9simo jogador",
+    "breakFollow": "Pressione qualquer tecla de movimento ou arraste para parar de seguir e voltar \u00e0 c\u00e2mera livre"
+  },
+
+  "powerUps": {
+    "tip": "Aparecem quando paredes destruct\u00edveis s\u00e3o destru\u00eddas. Passe sobre os blocos flutuantes para coletar. Seu HUD (canto inferior esquerdo) mostra suas estat\u00edsticas atuais."
+  },
+
+  "powerUpDetails": {
+    "bomb_up": "Aumenta sua contagem m\u00e1xima de bombas em 1 (m\u00e1ximo 8). Coloque mais bombas simultaneamente para encurralar inimigos e criar rea\u00e7\u00f5es em cadeia.",
+    "fire_up": "Estende o alcance da sua explos\u00e3o em 1 bloco em cada dire\u00e7\u00e3o (m\u00e1ximo 8). Maior alcance significa mais nega\u00e7\u00e3o de \u00e1rea e elimina\u00e7\u00f5es mais f\u00e1ceis.",
+    "speed_up": "Aumenta sua velocidade de movimento (at\u00e9 5 n\u00edveis). Mova-se mais r\u00e1pido para desviar de explos\u00f5es, perseguir inimigos e pegar power-ups primeiro.",
+    "shield": "Cria uma aura protetora que absorve um golpe de explos\u00e3o e depois quebra. Ap\u00f3s quebrar, voc\u00ea ganha breve invulnerabilidade para escapar. N\u00e3o acumula \u2014 coletas extras s\u00e3o consumidas sem efeito. Sem limite de tempo.",
+    "kick": "Ande em dire\u00e7\u00e3o a uma bomba para chut\u00e1-la pelo mapa. Bombas chutadas viajam at\u00e9 atingir uma parede, outra bomba ou um jogador. Aplica um breve tempo de espera de movimento ap\u00f3s chutar.",
+    "pierce_bomb": "Suas explos\u00f5es atravessam paredes destruct\u00edveis em vez de parar. As paredes ainda s\u00e3o destru\u00eddas, mas a explos\u00e3o continua al\u00e9m delas. Devastador para limpar grandes \u00e1reas.",
+    "remote_bomb": "Suas bombas n\u00e3o detonam mais automaticamente por tempo. Pressione <span class=\"help-key\">E</span> (ou <span class=\"help-key\">B</span> no gamepad) para detonar. Auto-detona\u00e7\u00e3o de seguran\u00e7a ap\u00f3s 10 segundos. Bombas aparecem azuis com efeito piscante. Pressione <span class=\"help-key\">E</span> sem bombas colocadas para alternar entre modo <b>TODAS</b> (detonar todas de uma vez) e <b>FIFO</b> (detonar a mais antiga primeiro). Seu modo atual \u00e9 mostrado no HUD.",
+    "line_bomb": "Coloca uma linha de bombas na dire\u00e7\u00e3o que est\u00e1 olhando, usando at\u00e9 sua capacidade restante de bombas. \u00d3timo para cortar rotas de fuga ou criar rea\u00e7\u00f5es em cadeia massivas.",
+    "bomb_throw": "Pressione <span class=\"help-key\">Q</span> (ou <span class=\"help-key\">Y</span> no gamepad) para lan\u00e7ar uma bomba 3 blocos na dire\u00e7\u00e3o que est\u00e1 olhando, voando sobre paredes e obst\u00e1culos. A bomba cai no bloco v\u00e1lido mais distante. Combina com bombas perfurantes/remotas."
+  },
+
+  "gameModes": {
+    "playerRange": "{{min}}\u2013{{max}} jogadores"
+  },
+
+  "modeTags": {
+    "shrinkingZone": "Zona Encolhendo",
+    "respawn": "Renascimento",
+    "zoneControl": "Controle de Zona",
+    "teams": "{{count}} Equipes"
+  },
+
+  "modeDetails": {
+    "ffa": "2\u20138 jogadores. Elimina\u00e7\u00e3o cl\u00e1ssica \u2014 seja o \u00faltimo em p\u00e9. Rodadas de 3 minutos.",
+    "teams": "4\u20138 jogadores divididos em Equipe Vermelha e Equipe Azul. \u00daltima equipe com um membro sobrevivente vence. Fogo amigo \u00e9 configur\u00e1vel pelo anfitri\u00e3o. Rodadas de 4 minutos.",
+    "battle_royale": "4\u20138 jogadores. Uma zona de perigo circular encolhe pelas bordas ao longo do tempo. Ficar fora da zona causa dano a cada tick. Fique dentro e sobreviva a todos. Rodadas de 5 minutos.",
+    "sudden_death": "2\u20138 jogadores. Todos come\u00e7am com tudo no m\u00e1ximo (8 bombas, 8 de alcance, velocidade m\u00e1xima, chute). Sem power-ups. Uma vida \u2014 pura habilidade. Rodadas de 2 minutos.",
+    "deathmatch": "2\u20138 jogadores. Renascer 3 segundos ap\u00f3s morrer com estat\u00edsticas resetadas. Primeiro a 10 elimina\u00e7\u00f5es vence, ou quem tiver mais elimina\u00e7\u00f5es quando o tempo acabar. Rodadas de 5 minutos.",
+    "king_of_the_hill": "2\u20138 jogadores. Uma zona brilhante de 3\u00d73 aparece no mapa. Fique nela para marcar pontos. Primeiro a 100 pontos vence. A colina move a cada 30 segundos \u2014 um contorno fantasma mostra a pr\u00f3xima posi\u00e7\u00e3o 5 segundos antes da mudan\u00e7a. Rodadas de 4 minutos."
+  },
+
+  "mapFeatures": {
+    "reinforcedWalls": {
+      "heading": "Paredes Refor\u00e7adas",
+      "tip": "Opcional \u2014 ativado ao criar uma sala.",
+      "desc": "Paredes destruct\u00edveis precisam de <b>2 golpes</b> para serem destru\u00eddas. A primeira explos\u00e3o as racha (visualmente danificadas), e a segunda as destr\u00f3i completamente. Planeje o posicionamento das suas bombas."
+    },
+    "dynamicEvents": {
+      "heading": "Eventos Din\u00e2micos do Mapa",
+      "tip": "Opcional \u2014 ativado ao criar uma sala. Adiciona caos aleat\u00f3rio para manter as partidas emocionantes.",
+      "meteorStrikes": "Chuva de Meteoros",
+      "meteorStrikesDesc": "Blocos aleat\u00f3rios s\u00e3o alvejados a cada 30\u201345 segundos. Uma mira de aviso aparece no ch\u00e3o por 2 segundos antes do impacto. Meteoros destroem paredes e matam jogadores na zona de explos\u00e3o.",
+      "powerUpRain": "Chuva de Power-Ups",
+      "powerUpRainDesc": "A cada 60 segundos, power-ups caem em blocos abertos aleat\u00f3rios no mapa. Uma \u00f3tima forma de se equipar no meio do jogo.",
+      "wallCollapse": "Colapso de Paredes",
+      "wallCollapseDesc": "A cada 45\u201360 segundos, uma \u00e1rea 3\u00d73 de paredes destruct\u00edveis desmorona ap\u00f3s um aviso de 2 segundos. Abre o mapa e pode pegar voc\u00ea desprevenido.",
+      "freezeWave": "Onda de Gelo",
+      "freezeWaveDesc": "A cada 50\u201370 segundos, uma fileira ou coluna de blocos congela em gelo por 6 segundos. Andar no gelo faz voc\u00ea deslizar com impulso. Um aviso de 1 segundo aparece antes do congelamento.",
+      "bombSurge": "Surto de Bombas",
+      "bombSurgeDesc": "A cada 40\u201355 segundos, todas as bombas no mapa perdem instantaneamente 1 segundo de tempo de pavio, fazendo-as detonar antes do esperado. Um pulso vermelho na tela sinaliza o surto."
+    },
+    "hazardTiles": {
+      "heading": "Blocos de Perigo",
+      "tip": "Opcional \u2014 ativado ao criar uma sala. Posicionados em locais fixos no mapa.",
+      "teleporters": "Teleportadores",
+      "teleportersDesc": "Plataformas brilhantes em pares azul/laranja. Pise em uma para ser teletransportado para a outra. Use para ataques surpresa ou fugas r\u00e1pidas.",
+      "conveyorBelts": "Esteiras Transportadoras",
+      "conveyorBeltsDesc": "Blocos escuros com setas direcionais. Empurram voc\u00ea automaticamente na dire\u00e7\u00e3o da seta quando voc\u00ea pisa neles. Podem ser usados estrategicamente ou podem te prender em perigo."
+    },
+    "themeVariants": {
+      "heading": "Variantes de Tema",
+      "tip": "No modo campanha, cada mundo tem seu pr\u00f3prio tema visual. Paredes e blocos destruct\u00edveis mudam de apar\u00eancia para combinar."
+    }
+  },
+
+  "levelEditor": {
+    "tileReference": "Refer\u00eancia de Blocos",
+    "tileRefTip": "Estes s\u00e3o os blocos dispon\u00edveis no editor de fases. O modo campanha inclui tipos especiais adicionais.",
+    "basicTiles": "Blocos B\u00e1sicos",
+    "wall": "Parede \u2014 indestruct\u00edvel, bloqueia movimento e explos\u00f5es",
+    "destructible": "Destruct\u00edvel \u2014 parede quebrável, pode soltar power-ups ao ser destru\u00edda",
+    "destructibleCracked": "Rachada \u2014 parede destruct\u00edvel danificada, mais um golpe para destruir (modo refor\u00e7ado)",
+    "mechanics": "Mec\u00e2nicas",
+    "teleporter": "Teleportadores \u2014 pares azul/laranja, pise em um para ser teletransportado para o outro",
+    "conveyor": "Esteiras \u2014 empurram jogadores, bombas e inimigos na dire\u00e7\u00e3o da seta",
+    "campaignTiles": "Blocos Exclusivos da Campanha",
+    "exit": "Sa\u00edda \u2014 textura de al\u00e7ap\u00e3o, transit\u00e1vel condicionalmente (desbloqueia ap\u00f3s elimina\u00e7\u00f5es necess\u00e1rias)",
+    "goal": "Objetivo \u2014 marcador de estrela, pise nele para completar o objetivo da fase",
+    "puzzleTiles": "Blocos de Puzzle",
+    "switch": "Interruptor \u2014 placa de press\u00e3o que alterna port\u00f5es vinculados (4 cores: vermelho, azul, verde, amarelo)",
+    "gate": "Port\u00e3o \u2014 barras bloqueando passagem, vinculadas a interruptores por cor",
+    "crumbling": "Piso Desmoronante \u2014 quebra formando um po\u00e7o 10 ticks ap\u00f3s um jogador ou inimigo sair de cima",
+    "hazardTiles": "Blocos de Perigo (Espec\u00edficos do Tema)",
+    "vine": "Trepadeira \u2014 reduz a velocidade de movimento (tema Floresta)",
+    "quicksand": "Areia Movedi\u00e7a \u2014 reduz a velocidade, mata ap\u00f3s 2 segundos (tema Deserto)",
+    "ice": "Gelo \u2014 causa impulso deslizante (tema Gelo)",
+    "lava": "Lava \u2014 morte instant\u00e2nea ao contato (tema Vulc\u00e3o)",
+    "mud": "Lama \u2014 reduz a velocidade de movimento (tema P\u00e2ntano)",
+    "spikes": "Espinhos \u2014 fases c\u00edclicas seguras/letais, 2s seguro depois 1s letal (tema Castelo)",
+    "darkRift": "Fenda Sombria \u2014 teletransporta para um bloco vazio aleat\u00f3rio (tema Vazio)",
+    "fullDocs": "Documenta\u00e7\u00e3o Completa",
+    "fullDocsDesc": "Veja a documenta\u00e7\u00e3o completa do sistema de campanha abaixo para detalhes sobre inimigos, chefes, condi\u00e7\u00f5es de vit\u00f3ria e mais."
+  },
+
+  "guides": {
+    "campaign": "Guia da Campanha",
+    "replaySystem": "Sistema de Replays",
+    "botAi": "Guia de IA de Bots",
+    "enemyAi": "Guia de IA de Inimigos"
+  },
+
+  "staffDocs": {
+    "adminSystems": "Painel de Admin e Sistemas",
+    "infrastructure": "Infraestrutura e Seguran\u00e7a",
+    "testing": "Testes",
+    "performance": "Performance e Internos",
+    "botAiInternals": "Internos da IA de Bots",
+    "apiReference": "Refer\u00eancia da API (OpenAPI)"
+  },
+
+  "imprint": {
+    "tab": "Aviso Legal",
+    "loading": "Carregando aviso legal...",
+    "noInfo": "Nenhuma informa\u00e7\u00e3o de aviso legal dispon\u00edvel.",
+    "failedToLoad": "Falha ao carregar aviso legal."
+  }
+}

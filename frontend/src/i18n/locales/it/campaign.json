@@ -1,0 +1,80 @@
+{
+  "title": "Campagna",
+  "titleBrand": "<span style=\"color:var(--text);\">CAMP</span>AGNA",
+  "backToLobby": "Torna alla lobby",
+  "empty": "Nessun mondo della campagna ancora disponibile.",
+  "loadFailed": "Impossibile caricare la campagna: {{error}}",
+  "loadingLevel": "Caricamento livello...",
+  "startFailed": "Impossibile avviare il livello: {{error}}",
+  "stats": {
+    "enemies": "nemici",
+    "life": "vita",
+    "lives": "vite",
+    "time": "tempo"
+  },
+  "buttons": {
+    "start": "Inizia",
+    "coop": "Co-op",
+    "localCoop": "Co-op locale",
+    "buddy": "Compagno"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "{{percent}}% dimensione"
+  },
+  "localCoopModal": {
+    "title": "Configurazione co-op locale",
+    "ariaLabel": "Configurazione co-op locale",
+    "player1Controls": "Controlli Giocatore 1",
+    "player2": "Giocatore 2",
+    "identity": "Identità:",
+    "guest": "Ospite",
+    "logIn": "Accedi",
+    "name": "Nome:",
+    "color": "Colore:",
+    "nameAriaLabel": "Nome utente Giocatore 2",
+    "passwordAriaLabel": "Password Giocatore 2",
+    "usernamePlaceholder": "Nome utente",
+    "passwordPlaceholder": "Password",
+    "loginDurationAriaLabel": "Durata accesso",
+    "loggingIn": "Accesso in corso...",
+    "logInBtn": "Accedi",
+    "enterCredentials": "Inserisci nome utente e password",
+    "loggedInAs": "Connesso come <strong>{{username}}</strong>",
+    "logout": "Esci",
+    "controls": "Controlli",
+    "cameraMode": "Modalità telecamera",
+    "controlConflict": "Entrambi i giocatori non possono usare gli stessi controlli",
+    "cancel": "Annulla",
+    "start": "Inizia",
+    "defaultPlayerName": "Giocatore 2",
+    "duration": {
+      "session": "Solo sessione",
+      "1h": "1 ora",
+      "6h": "6 ore",
+      "12h": "12 ore",
+      "24h": "24 ore"
+    },
+    "loginFailed": "Accesso fallito",
+    "connectionError": "Errore di connessione"
+  },
+  "buddyModal": {
+    "title": "Modalità compagno",
+    "ariaLabel": "Modalità compagno",
+    "loading": "Caricamento impostazioni compagno...",
+    "buddy": "Compagno",
+    "edit": "Modifica",
+    "done": "Fatto",
+    "name": "Nome",
+    "namePlaceholder": "Compagno",
+    "color": "Colore",
+    "sizeLabel": "Dimensione: {{percent}}%",
+    "p1Label": "G1",
+    "buddyLabel": "Compagno",
+    "player1Controls": "Controlli Giocatore 1",
+    "buddyControls": "Controlli compagno",
+    "controlConflict": "Giocatore 1 e Compagno non possono usare gli stessi controlli",
+    "cancel": "Annulla",
+    "start": "Inizia"
+  }
+}

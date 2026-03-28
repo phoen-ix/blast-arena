@@ -1,0 +1,199 @@
+{
+  "title": "Ayuda",
+  "backToLobby": "Volver al Lobby",
+  "github": "GitHub",
+  "loading": "Cargando...",
+  "retry": "Reintentar",
+  "failedToLoad": "Error al cargar.",
+  "failedToLoadDoc": "Error al cargar {{title}}.",
+  "failedToLoadLevelEditor": "Error al cargar la documentación del Editor de Niveles.",
+
+  "tabs": {
+    "gettingStarted": "Primeros Pasos",
+    "powerUps": "Power-Ups",
+    "gameModes": "Modos de Juego",
+    "mapFeatures": "Características del Mapa",
+    "guides": "Guías",
+    "levelEditor": "Editor de Niveles",
+    "adminDocs": "Docs de Admin"
+  },
+
+  "keyboard": {
+    "heading": "Controles de Teclado",
+    "arrowKeys": "Teclas de Flecha",
+    "space": "Espacio",
+    "move": "Mover tu personaje",
+    "placeBomb": "Colocar una bomba en tu posición actual",
+    "detonateRemote": "Detonar todas tus bombas remotas",
+    "throwBomb": "Lanzar una bomba en la dirección que miras",
+    "sendEmote": "Enviar un emote rápido (GG, ¡Ayuda!, ¡Buen!, Ups, Burla, Gracias)",
+    "spectateNth": "Observar al jugador N (cuando estás muerto)"
+  },
+
+  "gamepad": {
+    "heading": "Controles de Gamepad (Xbox / Estándar)",
+    "tip": "Cualquier control estándar funciona. Solo conéctalo y juega.",
+    "dpad": "D-Pad",
+    "leftStick": "Stick Izquierdo",
+    "placeBomb": "Colocar bomba",
+    "detonateRemote": "Detonar bombas remotas",
+    "throwBomb": "Lanzar bomba",
+    "cycleSpectate": "Cambiar objetivo de espectador (cuando estás muerto)",
+    "menuNavHeading": "Navegación de Menús",
+    "navigateMenus": "Navegar menús",
+    "confirm": "Confirmar / Seleccionar",
+    "back": "Atrás / Cerrar"
+  },
+
+  "mechanics": {
+    "heading": "Mecánicas Básicas",
+    "bombs": "Bombas",
+    "bombsDesc": "explotan después de 3 segundos en las 4 direcciones cardinales hasta su alcance de fuego",
+    "chainReactions": "Reacciones en cadena",
+    "chainReactionsDesc": "las bombas alcanzadas por una explosión detonan al instante, creando combos devastadores",
+    "kickedBombs": "Bombas pateadas",
+    "kickedBombsDesc": "se deslizan hasta golpear un muro, bomba o jugador",
+    "shieldBreak": "Rotura de escudo",
+    "shieldBreakDesc": "después de que tu escudo absorbe un golpe, obtienes 10 ticks de invulnerabilidad para escapar",
+    "spawnInvuln": "Invulnerabilidad al aparecer",
+    "spawnInvulnDesc": "2 segundos de protección después de aparecer o reaparecer",
+    "selfKills": "Auto-eliminaciones",
+    "selfKillsDesc": "restan 1 de tu puntuación de eliminaciones",
+    "gracePeriod": "Período de gracia",
+    "gracePeriodDesc": "1.5 segundos después de la condición de victoria antes de que termine la partida; el ganador es invulnerable"
+  },
+
+  "spectator": {
+    "heading": "Modo Espectador",
+    "tip": "Cuando mueres, entras en modo espectador para ver a los jugadores restantes.",
+    "arrows": "Flechas",
+    "mouseDrag": "Arrastrar con Ratón",
+    "freeCam": "Desplazamiento libre de cámara",
+    "click": "Clic",
+    "followPlayer": "en un jugador para seguirlo",
+    "jumpToNth": "Saltar al jugador N",
+    "breakFollow": "Presiona cualquier tecla de movimiento o arrastra para dejar de seguir y volver a la cámara libre"
+  },
+
+  "powerUps": {
+    "tip": "Se obtienen al destruir muros rompibles. Camina sobre las casillas flotantes para recogerlos. Tu HUD (esquina inferior izquierda) muestra tus estadísticas actuales."
+  },
+
+  "powerUpDetails": {
+    "bomb_up": "Aumenta tu cantidad máxima de bombas en 1 (máximo 8). Coloca más bombas simultáneamente para atrapar enemigos y crear reacciones en cadena.",
+    "fire_up": "Extiende el alcance de tu explosión en 1 casilla en cada dirección (máximo 8). Mayor alcance significa más control de área y eliminaciones más fáciles.",
+    "speed_up": "Aumenta tu velocidad de movimiento (hasta 5 niveles). Muévete más rápido para esquivar explosiones, perseguir enemigos y tomar power-ups primero.",
+    "shield": "Crea un aura protectora que absorbe un golpe de explosión y luego se rompe. Después de romperse, obtienes breve invulnerabilidad para escapar. No se acumula \u2014 recolecciones extras se consumen sin efecto. Sin límite de tiempo.",
+    "kick": "Camina hacia una bomba para patearla y que se deslice por el mapa. Las bombas pateadas viajan hasta golpear un muro, otra bomba o un jugador. Aplica un breve tiempo de espera de movimiento después de patear.",
+    "pierce_bomb": "Tus explosiones atraviesan muros destructibles en vez de detenerse. Los muros aún se destruyen, pero la explosión continúa más allá de ellos. Devastador para limpiar áreas grandes.",
+    "remote_bomb": "Tus bombas ya no detonan automáticamente con temporizador. Presiona <span class=\"help-key\">E</span> (o <span class=\"help-key\">B</span> en gamepad) para detonar. Auto-detonación de seguridad después de 10 segundos. Las bombas aparecen azules con efecto parpadeante. Presiona <span class=\"help-key\">E</span> sin bombas colocadas para alternar entre modo <b>TODOS</b> (detonar todas a la vez) y <b>FIFO</b> (detonar la más antigua primero). Tu modo actual se muestra en el HUD.",
+    "line_bomb": "Coloca una línea de bombas en la dirección que miras, usando hasta tu capacidad de bombas restante. Genial para cortar rutas de escape o provocar reacciones en cadena masivas.",
+    "bomb_throw": "Presiona <span class=\"help-key\">Q</span> (o <span class=\"help-key\">Y</span> en gamepad) para lanzar una bomba 3 casillas en la dirección que miras, volando sobre muros y obstáculos. La bomba aterriza en la casilla válida más lejana. Se combina con bombas perforantes/remotas."
+  },
+
+  "gameModes": {
+    "playerRange": "{{min}}\u2013{{max}} jugadores"
+  },
+
+  "modeTags": {
+    "shrinkingZone": "Zona Reduciéndose",
+    "respawn": "Reaparición",
+    "zoneControl": "Control de Zona",
+    "teams": "{{count}} Equipos"
+  },
+
+  "modeDetails": {
+    "ffa": "2\u20138 jugadores. Eliminación clásica \u2014 sé el último en pie. Rondas de 3 minutos.",
+    "teams": "4\u20138 jugadores divididos en Equipo Rojo y Equipo Azul. El último equipo con un miembro sobreviviente gana. El fuego amigo es configurable por el anfitrión. Rondas de 4 minutos.",
+    "battle_royale": "4\u20138 jugadores. Una zona de peligro circular se reduce desde los bordes con el tiempo. Estar fuera de la zona causa daño cada tick. Mantente dentro y sobrevive a todos. Rondas de 5 minutos.",
+    "sudden_death": "2\u20138 jugadores. Todos comienzan al máximo (8 bombas, 8 alcance, velocidad máxima, patada). No aparecen power-ups. Un golpe mata \u2014 pura habilidad. Rondas de 2 minutos.",
+    "deathmatch": "2\u20138 jugadores. Reapareces 3 segundos después de morir con estadísticas reseteadas. El primero en llegar a 10 eliminaciones gana, o quien tenga más eliminaciones al acabar el tiempo. Rondas de 5 minutos.",
+    "king_of_the_hill": "2\u20138 jugadores. Una zona brillante de 3\u00d73 aparece en el mapa. Párate en ella para ganar puntos. El primero en llegar a 100 puntos gana. La colina se mueve cada 30 segundos \u2014 un contorno fantasma muestra la siguiente posición 5 segundos antes del cambio. Rondas de 4 minutos."
+  },
+
+  "mapFeatures": {
+    "reinforcedWalls": {
+      "heading": "Muros Reforzados",
+      "tip": "Opcional \u2014 se activa al crear una sala.",
+      "desc": "Los muros rompibles necesitan <b>2 golpes</b> para destruirse. La primera explosión los agrieta (daño visual), y la segunda los destruye completamente. Planifica la colocación de tus bombas en consecuencia."
+    },
+    "dynamicEvents": {
+      "heading": "Eventos Dinámicos del Mapa",
+      "tip": "Opcional \u2014 se activa al crear una sala. Añade caos aleatorio para mantener las partidas emocionantes.",
+      "meteorStrikes": "Impactos de Meteorito",
+      "meteorStrikesDesc": "Casillas aleatorias son objetivo cada 30\u201345 segundos. Una retícula de advertencia aparece en el suelo 2 segundos antes del impacto. Los meteoritos destruyen muros y eliminan jugadores en la zona de explosión.",
+      "powerUpRain": "Lluvia de Power-Ups",
+      "powerUpRainDesc": "Cada 60 segundos, power-ups caen en casillas abiertas aleatorias del mapa. Una gran forma de equiparte a mitad de partida.",
+      "wallCollapse": "Colapso de Muros",
+      "wallCollapseDesc": "Cada 45\u201360 segundos, un área de 3\u00d73 de muros destructibles se derrumba tras una advertencia de 2 segundos. Abre el mapa y puede tomarte desprevenido.",
+      "freezeWave": "Onda de Congelación",
+      "freezeWaveDesc": "Cada 50\u201370 segundos, una fila o columna de casillas se congela en hielo por 6 segundos. Caminar sobre hielo causa deslizamiento por inercia. Una advertencia de 1 segundo aparece antes de la congelación.",
+      "bombSurge": "Oleada de Bombas",
+      "bombSurgeDesc": "Cada 40\u201355 segundos, todas las bombas en el mapa pierden 1 segundo de mecha al instante, haciéndolas detonar antes de lo esperado. Un pulso rojo en pantalla señala la oleada."
+    },
+    "hazardTiles": {
+      "heading": "Casillas de Peligro",
+      "tip": "Opcional \u2014 se activa al crear una sala. Se colocan en posiciones fijas del mapa.",
+      "teleporters": "Teletransportadores",
+      "teleportersDesc": "Plataformas brillantes en pares azul/naranja. Pisa una para teletransportarte instantáneamente a la otra. Úsalas para ataques sorpresa o escapes rápidos.",
+      "conveyorBelts": "Cintas Transportadoras",
+      "conveyorBeltsDesc": "Casillas oscuras con flechas direccionales. Te empujan automáticamente en la dirección de la flecha al pisarlas. Pueden usarse estratégicamente o pueden atraparte en peligro."
+    },
+    "themeVariants": {
+      "heading": "Variantes de Tema",
+      "tip": "En el modo campaña, cada mundo tiene su propio tema visual. Los muros y bloques destructibles cambian de apariencia para coincidir."
+    }
+  },
+
+  "levelEditor": {
+    "tileReference": "Referencia de Casillas",
+    "tileRefTip": "Estas son las casillas disponibles en el editor de niveles. El modo campaña incluye tipos especiales adicionales.",
+    "basicTiles": "Casillas Básicas",
+    "wall": "Muro \u2014 indestructible, bloquea movimiento y explosiones",
+    "destructible": "Destructible \u2014 muro rompible, puede soltar power-ups al destruirse",
+    "destructibleCracked": "Agrietado \u2014 muro destructible dañado, un golpe más para destruir (modo reforzado)",
+    "mechanics": "Mecánicas",
+    "teleporter": "Teletransportadores \u2014 pares azul/naranja, pisa uno para teletransportarte al otro",
+    "conveyor": "Cintas Transportadoras \u2014 empujan jugadores, bombas y enemigos en la dirección de la flecha",
+    "campaignTiles": "Casillas Exclusivas de Campaña",
+    "exit": "Salida \u2014 textura de trampilla, transitable condicionalmente (se desbloquea después de las eliminaciones requeridas)",
+    "goal": "Meta \u2014 marcador de estrella, camina sobre ella para completar el objetivo del nivel",
+    "puzzleTiles": "Casillas de Puzzle",
+    "switch": "Interruptor \u2014 placa de presión que activa puertas enlazadas (4 colores: rojo, azul, verde, amarillo)",
+    "gate": "Puerta \u2014 barras de reja que bloquean el paso, enlazadas a interruptores por color",
+    "crumbling": "Suelo Desmoronable \u2014 se convierte en pozo 10 ticks después de que un jugador o enemigo se baja",
+    "hazardTiles": "Casillas de Peligro (Específicas del Tema)",
+    "vine": "Enredadera \u2014 ralentiza el movimiento (tema Bosque)",
+    "quicksand": "Arenas Movedizas \u2014 ralentiza el movimiento, mata después de 2 segundos (tema Desierto)",
+    "ice": "Hielo \u2014 causa deslizamiento por inercia (tema Hielo)",
+    "lava": "Lava \u2014 muerte instantánea al contacto (tema Volcán)",
+    "mud": "Barro \u2014 ralentiza el movimiento (tema Pantano)",
+    "spikes": "Pinchos \u2014 fases cíclicas seguras/letales, 2s seguro luego 1s letal (tema Castillo)",
+    "darkRift": "Grieta Oscura \u2014 teletransporta a una casilla vacía aleatoria (tema Vacío)",
+    "fullDocs": "Documentación Completa",
+    "fullDocsDesc": "Consulta la documentación completa del sistema de campaña a continuación para detalles sobre enemigos, jefes, condiciones de victoria y más."
+  },
+
+  "guides": {
+    "campaign": "Guía de Campaña",
+    "replaySystem": "Sistema de Repeticiones",
+    "botAi": "Guía de IA de Bot",
+    "enemyAi": "Guía de IA de Enemigos"
+  },
+
+  "staffDocs": {
+    "adminSystems": "Panel de Admin y Sistemas",
+    "infrastructure": "Infraestructura y Seguridad",
+    "testing": "Pruebas",
+    "performance": "Rendimiento e Internos",
+    "botAiInternals": "Internos de IA de Bot",
+    "apiReference": "Referencia API (OpenAPI)"
+  },
+
+  "imprint": {
+    "tab": "Aviso Legal",
+    "loading": "Cargando aviso legal...",
+    "noInfo": "No hay información de aviso legal disponible.",
+    "failedToLoad": "Error al cargar aviso legal."
+  }
+}

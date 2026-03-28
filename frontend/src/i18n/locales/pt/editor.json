@@ -1,0 +1,91 @@
+{
+  "title": {
+    "mapEditor": "Editor de Mapa",
+    "levelEditor": "Editor de Fase"
+  },
+  "tools": {
+    "tiles": "Blocos",
+    "empty": "Vazio",
+    "wall": "Parede",
+    "destructible": "Destruct\u00edvel",
+    "spawn": "Ponto de In\u00edcio",
+    "exit": "Sa\u00edda",
+    "goal": "Objetivo",
+    "eraser": "Borracha",
+    "mechanics": "Mec\u00e2nicas",
+    "teleporterA": "Teleportador A",
+    "teleporterB": "Teleportador B",
+    "conveyorUp": "Esteira \u2191",
+    "conveyorDown": "Esteira \u2193",
+    "conveyorLeft": "Esteira \u2190",
+    "conveyorRight": "Esteira \u2192",
+    "puzzle": "Puzzle",
+    "switch": "Interruptor",
+    "gate": "Port\u00e3o",
+    "crumblingFloor": "Piso Desmoronante",
+    "themeHazards": "Perigos do Tema",
+    "noHazardsTheme": "Sem blocos de perigo para este tema",
+    "noHazardsAvailable": "Sem blocos de perigo dispon\u00edveis",
+    "showAllThemes": "Mostrar todos os temas",
+    "enemies": "Inimigos",
+    "powerUps": "Power-ups",
+    "variants": {
+      "toggle": "Altern\u00e2ncia",
+      "pressure": "Press\u00e3o",
+      "oneshot": "Uso \u00danico"
+    },
+    "powerUpNames": {
+      "bomb_up": "bomba extra",
+      "fire_up": "fogo extra",
+      "speed_up": "velocidade extra",
+      "shield": "escudo",
+      "kick": "chute",
+      "pierce_bomb": "bomba perfurante",
+      "remote_bomb": "bomba remota",
+      "line_bomb": "bomba em linha"
+    }
+  },
+  "settings": {
+    "mapSettings": "Configura\u00e7\u00f5es do Mapa",
+    "levelSettings": "Configura\u00e7\u00f5es da Fase",
+    "width": "Largura",
+    "height": "Altura",
+    "dimensionHint": "N\u00fameros \u00edmpares, 7-51",
+    "name": "Nome",
+    "description": "Descri\u00e7\u00e3o",
+    "lives": "Vidas",
+    "timeLimit": "Limite de Tempo (segundos, 0=nenhum)",
+    "parTime": "Tempo Ideal (segundos, 0=nenhum)",
+    "parTimeHint": "2 estrelas se completar abaixo do tempo ideal",
+    "winCondition": "Condi\u00e7\u00e3o de Vit\u00f3ria",
+    "winConditions": {
+      "killAll": "Eliminar Todos os Inimigos",
+      "findExit": "Encontrar a Sa\u00edda",
+      "reachGoal": "Alcan\u00e7ar o Objetivo",
+      "surviveTime": "Sobreviver ao Tempo"
+    },
+    "published": "Publicado"
+  },
+  "actions": {
+    "save": "Salvar",
+    "export": "Exportar",
+    "back": "Voltar"
+  },
+  "modals": {
+    "unsavedChanges": "Altera\u00e7\u00f5es N\u00e3o Salvas",
+    "unsavedDescription": "Voc\u00ea tem altera\u00e7\u00f5es n\u00e3o salvas. Deseja salvar antes de sair?",
+    "cancel": "Cancelar",
+    "discard": "Descartar",
+    "saveAndExit": "Salvar e Sair"
+  },
+  "toasts": {
+    "needSpawns": "S\u00e3o necess\u00e1rios pelo menos 2 pontos de in\u00edcio",
+    "mapSaved": "Mapa salvo!",
+    "levelSaved": "Fase salva!",
+    "saveFailed": "Falha ao salvar: {{error}}"
+  },
+  "defaults": {
+    "untitledLevel": "Fase Sem T\u00edtulo",
+    "untitledMap": "Mapa Sem T\u00edtulo"
+  }
+}

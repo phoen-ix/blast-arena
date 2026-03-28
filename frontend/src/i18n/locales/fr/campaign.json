@@ -1,0 +1,80 @@
+{
+  "title": "Campagne",
+  "titleBrand": "<span style=\"color:var(--text);\">CAMP</span>AGNE",
+  "backToLobby": "Retour au lobby",
+  "empty": "Aucun monde de campagne disponible pour le moment.",
+  "loadFailed": "\u00c9chec du chargement de la campagne : {{error}}",
+  "loadingLevel": "Chargement du niveau...",
+  "startFailed": "\u00c9chec du lancement du niveau : {{error}}",
+  "stats": {
+    "enemies": "ennemis",
+    "life": "vie",
+    "lives": "vies",
+    "time": "temps"
+  },
+  "buttons": {
+    "start": "Lancer",
+    "coop": "Coop",
+    "localCoop": "Coop locale",
+    "buddy": "Compagnon"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "{{percent}}% taille"
+  },
+  "localCoopModal": {
+    "title": "Configuration coop locale",
+    "ariaLabel": "Configuration coop locale",
+    "player1Controls": "Commandes du joueur 1",
+    "player2": "Joueur 2",
+    "identity": "Identit\u00e9 :",
+    "guest": "Invit\u00e9",
+    "logIn": "Connexion",
+    "name": "Nom :",
+    "color": "Couleur :",
+    "nameAriaLabel": "Nom d'utilisateur du joueur 2",
+    "passwordAriaLabel": "Mot de passe du joueur 2",
+    "usernamePlaceholder": "Nom d'utilisateur",
+    "passwordPlaceholder": "Mot de passe",
+    "loginDurationAriaLabel": "Dur\u00e9e de connexion",
+    "loggingIn": "Connexion en cours...",
+    "logInBtn": "Connexion",
+    "enterCredentials": "Entrez le nom d'utilisateur et le mot de passe",
+    "loggedInAs": "Connect\u00e9 en tant que <strong>{{username}}</strong>",
+    "logout": "D\u00e9connexion",
+    "controls": "Commandes",
+    "cameraMode": "Mode cam\u00e9ra",
+    "controlConflict": "Les deux joueurs ne peuvent pas utiliser les m\u00eames commandes",
+    "cancel": "Annuler",
+    "start": "Lancer",
+    "defaultPlayerName": "Joueur 2",
+    "duration": {
+      "session": "Session uniquement",
+      "1h": "1 heure",
+      "6h": "6 heures",
+      "12h": "12 heures",
+      "24h": "24 heures"
+    },
+    "loginFailed": "\u00c9chec de la connexion",
+    "connectionError": "Erreur de connexion"
+  },
+  "buddyModal": {
+    "title": "Mode compagnon",
+    "ariaLabel": "Mode compagnon",
+    "loading": "Chargement des param\u00e8tres du compagnon...",
+    "buddy": "Compagnon",
+    "edit": "Modifier",
+    "done": "Termin\u00e9",
+    "name": "Nom",
+    "namePlaceholder": "Compagnon",
+    "color": "Couleur",
+    "sizeLabel": "Taille : {{percent}}%",
+    "p1Label": "J1",
+    "buddyLabel": "Compagnon",
+    "player1Controls": "Commandes du joueur 1",
+    "buddyControls": "Commandes du compagnon",
+    "controlConflict": "Le joueur 1 et le compagnon ne peuvent pas utiliser les m\u00eames commandes",
+    "cancel": "Annuler",
+    "start": "Lancer"
+  }
+}

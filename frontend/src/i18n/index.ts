@@ -12,7 +12,7 @@ export async function initI18n(): Promise<void> {
     .use(LanguageDetector)
     .init({
       fallbackLng: 'en',
-      supportedLngs: ['en', 'de'],
+      supportedLngs: ['en', 'de', 'fr', 'es', 'it', 'pt'],
       ns: ['common', 'game', 'ui', 'auth', 'hud', 'admin', 'campaign', 'help', 'editor', 'errors'],
       defaultNS: 'ui',
       backend: {

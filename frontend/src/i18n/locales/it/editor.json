@@ -1,0 +1,91 @@
+{
+  "title": {
+    "mapEditor": "Editor mappa",
+    "levelEditor": "Editor livello"
+  },
+  "tools": {
+    "tiles": "Caselle",
+    "empty": "Vuoto",
+    "wall": "Muro",
+    "destructible": "Distruttibile",
+    "spawn": "Punto di nascita",
+    "exit": "Uscita",
+    "goal": "Obiettivo",
+    "eraser": "Gomma",
+    "mechanics": "Meccaniche",
+    "teleporterA": "Teletrasporto A",
+    "teleporterB": "Teletrasporto B",
+    "conveyorUp": "Nastro \u2191",
+    "conveyorDown": "Nastro \u2193",
+    "conveyorLeft": "Nastro \u2190",
+    "conveyorRight": "Nastro \u2192",
+    "puzzle": "Rompicapo",
+    "switch": "Interruttore",
+    "gate": "Cancello",
+    "crumblingFloor": "Pavimento cedevole",
+    "themeHazards": "Pericoli tematici",
+    "noHazardsTheme": "Nessuna casella pericolosa per questo tema",
+    "noHazardsAvailable": "Nessuna casella pericolosa disponibile",
+    "showAllThemes": "Mostra tutti i temi",
+    "enemies": "Nemici",
+    "powerUps": "Potenziamenti",
+    "variants": {
+      "toggle": "Interruttore",
+      "pressure": "Pressione",
+      "oneshot": "Singolo uso"
+    },
+    "powerUpNames": {
+      "bomb_up": "bomba +",
+      "fire_up": "fuoco +",
+      "speed_up": "velocità +",
+      "shield": "scudo",
+      "kick": "calcio",
+      "pierce_bomb": "bomba perforante",
+      "remote_bomb": "bomba remota",
+      "line_bomb": "bomba lineare"
+    }
+  },
+  "settings": {
+    "mapSettings": "Impostazioni mappa",
+    "levelSettings": "Impostazioni livello",
+    "width": "Larghezza",
+    "height": "Altezza",
+    "dimensionHint": "Numeri dispari, 7-51",
+    "name": "Nome",
+    "description": "Descrizione",
+    "lives": "Vite",
+    "timeLimit": "Limite di tempo (secondi, 0=nessuno)",
+    "parTime": "Tempo ottimale (secondi, 0=nessuno)",
+    "parTimeHint": "2 stelle se completato sotto il tempo ottimale",
+    "winCondition": "Condizione di vittoria",
+    "winConditions": {
+      "killAll": "Uccidi tutti i nemici",
+      "findExit": "Trova l'uscita",
+      "reachGoal": "Raggiungi l'obiettivo",
+      "surviveTime": "Sopravvivi al tempo"
+    },
+    "published": "Pubblicato"
+  },
+  "actions": {
+    "save": "Salva",
+    "export": "Esporta",
+    "back": "Indietro"
+  },
+  "modals": {
+    "unsavedChanges": "Modifiche non salvate",
+    "unsavedDescription": "Hai modifiche non salvate. Vuoi salvare prima di uscire?",
+    "cancel": "Annulla",
+    "discard": "Scarta",
+    "saveAndExit": "Salva ed esci"
+  },
+  "toasts": {
+    "needSpawns": "Servono almeno 2 punti di nascita",
+    "mapSaved": "Mappa salvata!",
+    "levelSaved": "Livello salvato!",
+    "saveFailed": "Salvataggio fallito: {{error}}"
+  },
+  "defaults": {
+    "untitledLevel": "Livello senza titolo",
+    "untitledMap": "Mappa senza titolo"
+  }
+}

@@ -257,6 +257,10 @@ export class AuthUI {
     const languages = [
       { code: 'en', flag: '🇬🇧', label: 'English' },
       { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
+      { code: 'fr', flag: '🇫🇷', label: 'Français' },
+      { code: 'es', flag: '🇪🇸', label: 'Español' },
+      { code: 'it', flag: '🇮🇹', label: 'Italiano' },
+      { code: 'pt', flag: '🇵🇹', label: 'Português' },
     ];
     const current = i18n.language?.split('-')[0] || 'en';
     const currentLang = languages.find((l) => l.code === current) || languages[0];

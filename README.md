@@ -186,10 +186,14 @@ Documentation served via backend API from `docs/` directory (bind-mounted in dev
 
 Full i18n support via [i18next](https://www.i18next.com/). All UI strings are extracted into JSON locale files — no hardcoded text in source code.
 
-| Language | Code | Status |
-|----------|------|--------|
-| English  | `en` | Complete |
-| German   | `de` | Complete |
+| Language   | Code | Status |
+|------------|------|--------|
+| English    | `en` | Complete |
+| German     | `de` | Complete |
+| French     | `fr` | Complete |
+| Spanish    | `es` | Complete |
+| Italian    | `it` | Complete |
+| Portuguese | `pt` | Complete |
 
 - **Language selection**: Flag dropdown on login screen + Settings > Preferences dropdown. Auto-detects browser language on first visit
 - **11 namespaces** organize translations: `ui`, `admin`, `auth`, `campaign`, `editor`, `help`, `game`, `common`, `errors`, `hud`, `server`

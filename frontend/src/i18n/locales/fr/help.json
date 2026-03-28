@@ -1,0 +1,199 @@
+{
+  "title": "Aide",
+  "backToLobby": "Retour au lobby",
+  "github": "GitHub",
+  "loading": "Chargement...",
+  "retry": "R\u00e9essayer",
+  "failedToLoad": "\u00c9chec du chargement.",
+  "failedToLoadDoc": "\u00c9chec du chargement de {{title}}.",
+  "failedToLoadLevelEditor": "\u00c9chec du chargement de la documentation de l'\u00e9diteur de niveaux.",
+
+  "tabs": {
+    "gettingStarted": "Pour commencer",
+    "powerUps": "Bonus",
+    "gameModes": "Modes de jeu",
+    "mapFeatures": "Fonctionnalit\u00e9s de carte",
+    "guides": "Guides",
+    "levelEditor": "\u00c9diteur de niveaux",
+    "adminDocs": "Docs admin"
+  },
+
+  "keyboard": {
+    "heading": "Commandes clavier",
+    "arrowKeys": "Touches fl\u00e9ch\u00e9es",
+    "space": "Espace",
+    "move": "D\u00e9placer votre personnage",
+    "placeBomb": "Poser une bombe \u00e0 votre position actuelle",
+    "detonateRemote": "Faire exploser toutes vos bombes t\u00e9l\u00e9command\u00e9es",
+    "throwBomb": "Lancer une bombe dans la direction regard\u00e9e",
+    "sendEmote": "Envoyer une emote rapide (GG, \u00c0 l'aide !, Bien jou\u00e9 !, Oups, Provoc, Merci)",
+    "spectateNth": "Observer le N-i\u00e8me joueur (quand \u00e9limin\u00e9)"
+  },
+
+  "gamepad": {
+    "heading": "Commandes manette (Xbox / Standard)",
+    "tip": "Toute manette standard fonctionne. Branchez et jouez.",
+    "dpad": "D-Pad",
+    "leftStick": "Stick gauche",
+    "placeBomb": "Poser une bombe",
+    "detonateRemote": "D\u00e9tonner les bombes t\u00e9l\u00e9command\u00e9es",
+    "throwBomb": "Lancer une bombe",
+    "cycleSpectate": "Changer de cible d'observation (quand \u00e9limin\u00e9)",
+    "menuNavHeading": "Navigation des menus",
+    "navigateMenus": "Naviguer dans les menus",
+    "confirm": "Confirmer / S\u00e9lectionner",
+    "back": "Retour / Fermer"
+  },
+
+  "mechanics": {
+    "heading": "M\u00e9caniques de base",
+    "bombs": "Bombes",
+    "bombsDesc": "explosent apr\u00e8s 3 secondes dans les 4 directions cardinales selon leur port\u00e9e de feu",
+    "chainReactions": "R\u00e9actions en cha\u00eene",
+    "chainReactionsDesc": "les bombes prises dans une explosion d\u00e9tonnent instantan\u00e9ment, cr\u00e9ant des combos d\u00e9vastateurs",
+    "kickedBombs": "Bombes pouss\u00e9es",
+    "kickedBombsDesc": "glissent jusqu'\u00e0 toucher un mur, une bombe ou un joueur",
+    "shieldBreak": "Bris de bouclier",
+    "shieldBreakDesc": "apr\u00e8s qu'un bouclier absorbe un coup, vous obtenez 10 ticks d'invuln\u00e9rabilit\u00e9 pour fuir",
+    "spawnInvuln": "Invuln\u00e9rabilit\u00e9 d'apparition",
+    "spawnInvulnDesc": "2 secondes de protection apr\u00e8s l'apparition ou la r\u00e9apparition",
+    "selfKills": "Auto-\u00e9liminations",
+    "selfKillsDesc": "retirent 1 de votre score de frags",
+    "gracePeriod": "P\u00e9riode de gr\u00e2ce",
+    "gracePeriodDesc": "1,5 seconde apr\u00e8s la condition de victoire avant la fin de la partie ; le gagnant est invuln\u00e9rable"
+  },
+
+  "spectator": {
+    "heading": "Mode spectateur",
+    "tip": "Quand vous mourez, vous passez en mode spectateur pour regarder les joueurs restants.",
+    "arrows": "Fl\u00e8ches",
+    "mouseDrag": "Glisser souris",
+    "freeCam": "D\u00e9placement libre de la cam\u00e9ra",
+    "click": "Clic",
+    "followPlayer": "sur un joueur pour le suivre",
+    "jumpToNth": "Aller au N-i\u00e8me joueur",
+    "breakFollow": "Appuyez sur une touche de d\u00e9placement ou glissez pour arr\u00eater le suivi et revenir en cam\u00e9ra libre"
+  },
+
+  "powerUps": {
+    "tip": "Apparaissent quand les murs destructibles sont d\u00e9truits. Marchez sur les tuiles flottantes pour les r\u00e9cup\u00e9rer. Votre HUD (en bas \u00e0 gauche) affiche vos stats actuelles."
+  },
+
+  "powerUpDetails": {
+    "bomb_up": "Augmente votre nombre maximum de bombes de 1 (max 8). Posez plus de bombes simultan\u00e9ment pour pi\u00e9ger les ennemis et cr\u00e9er des r\u00e9actions en cha\u00eene.",
+    "fire_up": "Augmente votre port\u00e9e d'explosion de 1 case dans chaque direction (max 8). Plus de port\u00e9e signifie plus de contr\u00f4le de zone et des \u00e9liminations plus faciles.",
+    "speed_up": "Am\u00e9liore votre vitesse de d\u00e9placement (jusqu'\u00e0 5 niveaux). D\u00e9placez-vous plus vite pour esquiver les explosions, pourchasser les ennemis et attraper les bonus en premier.",
+    "shield": "Cr\u00e9e une aura protectrice qui absorbe un coup d'explosion, puis se brise. Apr\u00e8s le bris, vous obtenez une br\u00e8ve invuln\u00e9rabilit\u00e9 pour fuir. Ne se cumule pas \u2014 les ramassages suppl\u00e9mentaires sont consomm\u00e9s sans effet. Pas de limite de temps.",
+    "kick": "Marchez vers une bombe pour la pousser \u00e0 travers la carte. Les bombes pouss\u00e9es glissent jusqu'\u00e0 toucher un mur, une autre bombe ou un joueur. Applique un court temps de recharge de d\u00e9placement apr\u00e8s le coup de pied.",
+    "pierce_bomb": "Vos explosions traversent les murs destructibles au lieu de s'arr\u00eater. Les murs sont quand m\u00eame d\u00e9truits, mais l'explosion continue au-del\u00e0. D\u00e9vastateur pour d\u00e9gager de grandes zones.",
+    "remote_bomb": "Vos bombes n'explosent plus automatiquement. Appuyez sur <span class=\"help-key\">E</span> (ou <span class=\"help-key\">B</span> sur manette) pour d\u00e9tonner. Explosion automatique de s\u00e9curit\u00e9 apr\u00e8s 10 secondes. Les bombes apparaissent bleues avec un effet clignotant. Appuyez sur <span class=\"help-key\">E</span> sans bombe pos\u00e9e pour basculer entre le mode <b>TOUTES</b> (exploser toutes en m\u00eame temps) et <b>FIFO</b> (exploser la plus ancienne en premier). Votre mode actuel est affich\u00e9 dans le HUD.",
+    "line_bomb": "Place une ligne de bombes dans la direction regard\u00e9e, utilisant votre capacit\u00e9 de bombes restante. Id\u00e9al pour couper les voies de fuite ou d\u00e9clencher des r\u00e9actions en cha\u00eene massives.",
+    "bomb_throw": "Appuyez sur <span class=\"help-key\">Q</span> (ou <span class=\"help-key\">Y</span> sur manette) pour lancer une bombe 3 cases devant vous, par-dessus les murs et les obstacles. La bombe atterrit sur la case valide la plus \u00e9loign\u00e9e. Se combine avec les bombes per\u00e7antes/t\u00e9l\u00e9command\u00e9es."
+  },
+
+  "gameModes": {
+    "playerRange": "{{min}}\u2013{{max}} joueurs"
+  },
+
+  "modeTags": {
+    "shrinkingZone": "Zone r\u00e9tr\u00e9cissante",
+    "respawn": "R\u00e9apparition",
+    "zoneControl": "Contr\u00f4le de zone",
+    "teams": "{{count}} \u00e9quipes"
+  },
+
+  "modeDetails": {
+    "ffa": "2\u20138 joueurs. \u00c9limination classique \u2014 soyez le dernier debout. Manches de 3 minutes.",
+    "teams": "4\u20138 joueurs r\u00e9partis en \u00c9quipe Rouge et \u00c9quipe Bleue. La derni\u00e8re \u00e9quipe avec un membre survivant gagne. Le tir alli\u00e9 est configurable par l'h\u00f4te. Manches de 4 minutes.",
+    "battle_royale": "4\u20138 joueurs. Une zone de danger circulaire r\u00e9tr\u00e9cit depuis les bords. Rester hors de la zone inflige des d\u00e9g\u00e2ts \u00e0 chaque tick. Restez dedans et survivez \u00e0 tous. Manches de 5 minutes.",
+    "sudden_death": "2\u20138 joueurs. Tout le monde commence au maximum (8 bombes, 8 de port\u00e9e, vitesse max, coup de pied). Aucun bonus n'appara\u00eet. Un coup suffit \u2014 pur skill. Manches de 2 minutes.",
+    "deathmatch": "2\u20138 joueurs. R\u00e9apparition 3 secondes apr\u00e8s la mort avec les stats remises \u00e0 z\u00e9ro. Le premier \u00e0 10 frags gagne, ou celui avec le plus de frags \u00e0 la fin du temps. Manches de 5 minutes.",
+    "king_of_the_hill": "2\u20138 joueurs. Une zone lumineuse 3\u00d73 appara\u00eet sur la carte. Restez dedans pour marquer des points. Le premier \u00e0 100 points gagne. La colline se d\u00e9place toutes les 30 secondes \u2014 un contour fant\u00f4me montre la prochaine position 5 secondes avant le changement. Manches de 4 minutes."
+  },
+
+  "mapFeatures": {
+    "reinforcedWalls": {
+      "heading": "Murs renforc\u00e9s",
+      "tip": "Optionnel \u2014 activ\u00e9 lors de la cr\u00e9ation d'un salon.",
+      "desc": "Les murs destructibles n\u00e9cessitent <b>2 coups</b> pour \u00eatre d\u00e9truits. La premi\u00e8re explosion les fissure (visuellement endommag\u00e9s), et la seconde les d\u00e9truit compl\u00e8tement. Planifiez le placement de vos bombes en cons\u00e9quence."
+    },
+    "dynamicEvents": {
+      "heading": "\u00c9v\u00e9nements dynamiques de carte",
+      "tip": "Optionnel \u2014 activ\u00e9 lors de la cr\u00e9ation d'un salon. Ajoute du chaos al\u00e9atoire pour pimenter les parties.",
+      "meteorStrikes": "Frappes de m\u00e9t\u00e9ores",
+      "meteorStrikesDesc": "Des cases al\u00e9atoires sont cibl\u00e9es toutes les 30\u201345 secondes. Un r\u00e9ticule d'avertissement appara\u00eet au sol pendant 2 secondes avant l'impact. Les m\u00e9t\u00e9ores d\u00e9truisent les murs et tuent les joueurs dans la zone d'explosion.",
+      "powerUpRain": "Pluie de bonus",
+      "powerUpRainDesc": "Toutes les 60 secondes, des bonus tombent sur des cases ouvertes al\u00e9atoires de la carte. Un excellent moyen de s'\u00e9quiper en cours de partie.",
+      "wallCollapse": "Effondrement de murs",
+      "wallCollapseDesc": "Toutes les 45\u201360 secondes, une zone 3\u00d73 de murs destructibles s'effondre apr\u00e8s un avertissement de 2 secondes. Ouvre la carte et peut vous surprendre.",
+      "freezeWave": "Vague de gel",
+      "freezeWaveDesc": "Toutes les 50\u201370 secondes, une rang\u00e9e ou une colonne de cases g\u00e8le en glace pendant 6 secondes. Marcher sur la glace provoque un glissement avec inertie. Un avertissement d'1 seconde appara\u00eet avant le gel.",
+      "bombSurge": "Surtension de bombes",
+      "bombSurgeDesc": "Toutes les 40\u201355 secondes, toutes les bombes sur la carte perdent instantan\u00e9ment 1 seconde de m\u00e8che, les faisant d\u00e9tonner plus t\u00f4t que pr\u00e9vu. Un flash rouge \u00e0 l'\u00e9cran signale la surtension."
+    },
+    "hazardTiles": {
+      "heading": "Cases dangereuses",
+      "tip": "Optionnel \u2014 activ\u00e9 lors de la cr\u00e9ation d'un salon. Plac\u00e9es \u00e0 des positions fixes sur la carte.",
+      "teleporters": "T\u00e9l\u00e9porteurs",
+      "teleportersDesc": "Dalles lumineuses en paires bleue/orange. Marchez sur l'une pour \u00eatre t\u00e9l\u00e9port\u00e9 \u00e0 l'autre. Utilisez-les pour des attaques surprises ou des \u00e9vasions rapides.",
+      "conveyorBelts": "Tapis roulants",
+      "conveyorBeltsDesc": "Cases sombres avec des fl\u00e8ches directionnelles. Vous poussent automatiquement dans la direction de la fl\u00e8che quand vous marchez dessus. Peuvent \u00eatre utilis\u00e9s strat\u00e9giquement ou vous pi\u00e9ger."
+    },
+    "themeVariants": {
+      "heading": "Variantes de th\u00e8me",
+      "tip": "En mode campagne, chaque monde a son propre th\u00e8me visuel. Les murs et blocs destructibles changent d'apparence pour correspondre."
+    }
+  },
+
+  "levelEditor": {
+    "tileReference": "R\u00e9f\u00e9rence des tuiles",
+    "tileRefTip": "Voici les tuiles disponibles dans l'\u00e9diteur de niveaux. Le mode campagne inclut des types sp\u00e9ciaux suppl\u00e9mentaires.",
+    "basicTiles": "Tuiles de base",
+    "wall": "Mur \u2014 indestructible, bloque le d\u00e9placement et les explosions",
+    "destructible": "Destructible \u2014 mur cassable, peut laisser tomber des bonus quand d\u00e9truit",
+    "destructibleCracked": "Fissur\u00e9 \u2014 mur destructible endommag\u00e9, encore un coup pour le d\u00e9truire (mode renforc\u00e9)",
+    "mechanics": "M\u00e9caniques",
+    "teleporter": "T\u00e9l\u00e9porteurs \u2014 paires bleue/orange, marchez sur l'un pour appara\u00eetre \u00e0 l'autre",
+    "conveyor": "Convoyeurs \u2014 poussent les joueurs, bombes et ennemis dans la direction de la fl\u00e8che",
+    "campaignTiles": "Tuiles campagne uniquement",
+    "exit": "Sortie \u2014 texture de trappe, praticable sous condition (se d\u00e9verrouille apr\u00e8s les \u00e9liminations requises)",
+    "goal": "Objectif \u2014 marqueur \u00e9toile, marchez dessus pour compl\u00e9ter l'objectif du niveau",
+    "puzzleTiles": "Tuiles de puzzle",
+    "switch": "Interrupteur \u2014 plaque de pression qui active les portes associ\u00e9es (4 couleurs : rouge, bleu, vert, jaune)",
+    "gate": "Porte \u2014 barreaux bloquant le passage, associ\u00e9s aux interrupteurs par couleur",
+    "crumbling": "Sol friable \u2014 s'effondre en gouffre 10 ticks apr\u00e8s qu'un joueur ou ennemi en sort",
+    "hazardTiles": "Cases dangereuses (sp\u00e9cifiques au th\u00e8me)",
+    "vine": "Liane \u2014 ralentit le d\u00e9placement (th\u00e8me For\u00eat)",
+    "quicksand": "Sables mouvants \u2014 ralentit le d\u00e9placement, tue apr\u00e8s 2 secondes (th\u00e8me D\u00e9sert)",
+    "ice": "Glace \u2014 provoque un glissement avec inertie (th\u00e8me Glace)",
+    "lava": "Lave \u2014 mort instantan\u00e9e au contact (th\u00e8me Volcan)",
+    "mud": "Boue \u2014 ralentit le d\u00e9placement (th\u00e8me Mar\u00e9cage)",
+    "spikes": "Piques \u2014 phases s\u00fbres/l\u00e9tales cycliques, 2s s\u00fbr puis 1s l\u00e9tal (th\u00e8me Ch\u00e2teau)",
+    "darkRift": "Faille sombre \u2014 t\u00e9l\u00e9porte vers une case vide al\u00e9atoire (th\u00e8me N\u00e9ant)",
+    "fullDocs": "Documentation compl\u00e8te",
+    "fullDocsDesc": "Consultez la documentation compl\u00e8te du syst\u00e8me de campagne ci-dessous pour les d\u00e9tails sur les ennemis, les boss, les conditions de victoire, et plus encore."
+  },
+
+  "guides": {
+    "campaign": "Guide de campagne",
+    "replaySystem": "Syst\u00e8me de replay",
+    "botAi": "Guide IA des bots",
+    "enemyAi": "Guide IA des ennemis"
+  },
+
+  "staffDocs": {
+    "adminSystems": "Panneau d'admin et syst\u00e8mes",
+    "infrastructure": "Infrastructure et s\u00e9curit\u00e9",
+    "testing": "Tests",
+    "performance": "Performance et fonctionnement interne",
+    "botAiInternals": "Fonctionnement interne de l'IA des bots",
+    "apiReference": "R\u00e9f\u00e9rence API (OpenAPI)"
+  },
+
+  "imprint": {
+    "tab": "Mentions l\u00e9gales",
+    "loading": "Chargement des mentions l\u00e9gales...",
+    "noInfo": "Aucune mention l\u00e9gale disponible.",
+    "failedToLoad": "\u00c9chec du chargement des mentions l\u00e9gales."
+  }
+}

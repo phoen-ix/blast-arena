@@ -1,0 +1,14 @@
+{
+  "CONFLICT": "Nombre de usuario o correo ya en uso",
+  "INVALID_CREDENTIALS": "Nombre de usuario o contraseña inválidos",
+  "DEACTIVATED": "La cuenta ha sido desactivada",
+  "INVALID_TOKEN": "Token inválido o expirado",
+  "TOKEN_EXPIRED": "Sesión expirada — por favor inicia sesión de nuevo",
+  "TOKEN_REUSE": "Sesión invalidada por seguridad — por favor inicia sesión de nuevo",
+  "VALIDATION_FAILED": "Validación fallida",
+  "REGISTRATION_DISABLED": "El registro está deshabilitado actualmente",
+  "FORBIDDEN": "No tienes permiso para realizar esta acción",
+  "NOT_FOUND": "Recurso no encontrado",
+  "INTERNAL_ERROR": "Ocurrió un error inesperado",
+  "BAD_REQUEST": "Solicitud inválida"
+}

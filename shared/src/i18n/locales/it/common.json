@@ -1,0 +1,30 @@
+{
+  "validation": {
+    "usernameMinLength": "Il nome utente deve avere almeno {{min}} caratteri",
+    "usernameMaxLength": "Il nome utente deve avere al massimo {{max}} caratteri",
+    "usernameInvalidChars": "Il nome utente può contenere solo lettere, numeri, trattini bassi e trattini",
+    "passwordMinLength": "La password deve avere almeno {{min}} caratteri",
+    "passwordMaxLength": "La password deve avere al massimo {{max}} caratteri",
+    "emailInvalid": "Indirizzo email non valido",
+    "emailMaxLength": "L'email deve avere al massimo {{max}} caratteri",
+    "roomNameMinLength": "Il nome della stanza deve avere almeno {{min}} caratteri",
+    "roomNameMaxLength": "Il nome della stanza deve avere al massimo {{max}} caratteri",
+    "roomNameInvalidChars": "Il nome della stanza può contenere solo lettere, numeri, spazi, trattini bassi e trattini"
+  },
+  "actions": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "close": "Chiudi",
+    "back": "Indietro",
+    "confirm": "Conferma",
+    "create": "Crea",
+    "edit": "Modifica",
+    "loading": "Caricamento..."
+  },
+  "roles": {
+    "user": "Utente",
+    "moderator": "Moderatore",
+    "admin": "Admin"
+  }
+}

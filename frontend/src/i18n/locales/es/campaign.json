@@ -1,0 +1,80 @@
+{
+  "title": "Campaña",
+  "titleBrand": "<span style=\"color:var(--text);\">CAMP</span>AÑA",
+  "backToLobby": "Volver al Lobby",
+  "empty": "No hay mundos de campaña disponibles aún.",
+  "loadFailed": "Error al cargar campaña: {{error}}",
+  "loadingLevel": "Cargando nivel...",
+  "startFailed": "Error al iniciar nivel: {{error}}",
+  "stats": {
+    "enemies": "enemigos",
+    "life": "vida",
+    "lives": "vidas",
+    "time": "tiempo"
+  },
+  "buttons": {
+    "start": "Iniciar",
+    "coop": "Co-op",
+    "localCoop": "Co-op Local",
+    "buddy": "Compañero"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "{{percent}}% tamaño"
+  },
+  "localCoopModal": {
+    "title": "Configuración de Co-Op Local",
+    "ariaLabel": "Configuración de Co-Op Local",
+    "player1Controls": "Controles del Jugador 1",
+    "player2": "Jugador 2",
+    "identity": "Identidad:",
+    "guest": "Invitado",
+    "logIn": "Iniciar Sesión",
+    "name": "Nombre:",
+    "color": "Color:",
+    "nameAriaLabel": "Nombre de Usuario del Jugador 2",
+    "passwordAriaLabel": "Contraseña del Jugador 2",
+    "usernamePlaceholder": "Nombre de usuario",
+    "passwordPlaceholder": "Contraseña",
+    "loginDurationAriaLabel": "Duración de la sesión",
+    "loggingIn": "Iniciando sesión...",
+    "logInBtn": "Iniciar Sesión",
+    "enterCredentials": "Ingresa nombre de usuario y contraseña",
+    "loggedInAs": "Sesión iniciada como <strong>{{username}}</strong>",
+    "logout": "Cerrar Sesión",
+    "controls": "Controles",
+    "cameraMode": "Modo de Cámara",
+    "controlConflict": "Ambos jugadores no pueden usar los mismos controles",
+    "cancel": "Cancelar",
+    "start": "Iniciar",
+    "defaultPlayerName": "Jugador 2",
+    "duration": {
+      "session": "Solo esta sesión",
+      "1h": "1 hora",
+      "6h": "6 horas",
+      "12h": "12 horas",
+      "24h": "24 horas"
+    },
+    "loginFailed": "Error al iniciar sesión",
+    "connectionError": "Error de conexión"
+  },
+  "buddyModal": {
+    "title": "Modo Compañero",
+    "ariaLabel": "Modo Compañero",
+    "loading": "Cargando configuración del compañero...",
+    "buddy": "Compañero",
+    "edit": "Editar",
+    "done": "Listo",
+    "name": "Nombre",
+    "namePlaceholder": "Compañero",
+    "color": "Color",
+    "sizeLabel": "Tamaño: {{percent}}%",
+    "p1Label": "J1",
+    "buddyLabel": "Compañero",
+    "player1Controls": "Controles del Jugador 1",
+    "buddyControls": "Controles del Compañero",
+    "controlConflict": "El Jugador 1 y el Compañero no pueden usar los mismos controles",
+    "cancel": "Cancelar",
+    "start": "Iniciar"
+  }
+}

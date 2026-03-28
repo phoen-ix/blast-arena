@@ -1,0 +1,80 @@
+{
+  "title": "Campanha",
+  "titleBrand": "<span style=\"color:var(--text);\">CAMP</span>ANHA",
+  "backToLobby": "Voltar ao Lobby",
+  "empty": "Nenhum mundo de campanha dispon\u00edvel ainda.",
+  "loadFailed": "Falha ao carregar campanha: {{error}}",
+  "loadingLevel": "Carregando fase...",
+  "startFailed": "Falha ao iniciar fase: {{error}}",
+  "stats": {
+    "enemies": "inimigos",
+    "life": "vida",
+    "lives": "vidas",
+    "time": "tempo"
+  },
+  "buttons": {
+    "start": "Iniciar",
+    "coop": "Co-op",
+    "localCoop": "Co-op Local",
+    "buddy": "Parceiro"
+  },
+  "progress": {
+    "completed": "{{completed}}/{{total}}",
+    "size": "{{percent}}% tamanho"
+  },
+  "localCoopModal": {
+    "title": "Configura\u00e7\u00e3o de Co-Op Local",
+    "ariaLabel": "Configura\u00e7\u00e3o de Co-Op Local",
+    "player1Controls": "Controles do Jogador 1",
+    "player2": "Jogador 2",
+    "identity": "Identidade:",
+    "guest": "Visitante",
+    "logIn": "Entrar",
+    "name": "Nome:",
+    "color": "Cor:",
+    "nameAriaLabel": "Nome do Jogador 2",
+    "passwordAriaLabel": "Senha do Jogador 2",
+    "usernamePlaceholder": "Nome de usu\u00e1rio",
+    "passwordPlaceholder": "Senha",
+    "loginDurationAriaLabel": "Dura\u00e7\u00e3o do login",
+    "loggingIn": "Entrando...",
+    "logInBtn": "Entrar",
+    "enterCredentials": "Digite o nome de usu\u00e1rio e a senha",
+    "loggedInAs": "Conectado como <strong>{{username}}</strong>",
+    "logout": "Sair",
+    "controls": "Controles",
+    "cameraMode": "Modo de C\u00e2mera",
+    "controlConflict": "Ambos os jogadores n\u00e3o podem usar os mesmos controles",
+    "cancel": "Cancelar",
+    "start": "Iniciar",
+    "defaultPlayerName": "Jogador 2",
+    "duration": {
+      "session": "Apenas esta sess\u00e3o",
+      "1h": "1 hora",
+      "6h": "6 horas",
+      "12h": "12 horas",
+      "24h": "24 horas"
+    },
+    "loginFailed": "Falha no login",
+    "connectionError": "Erro de conex\u00e3o"
+  },
+  "buddyModal": {
+    "title": "Modo Parceiro",
+    "ariaLabel": "Modo Parceiro",
+    "loading": "Carregando configura\u00e7\u00f5es do parceiro...",
+    "buddy": "Parceiro",
+    "edit": "Editar",
+    "done": "Pronto",
+    "name": "Nome",
+    "namePlaceholder": "Parceiro",
+    "color": "Cor",
+    "sizeLabel": "Tamanho: {{percent}}%",
+    "p1Label": "J1",
+    "buddyLabel": "Parceiro",
+    "player1Controls": "Controles do Jogador 1",
+    "buddyControls": "Controles do Parceiro",
+    "controlConflict": "Jogador 1 e Parceiro n\u00e3o podem usar os mesmos controles",
+    "cancel": "Cancelar",
+    "start": "Iniciar"
+  }
+}
