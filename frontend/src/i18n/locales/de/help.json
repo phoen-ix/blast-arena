@@ -86,7 +86,7 @@
     "shield": "Erzeugt eine sch\u00fctzende Aura, die einen Explosionstreffer absorbiert und dann zerbricht. Nach dem Zerbrechen erh\u00e4ltst du kurze Unverwundbarkeit zum Entkommen. Nicht stapelbar \u2014 zus\u00e4tzliche Aufnahmen werden ohne Effekt verbraucht. Kein Zeitlimit.",
     "kick": "Laufe in eine Bombe, um sie \u00fcber die Karte zu treten. Getretene Bomben gleiten, bis sie auf eine Wand, eine andere Bombe oder einen Spieler treffen. Nach dem Treten gibt es eine kurze Bewegungsverz\u00f6gerung.",
     "pierce_bomb": "Deine Explosionen durchdringen zerst\u00f6rbare W\u00e4nde, anstatt aufgehalten zu werden. W\u00e4nde werden trotzdem zerst\u00f6rt, aber die Explosion setzt sich dahinter fort. Verheerend f\u00fcr gro\u00dffl\u00e4chige R\u00e4umung.",
-    "remote_bomb": "Deine Bomben detonieren nicht mehr automatisch. Dr\u00fccke <span class=\"help-key\">E</span> (oder <span class=\"help-key\">B</span> auf dem Gamepad), um alle ferngesteuerten Bomben auf einmal zu z\u00fcnden. Automatische Sicherheitsdetonation nach 10 Sekunden. Bomben erscheinen blau mit einem Blinkeffekt.",
+    "remote_bomb": "Deine Bomben detonieren nicht mehr automatisch. Dr\u00fccke <span class=\"help-key\">E</span> (oder <span class=\"help-key\">B</span> auf dem Gamepad) zum Z\u00fcnden. Automatische Sicherheitsdetonation nach 10 Sekunden. Bomben erscheinen blau mit einem Blinkeffekt. Dr\u00fccke <span class=\"help-key\">E</span> ohne platzierte Bomben, um zwischen <b>ALLE</b> (alle auf einmal z\u00fcnden) und <b>FIFO</b> (\u00e4lteste zuerst z\u00fcnden) zu wechseln. Dein aktueller Modus wird im HUD angezeigt.",
     "line_bomb": "Platziert eine Reihe von Bomben in deine Blickrichtung und verbraucht bis zu deine verbleibende Bombenkapazit\u00e4t. Ideal, um Fluchtwege abzuschneiden oder massive Kettenreaktionen auszul\u00f6sen.",
     "bomb_throw": "Dr\u00fccke <span class=\"help-key\">Q</span> (oder <span class=\"help-key\">Y</span> auf dem Gamepad), um eine Bombe 3 Felder in deine Blickrichtung zu werfen \u2014 sie fliegt \u00fcber W\u00e4nde und Hindernisse. Die Bombe landet auf dem entferntesten g\u00fcltigen Feld. Kombinierbar mit Durchschlag-/Fernz\u00fcnderbomben."
   },
@@ -108,7 +108,7 @@
     "battle_royale": "4\u20138 Spieler. Eine kreisf\u00f6rmige Gefahrenzone schrumpft im Laufe der Zeit von den R\u00e4ndern. Au\u00dferhalb der Zone erleidest du jeden Tick Schaden. Bleib drinnen und \u00fcberlebe alle. 5 Minuten pro Runde.",
     "sudden_death": "2\u20138 Spieler. Alle starten mit maximalen Werten (8 Bomben, 8 Reichweite, maximale Geschwindigkeit, Tritt). Keine Power-Ups. Ein Treffer t\u00f6tet \u2014 reines K\u00f6nnen. 2 Minuten pro Runde.",
     "deathmatch": "2\u20138 Spieler. Respawn 3 Sekunden nach dem Tod mit zur\u00fcckgesetzten Werten. Wer zuerst 10 Kills erreicht, gewinnt \u2014 oder wer bei Ablauf der Zeit die meisten Kills hat. 5 Minuten pro Runde.",
-    "king_of_the_hill": "2\u20138 Spieler. Eine leuchtende 3\u00d73-Zone erscheint in der Mitte der Karte. Stehe darin, um Punkte zu sammeln. Wer zuerst 100 Punkte erreicht, gewinnt. 4 Minuten pro Runde."
+    "king_of_the_hill": "2\u20138 Spieler. Eine leuchtende 3\u00d73-Zone erscheint auf der Karte. Stehe darin, um Punkte zu sammeln. Wer zuerst 100 Punkte erreicht, gewinnt. Der H\u00fcgel bewegt sich alle 30 Sekunden \u2014 ein Geist-Umriss zeigt 5 Sekunden vorher die n\u00e4chste Position. 4 Minuten pro Runde."
   },
 
   "mapFeatures": {
@@ -123,7 +123,13 @@
       "meteorStrikes": "Meteoreinschl\u00e4ge",
       "meteorStrikesDesc": "Zuf\u00e4llige Felder werden alle 30\u201345 Sekunden anvisiert. Ein Warnfadenkreuz erscheint 2 Sekunden vor dem Einschlag am Boden. Meteore zerst\u00f6ren W\u00e4nde und t\u00f6ten Spieler in der Explosionszone.",
       "powerUpRain": "Power-Up-Regen",
-      "powerUpRainDesc": "Alle 60 Sekunden fallen Power-Ups auf zuf\u00e4llige freie Felder der Karte. Eine gro\u00dfartige M\u00f6glichkeit, sich mitten im Spiel aufzur\u00fcsten."
+      "powerUpRainDesc": "Alle 60 Sekunden fallen Power-Ups auf zuf\u00e4llige freie Felder der Karte. Eine gro\u00dfartige M\u00f6glichkeit, sich mitten im Spiel aufzur\u00fcsten.",
+      "wallCollapse": "Wandeinsturz",
+      "wallCollapseDesc": "Alle 45\u201360 Sekunden st\u00fcrzt ein 3\u00d73-Bereich zerst\u00f6rbarer W\u00e4nde nach einer 2-Sekunden-Warnung ein. \u00d6ffnet die Karte und kann dich \u00fcberraschen.",
+      "freezeWave": "Frostwelle",
+      "freezeWaveDesc": "Alle 50\u201370 Sekunden gefriert eine Reihe oder Spalte von Feldern f\u00fcr 6 Sekunden zu Eis. Auf Eis rutscht man mit Schwung weiter. Eine 1-Sekunden-Warnung erscheint vor dem Einfrieren.",
+      "bombSurge": "Bombensog",
+      "bombSurgeDesc": "Alle 40\u201355 Sekunden verlieren alle Bomben auf der Karte sofort 1 Sekunde Z\u00fcndzeit und detonieren fr\u00fcher als erwartet. Ein roter Bildschirmpuls signalisiert den Sog."
     },
     "hazardTiles": {
       "heading": "Gefahrenfelder",

@@ -339,8 +339,17 @@ export class HelpUI {
         <div class="help-row help-row-spaced">
           <b class="text-danger">${t('help:mapFeatures.dynamicEvents.meteorStrikes')}</b> — ${t('help:mapFeatures.dynamicEvents.meteorStrikesDesc')}
         </div>
-        <div class="help-row">
+        <div class="help-row help-row-spaced">
           <b class="text-success">${t('help:mapFeatures.dynamicEvents.powerUpRain')}</b> — ${t('help:mapFeatures.dynamicEvents.powerUpRainDesc')}
+        </div>
+        <div class="help-row help-row-spaced">
+          <b class="text-warning">${t('help:mapFeatures.dynamicEvents.wallCollapse')}</b> — ${t('help:mapFeatures.dynamicEvents.wallCollapseDesc')}
+        </div>
+        <div class="help-row help-row-spaced">
+          <b style="color:var(--info)">${t('help:mapFeatures.dynamicEvents.freezeWave')}</b> — ${t('help:mapFeatures.dynamicEvents.freezeWaveDesc')}
+        </div>
+        <div class="help-row">
+          <b class="text-danger">${t('help:mapFeatures.dynamicEvents.bombSurge')}</b> — ${t('help:mapFeatures.dynamicEvents.bombSurgeDesc')}
         </div>
       </div>
 

@@ -86,7 +86,7 @@
     "shield": "Creates a protective aura that absorbs one explosion hit, then breaks. After breaking, you get brief invulnerability to escape. Does not stack \u2014 extra pickups are consumed with no effect. No time limit.",
     "kick": "Walk into a bomb to kick it sliding across the map. Kicked bombs travel until hitting a wall, another bomb, or a player. Applies a short movement cooldown after kicking.",
     "pierce_bomb": "Your explosions pass through destructible walls instead of stopping. Walls are still destroyed, but the blast continues beyond them. Devastating for clearing large areas.",
-    "remote_bomb": "Your bombs no longer auto-detonate on a timer. Press <span class=\"help-key\">E</span> (or <span class=\"help-key\">B</span> on gamepad) to detonate all your remote bombs at once. Safety auto-detonation after 10 seconds. Bombs appear blue with a blinking effect.",
+    "remote_bomb": "Your bombs no longer auto-detonate on a timer. Press <span class=\"help-key\">E</span> (or <span class=\"help-key\">B</span> on gamepad) to detonate. Safety auto-detonation after 10 seconds. Bombs appear blue with a blinking effect. Press <span class=\"help-key\">E</span> with no bombs placed to toggle between <b>ALL</b> (detonate all at once) and <b>FIFO</b> (detonate oldest first) mode. Your current mode is shown in the HUD.",
     "line_bomb": "Places a line of bombs in your facing direction, using up to your remaining bomb capacity. Great for cutting off escape routes or triggering massive chain reactions.",
     "bomb_throw": "Press <span class=\"help-key\">Q</span> (or <span class=\"help-key\">Y</span> on gamepad) to throw a bomb 3 tiles in your facing direction, flying over walls and obstacles. The bomb lands on the farthest valid tile. Combines with pierce/remote bomb types."
   },
@@ -108,7 +108,7 @@
     "battle_royale": "4\u20138 players. A circular danger zone shrinks from the edges over time. Standing outside the zone deals damage every tick. Stay inside and outlast everyone. 5 minute rounds.",
     "sudden_death": "2\u20138 players. Everyone starts fully maxed out (8 bombs, 8 range, max speed, kick). No power-ups spawn. One hit kills \u2014 pure skill. 2 minute rounds.",
     "deathmatch": "2\u20138 players. Respawn 3 seconds after death with reset stats. First to 10 kills wins, or whoever has the most kills when time runs out. 5 minute rounds.",
-    "king_of_the_hill": "2\u20138 players. A glowing 3\u00d73 zone appears in the center of the map. Stand in it to score points. First to 100 points wins. 4 minute rounds."
+    "king_of_the_hill": "2\u20138 players. A glowing 3\u00d73 zone appears on the map. Stand in it to score points. First to 100 points wins. The hill moves every 30 seconds \u2014 a ghost outline shows the next position 5 seconds before it shifts. 4 minute rounds."
   },
 
   "mapFeatures": {
@@ -123,7 +123,13 @@
       "meteorStrikes": "Meteor Strikes",
       "meteorStrikesDesc": "Random tiles are targeted every 30\u201345 seconds. A warning reticle appears on the ground for 2 seconds before impact. Meteors destroy walls and kill players in the blast zone.",
       "powerUpRain": "Power-Up Rain",
-      "powerUpRainDesc": "Every 60 seconds, power-ups drop across random open tiles on the map. A great way to gear up mid-game."
+      "powerUpRainDesc": "Every 60 seconds, power-ups drop across random open tiles on the map. A great way to gear up mid-game.",
+      "wallCollapse": "Wall Collapse",
+      "wallCollapseDesc": "Every 45\u201360 seconds, a 3\u00d73 area of destructible walls crumbles after a 2-second warning. Opens up the map and can catch you off-guard.",
+      "freezeWave": "Freeze Wave",
+      "freezeWaveDesc": "Every 50\u201370 seconds, a row or column of tiles freezes into ice for 6 seconds. Walking on ice causes you to slide with momentum. A 1-second warning appears before the freeze.",
+      "bombSurge": "Bomb Surge",
+      "bombSurgeDesc": "Every 40\u201355 seconds, all bombs on the map instantly lose 1 second of fuse time, making them detonate earlier than expected. A red screen pulse signals the surge."
     },
     "hazardTiles": {
       "heading": "Hazard Tiles",
