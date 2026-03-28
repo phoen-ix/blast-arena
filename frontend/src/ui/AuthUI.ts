@@ -294,10 +294,10 @@ export class AuthUI {
     });
 
     dropdown.querySelectorAll<HTMLButtonElement>('.auth-lang-option').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const lang = btn.dataset.lang!;
         if (lang !== i18n.language?.split('-')[0]) {
-          i18n.changeLanguage(lang);
+          await i18n.changeLanguage(lang);
           this.render();
         }
       });
