@@ -10,6 +10,9 @@ interface FilterState {
   movement: boolean;
   powerup_pickup: boolean;
   explosion_detail: boolean;
+  player_leave: boolean;
+  player_disconnect: boolean;
+  player_disconnect_kill: boolean;
   game_over: boolean;
 }
 
@@ -25,6 +28,9 @@ const EVENT_CONFIG: Record<ReplayLogEventType, { icon: string; color: string; la
     color: 'var(--warning)',
     label: 'Explosions',
   },
+  player_leave: { icon: '\uD83D\uDEAA', color: 'var(--warning)', label: 'Leave' },
+  player_disconnect: { icon: '\u26A0\uFE0F', color: 'var(--warning)', label: 'Disconnect' },
+  player_disconnect_kill: { icon: '\u26A0\uFE0F', color: 'var(--danger)', label: 'Disconnect' },
   game_over: { icon: '\uD83C\uDFC1', color: 'var(--accent)', label: 'Game Over' },
 };
 
@@ -66,6 +72,12 @@ const FILTER_GROUPS: {
     types: ['explosion_detail'],
     defaultOn: false,
   },
+  {
+    key: 'players',
+    label: '\u26A0\uFE0F Leave/DC',
+    types: ['player_leave', 'player_disconnect', 'player_disconnect_kill'],
+    defaultOn: true,
+  },
 ];
 
 export class ReplayLogPanel {
@@ -95,6 +107,9 @@ export class ReplayLogPanel {
       movement: false,
       powerup_pickup: true,
       explosion_detail: false,
+      player_leave: true,
+      player_disconnect: true,
+      player_disconnect_kill: true,
       game_over: true,
     };
 
@@ -326,6 +341,18 @@ export class ReplayLogPanel {
       case 'explosion_detail': {
         const owner = escapeHtml(String(d.ownerName || ''));
         return `<span style="color:var(--warning)">${owner}</span> explosion: ${d.cellCount} cells, ${d.destroyedWalls} walls`;
+      }
+      case 'player_leave': {
+        const player = escapeHtml(String(d.playerName || ''));
+        return `<span style="color:var(--warning)">${player}</span> left the game`;
+      }
+      case 'player_disconnect': {
+        const player = escapeHtml(String(d.playerName || ''));
+        return `<span style="color:var(--warning)">${player}</span> disconnected`;
+      }
+      case 'player_disconnect_kill': {
+        const player = escapeHtml(String(d.playerName || ''));
+        return `<span style="color:var(--danger)">${player}</span> killed (disconnect timeout)`;
       }
       case 'game_over':
         return `Game over`;

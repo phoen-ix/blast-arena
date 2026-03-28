@@ -524,6 +524,21 @@ export class GameScene extends Phaser.Scene {
         this.scene.stop('HUDScene');
         this.scene.start('GameOverScene');
       });
+
+      // Escape key to toggle leave game menu (multiplayer)
+      if (!this.registry.get('replayMode') && !this.registry.get('simulationSpectate')) {
+        this.pauseKeyHandler = (e: KeyboardEvent) => {
+          if (e.code === 'Escape') {
+            e.preventDefault();
+            if (this.paused) {
+              this.hideLeaveOverlay();
+            } else {
+              this.showLeaveOverlay();
+            }
+          }
+        };
+        window.addEventListener('keydown', this.pauseKeyHandler);
+      }
     }
 
     // Camera setup
@@ -1243,6 +1258,41 @@ export class GameScene extends Phaser.Scene {
       this.paused = false;
       this.hidePauseOverlay();
     });
+  }
+
+  private showLeaveOverlay(): void {
+    if (this.paused) return;
+    this.paused = true;
+    this.hidePauseOverlay();
+    const overlay = document.createElement('div');
+    overlay.className = 'pause-overlay';
+    overlay.innerHTML = `
+      <div class="pause-menu">
+        <h2 class="pause-title">${t('ui:game.leaveTitle')}</h2>
+        <p style="color: var(--text-muted); margin: 0; font-size: 14px;">${t('ui:game.leaveWarning')}</p>
+        <button class="btn btn-primary pause-btn" id="leave-confirm" style="background: var(--danger);">${t('ui:game.leaveConfirm')}</button>
+        <button class="btn btn-secondary pause-btn" id="leave-cancel">${t('ui:game.leaveCancel')}</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    this.pauseOverlay = overlay;
+
+    overlay.querySelector('#leave-confirm')!.addEventListener('click', () => {
+      this.paused = false;
+      this.hidePauseOverlay();
+      this.socketClient.emit('room:leave');
+      this.registry.remove('currentRoom');
+      this.scene.stop('HUDScene');
+      this.scene.start('LobbyScene');
+    });
+    overlay.querySelector('#leave-cancel')!.addEventListener('click', () => {
+      this.hideLeaveOverlay();
+    });
+  }
+
+  private hideLeaveOverlay(): void {
+    this.paused = false;
+    this.hidePauseOverlay();
   }
 
   private showPauseOverlay(): void {

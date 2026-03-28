@@ -155,6 +155,7 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 - Power-up drop on kill: dying players drop one random collected power-up as a pickup at death position. Weighted by stacked amounts (e.g., 3 bomb_up if maxBombs=4). `dropPowerUpOnDeath()` on GameState
 - Game over placements sorted by kills descending, tiebreak by survival placement
 - Grace period: 30 ticks (1.5s) after win condition before status='finished'; winner invulnerable during grace period
+- **Mid-game leave**: Escape key opens leave confirmation overlay in multiplayer (reuses `pauseOverlay`/`pauseKeyHandler` — mutually exclusive with campaign pause). "Leave Game" emits `room:leave`, kills player immediately server-side via `handlePlayerLeave()` (no grace period), clears `currentRoom` registry, transitions to LobbyScene. Disconnect (tab close) still uses `handlePlayerDisconnect()` with 10s grace period (`DISCONNECT_GRACE_TICKS = 200`). When only bots remain alive after leave/disconnect, `checkBotOnlySpeedup()` increases tick rate to 5x (`BOT_ONLY_TICK_RATE = 100`) and `onBotsOnly` callback removes room from lobby via `deleteRoom()` + `broadcastRoomList()`. `GameLoop.setTickRate()` clears and restarts the interval
 - Dead players enter spectator mode: free camera pan, click-to-follow, number keys 1-9, LB/RB bumpers
 - Mouse drag panning: pointerdown records start, pointermove after 4px threshold pans freeCam; pointerup without drag triggers replay play/pause
 - Spectate-follow breaks only on new keydown or mouse drag (not stale keysDown state); blur handler clears keysDown
@@ -201,7 +202,7 @@ Full-screen panel for admin/moderator roles. 11 tabs: Dashboard, Users, Matches,
 - **Puzzle tiles** (campaign only): Switches (4 colors × 3 variants), gates (4 colors), crumbling floors. See Campaign System → Puzzle Tiles section
 
 ## Replay System
-Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-system.md).
+Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-system.md). `GameLogger` and `ReplayRecorder` both log player leave/disconnect events: `player_leave`, `player_disconnect`, `player_disconnect_kill`. `ReplayLogPanel` displays these in the replay log with a "Leave/DC" filter toggle (default on).
 - **Campaign replays**: Recorded via `ReplayRecorder` in `CampaignGame`, controlled by `recordings_enabled` setting. Stores enemy states per frame in optional `ReplayFrame.enemies` field. `CampaignReplayMeta` on `ReplayData.campaign` carries level info + `EnemyTypeEntry[]` for texture generation during playback. Files named `campaign_{sessionId}.replay.json.gz`. DB table `campaign_replays` (migration 025) tracks metadata. Admin API: `GET/DELETE /admin/campaign-replays`. Frontend: Campaign tab "Replays" sub-view with watch/delete; `ReplayPlayer.onCampaignFrame` callback feeds `EnemySpriteRenderer` during playback
 
 ## SEO & Static Assets

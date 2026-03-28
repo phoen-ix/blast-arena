@@ -38,10 +38,10 @@ Open `http://localhost:8080` (or your configured `APP_EXTERNAL_PORT`). See `.env
 | `E` | B | Detonate remote bombs / Toggle FIFO mode |
 | `Q` | Y | Throw bomb (with Bomb Throw power-up) |
 | `1`-`6` | — | Quick emote (when alive) |
-| `Escape` | — | Pause campaign (when in campaign) |
+| `Escape` | — | Pause (campaign) / Leave game (multiplayer) |
 | `1`-`9` | LB / RB | Spectate player (when dead) |
 
-Walk into a bomb with the Kick power-up to send it sliding. Click a player name in the HUD to follow them as spectator.
+Walk into a bomb with the Kick power-up to send it sliding. Click a player name in the HUD to follow them as spectator. Press Escape during a multiplayer game to open the leave confirmation menu — leaving kills your player immediately and returns you to the lobby. If all human players leave, the remaining bot match speeds up to 5x and the room is removed from the lobby.
 
 ## Power-Ups
 

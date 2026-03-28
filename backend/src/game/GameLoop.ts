@@ -136,6 +136,19 @@ export class GameLoop {
     logger.info('Game loop resumed');
   }
 
+  setTickRate(newRate: number): void {
+    this.tickRate = newRate;
+    if (this.running && this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+      this.resume();
+    }
+  }
+
+  getTickRate(): number {
+    return this.tickRate;
+  }
+
   isPaused(): boolean {
     return this.running && this.interval === null;
   }

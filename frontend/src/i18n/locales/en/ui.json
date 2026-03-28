@@ -503,6 +503,12 @@
       "sparky": "Sparky"
     }
   },
+  "game": {
+    "leaveTitle": "LEAVE GAME",
+    "leaveWarning": "You will die and lose all progress.",
+    "leaveConfirm": "Leave Game",
+    "leaveCancel": "Cancel"
+  },
   "gameOver": {
     "gameWord": "GAME",
     "overWord": "OVER",

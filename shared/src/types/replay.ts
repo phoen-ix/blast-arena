@@ -21,6 +21,9 @@ export type ReplayLogEventType =
   | 'movement'
   | 'powerup_pickup'
   | 'explosion_detail'
+  | 'player_leave'
+  | 'player_disconnect'
+  | 'player_disconnect_kill'
   | 'game_over';
 
 export interface ReplayLogEntry {

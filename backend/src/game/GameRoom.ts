@@ -39,6 +39,7 @@ import * as eloService from '../services/elo';
 import * as achievementsService from '../services/achievements';
 
 const DISCONNECT_GRACE_TICKS = 200; // 10 seconds at 20 tps
+const BOT_ONLY_TICK_RATE = 100; // 5x speed when only bots remain
 
 export class GameRoom {
   public readonly code: string;
@@ -49,6 +50,7 @@ export class GameRoom {
   private matchId: number | null = null;
   private replayRecorder: ReplayRecorder | null = null;
   private disconnectedPlayers: Map<number, number> = new Map(); // playerId -> tick when disconnected
+  private onBotsOnly: (() => void) | null = null;
 
   constructor(io: TypedServer, room: Room, customMap?: GameConfig['customMap']) {
     this.code = room.code;
@@ -258,10 +260,29 @@ export class GameRoom {
 
     // Start grace period instead of instant death
     this.disconnectedPlayers.set(playerId, this.gameState.tick);
+    this.gameState.gameLogger?.logPlayerDisconnect(playerId, player.username);
     logger.info(
       { code: this.code, playerId, username: player.username },
       'Player disconnected during game, starting grace period',
     );
+  }
+
+  /** Explicit leave — kill player immediately, no grace period */
+  handlePlayerLeave(playerId: number): void {
+    // Cancel any pending grace period
+    this.disconnectedPlayers.delete(playerId);
+
+    const player = this.gameState.players.get(playerId);
+    if (player?.alive) {
+      this.gameState.gameLogger?.logPlayerLeave(playerId, player.username);
+      this.gameState.killPlayer(playerId, null);
+      logger.info(
+        { code: this.code, playerId, username: player.username },
+        'Player left game voluntarily',
+      );
+    }
+
+    this.checkBotOnlySpeedup();
   }
 
   handlePlayerReconnect(playerId: number): boolean {
@@ -283,6 +304,8 @@ export class GameRoom {
     let killedByGrace = false;
     for (const [playerId, disconnectTick] of this.disconnectedPlayers) {
       if (currentTick - disconnectTick >= DISCONNECT_GRACE_TICKS) {
+        const player = this.gameState.players.get(playerId);
+        this.gameState.gameLogger?.logPlayerDisconnectKill(playerId, player?.username ?? '?');
         this.gameState.killPlayer(playerId, null);
         logger.info(
           { code: this.code, playerId },
@@ -293,15 +316,22 @@ export class GameRoom {
       }
     }
 
-    // End game if all humans were killed by disconnect grace expiry (not normal gameplay deaths)
-    if (killedByGrace && this.disconnectedPlayers.size === 0) {
-      const hasAliveHuman = Array.from(this.gameState.players.values()).some(
-        (p) => p.alive && !p.isBot,
-      );
-      if (!hasAliveHuman && this.gameLoop.isRunning()) {
-        logger.info({ code: this.code }, 'No human players alive, ending game');
-        this.gameState.status = 'finished';
-        this.gameState.finishReason = 'All players disconnected';
+    if (killedByGrace) {
+      this.checkBotOnlySpeedup();
+    }
+  }
+
+  /** Speed up simulation when only bots remain alive and hide room from lobby */
+  private checkBotOnlySpeedup(): void {
+    if (!this.gameLoop.isRunning()) return;
+    const hasAliveHuman = Array.from(this.gameState.players.values()).some(
+      (p) => p.alive && !p.isBot,
+    );
+    if (!hasAliveHuman) {
+      if (this.gameLoop.getTickRate() !== BOT_ONLY_TICK_RATE) {
+        logger.info({ code: this.code }, 'Only bots remain, speeding up simulation');
+        this.gameLoop.setTickRate(BOT_ONLY_TICK_RATE);
+        this.onBotsOnly?.();
       }
     }
   }
@@ -584,5 +614,9 @@ export class GameRoom {
   isPlayerAlive(playerId: number): boolean {
     const player = this.gameState.players.get(playerId);
     return player?.alive ?? false;
+  }
+
+  setBotsOnlyCallback(cb: () => void): void {
+    this.onBotsOnly = cb;
   }
 }

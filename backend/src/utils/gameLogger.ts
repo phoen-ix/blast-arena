@@ -264,6 +264,21 @@ export class GameLogger {
     );
   }
 
+  logPlayerLeave(playerId: number, playerName: string): void {
+    this.log('player_leave', { playerId, playerName });
+    this.replayRecorder?.addLogEntry('player_leave', { playerId, playerName });
+  }
+
+  logPlayerDisconnect(playerId: number, playerName: string): void {
+    this.log('player_disconnect', { playerId, playerName });
+    this.replayRecorder?.addLogEntry('player_disconnect', { playerId, playerName });
+  }
+
+  logPlayerDisconnectKill(playerId: number, playerName: string): void {
+    this.log('player_disconnect_kill', { playerId, playerName });
+    this.replayRecorder?.addLogEntry('player_disconnect_kill', { playerId, playerName });
+  }
+
   logGameOver(winnerId: number | null, placements: any[]): void {
     this.log('game_over', { winnerId, placements });
     this.stream.end();

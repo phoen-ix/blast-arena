@@ -318,10 +318,10 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       if (!roomCode) return;
 
       try {
-        // If game is running, notify the game room
+        // If game is running, player explicitly leaves — kill immediately (no grace period)
         const gameRoom = roomManager.getRoom(roomCode);
         if (gameRoom) {
-          gameRoom.handlePlayerDisconnect(socket.data.userId);
+          gameRoom.handlePlayerLeave(socket.data.userId);
         }
 
         const room = await lobbyService.leaveRoom(roomCode, socket.data.userId);
@@ -438,7 +438,11 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
           await customMapsService.incrementPlayCount(mapData.id);
         }
 
-        await roomManager.createGame(startedRoom, customMap);
+        const gameRoom = await roomManager.createGame(startedRoom, customMap);
+        gameRoom.setBotsOnlyCallback(async () => {
+          await lobbyService.deleteRoom(roomCode);
+          broadcastRoomList();
+        });
         logger.info({ roomCode, players: room.players.length }, 'Game started');
         broadcastRoomList();
 
