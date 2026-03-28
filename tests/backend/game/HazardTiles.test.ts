@@ -193,12 +193,13 @@ describe('HazardTiles', () => {
       player.position.x = 3;
       player.position.y = 1;
       player.moveCooldown = 1; // just applied a move
+      player.movedThisTick = true; // slowing only applies on the tick of movement
 
-      // Tick — speed modifier should double the cooldown
+      // Tick — speed modifier adds MOVE_COOLDOWN_BASE to cooldown
       capturedOnTick!();
 
-      // Vine doubles moveCooldown (MOVE_COOLDOWN_BASE=5, so cooldown should be at least 10)
-      expect(player.moveCooldown).toBeGreaterThanOrEqual(10);
+      // Vine adds MOVE_COOLDOWN_BASE (5) to moveCooldown: 1 + 5 = 6
+      expect(player.moveCooldown).toBeGreaterThanOrEqual(6);
     });
 
     it('should be destroyed by explosions', () => {
@@ -254,9 +255,10 @@ describe('HazardTiles', () => {
       player.position.x = 3;
       player.position.y = 1;
       player.moveCooldown = 1;
+      player.movedThisTick = true; // slowing only applies on the tick of movement
 
       capturedOnTick!();
-      expect(player.moveCooldown).toBeGreaterThanOrEqual(10);
+      expect(player.moveCooldown).toBeGreaterThanOrEqual(6);
     });
 
     it('should kill player after QUICKSAND_KILL_TICKS continuous standing', () => {
@@ -469,9 +471,10 @@ describe('HazardTiles', () => {
       player.position.x = 3;
       player.position.y = 1;
       player.moveCooldown = 1;
+      player.movedThisTick = true; // slowing only applies on the tick of movement
 
       capturedOnTick!();
-      expect(player.moveCooldown).toBeGreaterThanOrEqual(10);
+      expect(player.moveCooldown).toBeGreaterThanOrEqual(6);
     });
 
     it('should NOT be destroyed by explosions', () => {

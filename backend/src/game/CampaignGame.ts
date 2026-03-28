@@ -526,6 +526,7 @@ export class CampaignGame {
     if (powerups.pierceBomb) player.applyPowerUp('pierce_bomb');
     if (powerups.remoteBomb) player.applyPowerUp('remote_bomb');
     if (powerups.lineBomb) player.applyPowerUp('line_bomb');
+    if (powerups.bombThrow) player.applyPowerUp('bomb_throw');
   }
 
   private onTick(_tickState: unknown): void {

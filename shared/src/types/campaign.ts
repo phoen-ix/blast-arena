@@ -122,6 +122,7 @@ export interface StartingPowerUps {
   pierceBomb?: boolean;
   remoteBomb?: boolean;
   lineBomb?: boolean;
+  bombThrow?: boolean;
 }
 
 export interface CampaignLevel {

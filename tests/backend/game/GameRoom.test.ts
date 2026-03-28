@@ -58,6 +58,8 @@ jest.mock('../../../backend/src/utils/gameLogger', () => ({
   GameLogger: jest.fn().mockImplementation(() => ({
     log: jest.fn(),
     logGameOver: jest.fn(),
+    logPlayerDisconnect: jest.fn(),
+    logPlayerLeave: jest.fn(),
     replayRecorder: null,
   })),
 }));

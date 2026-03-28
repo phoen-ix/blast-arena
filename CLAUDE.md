@@ -45,6 +45,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **HUD**: DOM-based overlay in HUDScene.ts. Timer counts up for campaign levels with no time limit (`roundTime >= 99999`), counts down otherwise
 - **Countdown**: Synced server/client — 36 ticks (1.8s). Both block inputs during countdown
 - **Gamepad**: `pendingGamepadAction` latching survives 50ms tick throttle. Keyboard takes priority
+- **Input edge-detection**: Keyboard bomb/detonate/throw use `Phaser.Input.Keyboard.JustDown()` (fires once per press). Gamepad uses `bombDown && !prevBomb`. Local co-op uses same edge-detection pattern
 - **Real-time lobby**: Room list auto-updates via `room:list` socket broadcast on every room mutation
 
 ## Campaign System
@@ -54,6 +55,7 @@ Campaign with hand-crafted levels, enemies, and bosses. Solo, online co-op (2 pl
 - Pause: `campaign:pause`/`campaign:resume` events; input blocked while paused; pause blocked during countdown
 - Spawn fallback: empty/null tiles → default map. Otherwise: level spawns → scan for 'spawn' → first empty tile → (1,1); co-op spiral search for P2
 - Editor supports dual mode: `editorMode: 'campaign' | 'custom_map'`. Custom map mode hides campaign-only tools and uses `/maps` API
+- **Tutorial worlds** (migration 028): 8 worlds, 21 levels — Power-Up Academy (12 levels covering all 9 power-ups + teleporters, conveyors, reinforced walls), 6 themed hazard worlds (forest/desert/ice/volcano/castle/void), Puzzle Chambers (3 levels: toggle switches, pressure switches, crumbling floors). All 11x11 handcrafted maps
 
 ### Co-Op
 - **Online**: Party-based (exactly 2 members, leader starts). Both sockets join `campaign:{sessionId}` room
@@ -213,7 +215,7 @@ npm test                    # Run all workspace tests (backend + frontend)
 npx jest --config tests/backend/jest.config.ts  # Backend only (from project root)
 cd frontend && npx vitest run                   # Frontend only
 ```
-- 1851 tests: 1809 backend (Jest, 55 suites) + 42 frontend (Vitest, 3 suites)
+- 1882 tests: 1840 backend (Jest, 56 suites) + 42 frontend (Vitest, 3 suites)
 - See [docs/testing.md](docs/testing.md) for full inventory, mocking patterns, and guide for writing new tests
 
 ## Documentation

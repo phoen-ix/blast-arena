@@ -1073,9 +1073,9 @@ export class GameScene extends Phaser.Scene {
       else if (this.cursors.left.isDown || this.wasd?.left.isDown) direction = 'left';
       else if (this.cursors.right.isDown || this.wasd?.right.isDown) direction = 'right';
 
-      if (this.spaceKey?.isDown) action = 'bomb';
-      if (this.detonateKey?.isDown) action = 'detonate';
-      if (this.throwKey?.isDown) action = 'throw';
+      if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) action = 'bomb';
+      if (Phaser.Input.Keyboard.JustDown(this.detonateKey)) action = 'detonate';
+      if (Phaser.Input.Keyboard.JustDown(this.throwKey)) action = 'throw';
     }
 
     // Gamepad input (fills nulls — keyboard takes priority)
