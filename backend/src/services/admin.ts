@@ -2,7 +2,8 @@ import { query, execute } from '../db/connection';
 import { AppError } from '../middleware/errorHandler';
 import { UserRole, RoomListItem } from '@blast-arena/shared';
 import { getRoomManager, getIO } from '../game/registry';
-import { hashPassword } from '../utils/crypto';
+import { hashPassword, hashEmail, generateEmailHint } from '../utils/crypto';
+import { getConfig } from '../config';
 import { hasReplay, getReplayPlacements } from './replay';
 import * as lobbyService from './lobby';
 import {
@@ -21,10 +22,15 @@ export async function createUser(
   password: string,
   role?: UserRole,
 ): Promise<{ id: number; username: string }> {
-  const existing = await query<IdRow[]>('SELECT id FROM users WHERE username = ? OR email = ?', [
-    username,
-    email,
-  ]);
+  const config = getConfig();
+  const normalizedEmail = email.toLowerCase();
+  const emailHash = hashEmail(normalizedEmail, config.EMAIL_PEPPER);
+  const emailHint = generateEmailHint(normalizedEmail);
+
+  const existing = await query<IdRow[]>(
+    'SELECT id FROM users WHERE username = ? OR email_hash = ?',
+    [username, emailHash],
+  );
   if (existing.length > 0) {
     throw new AppError('Username or email already taken', 409, 'CONFLICT');
   }
@@ -33,8 +39,8 @@ export async function createUser(
   const userRole = role || 'user';
 
   const result = await execute(
-    'INSERT INTO users (username, email, password_hash, role, email_verified) VALUES (?, ?, ?, ?, TRUE)',
-    [username, email, passwordHash, userRole],
+    'INSERT INTO users (username, email_hash, email_hint, password_hash, role, email_verified) VALUES (?, ?, ?, ?, ?, TRUE)',
+    [username, emailHash, emailHint, passwordHash, userRole],
   );
 
   await execute('INSERT INTO user_stats (user_id) VALUES (?)', [result.insertId]);
@@ -48,9 +54,10 @@ export async function createUser(
 }
 
 export async function listUsers(page: number = 1, limit: number = 20, search?: string) {
+  const config = getConfig();
   const offset = (page - 1) * limit;
   let sql = `
-    SELECT u.id, u.username, u.email, u.role, u.email_verified,
+    SELECT u.id, u.username, u.email_hint, u.role, u.email_verified,
            u.is_deactivated, u.deactivated_at,
            u.last_login, u.created_at,
            COALESCE(s.total_matches, 0) as total_matches,
@@ -61,8 +68,15 @@ export async function listUsers(page: number = 1, limit: number = 20, search?: s
   const params: (string | number)[] = [];
 
   if (search) {
-    sql += ' WHERE u.username LIKE ? OR u.email LIKE ?';
-    params.push(`%${search}%`, `%${search}%`);
+    if (search.includes('@')) {
+      // Exact email lookup via hash
+      const searchHash = hashEmail(search.toLowerCase().trim(), config.EMAIL_PEPPER);
+      sql += ' WHERE u.email_hash = ?';
+      params.push(searchHash);
+    } else {
+      sql += ' WHERE u.username LIKE ?';
+      params.push(`%${search}%`);
+    }
   }
 
   sql += ' ORDER BY u.created_at DESC LIMIT ? OFFSET ?';
@@ -73,8 +87,14 @@ export async function listUsers(page: number = 1, limit: number = 20, search?: s
   let countSql = 'SELECT COUNT(*) as total FROM users';
   const countParams: (string | number)[] = [];
   if (search) {
-    countSql += ' WHERE username LIKE ? OR email LIKE ?';
-    countParams.push(`%${search}%`, `%${search}%`);
+    if (search.includes('@')) {
+      const searchHash = hashEmail(search.toLowerCase().trim(), config.EMAIL_PEPPER);
+      countSql += ' WHERE email_hash = ?';
+      countParams.push(searchHash);
+    } else {
+      countSql += ' WHERE username LIKE ?';
+      countParams.push(`%${search}%`);
+    }
   }
   const countRows = await query<CountRow[]>(countSql, countParams);
   const total = countRows[0].total;
@@ -171,12 +191,12 @@ export async function resetUserPassword(
 
 export async function getServerStats() {
   // Single query with subselects instead of 3 separate round-trips
-  const [stats] = await query<CountRow[]>(
+  const [stats] = (await query<CountRow[]>(
     `SELECT
       (SELECT COUNT(*) FROM users WHERE is_deactivated = FALSE) as totalUsers,
       (SELECT COUNT(*) FROM users WHERE last_login > DATE_SUB(NOW(), INTERVAL 24 HOUR)) as activeUsers24h,
       (SELECT COUNT(*) FROM matches) as totalMatches`,
-  ) as unknown as [{ totalUsers: number; activeUsers24h: number; totalMatches: number }];
+  )) as unknown as [{ totalUsers: number; activeUsers24h: number; totalMatches: number }];
 
   let activeRooms = 0;
   let activePlayers = 0;

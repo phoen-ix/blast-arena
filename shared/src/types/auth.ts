@@ -3,7 +3,7 @@ export type UserRole = 'user' | 'moderator' | 'admin';
 export interface User {
   id: number;
   username: string;
-  email: string;
+  emailHint: string;
   emailVerified: boolean;
   role: UserRole;
   lastLogin: Date | null;

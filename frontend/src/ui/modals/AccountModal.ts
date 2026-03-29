@@ -53,14 +53,14 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
       <div class="form-group">
         <label for="acct-new-email">${t('settings.account.email')}</label>
         <div style="color:var(--text-dim);font-size:13px;margin-bottom:6px;">
-          ${t('settings.account.current')} <strong style="color:var(--text);">${escapeHtml(profile.email)}</strong>
+          ${t('settings.account.current')} <strong style="color:var(--text);">${escapeHtml(profile.emailHint)}</strong>
           ${profile.emailVerified ? `<span style="color:var(--success);margin-left:6px;">${t('settings.account.verified')}</span>` : `<span style="color:var(--warning);margin-left:6px;">${t('settings.account.unverified')}</span>`}
         </div>
         ${
-          !isAdmin && profile.pendingEmail
+          !isAdmin && profile.pendingEmailHint
             ? `
           <div style="color:var(--warning);font-size:13px;margin-bottom:8px;padding:10px;background:var(--warning-dim);border:1px solid var(--warning);border-radius:8px;">
-            ${t('settings.account.pendingChange')} <strong>${escapeHtml(profile.pendingEmail)}</strong> — ${t('settings.account.pendingHint')}
+            ${t('settings.account.pendingChange')} <strong>${escapeHtml(profile.pendingEmailHint)}</strong> — ${t('settings.account.pendingHint')}
             <button class="btn btn-secondary" id="acct-cancel-email" style="margin-left:8px;padding:2px 8px;font-size:11px;">${t('settings.account.cancel')}</button>
           </div>
         `
@@ -137,10 +137,6 @@ export async function showAccountModal(deps: AccountModalDeps): Promise<void> {
 
     if (!newEmail) {
       statusEl.innerHTML = `<span style="color:var(--danger);">${t('settings.account.emailEmpty')}</span>`;
-      return;
-    }
-    if (newEmail === profile.email) {
-      statusEl.innerHTML = `<span style="color:var(--text-dim);">${t('settings.account.emailSame')}</span>`;
       return;
     }
 

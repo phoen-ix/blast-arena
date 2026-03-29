@@ -11,8 +11,18 @@ jest.mock('../../../backend/src/db/connection', () => ({
 }));
 
 const mockHashPassword = jest.fn<AnyFn>();
+const mockHashEmail = jest.fn<AnyFn>();
+const mockGenerateEmailHint = jest.fn<AnyFn>();
 jest.mock('../../../backend/src/utils/crypto', () => ({
   hashPassword: mockHashPassword,
+  hashEmail: mockHashEmail,
+  generateEmailHint: mockGenerateEmailHint,
+}));
+
+jest.mock('../../../backend/src/config', () => ({
+  getConfig: () => ({
+    EMAIL_PEPPER: 'test-pepper-minimum-32-characters-long',
+  }),
 }));
 
 const mockGetRoomManager = jest.fn<AnyFn>();
@@ -64,6 +74,8 @@ import { AppError } from '../../../backend/src/middleware/errorHandler';
 describe('admin service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockHashEmail.mockReturnValue('hashed-email');
+    mockGenerateEmailHint.mockReturnValue('n***@e***.com');
   });
 
   // ── createUser ──────────────────────────────────────────────────────
@@ -84,7 +96,8 @@ describe('admin service', () => {
       // Verify user insert includes default 'user' role
       expect(mockExecute.mock.calls[0][1]).toEqual([
         'newuser',
-        'new@example.com',
+        'hashed-email',
+        'n***@e***.com',
         'hashed_pw',
         'user',
       ]);
@@ -102,7 +115,8 @@ describe('admin service', () => {
       expect(result).toEqual({ id: 43, username: 'moduser' });
       expect(mockExecute.mock.calls[0][1]).toEqual([
         'moduser',
-        'mod@example.com',
+        'hashed-email',
+        'n***@e***.com',
         'hashed_pw',
         'moderator',
       ]);
@@ -144,13 +158,7 @@ describe('admin service', () => {
       await createUser(99, 'bob', 'bob@x.com', 'p', 'admin');
 
       // Third execute call is audit log
-      expect(mockExecute.mock.calls[2][1]).toEqual([
-        99,
-        'create_user',
-        'user',
-        7,
-        'bob (admin)',
-      ]);
+      expect(mockExecute.mock.calls[2][1]).toEqual([99, 'create_user', 'user', 7, 'bob (admin)']);
     });
   });
 
@@ -159,8 +167,8 @@ describe('admin service', () => {
   describe('listUsers', () => {
     it('returns paginated user list without search', async () => {
       const userRows = [
-        { id: 1, username: 'alice', email: 'alice@x.com' },
-        { id: 2, username: 'bob', email: 'bob@x.com' },
+        { id: 1, username: 'alice', email_hint: 'a***@x***.com' },
+        { id: 2, username: 'bob', email_hint: 'b***@x***.com' },
       ];
       mockQuery.mockResolvedValueOnce(userRows); // user rows
       mockQuery.mockResolvedValueOnce([{ total: 25 }]); // count
@@ -172,16 +180,15 @@ describe('admin service', () => {
       expect(mockQuery.mock.calls[0][1]).toEqual([10, 10]);
     });
 
-    it('applies search filter to both username and email', async () => {
+    it('applies search filter to username with LIKE', async () => {
       mockQuery.mockResolvedValueOnce([]);
       mockQuery.mockResolvedValueOnce([{ total: 0 }]);
 
       await listUsers(1, 20, 'alice');
 
-      // User query should include LIKE params
-      expect(mockQuery.mock.calls[0][1]).toEqual(['%alice%', '%alice%', 20, 0]);
-      // Count query should also include LIKE params
-      expect(mockQuery.mock.calls[1][1]).toEqual(['%alice%', '%alice%']);
+      // Non-email search uses username LIKE only
+      expect(mockQuery.mock.calls[0][1]).toEqual(['%alice%', 20, 0]);
+      expect(mockQuery.mock.calls[1][1]).toEqual(['%alice%']);
     });
 
     it('uses default page=1 and limit=20', async () => {
@@ -354,9 +361,7 @@ describe('admin service', () => {
 
   describe('getServerStats', () => {
     it('returns DB stats combined with active room/player counts', async () => {
-      mockQuery.mockResolvedValueOnce([
-        { totalUsers: 100, activeUsers24h: 15, totalMatches: 500 },
-      ]);
+      mockQuery.mockResolvedValueOnce([{ totalUsers: 100, activeUsers24h: 15, totalMatches: 500 }]);
 
       const mockEmit = jest.fn();
       const mockRoomsGet = jest.fn<AnyFn>();
@@ -392,9 +397,7 @@ describe('admin service', () => {
     });
 
     it('returns 0 for rooms/players when registry is not initialized', async () => {
-      mockQuery.mockResolvedValueOnce([
-        { totalUsers: 50, activeUsers24h: 5, totalMatches: 200 },
-      ]);
+      mockQuery.mockResolvedValueOnce([{ totalUsers: 50, activeUsers24h: 5, totalMatches: 200 }]);
 
       mockGetRoomManager.mockImplementation(() => {
         throw new Error('RoomManager not initialized');
@@ -412,9 +415,7 @@ describe('admin service', () => {
     });
 
     it('handles rooms with no sockets (undefined from rooms.get)', async () => {
-      mockQuery.mockResolvedValueOnce([
-        { totalUsers: 10, activeUsers24h: 1, totalMatches: 3 },
-      ]);
+      mockQuery.mockResolvedValueOnce([{ totalUsers: 10, activeUsers24h: 1, totalMatches: 3 }]);
 
       const mockRoomsGet = jest.fn<AnyFn>();
       mockGetIO.mockReturnValue({
@@ -788,13 +789,7 @@ describe('admin service', () => {
       // Socket emit with null message
       expect(mockEmit).toHaveBeenCalledWith('admin:banner', { message: null });
       // Audit log
-      expect(mockExecute.mock.calls[1][1]).toEqual([
-        1,
-        'clear_banner',
-        'broadcast',
-        0,
-        null,
-      ]);
+      expect(mockExecute.mock.calls[1][1]).toEqual([1, 'clear_banner', 'broadcast', 0, null]);
     });
 
     it('still logs audit action even if IO is not available', async () => {
@@ -807,13 +802,7 @@ describe('admin service', () => {
       await clearBanner(1);
 
       expect(mockExecute).toHaveBeenCalledTimes(2);
-      expect(mockExecute.mock.calls[1][1]).toEqual([
-        1,
-        'clear_banner',
-        'broadcast',
-        0,
-        null,
-      ]);
+      expect(mockExecute.mock.calls[1][1]).toEqual([1, 'clear_banner', 'broadcast', 0, null]);
     });
   });
 

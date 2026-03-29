@@ -17,6 +17,8 @@ const configSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
+  EMAIL_PEPPER: z.string().min(32),
+
   SMTP_HOST: z.string().default(''),
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_USER: z.string().default(''),

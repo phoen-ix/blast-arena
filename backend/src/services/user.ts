@@ -1,14 +1,22 @@
 import { query, execute, withTransaction } from '../db/connection';
 import { AppError } from '../middleware/errorHandler';
-import { comparePassword, hashPassword, generateToken, hashToken } from '../utils/crypto';
+import {
+  comparePassword,
+  hashPassword,
+  generateToken,
+  hashToken,
+  hashEmail,
+  generateEmailHint,
+} from '../utils/crypto';
+import { getConfig } from '../config';
 import { sendEmailChangeEmail } from './email';
 import { logger } from '../utils/logger';
 import { UserRow, UserProfileRow, UserEmailChangeRow, IdRow } from '../db/types';
 
 export async function getUserProfile(userId: number) {
   const rows = await query<UserProfileRow[]>(
-    `SELECT u.id, u.username, u.email, u.role, u.email_verified,
-            u.pending_email, u.created_at,
+    `SELECT u.id, u.username, u.email_hint, u.role, u.email_verified,
+            u.pending_email_hint, u.created_at,
             s.total_matches, s.total_wins, s.total_kills, s.total_deaths,
             s.total_bombs, s.total_powerups, s.total_playtime,
             s.win_streak, s.best_win_streak, s.elo_rating, s.peak_elo,
@@ -28,10 +36,10 @@ export async function getUserProfile(userId: number) {
   return {
     id: row.id,
     username: row.username,
-    email: row.email,
+    emailHint: row.email_hint,
     role: row.role,
     emailVerified: row.email_verified,
-    pendingEmail: row.pending_email || null,
+    pendingEmailHint: row.pending_email_hint || null,
     createdAt: row.created_at,
     stats: {
       totalMatches: row.total_matches || 0,
@@ -67,9 +75,13 @@ export async function updateUsername(userId: number, newUsername: string): Promi
 }
 
 export async function updateEmailDirect(userId: number, newEmail: string): Promise<void> {
+  const config = getConfig();
   const normalizedEmail = newEmail.toLowerCase();
-  const existing = await query<IdRow[]>('SELECT id FROM users WHERE email = ? AND id != ?', [
-    normalizedEmail,
+  const emailHash = hashEmail(normalizedEmail, config.EMAIL_PEPPER);
+  const emailHint = generateEmailHint(normalizedEmail);
+
+  const existing = await query<IdRow[]>('SELECT id FROM users WHERE email_hash = ? AND id != ?', [
+    emailHash,
     userId,
   ]);
   if (existing.length > 0) {
@@ -77,17 +89,20 @@ export async function updateEmailDirect(userId: number, newEmail: string): Promi
   }
 
   await execute(
-    'UPDATE users SET email = ?, email_verified = TRUE, pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
-    [normalizedEmail, userId],
+    'UPDATE users SET email_hash = ?, email_hint = ?, email_verified = TRUE, pending_email_hash = NULL, pending_email_hint = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
+    [emailHash, emailHint, userId],
   );
 }
 
 export async function requestEmailChange(userId: number, newEmail: string): Promise<void> {
+  const config = getConfig();
   const normalizedEmail = newEmail.toLowerCase();
+  const emailHash = hashEmail(normalizedEmail, config.EMAIL_PEPPER);
+  const emailHint = generateEmailHint(normalizedEmail);
 
   // Check if the new email is already used by another user
-  const existing = await query<IdRow[]>('SELECT id FROM users WHERE email = ? AND id != ?', [
-    normalizedEmail,
+  const existing = await query<IdRow[]>('SELECT id FROM users WHERE email_hash = ? AND id != ?', [
+    emailHash,
     userId,
   ]);
   if (existing.length > 0) {
@@ -96,8 +111,8 @@ export async function requestEmailChange(userId: number, newEmail: string): Prom
 
   // Also check if another user has this as a pending email (optional but prevents race)
   const pendingExisting = await query<IdRow[]>(
-    'SELECT id FROM users WHERE pending_email = ? AND id != ?',
-    [normalizedEmail, userId],
+    'SELECT id FROM users WHERE pending_email_hash = ? AND id != ?',
+    [emailHash, userId],
   );
   if (pendingExisting.length > 0) {
     throw new AppError('Email is already in use', 409, 'CONFLICT');
@@ -107,8 +122,8 @@ export async function requestEmailChange(userId: number, newEmail: string): Prom
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
   await execute(
-    'UPDATE users SET pending_email = ?, email_change_token = ?, email_change_expires = ? WHERE id = ?',
-    [normalizedEmail, hashToken(token), expires, userId],
+    'UPDATE users SET pending_email_hash = ?, pending_email_hint = ?, email_change_token = ?, email_change_expires = ? WHERE id = ?',
+    [emailHash, emailHint, hashToken(token), expires, userId],
   );
 
   // Send confirmation to the NEW email address
@@ -122,7 +137,7 @@ export async function confirmEmailChange(token: string): Promise<void> {
 
   await withTransaction(async (conn) => {
     const [rows] = await conn.execute(
-      'SELECT id, pending_email, email_change_expires FROM users WHERE email_change_token = ? FOR UPDATE',
+      'SELECT id, pending_email_hash, pending_email_hint, email_change_expires FROM users WHERE email_change_token = ? FOR UPDATE',
       [tokenHash],
     );
 
@@ -135,7 +150,7 @@ export async function confirmEmailChange(token: string): Promise<void> {
 
     if (new Date(row.email_change_expires) < new Date()) {
       await conn.execute(
-        'UPDATE users SET pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
+        'UPDATE users SET pending_email_hash = NULL, pending_email_hint = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
         [row.id],
       );
       throw new AppError('Confirmation link has expired', 400, 'TOKEN_EXPIRED');
@@ -143,20 +158,20 @@ export async function confirmEmailChange(token: string): Promise<void> {
 
     // Uniqueness check within transaction — FOR UPDATE prevents concurrent claims
     const [conflict] = await conn.execute(
-      'SELECT id FROM users WHERE email = ? AND id != ? FOR UPDATE',
-      [row.pending_email, row.id],
+      'SELECT id FROM users WHERE email_hash = ? AND id != ? FOR UPDATE',
+      [row.pending_email_hash, row.id],
     );
     if ((conflict as IdRow[]).length > 0) {
       await conn.execute(
-        'UPDATE users SET pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
+        'UPDATE users SET pending_email_hash = NULL, pending_email_hint = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
         [row.id],
       );
       throw new AppError('Email is already in use by another account', 409, 'CONFLICT');
     }
 
     await conn.execute(
-      'UPDATE users SET email = ?, email_verified = TRUE, pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
-      [row.pending_email, row.id],
+      'UPDATE users SET email_hash = ?, email_hint = ?, email_verified = TRUE, pending_email_hash = NULL, pending_email_hint = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
+      [row.pending_email_hash, row.pending_email_hint, row.id],
     );
   });
 }
@@ -183,7 +198,7 @@ export async function changePassword(
 
 export async function cancelEmailChange(userId: number): Promise<void> {
   await execute(
-    'UPDATE users SET pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
+    'UPDATE users SET pending_email_hash = NULL, pending_email_hint = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
     [userId],
   );
 }

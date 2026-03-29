@@ -175,14 +175,14 @@ export class SettingsUI {
         <div class="content-section">
           <h3 class="settings-section-title">${t('settings.account.email')}</h3>
           <div class="settings-current-value">
-            ${t('settings.account.current')} <strong>${escapeHtml(profile.email)}</strong>
+            ${t('settings.account.current')} <strong>${escapeHtml(profile.emailHint)}</strong>
             ${profile.emailVerified ? `<span class="text-success ml-1">${t('settings.account.verified')}</span>` : `<span class="text-warning ml-1">${t('settings.account.unverified')}</span>`}
           </div>
           ${
-            !isAdmin && profile.pendingEmail
+            !isAdmin && profile.pendingEmailHint
               ? `
             <div class="settings-pending-banner">
-              ${t('settings.account.pendingChange')} <strong>${escapeHtml(profile.pendingEmail)}</strong> — ${t('settings.account.pendingHint')}
+              ${t('settings.account.pendingChange')} <strong>${escapeHtml(profile.pendingEmailHint)}</strong> — ${t('settings.account.pendingHint')}
               <button class="btn btn-secondary btn-sm ml-2" id="acct-cancel-email">${t('settings.account.deleteModal.cancel')}</button>
             </div>
           `
@@ -263,10 +263,6 @@ export class SettingsUI {
 
       if (!newEmail) {
         statusEl.innerHTML = `<span class="text-danger">${t('settings.account.emailEmpty')}</span>`;
-        return;
-      }
-      if (newEmail === profile.email) {
-        statusEl.innerHTML = `<span class="text-dim">${t('settings.account.emailSame')}</span>`;
         return;
       }
 

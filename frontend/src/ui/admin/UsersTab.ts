@@ -97,7 +97,7 @@ export class UsersTab {
                 (u: any) => `
               <tr>
                 <td>${escapeHtml(u.username)}</td>
-                <td>${escapeHtml(u.email)}</td>
+                <td>${escapeHtml(u.email_hint)}</td>
                 <td><span class="badge badge-${u.role}">${u.role}</span></td>
                 <td>${this.statusBadge(u)}</td>
                 <td>${u.total_matches}</td>

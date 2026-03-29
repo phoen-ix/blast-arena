@@ -12,11 +12,15 @@ const mockHashPassword = jest.fn<(password: string) => Promise<string>>();
 const mockComparePassword = jest.fn<(password: string, hash: string) => Promise<boolean>>();
 const mockGenerateToken = jest.fn<() => string>();
 const mockHashToken = jest.fn<(token: string) => string>();
+const mockHashEmail = jest.fn<(email: string, pepper: string) => string>();
+const mockGenerateEmailHint = jest.fn<(email: string) => string>();
 jest.mock('../../../backend/src/utils/crypto', () => ({
   hashPassword: mockHashPassword,
   comparePassword: mockComparePassword,
   generateToken: mockGenerateToken,
   hashToken: mockHashToken,
+  hashEmail: mockHashEmail,
+  generateEmailHint: mockGenerateEmailHint,
 }));
 
 const mockSendVerificationEmail = jest.fn<(...args: any[]) => Promise<void>>();
@@ -31,6 +35,7 @@ jest.mock('../../../backend/src/config', () => ({
     JWT_SECRET: 'test-secret-key-min16',
     JWT_EXPIRES_IN: '15m',
     JWT_REFRESH_EXPIRES_IN: '7d',
+    EMAIL_PEPPER: 'test-pepper-minimum-32-characters-long',
   }),
 }));
 
@@ -54,6 +59,8 @@ describe('Auth Service', () => {
     mockComparePassword.mockResolvedValue(true);
     mockGenerateToken.mockReturnValue('a'.repeat(64));
     mockHashToken.mockReturnValue('hashed-token');
+    mockHashEmail.mockReturnValue('hashed-email');
+    mockGenerateEmailHint.mockReturnValue('n***@t***.com');
     mockSendVerificationEmail.mockResolvedValue(undefined);
     mockSendPasswordResetEmail.mockResolvedValue(undefined);
   });
@@ -107,7 +114,6 @@ describe('Auth Service', () => {
     const mockUserRow = {
       id: 10,
       username: 'testuser',
-      email: 'test@test.com',
       password_hash: 'hashed',
       role: 'user',
       language: 'en',

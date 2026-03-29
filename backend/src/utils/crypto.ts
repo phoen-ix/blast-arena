@@ -18,3 +18,20 @@ export function generateToken(): string {
 export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
+
+export function hashEmail(email: string, pepper: string): string {
+  return crypto.createHmac('sha256', pepper).update(email.toLowerCase().trim()).digest('hex');
+}
+
+export function generateEmailHint(email: string): string {
+  const normalized = email.toLowerCase().trim();
+  const atIdx = normalized.indexOf('@');
+  if (atIdx < 1) return '***@***';
+  const local = normalized.slice(0, atIdx);
+  const domain = normalized.slice(atIdx + 1);
+  const maskedLocal = local[0] + '***';
+  const parts = domain.split('.');
+  const tld = parts.pop()!;
+  const maskedDomain = parts.map((p) => p[0] + '***').join('.') + '.' + tld;
+  return maskedLocal + '@' + maskedDomain;
+}

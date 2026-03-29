@@ -1,7 +1,14 @@
 import jwt from 'jsonwebtoken';
 import { getConfig } from '../config';
 import { query, execute } from '../db/connection';
-import { hashPassword, comparePassword, generateToken, hashToken } from '../utils/crypto';
+import {
+  hashPassword,
+  comparePassword,
+  generateToken,
+  hashToken,
+  hashEmail,
+  generateEmailHint,
+} from '../utils/crypto';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 import { AppError } from '../middleware/errorHandler';
 import { AuthPayload, PublicUser, AuthResponse, UserRole } from '@blast-arena/shared';
@@ -76,13 +83,16 @@ export async function register(
   email: string,
   password: string,
 ): Promise<AuthResponse> {
+  const config = getConfig();
   const normalizedEmail = email.toLowerCase();
+  const emailHash = hashEmail(normalizedEmail, config.EMAIL_PEPPER);
+  const emailHint = generateEmailHint(normalizedEmail);
 
   // Check existing user
-  const existing = await query<IdRow[]>('SELECT id FROM users WHERE username = ? OR email = ?', [
-    username,
-    normalizedEmail,
-  ]);
+  const existing = await query<IdRow[]>(
+    'SELECT id FROM users WHERE username = ? OR email_hash = ?',
+    [username, emailHash],
+  );
   if (existing.length > 0) {
     throw new AppError('Username or email already taken', 409, 'CONFLICT');
   }
@@ -91,8 +101,8 @@ export async function register(
   const verifyToken = generateToken();
 
   const result = await execute(
-    `INSERT INTO users (username, email, password_hash, email_verify_token) VALUES (?, ?, ?, ?)`,
-    [username, normalizedEmail, passwordHash, hashToken(verifyToken)],
+    `INSERT INTO users (username, email_hash, email_hint, password_hash, email_verify_token) VALUES (?, ?, ?, ?, ?)`,
+    [username, emailHash, emailHint, passwordHash, hashToken(verifyToken)],
   );
 
   // Create user_stats row
@@ -116,7 +126,7 @@ export async function register(
 
 export async function verifyCredentials(username: string, password: string): Promise<PublicUser> {
   const rows = await query<UserRow[]>(
-    'SELECT id, username, email, password_hash, role, language, is_deactivated, email_verified FROM users WHERE username = ?',
+    'SELECT id, username, password_hash, role, language, is_deactivated, email_verified FROM users WHERE username = ?',
     [username],
   );
 
@@ -246,7 +256,10 @@ export async function verifyEmail(token: string): Promise<void> {
 }
 
 export async function forgotPassword(email: string): Promise<void> {
-  const rows = await query<IdRow[]>('SELECT id FROM users WHERE email = ?', [email]);
+  const config = getConfig();
+  const emailHash = hashEmail(email.toLowerCase().trim(), config.EMAIL_PEPPER);
+
+  const rows = await query<IdRow[]>('SELECT id FROM users WHERE email_hash = ?', [emailHash]);
   if (rows.length === 0) {
     // Don't reveal whether email exists
     return;
@@ -256,8 +269,8 @@ export async function forgotPassword(email: string): Promise<void> {
   const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
   await execute(
-    'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE email = ?',
-    [hashToken(resetToken), expires, email],
+    'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE email_hash = ?',
+    [hashToken(resetToken), expires, emailHash],
   );
 
   await sendPasswordResetEmail(email, resetToken);

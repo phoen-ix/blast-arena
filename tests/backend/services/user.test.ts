@@ -16,11 +16,21 @@ const mockComparePassword = jest.fn<AnyFn>();
 const mockHashPassword = jest.fn<AnyFn>();
 const mockGenerateToken = jest.fn<AnyFn>();
 const mockHashToken = jest.fn<AnyFn>();
+const mockHashEmail = jest.fn<AnyFn>();
+const mockGenerateEmailHint = jest.fn<AnyFn>();
 jest.mock('../../../backend/src/utils/crypto', () => ({
   comparePassword: mockComparePassword,
   hashPassword: mockHashPassword,
   generateToken: mockGenerateToken,
   hashToken: mockHashToken,
+  hashEmail: mockHashEmail,
+  generateEmailHint: mockGenerateEmailHint,
+}));
+
+jest.mock('../../../backend/src/config', () => ({
+  getConfig: () => ({
+    EMAIL_PEPPER: 'test-pepper-minimum-32-characters-long',
+  }),
 }));
 
 const mockSendEmailChangeEmail = jest.fn<AnyFn>();
@@ -50,6 +60,8 @@ import { AppError } from '../../../backend/src/middleware/errorHandler';
 describe('user service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockHashEmail.mockReturnValue('hashed-email');
+    mockGenerateEmailHint.mockReturnValue('n***@e***.com');
   });
 
   // ── getUserProfile ──────────────────────────────────────────────────
@@ -59,10 +71,10 @@ describe('user service', () => {
       const row = {
         id: 1,
         username: 'alice',
-        email: 'alice@example.com',
+        email_hint: 'a***@e***.com',
         role: 'user',
         email_verified: true,
-        pending_email: null,
+        pending_email_hint: null,
         created_at: new Date('2025-01-01'),
         total_matches: 50,
         total_wins: 20,
@@ -87,10 +99,10 @@ describe('user service', () => {
       expect(profile).toEqual({
         id: 1,
         username: 'alice',
-        email: 'alice@example.com',
+        emailHint: 'a***@e***.com',
         role: 'user',
         emailVerified: true,
-        pendingEmail: null,
+        pendingEmailHint: null,
         createdAt: new Date('2025-01-01'),
         stats: {
           totalMatches: 50,
@@ -116,10 +128,10 @@ describe('user service', () => {
       const row = {
         id: 2,
         username: 'newuser',
-        email: 'new@example.com',
+        email_hint: 'n***@e***.com',
         role: 'user',
         email_verified: false,
-        pending_email: null,
+        pending_email_hint: null,
         created_at: new Date('2025-06-01'),
         total_matches: null,
         total_wins: null,
@@ -214,8 +226,8 @@ describe('user service', () => {
       expect(mockGenerateToken).toHaveBeenCalled();
       expect(mockHashToken).toHaveBeenCalledWith('raw-token-123');
       expect(mockExecute).toHaveBeenCalledWith(
-        'UPDATE users SET pending_email = ?, email_change_token = ?, email_change_expires = ? WHERE id = ?',
-        ['newemail@example.com', 'hashed-token-abc', expect.any(Date), 1],
+        'UPDATE users SET pending_email_hash = ?, pending_email_hint = ?, email_change_token = ?, email_change_expires = ? WHERE id = ?',
+        ['hashed-email', 'n***@e***.com', 'hashed-token-abc', expect.any(Date), 1],
       );
       expect(mockSendEmailChangeEmail).toHaveBeenCalledWith(
         'newemail@example.com',
@@ -262,7 +274,14 @@ describe('user service', () => {
       const futureDate = new Date(Date.now() + 60 * 60 * 1000); // 1h from now
       // conn.execute returns [rows, fields] tuples
       mockConnExecute.mockResolvedValueOnce([
-        [{ id: 5, pending_email: 'new@example.com', email_change_expires: futureDate }],
+        [
+          {
+            id: 5,
+            pending_email_hash: 'hashed-new-email',
+            pending_email_hint: 'n***@e***.com',
+            email_change_expires: futureDate,
+          },
+        ],
       ]);
       mockConnExecute.mockResolvedValueOnce([[]]); // no conflict
       mockConnExecute.mockResolvedValueOnce([{}]); // update result
@@ -271,8 +290,8 @@ describe('user service', () => {
 
       expect(mockHashToken).toHaveBeenCalledWith('some-token');
       expect(mockConnExecute).toHaveBeenCalledWith(
-        'UPDATE users SET email = ?, email_verified = TRUE, pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
-        ['new@example.com', 5],
+        'UPDATE users SET email_hash = ?, email_hint = ?, email_verified = TRUE, pending_email_hash = NULL, pending_email_hint = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
+        ['hashed-new-email', 'n***@e***.com', 5],
       );
     });
 
@@ -292,7 +311,14 @@ describe('user service', () => {
       mockHashToken.mockReturnValue('hashed-token');
       const pastDate = new Date(Date.now() - 60 * 60 * 1000); // 1h ago
       mockConnExecute.mockResolvedValueOnce([
-        [{ id: 5, pending_email: 'new@example.com', email_change_expires: pastDate }],
+        [
+          {
+            id: 5,
+            pending_email_hash: 'hashed-email',
+            pending_email_hint: 'n***@e***.com',
+            email_change_expires: pastDate,
+          },
+        ],
       ]);
       mockConnExecute.mockResolvedValueOnce([{}]); // cleanup update
 
@@ -308,7 +334,14 @@ describe('user service', () => {
       mockHashToken.mockReturnValue('hashed-token');
       const futureDate = new Date(Date.now() + 60 * 60 * 1000);
       mockConnExecute.mockResolvedValueOnce([
-        [{ id: 5, pending_email: 'race@example.com', email_change_expires: futureDate }],
+        [
+          {
+            id: 5,
+            pending_email_hash: 'hashed-race-email',
+            pending_email_hint: 'r***@e***.com',
+            email_change_expires: futureDate,
+          },
+        ],
       ]);
       mockConnExecute.mockResolvedValueOnce([[{ id: 99 }]]); // conflict found
       mockConnExecute.mockResolvedValueOnce([{}]); // cleanup update
@@ -375,7 +408,7 @@ describe('user service', () => {
       await cancelEmailChange(1);
 
       expect(mockExecute).toHaveBeenCalledWith(
-        'UPDATE users SET pending_email = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
+        'UPDATE users SET pending_email_hash = NULL, pending_email_hint = NULL, email_change_token = NULL, email_change_expires = NULL WHERE id = ?',
         [1],
       );
     });

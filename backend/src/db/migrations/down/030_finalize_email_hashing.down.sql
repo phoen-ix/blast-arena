@@ -1,0 +1,3 @@
+ALTER TABLE users
+  ADD COLUMN email VARCHAR(255) DEFAULT NULL AFTER username,
+  ADD COLUMN pending_email VARCHAR(255) DEFAULT NULL AFTER email_verify_token;

@@ -3,7 +3,7 @@ import { UserRole } from './auth';
 export interface AdminUserListItem {
   id: number;
   username: string;
-  email: string;
+  emailHint: string;
   role: UserRole;
   emailVerified: boolean;
   isDeactivated: boolean;

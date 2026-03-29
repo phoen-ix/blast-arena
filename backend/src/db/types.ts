@@ -14,7 +14,8 @@ export interface IdRow extends RowDataPacket {
 export interface UserRow extends RowDataPacket {
   id: number;
   username: string;
-  email: string;
+  email_hash: string;
+  email_hint: string;
   password_hash: string;
   role: string;
   language: string;
@@ -24,7 +25,8 @@ export interface UserRow extends RowDataPacket {
   last_login: Date | null;
   created_at: Date;
   updated_at: Date;
-  pending_email: string | null;
+  pending_email_hash: string | null;
+  pending_email_hint: string | null;
   email_change_token: string | null;
   email_change_expires: Date | null;
 }
@@ -45,10 +47,10 @@ export interface RefreshTokenJoinRow extends RowDataPacket {
 export interface UserProfileRow extends RowDataPacket {
   id: number;
   username: string;
-  email: string;
+  email_hint: string;
   role: string;
   email_verified: boolean;
-  pending_email: string | null;
+  pending_email_hint: string | null;
   created_at: Date;
   total_matches: number | null;
   total_wins: number | null;
@@ -70,7 +72,8 @@ export interface UserProfileRow extends RowDataPacket {
 /** User with email change fields */
 export interface UserEmailChangeRow extends RowDataPacket {
   id: number;
-  pending_email: string;
+  pending_email_hash: string;
+  pending_email_hint: string;
   email_change_expires: Date;
 }
 
@@ -436,7 +439,7 @@ export interface CustomMapRow extends RowDataPacket {
 export interface AdminUserRow extends RowDataPacket {
   id: number;
   username: string;
-  email: string;
+  email_hint: string;
   role: string;
   email_verified: boolean;
   is_deactivated: boolean;

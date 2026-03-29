@@ -22,6 +22,10 @@ async function main(): Promise<void> {
   // 4. Run migrations
   await runMigrations();
 
+  // 4.1. Backfill email hashes (idempotent, no-op when complete)
+  const { backfillEmailHashes } = await import('./db/backfill-emails');
+  await backfillEmailHashes();
+
   // 4.5. Initialize i18n
   const { initI18n } = await import('./i18n');
   await initI18n();
