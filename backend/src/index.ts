@@ -19,12 +19,12 @@ async function main(): Promise<void> {
   // 3. Connect to Redis
   await createRedisClient();
 
-  // 4. Run migrations
-  await runMigrations();
-
-  // 4.1. Backfill email hashes (idempotent, no-op when complete)
+  // 4. Backfill email hashes (must run before migration 030 can finalize)
   const { backfillEmailHashes } = await import('./db/backfill-emails');
   await backfillEmailHashes();
+
+  // 4.1. Run migrations
+  await runMigrations();
 
   // 4.5. Initialize i18n
   const { initI18n } = await import('./i18n');
