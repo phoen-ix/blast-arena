@@ -260,12 +260,12 @@ blast-arena/
 ## Testing & Linting
 
 ```bash
-npm test                    # Run all test suites (1883 tests)
+npm test                    # Run all test suites (2379 tests)
 npm run lint                # ESLint across all workspaces
 npm run format:check        # Prettier format check
 ```
 
-1883 tests across 59 suites: game logic (486), services (692), routes (486), middleware (36), simulation (69), utilities (72), frontend (42). See [docs/testing.md](docs/testing.md) for full test inventory, mocking patterns, and a guide for writing new tests.
+2379 tests across 78 suites: game logic (593), services (854), routes (537), handlers (62), middleware (55), simulation (69), utilities (165), frontend (42). See [docs/testing.md](docs/testing.md) for full test inventory, mocking patterns, and a guide for writing new tests.
 
 ## Documentation
 
