@@ -98,6 +98,16 @@ export interface Position {
   y: number;
 }
 
+export type KillCause =
+  | 'bomb'
+  | 'zone'
+  | 'lava'
+  | 'quicksand'
+  | 'spikes'
+  | 'dark_rift'
+  | 'disconnect'
+  | 'self';
+
 export interface PlayerState {
   id: number;
   username: string;

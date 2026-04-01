@@ -8,6 +8,7 @@ import { GameOverScene } from './scenes/GameOverScene';
 import { LevelEditorScene } from './scenes/LevelEditorScene';
 import { themeManager } from './themes/ThemeManager';
 import { initI18n } from './i18n';
+import { audioManager } from './game/AudioManager';
 
 let game: Phaser.Game;
 
@@ -36,7 +37,7 @@ async function boot(): Promise<Phaser.Game> {
       },
     },
     audio: {
-      noAudio: true,
+      noAudio: true, // Phaser audio unused — we use Web Audio API via AudioManager
     },
     input: {
       gamepad: true,
@@ -45,6 +46,15 @@ async function boot(): Promise<Phaser.Game> {
   };
 
   game = new Phaser.Game(config);
+
+  // Initialize audio on first user interaction (required by browser autoplay policy)
+  const initAudio = () => {
+    audioManager.init();
+    document.removeEventListener('click', initAudio);
+    document.removeEventListener('keydown', initAudio);
+  };
+  document.addEventListener('click', initAudio);
+  document.addEventListener('keydown', initAudio);
 
   // Initialize theme manager (async, fetches admin default if no user preference)
   themeManager.initialize();

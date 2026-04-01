@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SocketClient } from '../network/SocketClient';
 import { TILE_SIZE, Position } from '@blast-arena/shared';
 import { getSettings } from './Settings';
+import { audioManager } from './AudioManager';
 
 export class EffectSystem {
   private scene: Phaser.Scene;
@@ -35,8 +36,10 @@ export class EffectSystem {
       this.onPlayerDied(data.playerId);
     };
 
-    this.powerupCollectedHandler = (_data) => {
-      // Power-up collection effects are handled in the renderer via state diff
+    this.powerupCollectedHandler = (data) => {
+      if (data.playerId === this.localPlayerId) {
+        audioManager.powerUpCollect();
+      }
     };
 
     this.socketClient.on('game:explosion', this.explosionHandler);
@@ -141,6 +144,10 @@ export class EffectSystem {
     }
 
     const tilesDist = minDist / TILE_SIZE;
+
+    // Play explosion sound scaled by distance (audible beyond shake range)
+    audioManager.explosion(tilesDist);
+
     if (tilesDist > 6) return;
 
     // Scale intensity inversely with distance
@@ -157,6 +164,7 @@ export class EffectSystem {
   private onPlayerDied(playerId: number): void {
     if (playerId === this.localPlayerId) {
       this.localPlayerAlive = false;
+      audioManager.death();
       const settings = getSettings();
       if (settings.screenShake) {
         this.scene.cameras.main.shake(300, 0.02);

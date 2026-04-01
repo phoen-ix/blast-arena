@@ -92,15 +92,27 @@ function createMockRoom(overrides: Partial<Room> = {}): Room {
   return {
     code: 'ABC123',
     name: 'Test Room',
-    host: { id: 1, username: 'host', role: 'user' as const, language: 'en' },
+    host: { id: 1, username: 'host', role: 'user' as const, language: 'en', emailVerified: true },
     players: [
       {
-        user: { id: 1, username: 'host', role: 'user' as const, language: 'en' },
+        user: {
+          id: 1,
+          username: 'host',
+          role: 'user' as const,
+          language: 'en',
+          emailVerified: true,
+        },
         ready: true,
         team: null,
       },
       {
-        user: { id: 2, username: 'player2', role: 'user' as const, language: 'en' },
+        user: {
+          id: 2,
+          username: 'player2',
+          role: 'user' as const,
+          language: 'en',
+          emailVerified: true,
+        },
         ready: true,
         team: null,
       },
@@ -526,22 +538,46 @@ describe('RoomManager', () => {
           },
           players: [
             {
-              user: { id: 1, username: 'p1', role: 'user' as const, language: 'en' },
+              user: {
+                id: 1,
+                username: 'p1',
+                role: 'user' as const,
+                language: 'en',
+                emailVerified: true,
+              },
               ready: true,
               team: 0,
             },
             {
-              user: { id: 2, username: 'p2', role: 'user' as const, language: 'en' },
+              user: {
+                id: 2,
+                username: 'p2',
+                role: 'user' as const,
+                language: 'en',
+                emailVerified: true,
+              },
               ready: true,
               team: 0,
             },
             {
-              user: { id: 3, username: 'p3', role: 'user' as const, language: 'en' },
+              user: {
+                id: 3,
+                username: 'p3',
+                role: 'user' as const,
+                language: 'en',
+                emailVerified: true,
+              },
               ready: true,
               team: 1,
             },
             {
-              user: { id: 4, username: 'p4', role: 'user' as const, language: 'en' },
+              user: {
+                id: 4,
+                username: 'p4',
+                role: 'user' as const,
+                language: 'en',
+                emailVerified: true,
+              },
               ready: true,
               team: 1,
             },

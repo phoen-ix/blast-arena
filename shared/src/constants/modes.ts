@@ -97,11 +97,11 @@ export const BR_ZONE_MIN_RADIUS = 3;
 
 // Deathmatch config
 export const DEATHMATCH_RESPAWN_TICKS = 60; // 3 seconds
-export const DEATHMATCH_KILL_TARGET = 10;
+export const DEATHMATCH_KILL_TARGET = 15;
 
 // King of the Hill config
 export const KOTH_ZONE_SIZE = 3; // 3x3 tiles
 export const KOTH_SCORE_TARGET = 100;
-export const KOTH_POINTS_PER_TICK = 1;
+export const KOTH_POINTS_PER_TICK = 2;
 export const KOTH_HILL_MOVE_INTERVAL = 600; // 30 seconds at 20 tps
 export const KOTH_HILL_MOVE_WARNING = 100; // 5 seconds warning

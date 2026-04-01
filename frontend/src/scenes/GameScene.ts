@@ -41,6 +41,7 @@ import {
 } from '../game/LocalCoopInput';
 import { ApiClient } from '../network/ApiClient';
 import { EmoteId, EMOTES, CampaignLevelSummary } from '@blast-arena/shared';
+import { audioManager } from '../game/AudioManager';
 
 export class GameScene extends Phaser.Scene {
   private socketClient!: SocketClient;
@@ -1088,6 +1089,11 @@ export class GameScene extends Phaser.Scene {
     if (direction || action) {
       this.lastInputTime = now;
       this.lastInputSeq++;
+
+      // Play input SFX optimistically
+      if (action === 'bomb') audioManager.bombPlace();
+      else if (action === 'throw') audioManager.bombThrow();
+
       const input = {
         seq: this.lastInputSeq,
         direction,

@@ -13,7 +13,7 @@ export const SPAWN_CLEAR_RADIUS = 2;
 export const DEFAULT_SPEED = 1;
 export const DEFAULT_MAX_BOMBS = 1;
 export const DEFAULT_FIRE_RANGE = 1;
-export const MAX_SPEED = 2;
+export const MAX_SPEED = 3;
 export const MAX_BOMBS = 8;
 export const MAX_FIRE_RANGE = 8;
 

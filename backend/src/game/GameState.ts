@@ -6,6 +6,7 @@ import {
   Position,
   PowerUpType,
   Direction,
+  KillCause,
 } from '@blast-arena/shared';
 import { getExplosionCells } from '@blast-arena/shared';
 import {
@@ -127,7 +128,7 @@ export class GameStateManager {
   // Per-tick event buffers for discrete event emission
   public tickEvents: {
     explosions: { cells: { x: number; y: number }[]; ownerId: number }[];
-    playerDied: { playerId: number; killerId: number | null }[];
+    playerDied: { playerId: number; killerId: number | null; cause: KillCause }[];
     powerupCollected: { playerId: number; type: string; position: { x: number; y: number } }[];
   } = { explosions: [], playerDied: [], powerupCollected: [] };
 
@@ -578,14 +579,26 @@ export class GameStateManager {
             if (owner && owner.id !== player.id) {
               owner.kills++;
               this.gameLogger?.logKill(owner.id, owner.username, player.id, player.username, false);
-              this.tickEvents.playerDied.push({ playerId: player.id, killerId: owner.id });
+              this.tickEvents.playerDied.push({
+                playerId: player.id,
+                killerId: owner.id,
+                cause: 'bomb',
+              });
             } else if (owner && owner.id === player.id) {
               owner.selfKills++;
               owner.kills--;
               this.gameLogger?.logKill(owner.id, owner.username, player.id, player.username, true);
-              this.tickEvents.playerDied.push({ playerId: player.id, killerId: owner.id });
+              this.tickEvents.playerDied.push({
+                playerId: player.id,
+                killerId: owner.id,
+                cause: 'self',
+              });
             } else {
-              this.tickEvents.playerDied.push({ playerId: player.id, killerId: null });
+              this.tickEvents.playerDied.push({
+                playerId: player.id,
+                killerId: null,
+                cause: 'bomb',
+              });
             }
 
             // Drop one random collected power-up at death position
@@ -931,7 +944,7 @@ export class GameStateManager {
             this.invalidateAliveCache();
             this.placementCounter--;
             player.placement = this.getAlivePlayers().length + 1;
-            this.tickEvents.playerDied.push({ playerId: player.id, killerId: null });
+            this.tickEvents.playerDied.push({ playerId: player.id, killerId: null, cause: 'zone' });
             this.dropPowerUpOnDeath(player);
           }
         }
@@ -1010,7 +1023,11 @@ export class GameStateManager {
             this.invalidateAliveCache();
             this.placementCounter--;
             player.placement = this.getAlivePlayers().length + 1;
-            this.tickEvents.playerDied.push({ playerId: player.id, killerId: null });
+            this.tickEvents.playerDied.push({
+              playerId: player.id,
+              killerId: null,
+              cause: 'quicksand',
+            });
             this.dropPowerUpOnDeath(player);
             this.quicksandTimers.delete(player.id);
           }
@@ -1144,7 +1161,11 @@ export class GameStateManager {
             this.invalidateAliveCache();
             this.placementCounter--;
             player.placement = this.getAlivePlayers().length + 1;
-            this.tickEvents.playerDied.push({ playerId: player.id, killerId: null });
+            this.tickEvents.playerDied.push({
+              playerId: player.id,
+              killerId: null,
+              cause: 'spikes',
+            });
             this.dropPowerUpOnDeath(player);
           }
         }
@@ -1760,7 +1781,7 @@ export class GameStateManager {
   }
 
   /** Kill a player externally (e.g. disconnect timeout). Handles placement and logging. */
-  killPlayer(playerId: number, killerId: number | null): void {
+  killPlayer(playerId: number, killerId: number | null, cause: KillCause = 'disconnect'): void {
     const player = this.players.get(playerId);
     if (!player?.alive) return;
 
@@ -1768,7 +1789,7 @@ export class GameStateManager {
     this.invalidateAliveCache();
     this.placementCounter--;
     player.placement = this.getAlivePlayers().length + 1;
-    this.tickEvents.playerDied.push({ playerId, killerId });
+    this.tickEvents.playerDied.push({ playerId, killerId, cause });
     this.dropPowerUpOnDeath(player);
     this.gameLogger?.logKill(
       killerId ?? playerId,

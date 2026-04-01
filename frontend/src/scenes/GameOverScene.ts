@@ -12,6 +12,8 @@ import {
 import { themeManager } from '../themes/ThemeManager';
 import { LocalCoopP2Identity } from '../game/LocalCoopInput';
 import { t } from '../i18n';
+import { audioManager } from '../game/AudioManager';
+import { AuthManager } from '../network/AuthManager';
 
 const DEADZONE = 0.3;
 
@@ -128,8 +130,19 @@ export class GameOverScene extends Phaser.Scene {
 
     // Campaign results
     if (data?.campaignResult) {
+      if (data.success) audioManager.victory();
+      else audioManager.defeat();
       this.createCampaignGameOver(width, height, data, socketClient);
       return;
+    }
+
+    // Play victory/defeat sound based on local player's placement
+    const authManager: AuthManager = this.registry.get('authManager');
+    const localUserId = authManager?.getUser()?.id;
+    if (data?.placements && localUserId) {
+      const localIdx = data.placements.findIndex((p: any) => p.userId === localUserId);
+      if (localIdx === 0) audioManager.victory();
+      else audioManager.defeat();
     }
 
     const gameText = this.add

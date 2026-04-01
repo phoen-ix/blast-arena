@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getSettings } from './Settings';
+import { audioManager } from './AudioManager';
 
 export class CountdownOverlay {
   private scene: Phaser.Scene;
@@ -24,13 +25,22 @@ export class CountdownOverlay {
 
     items.forEach((label, i) => {
       this.scene.time.delayedCall(i * 600, () => {
-        const text = this.scene.add.text(cx, cy, label, {
-          fontSize: '72px',
-          color: colors[i],
-          fontStyle: 'bold',
-          stroke: '#000000',
-          strokeThickness: 4,
-        }).setOrigin(0.5).setDepth(100).setScrollFactor(0);
+        if (i < 3) {
+          audioManager.countdownBeep();
+        } else {
+          audioManager.countdownGo();
+        }
+        const text = this.scene.add
+          .text(cx, cy, label, {
+            fontSize: '72px',
+            color: colors[i],
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4,
+          })
+          .setOrigin(0.5)
+          .setDepth(100)
+          .setScrollFactor(0);
 
         if (settings.animations) {
           text.setScale(3);

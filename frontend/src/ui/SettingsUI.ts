@@ -19,6 +19,7 @@ import { themeManager } from '../themes/ThemeManager';
 import { THEME_DEFINITIONS } from '../themes/definitions';
 import { PLAYER_COLORS } from '../scenes/BootScene';
 import { drawPlayerSprite, drawBombSprite, getPlayerColorHex } from '../utils/playerCanvas';
+import { audioManager } from '../game/AudioManager';
 
 interface Tab {
   id: string;
@@ -480,6 +481,42 @@ export class SettingsUI {
               <div class="setting-row-desc">${t('settings.particlesDesc')}</div>
             </div>
           </div>
+          <div class="setting-row">
+            <label class="toggle-switch">
+              <input type="checkbox" name="minimap" role="switch" aria-checked="${settings.minimap ? 'true' : 'false'}" ${settings.minimap ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="setting-row-info">
+              <div class="setting-row-label">${t('settings.minimap')}</div>
+              <div class="setting-row-desc">${t('settings.minimapDesc')}</div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="content-section-title mt-6">${t('settings.audio')}</h3>
+        <div class="settings-toggle-list">
+          <div class="setting-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="audio-mute" role="switch" aria-checked="${audioManager.isMuted() ? 'true' : 'false'}" ${audioManager.isMuted() ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="setting-row-info">
+              <div class="setting-row-label">${t('settings.mute')}</div>
+              <div class="setting-row-desc">${t('settings.muteDesc')}</div>
+            </div>
+          </div>
+          <div class="setting-row">
+            <input type="range" id="audio-master" min="0" max="100" step="5" value="${Math.round(audioManager.getMasterVolume() * 100)}" style="width:120px;accent-color:var(--primary);">
+            <div class="setting-row-info">
+              <div class="setting-row-label">${t('settings.masterVolume')}</div>
+            </div>
+          </div>
+          <div class="setting-row">
+            <input type="range" id="audio-sfx" min="0" max="100" step="5" value="${Math.round(audioManager.getSfxVolume() * 100)}" style="width:120px;accent-color:var(--primary);">
+            <div class="setting-row-info">
+              <div class="setting-row-label">${t('settings.sfxVolume')}</div>
+            </div>
+          </div>
         </div>
 
         <h3 class="content-section-title mt-6">${t('settings.chat')}</h3>
@@ -562,6 +599,27 @@ export class SettingsUI {
         window.dispatchEvent(new CustomEvent('lobbychat-toggle'));
       }
     });
+
+    // Audio controls
+    const muteCheckbox = this.contentEl.querySelector('#audio-mute') as HTMLInputElement;
+    if (muteCheckbox) {
+      muteCheckbox.addEventListener('change', () => {
+        audioManager.setMuted(muteCheckbox.checked);
+        muteCheckbox.setAttribute('aria-checked', String(muteCheckbox.checked));
+      });
+    }
+    const masterSlider = this.contentEl.querySelector('#audio-master') as HTMLInputElement;
+    if (masterSlider) {
+      masterSlider.addEventListener('input', () => {
+        audioManager.setMasterVolume(parseInt(masterSlider.value) / 100);
+      });
+    }
+    const sfxSlider = this.contentEl.querySelector('#audio-sfx') as HTMLInputElement;
+    if (sfxSlider) {
+      sfxSlider.addEventListener('input', () => {
+        audioManager.setSfxVolume(parseInt(sfxSlider.value) / 100);
+      });
+    }
   }
 
   private async loadBuddySettings(): Promise<void> {

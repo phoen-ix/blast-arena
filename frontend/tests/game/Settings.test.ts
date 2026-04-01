@@ -22,6 +22,7 @@ describe('Settings', () => {
         screenShake: true,
         particles: true,
         lobbyChat: true,
+        minimap: true,
       });
     });
 
@@ -37,6 +38,7 @@ describe('Settings', () => {
             screenShake: true,
             particles: true,
             lobbyChat: true,
+            minimap: true,
           });
         })
       );
@@ -53,6 +55,7 @@ describe('Settings', () => {
             screenShake: true,
             particles: true,
             lobbyChat: true,
+            minimap: true,
           });
         })
       );
@@ -69,6 +72,7 @@ describe('Settings', () => {
             screenShake: true,
             particles: true,
             lobbyChat: true,
+            minimap: true,
           });
         })
       );

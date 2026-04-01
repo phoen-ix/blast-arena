@@ -1,8 +1,16 @@
 import Phaser from 'phaser';
-import { GameState, PlayerState, CampaignGameState } from '@blast-arena/shared';
+import {
+  GameState,
+  PlayerState,
+  CampaignGameState,
+  TileType,
+  KillCause,
+} from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
 import { SpectatorChat } from '../game/SpectatorChat';
 import { t } from '../i18n';
+import { getSettings } from '../game/Settings';
+import { PLAYER_COLORS } from './BootScene';
 
 export class HUDScene extends Phaser.Scene {
   private hudContainer!: HTMLElement;
@@ -17,7 +25,7 @@ export class HUDScene extends Phaser.Scene {
     off: (event: string, handler: (...args: any[]) => void) => void;
   } | null = null;
   private playerDiedHandler:
-    | ((data: { playerId: number; killerId: number | null }) => void)
+    | ((data: { playerId: number; killerId: number | null; cause?: KillCause }) => void)
     | null = null;
   private killFeedEntries: { text: string; time: number; el?: HTMLElement }[] = [];
   private stateUpdateHandler: ((state: GameState) => void) | null = null;
@@ -51,6 +59,14 @@ export class HUDScene extends Phaser.Scene {
   private lastCampaignEnemyCount: number = -1;
   private spectatorChat: SpectatorChat | null = null;
   private spectatorChatMounted: boolean = false;
+
+  // Minimap
+  private minimapContainer: HTMLElement | null = null;
+  private minimapCanvas: HTMLCanvasElement | null = null;
+  private minimapCtx: CanvasRenderingContext2D | null = null;
+  private minimapEnabled: boolean = true;
+  private minimapTileSize: number = 0;
+  private lastMinimapTick: number = -1;
 
   constructor() {
     super({ key: 'HUDScene' });
@@ -128,6 +144,19 @@ export class HUDScene extends Phaser.Scene {
     overlay?.appendChild(this.killFeedEl);
     overlay?.appendChild(this.statsEl);
 
+    // Minimap
+    this.minimapEnabled = getSettings().minimap;
+    this.minimapContainer?.remove();
+    this.minimapContainer = null;
+    this.minimapCanvas = null;
+    this.minimapCtx = null;
+    this.lastMinimapTick = -1;
+    if (this.minimapEnabled) {
+      this.minimapContainer = document.createElement('div');
+      this.minimapContainer.className = 'hud-minimap';
+      overlay?.appendChild(this.minimapContainer);
+    }
+
     // Spectate click handler
     this.boundClickHandler = (e: MouseEvent) => {
       if (!this.localPlayerDead) return;
@@ -146,7 +175,11 @@ export class HUDScene extends Phaser.Scene {
 
     // Listen for kill events
     if (this.socketClient) {
-      this.playerDiedHandler = (data: { playerId: number; killerId: number | null }) => {
+      this.playerDiedHandler = (data: {
+        playerId: number;
+        killerId: number | null;
+        cause?: KillCause;
+      }) => {
         this.onPlayerDied(data);
       };
       this.socketClient.on('game:playerDied', this.playerDiedHandler);
@@ -187,7 +220,22 @@ export class HUDScene extends Phaser.Scene {
     }
   }
 
-  private onPlayerDied(data: { playerId: number; killerId: number | null }): void {
+  private static CAUSE_ICONS: Record<string, string> = {
+    bomb: '💣',
+    self: '💀',
+    zone: '🔴',
+    lava: '🌋',
+    quicksand: '⏳',
+    spikes: '⚔️',
+    dark_rift: '🌀',
+    disconnect: '🔌',
+  };
+
+  private onPlayerDied(data: {
+    playerId: number;
+    killerId: number | null;
+    cause?: KillCause;
+  }): void {
     // Look up names from latest game state
     const state = this.registry.get('initialGameState') as GameState | undefined;
     if (!state) return;
@@ -198,14 +246,24 @@ export class HUDScene extends Phaser.Scene {
       ? this.lastKnownPlayers?.find((p) => p.id === data.killerId)
       : null;
 
+    const causeIcon = HUDScene.CAUSE_ICONS[data.cause ?? 'bomb'] ?? '💣';
+
     let text: string;
     if (killer && killer.id !== data.playerId) {
-      text = t('ui:hud.eliminated', {
+      text = `${causeIcon} ${t('ui:hud.eliminated', {
         killer: escapeHtml(killer.username),
         victim: escapeHtml(victim?.username || '???'),
-      });
+      })}`;
+    } else if (data.cause === 'self') {
+      text = `${causeIcon} ${t('ui:hud.selfEliminated', { player: escapeHtml(victim?.username || '???') })}`;
+    } else if (data.cause && data.cause !== 'bomb') {
+      // Hazard/environment kill
+      text = `${causeIcon} ${t('ui:hud.hazardEliminated', {
+        player: escapeHtml(victim?.username || '???'),
+        hazard: data.cause,
+      })}`;
     } else {
-      text = t('ui:hud.selfEliminated', { player: escapeHtml(victim?.username || '???') });
+      text = `${causeIcon} ${t('ui:hud.selfEliminated', { player: escapeHtml(victim?.username || '???') })}`;
     }
 
     this.killFeedEntries.push({ text, time: Date.now() });
@@ -213,6 +271,34 @@ export class HUDScene extends Phaser.Scene {
       this.killFeedEntries.shift();
     }
     this.renderKillFeed();
+
+    // Show death banner when local player dies
+    if (data.playerId === this.localPlayerId) {
+      this.showDeathBanner(killer, data.cause);
+    }
+  }
+
+  private showDeathBanner(killer: PlayerState | null | undefined, cause?: KillCause): void {
+    const causeIcon = HUDScene.CAUSE_ICONS[cause ?? 'bomb'] ?? '💣';
+    let message: string;
+    if (killer && killer.id !== this.localPlayerId) {
+      message = `${causeIcon} ${t('ui:hud.youWereEliminated', { killer: escapeHtml(killer.username) })}`;
+    } else if (cause && cause !== 'bomb' && cause !== 'self') {
+      message = `${causeIcon} ${t('ui:hud.youWereEliminatedBy', { cause })}`;
+    } else {
+      message = `${causeIcon} ${t('ui:hud.youEliminated')}`;
+    }
+
+    const banner = document.createElement('div');
+    banner.className = 'hud-death-banner';
+    banner.innerHTML = message;
+    document.getElementById('ui-overlay')?.appendChild(banner);
+
+    // Fade out and remove after 3 seconds
+    setTimeout(() => {
+      banner.style.opacity = '0';
+      setTimeout(() => banner.remove(), 500);
+    }, 3000);
   }
 
   private lastKnownPlayers: PlayerState[] = [];
@@ -423,8 +509,126 @@ export class HUDScene extends Phaser.Scene {
         .join('');
     }
 
+    // Minimap
+    this.updateMinimap(state);
+
     // Refresh kill feed (for age-based opacity)
     this.renderKillFeed();
+  }
+
+  private updateMinimap(state: GameState): void {
+    if (!this.minimapEnabled || !this.minimapContainer) return;
+
+    // Only redraw every 4 ticks (~5 FPS) for performance
+    if (state.tick - this.lastMinimapTick < 4) return;
+    this.lastMinimapTick = state.tick;
+
+    const map = state.map;
+    const maxSize = 140;
+
+    // Lazily create canvas on first state with map data
+    if (!this.minimapCanvas) {
+      const ts = Math.max(1, Math.floor(maxSize / Math.max(map.width, map.height)));
+      this.minimapTileSize = ts;
+      this.minimapCanvas = document.createElement('canvas');
+      this.minimapCanvas.width = map.width * ts;
+      this.minimapCanvas.height = map.height * ts;
+      this.minimapCanvas.style.imageRendering = 'pixelated';
+      this.minimapCtx = this.minimapCanvas.getContext('2d')!;
+      this.minimapContainer.appendChild(this.minimapCanvas);
+    }
+
+    const ctx = this.minimapCtx!;
+    const ts = this.minimapTileSize;
+
+    // Draw tiles
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        ctx.fillStyle = this.getMinimapTileColor(map.tiles[y][x]);
+        ctx.fillRect(x * ts, y * ts, ts, ts);
+      }
+    }
+
+    // Draw bombs (pulsing yellow/red)
+    const bombBright = state.tick % 8 < 4;
+    ctx.fillStyle = bombBright ? '#ffcc00' : '#ff4400';
+    for (const bomb of state.bombs) {
+      ctx.fillRect(bomb.position.x * ts, bomb.position.y * ts, ts, ts);
+    }
+
+    // Draw explosions
+    ctx.fillStyle = '#ff6622';
+    for (const exp of state.explosions) {
+      for (const cell of exp.cells) {
+        ctx.fillRect(cell.x * ts, cell.y * ts, ts, ts);
+      }
+    }
+
+    // Draw power-ups
+    ctx.fillStyle = '#00ff88';
+    for (const pu of state.powerUps) {
+      const px = pu.position.x * ts;
+      const py = pu.position.y * ts;
+      const half = Math.max(1, Math.floor(ts / 2));
+      const offset = Math.floor((ts - half) / 2);
+      ctx.fillRect(px + offset, py + offset, half, half);
+    }
+
+    // Draw players
+    for (let i = 0; i < state.players.length; i++) {
+      const p = state.players[i];
+      if (!p.alive) continue;
+      const color = p.cosmetics?.colorHex ?? PLAYER_COLORS[i % PLAYER_COLORS.length];
+      ctx.fillStyle = typeof color === 'number' ? '#' + color.toString(16).padStart(6, '0') : color;
+      const px = p.position.x * ts;
+      const py = p.position.y * ts;
+      ctx.fillRect(px, py, ts, ts);
+      // Bright border for local player
+      if (p.id === this.localPlayerId) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px, py, ts, ts);
+      }
+    }
+
+    // Draw zone boundary (Battle Royale)
+    if (state.zone) {
+      const z = state.zone;
+      ctx.strokeStyle = 'rgba(255, 50, 50, 0.8)';
+      ctx.lineWidth = 1;
+      const zx = (z.centerX - z.currentRadius) * ts;
+      const zy = (z.centerY - z.currentRadius) * ts;
+      const zw = z.currentRadius * 2 * ts;
+      const zh = z.currentRadius * 2 * ts;
+      ctx.strokeRect(zx, zy, zw, zh);
+    }
+
+    // Draw KOTH hill zone
+    if (state.hillZone) {
+      const h = state.hillZone;
+      ctx.strokeStyle = 'rgba(255, 204, 0, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(h.x * ts, h.y * ts, h.width * ts, h.height * ts);
+    }
+  }
+
+  private getMinimapTileColor(type: TileType): string {
+    switch (type) {
+      case 'wall':
+        return '#333355';
+      case 'destructible':
+        return '#886633';
+      case 'destructible_cracked':
+        return '#776622';
+      case 'lava':
+        return '#cc3300';
+      case 'pit':
+        return '#0a0a12';
+      case 'ice':
+        return '#8ac8e8';
+      default:
+        return '#1a1a2e';
+    }
   }
 
   private updateCampaignHUD(state: CampaignGameState): void {
@@ -549,6 +753,10 @@ export class HUDScene extends Phaser.Scene {
     this.statsEl?.remove();
     this.playerListEl?.remove();
     this.killFeedEl?.remove();
+    this.minimapContainer?.remove();
+    this.minimapContainer = null;
+    this.minimapCanvas = null;
+    this.minimapCtx = null;
     this.campaignHudEl?.remove();
     this.campaignHudEl = null;
     document.getElementById('campaign-boss-hp')?.remove();

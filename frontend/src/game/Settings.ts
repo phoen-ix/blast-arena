@@ -5,6 +5,7 @@ export interface VisualSettings {
   screenShake: boolean;
   particles: boolean;
   lobbyChat: boolean;
+  minimap: boolean;
 }
 
 const DEFAULTS: VisualSettings = {
@@ -12,6 +13,7 @@ const DEFAULTS: VisualSettings = {
   screenShake: true,
   particles: true,
   lobbyChat: true,
+  minimap: true,
 };
 
 let cached: VisualSettings | null = null;
