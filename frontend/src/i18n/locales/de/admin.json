@@ -90,7 +90,9 @@
     "roleChangeSuccess": "Rolle geändert zu {{role}}",
     "deactivateSuccess": "Benutzer deaktiviert",
     "reactivateSuccess": "Benutzer reaktiviert",
-    "deleteSuccess": "Benutzer endgültig gelöscht"
+    "deleteSuccess": "Benutzer endgültig gelöscht",
+    "revokeSessions": "Sitzungen widerrufen",
+    "revokeSessionsSuccess": "Benutzersitzungen widerrufen"
   },
   "matches": {
     "deleteAllMatches": "Alle Partien löschen",
@@ -552,7 +554,14 @@
     "statTotalMatches": "Partien gesamt",
     "statActiveRooms": "Aktive Räume",
     "statOnlinePlayers": "Spieler online",
-    "failedLoadStats": "Statistiken konnten nicht geladen werden"
+    "failedLoadStats": "Statistiken konnten nicht geladen werden",
+    "dangerZone": "Gefahrenzone",
+    "revokeAllSessions": "Alle Sitzungen widerrufen",
+    "revokeAllDescription": "Alle Benutzer zwangstrennen und ihre Sitzungen ungültig machen. Alle außer Ihnen werden abgemeldet.",
+    "revokeAllConfirmPrompt": "Geben Sie CONFIRM ein, um fortzufahren:",
+    "revokeAllCancel": "Abbrechen",
+    "revokeAllConfirm": "Alle widerrufen",
+    "revokeAllSuccess": "Alle Sitzungen widerrufen"
   },
   "seasons": {
     "sectionTitle": "Season-Verwaltung",

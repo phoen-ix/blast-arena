@@ -90,7 +90,9 @@
     "roleChangeSuccess": "Roll ändrad till {{role}}",
     "deactivateSuccess": "Användare inaktiverad",
     "reactivateSuccess": "Användare återaktiverad",
-    "deleteSuccess": "Användare permanent borttagen"
+    "deleteSuccess": "Användare permanent borttagen",
+    "revokeSessions": "Återkalla sessioner",
+    "revokeSessionsSuccess": "Användarsessioner återkallade"
   },
   "matches": {
     "deleteAllMatches": "Ta bort alla matcher",
@@ -552,7 +554,14 @@
     "statTotalMatches": "Totalt antal matcher",
     "statActiveRooms": "Aktiva rum",
     "statOnlinePlayers": "Spelare online",
-    "failedLoadStats": "Kunde inte ladda statistik"
+    "failedLoadStats": "Kunde inte ladda statistik",
+    "dangerZone": "Farozon",
+    "revokeAllSessions": "Återkalla alla sessioner",
+    "revokeAllDescription": "Tvångskoppla alla användare och ogiltigförklara deras sessioner. Alla utom du loggas ut.",
+    "revokeAllConfirmPrompt": "Skriv CONFIRM för att fortsätta:",
+    "revokeAllCancel": "Avbryt",
+    "revokeAllConfirm": "Återkalla alla",
+    "revokeAllSuccess": "Alla sessioner återkallade"
   },
   "seasons": {
     "sectionTitle": "Säsongshantering",

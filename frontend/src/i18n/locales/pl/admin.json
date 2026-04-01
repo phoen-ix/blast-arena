@@ -90,7 +90,9 @@
     "roleChangeSuccess": "Rola zmieniona na {{role}}",
     "deactivateSuccess": "U\u017cytkownik dezaktywowany",
     "reactivateSuccess": "U\u017cytkownik reaktywowany",
-    "deleteSuccess": "U\u017cytkownik trwale usuni\u0119ty"
+    "deleteSuccess": "U\u017cytkownik trwale usuni\u0119ty",
+    "revokeSessions": "Uniewa\u017cnij sesje",
+    "revokeSessionsSuccess": "Sesje u\u017cytkownika uniewa\u017cnione"
   },
   "matches": {
     "deleteAllMatches": "Usu\u0144 wszystkie mecze",
@@ -552,7 +554,14 @@
     "statTotalMatches": "\u0141\u0105czna liczba meczy",
     "statActiveRooms": "Aktywne pokoje",
     "statOnlinePlayers": "Gracze online",
-    "failedLoadStats": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107 statystyk"
+    "failedLoadStats": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107 statystyk",
+    "dangerZone": "Strefa zagro\u017cenia",
+    "revokeAllSessions": "Uniewa\u017cnij wszystkie sesje",
+    "revokeAllDescription": "Wymu\u015b roz\u0142\u0105czenie wszystkich u\u017cytkownik\u00f3w i uniewa\u017cnij ich sesje. Wszyscy opr\u00f3cz Ciebie zostan\u0105 wylogowani.",
+    "revokeAllConfirmPrompt": "Wpisz CONFIRM, aby kontynuowa\u0107:",
+    "revokeAllCancel": "Anuluj",
+    "revokeAllConfirm": "Uniewa\u017cnij wszystkie",
+    "revokeAllSuccess": "Wszystkie sesje uniewa\u017cnione"
   },
   "seasons": {
     "sectionTitle": "Zarz\u0105dzanie sezonami",

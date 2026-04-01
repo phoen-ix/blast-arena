@@ -90,7 +90,9 @@
     "roleChangeSuccess": "Fun\u00e7\u00e3o alterada para {{role}}",
     "deactivateSuccess": "Usu\u00e1rio desativado",
     "reactivateSuccess": "Usu\u00e1rio reativado",
-    "deleteSuccess": "Usu\u00e1rio exclu\u00eddo permanentemente"
+    "deleteSuccess": "Usu\u00e1rio exclu\u00eddo permanentemente",
+    "revokeSessions": "Revogar sess\u00f5es",
+    "revokeSessionsSuccess": "Sess\u00f5es do usu\u00e1rio revogadas"
   },
   "matches": {
     "deleteAllMatches": "Excluir Todas as Partidas",
@@ -552,7 +554,14 @@
     "statTotalMatches": "Total de Partidas",
     "statActiveRooms": "Salas Ativas",
     "statOnlinePlayers": "Jogadores Online",
-    "failedLoadStats": "Falha ao carregar estat\u00edsticas"
+    "failedLoadStats": "Falha ao carregar estat\u00edsticas",
+    "dangerZone": "Zona de perigo",
+    "revokeAllSessions": "Revogar todas as sess\u00f5es",
+    "revokeAllDescription": "Desconectar todos os usu\u00e1rios e invalidar suas sess\u00f5es. Todos exceto voc\u00ea ser\u00e3o desconectados.",
+    "revokeAllConfirmPrompt": "Digite CONFIRM para continuar:",
+    "revokeAllCancel": "Cancelar",
+    "revokeAllConfirm": "Revogar tudo",
+    "revokeAllSuccess": "Todas as sess\u00f5es revogadas"
   },
   "seasons": {
     "sectionTitle": "Gerenciamento de Temporadas",

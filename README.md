@@ -101,8 +101,8 @@ Admin-configurable achievement system with four condition types: cumulative stat
 
 | Tab | Access | Key Features |
 |-----|--------|-------------|
-| Dashboard | Admin | Stats, server settings (recordings, registration, email/SMTP, chat modes, XP multiplier, default theme, GitHub/imprint display), game/simulation defaults |
-| Users | Staff | Search, roles, deactivate, delete, password reset |
+| Dashboard | Admin | Stats, server settings (recordings, registration, email/SMTP, chat modes, XP multiplier, default theme, GitHub/imprint display), game/simulation defaults, revoke all sessions |
+| Users | Staff | Search, roles, deactivate, delete, password reset, revoke sessions |
 | Matches | Staff | History, per-player stats, replay viewer, delete |
 | Rooms | Staff | Live rooms, spectate, kick, force close |
 | Logs | Admin | Audit trail with filters, click-to-expand detail rows |

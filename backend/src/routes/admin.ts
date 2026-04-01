@@ -866,6 +866,26 @@ router.delete('/admin/users/:id', adminOnlyMiddleware, async (req, res, next) =>
   }
 });
 
+router.post('/admin/users/:id/revoke-sessions', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+    await adminService.revokeUserSessions(req.user!.userId, userId);
+    res.json({ message: 'User sessions revoked' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/admin/revoke-all-sessions', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    await adminService.revokeAllSessions(req.user!.userId);
+    res.json({ message: 'All sessions revoked' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // --- Stats ---
 
 router.get('/admin/stats', adminOnlyMiddleware, async (_req, res, next) => {

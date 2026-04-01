@@ -117,6 +117,7 @@ export class UsersTab {
                       ${u.is_deactivated ? t('admin:users.reactivate') : t('admin:users.deactivate')}
                     </button>
                     <button class="btn-sm" style="background:var(--accent);color:var(--bg-deep);" data-action="resetpw" data-id="${u.id}" data-username="${escapeAttr(u.username)}">${t('admin:users.resetPw')}</button>
+                    <button class="btn-sm" style="background:var(--warning);color:var(--bg-deep);" data-action="revoke-sessions" data-id="${u.id}">${t('admin:users.revokeSessions')}</button>
                     <button class="btn-danger btn-sm" data-action="delete" data-id="${u.id}" data-username="${escapeAttr(u.username)}">${t('admin:users.delete')}</button>
                   `
                       : ''
@@ -167,6 +168,8 @@ export class UsersTab {
       await this.doDeactivate(parseInt(id), !isDeactivated);
     } else if (action === 'resetpw') {
       this.showResetPasswordModal(parseInt(id), target.dataset.username || '');
+    } else if (action === 'revoke-sessions') {
+      await this.doRevokeSessions(parseInt(id));
     } else if (action === 'delete') {
       this.showDeleteModal(parseInt(id), target.dataset.username || '');
     }
@@ -379,6 +382,15 @@ export class UsersTab {
         deactivated ? t('admin:users.deactivateSuccess') : t('admin:users.reactivateSuccess'),
       );
       await this.loadUsers();
+    } catch (err: unknown) {
+      this.notifications.error(getErrorMessage(err));
+    }
+  }
+
+  private async doRevokeSessions(userId: number): Promise<void> {
+    try {
+      await ApiClient.post(`/admin/users/${userId}/revoke-sessions`, {});
+      this.notifications.success(t('admin:users.revokeSessionsSuccess'));
     } catch (err: unknown) {
       this.notifications.error(getErrorMessage(err));
     }

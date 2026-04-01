@@ -90,7 +90,9 @@
     "roleChangeSuccess": "Ruolo cambiato in {{role}}",
     "deactivateSuccess": "Utente disattivato",
     "reactivateSuccess": "Utente riattivato",
-    "deleteSuccess": "Utente eliminato permanentemente"
+    "deleteSuccess": "Utente eliminato permanentemente",
+    "revokeSessions": "Revoca sessioni",
+    "revokeSessionsSuccess": "Sessioni utente revocate"
   },
   "matches": {
     "deleteAllMatches": "Elimina tutte le partite",
@@ -552,7 +554,14 @@
     "statTotalMatches": "Partite totali",
     "statActiveRooms": "Stanze attive",
     "statOnlinePlayers": "Giocatori online",
-    "failedLoadStats": "Impossibile caricare le statistiche"
+    "failedLoadStats": "Impossibile caricare le statistiche",
+    "dangerZone": "Zona pericolosa",
+    "revokeAllSessions": "Revoca tutte le sessioni",
+    "revokeAllDescription": "Disconnetti forzatamente tutti gli utenti e invalida le loro sessioni. Tutti tranne te verranno disconnessi.",
+    "revokeAllConfirmPrompt": "Digita CONFIRM per procedere:",
+    "revokeAllCancel": "Annulla",
+    "revokeAllConfirm": "Revoca tutto",
+    "revokeAllSuccess": "Tutte le sessioni revocate"
   },
   "seasons": {
     "sectionTitle": "Gestione stagioni",

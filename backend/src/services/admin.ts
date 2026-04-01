@@ -141,7 +141,60 @@ export async function deactivateUser(
 
   if (deactivated) {
     await execute('UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = ?', [userId]);
+    // Force-disconnect active sockets immediately
+    try {
+      getIO().in(`user:${userId}`).disconnectSockets(true);
+    } catch {
+      // Socket server may not be available in tests
+    }
   }
+}
+
+export async function revokeUserSessions(adminId: number, userId: number): Promise<void> {
+  if (adminId === userId) {
+    throw new AppError('Cannot revoke your own sessions', 400, 'SELF_ACTION');
+  }
+
+  await execute('UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = ?', [userId]);
+
+  let socketCount = 0;
+  try {
+    const io = getIO();
+    const sockets = await io.in(`user:${userId}`).fetchSockets();
+    socketCount = sockets.length;
+    io.in(`user:${userId}`).disconnectSockets(true);
+  } catch {
+    // Socket server may not be available in tests
+  }
+
+  await execute(
+    'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+    [adminId, 'revoke_sessions', 'user', userId, JSON.stringify({ socketCount })],
+  );
+}
+
+export async function revokeAllSessions(adminId: number): Promise<void> {
+  // Revoke all refresh tokens except the admin's own
+  await execute('UPDATE refresh_tokens SET revoked = TRUE WHERE user_id != ?', [adminId]);
+
+  let socketCount = 0;
+  try {
+    const io = getIO();
+    const allSockets = await io.fetchSockets();
+    for (const s of allSockets) {
+      if (s.data.userId !== adminId) {
+        socketCount++;
+        s.disconnect(true);
+      }
+    }
+  } catch {
+    // Socket server may not be available in tests
+  }
+
+  await execute(
+    'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+    [adminId, 'revoke_all_sessions', 'system', 0, JSON.stringify({ socketCount })],
+  );
 }
 
 export async function deleteUser(adminId: number, userId: number): Promise<void> {

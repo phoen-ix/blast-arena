@@ -90,7 +90,9 @@
     "roleChangeSuccess": "R\u00f4le chang\u00e9 en {{role}}",
     "deactivateSuccess": "Utilisateur d\u00e9sactiv\u00e9",
     "reactivateSuccess": "Utilisateur r\u00e9activ\u00e9",
-    "deleteSuccess": "Utilisateur supprim\u00e9 d\u00e9finitivement"
+    "deleteSuccess": "Utilisateur supprim\u00e9 d\u00e9finitivement",
+    "revokeSessions": "R\u00e9voquer les sessions",
+    "revokeSessionsSuccess": "Sessions utilisateur r\u00e9voqu\u00e9es"
   },
   "matches": {
     "deleteAllMatches": "Supprimer toutes les parties",
@@ -552,7 +554,14 @@
     "statTotalMatches": "Total parties",
     "statActiveRooms": "Salons actifs",
     "statOnlinePlayers": "Joueurs en ligne",
-    "failedLoadStats": "\u00c9chec du chargement des statistiques"
+    "failedLoadStats": "\u00c9chec du chargement des statistiques",
+    "dangerZone": "Zone de danger",
+    "revokeAllSessions": "R\u00e9voquer toutes les sessions",
+    "revokeAllDescription": "D\u00e9connecter tous les utilisateurs et invalider leurs sessions. Tout le monde sauf vous sera d\u00e9connect\u00e9.",
+    "revokeAllConfirmPrompt": "Tapez CONFIRM pour continuer :",
+    "revokeAllCancel": "Annuler",
+    "revokeAllConfirm": "Tout r\u00e9voquer",
+    "revokeAllSuccess": "Toutes les sessions r\u00e9voqu\u00e9es"
   },
   "seasons": {
     "sectionTitle": "Gestion des saisons",

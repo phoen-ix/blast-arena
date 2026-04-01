@@ -112,6 +112,7 @@ Full-screen panel for admin/moderator roles. `staffMiddleware` (admin+moderator)
 - `admin_actions.target_id` is `INT NOT NULL` — use `0` (not `null`) for bulk operations
 - `registration_enabled` setting — when disabled, `/auth/register` returns 403 and AuthUI hides register link
 - `/admin/settings/public` batched endpoint returns `registrationEnabled`, `imprint`, `imprintText`, `displayGithub` in one request
+- **Session revocation**: Per-user (`POST /admin/users/:id/revoke-sessions`) and global nuke (`POST /admin/revoke-all-sessions`). Both revoke refresh tokens + force-disconnect sockets via `user:{userId}` rooms. Global nuke excludes the admin performing the action. Deactivation also disconnects sockets immediately
 - See [docs/admin-and-systems.md](docs/admin-and-systems.md) for full details
 
 ## AI Systems

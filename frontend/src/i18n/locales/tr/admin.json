@@ -90,7 +90,9 @@
     "roleChangeSuccess": "Rol {{role}} olarak degistirildi",
     "deactivateSuccess": "Kullanici devre disi birakildi",
     "reactivateSuccess": "Kullanici yeniden etkinlestirildi",
-    "deleteSuccess": "Kullanici kalici olarak silindi"
+    "deleteSuccess": "Kullanici kalici olarak silindi",
+    "revokeSessions": "Oturumları iptal et",
+    "revokeSessionsSuccess": "Kullanıcı oturumları iptal edildi"
   },
   "matches": {
     "deleteAllMatches": "Tum Maclari Sil",
@@ -552,7 +554,14 @@
     "statTotalMatches": "Toplam Mac",
     "statActiveRooms": "Aktif Odalar",
     "statOnlinePlayers": "Cevrimici Oyuncular",
-    "failedLoadStats": "Istatistikler yuklenemedi"
+    "failedLoadStats": "Istatistikler yuklenemedi",
+    "dangerZone": "Tehlikeli Bölge",
+    "revokeAllSessions": "Tüm Oturumları İptal Et",
+    "revokeAllDescription": "Tüm kullanıcıların bağlantısını kes ve oturumlarını geçersiz kıl. Siz hariç herkes çıkış yapacak.",
+    "revokeAllConfirmPrompt": "Devam etmek için CONFIRM yazın:",
+    "revokeAllCancel": "İptal",
+    "revokeAllConfirm": "Tümünü İptal Et",
+    "revokeAllSuccess": "Tüm oturumlar iptal edildi"
   },
   "seasons": {
     "sectionTitle": "Sezon Yonetimi",

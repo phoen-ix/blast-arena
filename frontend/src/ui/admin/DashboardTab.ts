@@ -233,6 +233,17 @@ export class DashboardTab {
         </div>
       </div>
 
+      <div class="danger-zone">
+        <h4 style="color:var(--danger);margin-bottom:var(--sp-2);">${t('admin:dashboard.dangerZone')}</h4>
+        <div class="setting-item" style="border:1px solid var(--danger);border-radius:var(--radius-sm);padding:var(--sp-3);">
+          <div style="flex:1;">
+            <span class="setting-item-label">${t('admin:dashboard.revokeAllSessions')}</span>
+            <span class="setting-item-desc">${t('admin:dashboard.revokeAllDescription')}</span>
+          </div>
+          <button id="btn-revoke-all-sessions" class="btn-danger" style="padding:6px 12px;font-size:13px;white-space:nowrap;">${t('admin:dashboard.revokeAllSessions')}</button>
+        </div>
+      </div>
+
       ${this.renderEmailSettingsSection()}
       ${this.renderDefaultsSection('game')}
       ${this.renderDefaultsSection('simulation')}
@@ -269,6 +280,10 @@ export class DashboardTab {
         (e.target as HTMLInputElement).checked = !enabled;
         this.notifications.error(t('admin:dashboard.failedUpdateSetting'));
       }
+    });
+
+    card.querySelector('#btn-revoke-all-sessions')!.addEventListener('click', () => {
+      this.showRevokeAllModal();
     });
 
     const chatModeSelect = card.querySelector('#select-chat-mode') as HTMLSelectElement;
@@ -441,6 +456,50 @@ export class DashboardTab {
         );
       } catch {
         select.value = prev;
+        this.notifications.error(t('admin:dashboard.failedUpdateSetting'));
+      }
+    });
+  }
+
+  private showRevokeAllModal(): void {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', t('admin:dashboard.revokeAllSessions'));
+    modal.innerHTML = `
+      <div class="modal" style="max-width:420px;">
+        <h2 style="margin-bottom:12px;color:var(--danger);">${t('admin:dashboard.revokeAllSessions')}</h2>
+        <p style="color:var(--text-dim);font-size:14px;">${t('admin:dashboard.revokeAllDescription')}</p>
+        <p style="color:var(--text-dim);font-size:13px;margin-top:8px;">${t('admin:dashboard.revokeAllConfirmPrompt')}</p>
+        <input type="text" class="confirm-input" id="revoke-all-confirm-input" placeholder="CONFIRM" aria-label="${escapeAttr(t('admin:dashboard.revokeAllConfirmPrompt'))}">
+        <div class="modal-actions" style="margin-top:16px;">
+          <button class="btn btn-secondary" id="revoke-all-cancel">${t('admin:dashboard.revokeAllCancel')}</button>
+          <button class="btn-danger" style="padding:8px 16px;font-size:14px;opacity:0.5;" id="revoke-all-confirm" disabled>${t('admin:dashboard.revokeAllConfirm')}</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('ui-overlay')!.appendChild(modal);
+
+    const input = modal.querySelector('#revoke-all-confirm-input') as HTMLInputElement;
+    const confirmBtn = modal.querySelector('#revoke-all-confirm') as HTMLButtonElement;
+
+    input.addEventListener('input', () => {
+      const matches = input.value === 'CONFIRM';
+      confirmBtn.disabled = !matches;
+      confirmBtn.style.opacity = matches ? '1' : '0.5';
+    });
+
+    modal.querySelector('#revoke-all-cancel')!.addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+    confirmBtn.addEventListener('click', async () => {
+      modal.remove();
+      try {
+        await ApiClient.post('/admin/revoke-all-sessions', {});
+        this.notifications.success(t('admin:dashboard.revokeAllSuccess'));
+      } catch {
         this.notifications.error(t('admin:dashboard.failedUpdateSetting'));
       }
     });

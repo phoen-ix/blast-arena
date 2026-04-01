@@ -90,7 +90,9 @@
     "roleChangeSuccess": "Role changed to {{role}}",
     "deactivateSuccess": "User deactivated",
     "reactivateSuccess": "User reactivated",
-    "deleteSuccess": "User deleted permanently"
+    "deleteSuccess": "User deleted permanently",
+    "revokeSessions": "Revoke Sessions",
+    "revokeSessionsSuccess": "User sessions revoked"
   },
   "matches": {
     "deleteAllMatches": "Delete All Matches",
@@ -552,7 +554,14 @@
     "statTotalMatches": "Total Matches",
     "statActiveRooms": "Active Rooms",
     "statOnlinePlayers": "Online Players",
-    "failedLoadStats": "Failed to load stats"
+    "failedLoadStats": "Failed to load stats",
+    "dangerZone": "Danger Zone",
+    "revokeAllSessions": "Revoke All Sessions",
+    "revokeAllDescription": "Force-disconnect all users and invalidate their sessions. Everyone except you will be logged out.",
+    "revokeAllConfirmPrompt": "Type CONFIRM to proceed:",
+    "revokeAllCancel": "Cancel",
+    "revokeAllConfirm": "Revoke All",
+    "revokeAllSuccess": "All sessions revoked"
   },
   "seasons": {
     "sectionTitle": "Season Management",

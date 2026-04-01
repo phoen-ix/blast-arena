@@ -90,7 +90,9 @@
     "roleChangeSuccess": "Rolle \u00e6ndret til {{role}}",
     "deactivateSuccess": "Bruger deaktiveret",
     "reactivateSuccess": "Bruger genaktiveret",
-    "deleteSuccess": "Bruger slettet permanent"
+    "deleteSuccess": "Bruger slettet permanent",
+    "revokeSessions": "Tilbagekald sessioner",
+    "revokeSessionsSuccess": "Brugersessioner tilbagekaldt"
   },
   "matches": {
     "deleteAllMatches": "Slet alle kampe",
@@ -552,7 +554,14 @@
     "statTotalMatches": "Kampe i alt",
     "statActiveRooms": "Aktive rum",
     "statOnlinePlayers": "Spillere online",
-    "failedLoadStats": "Kunne ikke indl\u00e6se statistik"
+    "failedLoadStats": "Kunne ikke indl\u00e6se statistik",
+    "dangerZone": "Farezone",
+    "revokeAllSessions": "Tilbagekald alle sessioner",
+    "revokeAllDescription": "Tvangsafbryd alle brugere og ugyldigg\u00f8r deres sessioner. Alle undtagen dig vil blive logget ud.",
+    "revokeAllConfirmPrompt": "Skriv CONFIRM for at forts\u00e6tte:",
+    "revokeAllCancel": "Annuller",
+    "revokeAllConfirm": "Tilbagekald alle",
+    "revokeAllSuccess": "Alle sessioner tilbagekaldt"
   },
   "seasons": {
     "sectionTitle": "S\u00e6sonadministration",
