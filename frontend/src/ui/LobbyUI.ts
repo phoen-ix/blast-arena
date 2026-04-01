@@ -232,6 +232,10 @@ export class LobbyUI {
           () => this.navigateTo('rooms'),
         );
       }
+      case 'matchHistory': {
+        const { MatchHistoryView } = await import('./views/MatchHistoryView');
+        return new MatchHistoryView(deps);
+      }
       case 'profile': {
         const { ProfileView } = await import('./views/ProfileView');
         return new ProfileView(deps, options);
@@ -313,6 +317,10 @@ export class LobbyUI {
             <span class="nav-icon">&#9818;</span>
             <span class="nav-label">${t('ui:sidebar.leaderboard')}</span>
           </button>
+          <button class="sidebar-nav-item" id="nav-matchHistory">
+            <span class="nav-icon">&#9776;</span>
+            <span class="nav-label">${t('ui:sidebar.matchHistory')}</span>
+          </button>
 
           <div class="sidebar-divider"></div>
 
@@ -388,6 +396,9 @@ export class LobbyUI {
     this.container
       .querySelector('#nav-leaderboard')!
       .addEventListener('click', () => this.navigateTo('leaderboard'));
+    this.container
+      .querySelector('#nav-matchHistory')!
+      .addEventListener('click', () => this.navigateTo('matchHistory'));
     this.container
       .querySelector('#nav-settings')!
       .addEventListener('click', () => this.navigateTo('settings'));

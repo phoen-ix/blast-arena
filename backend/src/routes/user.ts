@@ -236,6 +236,19 @@ router.delete(
   },
 );
 
+// --- Match History ---
+
+router.get('/user/matches', authMiddleware, emailVerifiedMiddleware, async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const result = await userService.getMatchHistory(req.user!.userId, page, limit);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/user/confirm-email/:token', async (req, res, next) => {
   try {
     await userService.confirmEmailChange(req.params.token);

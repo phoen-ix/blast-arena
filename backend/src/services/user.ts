@@ -11,7 +11,15 @@ import {
 import { getConfig } from '../config';
 import { sendEmailChangeEmail, sendEmailTakenChangeWarning } from './email';
 import { logger } from '../utils/logger';
-import { UserRow, UserProfileRow, UserEmailChangeRow, IdRow, IdWithLanguageRow } from '../db/types';
+import {
+  UserRow,
+  UserProfileRow,
+  UserEmailChangeRow,
+  IdRow,
+  IdWithLanguageRow,
+  MatchRow,
+  CountRow,
+} from '../db/types';
 
 export async function getUserProfile(userId: number) {
   const rows = await query<UserProfileRow[]>(
@@ -260,4 +268,47 @@ export async function deleteAccount(userId: number, password: string): Promise<v
   // Hard delete — FK cascades handle all related data
   await execute('DELETE FROM users WHERE id = ?', [userId]);
   logger.info(`User ${userId} deleted their own account`);
+}
+
+export async function getMatchHistory(userId: number, page: number = 1, limit: number = 20) {
+  const offset = (page - 1) * limit;
+  const rows = await query<(MatchRow & { placement: number; kills: number; deaths: number })[]>(
+    `SELECT m.id, m.room_code, m.game_mode, m.status, m.duration,
+            m.started_at, m.finished_at,
+            u.username as winner_username,
+            COALESCE(pc.player_count, 0) as player_count,
+            mp.placement, mp.kills, mp.deaths
+     FROM match_players mp
+     JOIN matches m ON m.id = mp.match_id
+     LEFT JOIN users u ON u.id = m.winner_id
+     LEFT JOIN (SELECT match_id, COUNT(*) as player_count FROM match_players GROUP BY match_id) pc ON pc.match_id = m.id
+     WHERE mp.user_id = ? AND m.status = 'finished'
+     ORDER BY m.finished_at DESC
+     LIMIT ? OFFSET ?`,
+    [userId, limit, offset],
+  );
+
+  const [countRow] = await query<CountRow[]>(
+    `SELECT COUNT(*) as total FROM match_players mp
+     JOIN matches m ON m.id = mp.match_id
+     WHERE mp.user_id = ? AND m.status = 'finished'`,
+    [userId],
+  );
+
+  return {
+    matches: rows.map((r) => ({
+      id: r.id,
+      gameMode: r.game_mode,
+      duration: r.duration,
+      finishedAt: r.finished_at,
+      playerCount: r.player_count,
+      winnerUsername: r.winner_username,
+      placement: r.placement,
+      kills: r.kills,
+      deaths: r.deaths,
+    })),
+    total: countRow.total,
+    page,
+    limit,
+  };
 }

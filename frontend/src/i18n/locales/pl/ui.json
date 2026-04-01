@@ -10,6 +10,7 @@
     "messages": "Wiadomo\u015bci",
     "party": "Dru\u017cyna",
     "leaderboard": "Ranking",
+    "matchHistory": "Match History",
     "settings": "Ustawienia",
     "help": "Pomoc",
     "admin": "Admin",
@@ -332,6 +333,22 @@
     "prev": "Poprz.",
     "next": "Nast.",
     "pageInfo": "Strona {{current}} z {{total}}"
+  },
+  "matchHistory": {
+    "title": "Match History",
+    "loading": "Loading match history...",
+    "error": "Failed to load match history",
+    "noMatches": "No matches played yet. Get out there!",
+    "mode": "Mode",
+    "result": "Result",
+    "kills": "Kills",
+    "deaths": "Deaths",
+    "players": "Players",
+    "duration": "Duration",
+    "date": "Date",
+    "win": "WIN",
+    "prev": "Prev",
+    "next": "Next"
   },
   "createRoom": {
     "title": "Utw\u00f3rz pok\u00f3j",

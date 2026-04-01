@@ -10,6 +10,7 @@
     "messages": "Messaggi",
     "party": "Gruppo",
     "leaderboard": "Classifica",
+    "matchHistory": "Match History",
     "settings": "Impostazioni",
     "help": "Aiuto",
     "admin": "Admin",
@@ -332,6 +333,22 @@
     "prev": "Prec",
     "next": "Succ",
     "pageInfo": "Pagina {{current}} di {{total}}"
+  },
+  "matchHistory": {
+    "title": "Match History",
+    "loading": "Loading match history...",
+    "error": "Failed to load match history",
+    "noMatches": "No matches played yet. Get out there!",
+    "mode": "Mode",
+    "result": "Result",
+    "kills": "Kills",
+    "deaths": "Deaths",
+    "players": "Players",
+    "duration": "Duration",
+    "date": "Date",
+    "win": "WIN",
+    "prev": "Prev",
+    "next": "Next"
   },
   "createRoom": {
     "title": "Crea stanza",

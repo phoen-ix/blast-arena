@@ -10,6 +10,7 @@
     "messages": "Mensagens",
     "party": "Grupo",
     "leaderboard": "Ranking",
+    "matchHistory": "Match History",
     "settings": "Configura\u00e7\u00f5es",
     "help": "Ajuda",
     "admin": "Admin",
@@ -332,6 +333,22 @@
     "prev": "Anterior",
     "next": "Pr\u00f3ximo",
     "pageInfo": "P\u00e1gina {{current}} de {{total}}"
+  },
+  "matchHistory": {
+    "title": "Match History",
+    "loading": "Loading match history...",
+    "error": "Failed to load match history",
+    "noMatches": "No matches played yet. Get out there!",
+    "mode": "Mode",
+    "result": "Result",
+    "kills": "Kills",
+    "deaths": "Deaths",
+    "players": "Players",
+    "duration": "Duration",
+    "date": "Date",
+    "win": "WIN",
+    "prev": "Prev",
+    "next": "Next"
   },
   "createRoom": {
     "title": "Criar Sala",

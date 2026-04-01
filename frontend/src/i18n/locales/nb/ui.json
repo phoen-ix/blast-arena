@@ -10,6 +10,7 @@
     "messages": "Meldinger",
     "party": "Gruppe",
     "leaderboard": "Rangliste",
+    "matchHistory": "Match History",
     "settings": "Innstillinger",
     "help": "Hjelp",
     "admin": "Admin",
@@ -332,6 +333,22 @@
     "prev": "Forrige",
     "next": "Neste",
     "pageInfo": "Side {{current}} av {{total}}"
+  },
+  "matchHistory": {
+    "title": "Match History",
+    "loading": "Loading match history...",
+    "error": "Failed to load match history",
+    "noMatches": "No matches played yet. Get out there!",
+    "mode": "Mode",
+    "result": "Result",
+    "kills": "Kills",
+    "deaths": "Deaths",
+    "players": "Players",
+    "duration": "Duration",
+    "date": "Date",
+    "win": "WIN",
+    "prev": "Prev",
+    "next": "Next"
   },
   "createRoom": {
     "title": "Opprett rom",

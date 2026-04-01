@@ -10,6 +10,7 @@
     "messages": "Berichten",
     "party": "Groep",
     "leaderboard": "Ranglijst",
+    "matchHistory": "Match History",
     "settings": "Instellingen",
     "help": "Help",
     "admin": "Beheer",
@@ -332,6 +333,22 @@
     "prev": "Vorige",
     "next": "Volgende",
     "pageInfo": "Pagina {{current}} van {{total}}"
+  },
+  "matchHistory": {
+    "title": "Match History",
+    "loading": "Loading match history...",
+    "error": "Failed to load match history",
+    "noMatches": "No matches played yet. Get out there!",
+    "mode": "Mode",
+    "result": "Result",
+    "kills": "Kills",
+    "deaths": "Deaths",
+    "players": "Players",
+    "duration": "Duration",
+    "date": "Date",
+    "win": "WIN",
+    "prev": "Prev",
+    "next": "Next"
   },
   "createRoom": {
     "title": "Kamer aanmaken",

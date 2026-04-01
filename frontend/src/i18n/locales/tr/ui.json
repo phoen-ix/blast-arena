@@ -10,6 +10,7 @@
     "messages": "Mesajlar",
     "party": "Parti",
     "leaderboard": "Skor Tablosu",
+    "matchHistory": "Match History",
     "settings": "Ayarlar",
     "help": "Yardim",
     "admin": "Yonetici",
@@ -332,6 +333,22 @@
     "prev": "Onceki",
     "next": "Sonraki",
     "pageInfo": "Sayfa {{current}} / {{total}}"
+  },
+  "matchHistory": {
+    "title": "Match History",
+    "loading": "Loading match history...",
+    "error": "Failed to load match history",
+    "noMatches": "No matches played yet. Get out there!",
+    "mode": "Mode",
+    "result": "Result",
+    "kills": "Kills",
+    "deaths": "Deaths",
+    "players": "Players",
+    "duration": "Duration",
+    "date": "Date",
+    "win": "WIN",
+    "prev": "Prev",
+    "next": "Next"
   },
   "createRoom": {
     "title": "Oda Olustur",

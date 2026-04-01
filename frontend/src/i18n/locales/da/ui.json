@@ -10,6 +10,7 @@
     "messages": "Beskeder",
     "party": "Gruppe",
     "leaderboard": "Rangliste",
+    "matchHistory": "Match History",
     "settings": "Indstillinger",
     "help": "Hj\u00e6lp",
     "admin": "Admin",
@@ -332,6 +333,22 @@
     "prev": "Forrige",
     "next": "N\u00e6ste",
     "pageInfo": "Side {{current}} af {{total}}"
+  },
+  "matchHistory": {
+    "title": "Match History",
+    "loading": "Loading match history...",
+    "error": "Failed to load match history",
+    "noMatches": "No matches played yet. Get out there!",
+    "mode": "Mode",
+    "result": "Result",
+    "kills": "Kills",
+    "deaths": "Deaths",
+    "players": "Players",
+    "duration": "Duration",
+    "date": "Date",
+    "win": "WIN",
+    "prev": "Prev",
+    "next": "Next"
   },
   "createRoom": {
     "title": "Opret rum",

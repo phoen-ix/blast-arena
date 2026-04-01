@@ -10,6 +10,7 @@
     "messages": "Messages",
     "party": "Groupe",
     "leaderboard": "Classement",
+    "matchHistory": "Match History",
     "settings": "Param\u00e8tres",
     "help": "Aide",
     "admin": "Admin",
@@ -332,6 +333,22 @@
     "prev": "Pr\u00e9c.",
     "next": "Suiv.",
     "pageInfo": "Page {{current}} sur {{total}}"
+  },
+  "matchHistory": {
+    "title": "Match History",
+    "loading": "Loading match history...",
+    "error": "Failed to load match history",
+    "noMatches": "No matches played yet. Get out there!",
+    "mode": "Mode",
+    "result": "Result",
+    "kills": "Kills",
+    "deaths": "Deaths",
+    "players": "Players",
+    "duration": "Duration",
+    "date": "Date",
+    "win": "WIN",
+    "prev": "Prev",
+    "next": "Next"
   },
   "createRoom": {
     "title": "Cr\u00e9er un salon",
