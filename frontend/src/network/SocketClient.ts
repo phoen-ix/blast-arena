@@ -62,6 +62,11 @@ export class SocketClient {
 
     this.socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error.message);
+      if (error.message === 'EMAIL_NOT_VERIFIED') {
+        // Don't show reconnecting overlay — the VerificationUI handles this
+        this.socket?.disconnect();
+        return;
+      }
       this.showOverlay();
     });
   }

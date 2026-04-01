@@ -26,6 +26,7 @@ function toPublicUser(row: UserRow | RefreshTokenJoinRow): PublicUser {
     username: row.username,
     role: row.role as UserRole,
     language: 'language' in row ? (row.language as string) : 'en',
+    emailVerified: !!row.email_verified,
   };
 }
 
@@ -136,7 +137,13 @@ export async function register(
     logger.error({ err }, 'Failed to send verification email');
   });
 
-  const user: PublicUser = { id: result.insertId, username, role: 'user', language };
+  const user: PublicUser = {
+    id: result.insertId,
+    username,
+    role: 'user',
+    language,
+    emailVerified: false,
+  };
   const accessToken = generateAccessToken({ userId: user.id, username, role: 'user' });
 
   return { user, accessToken };
@@ -204,7 +211,7 @@ export async function refreshAccessToken(
 
   const rows = await query<RefreshTokenJoinRow[]>(
     `SELECT rt.id, rt.user_id, rt.expires_at, rt.revoked,
-            u.username, u.role, u.language, u.is_deactivated
+            u.username, u.role, u.language, u.is_deactivated, u.email_verified
      FROM refresh_tokens rt
      JOIN users u ON u.id = rt.user_id
      WHERE rt.token_hash = ?`,
@@ -279,6 +286,33 @@ export async function verifyEmail(token: string): Promise<void> {
   if (result.affectedRows === 0) {
     throw new AppError('Invalid verification token', 400, 'INVALID_TOKEN');
   }
+}
+
+export async function resendVerificationEmail(userId: number, email: string): Promise<void> {
+  const config = getConfig();
+  const normalizedEmail = email.toLowerCase().trim();
+  const emailHash = hashEmail(normalizedEmail, config.EMAIL_PEPPER);
+
+  const rows = await query<UserRow[]>(
+    'SELECT id, email_hash, email_verified, language FROM users WHERE id = ? AND email_hash = ?',
+    [userId, emailHash],
+  );
+  if (rows.length === 0) {
+    // Email doesn't match — return silently to avoid enumeration
+    return;
+  }
+  const user = rows[0];
+  if (user.email_verified) {
+    return;
+  }
+
+  const newToken = generateToken();
+  await execute('UPDATE users SET email_verify_token = ? WHERE id = ?', [
+    hashToken(newToken),
+    userId,
+  ]);
+
+  await sendVerificationEmail(normalizedEmail, newToken, user.language || 'en');
 }
 
 export async function forgotPassword(email: string): Promise<void> {

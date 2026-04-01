@@ -168,7 +168,7 @@ describe('POST /lobby/rooms', () => {
     await handler(req, res as unknown as Response, next as NextFunction);
 
     expect(mockCreateRoom).toHaveBeenCalledWith(
-      { id: 42, username: 'bob', role: 'admin', language: 'en' },
+      { id: 42, username: 'bob', role: 'admin', language: 'en', emailVerified: true },
       'Admin Room',
       { gameMode: 'teams', maxPlayers: 8 },
     );
@@ -212,7 +212,13 @@ describe('POST /lobby/rooms', () => {
     await handler(req, res as unknown as Response, next as NextFunction);
 
     const userArg = mockCreateRoom.mock.calls[0][0];
-    expect(userArg).toEqual({ id: 77, username: 'charlie', role: 'moderator', language: 'en' });
+    expect(userArg).toEqual({
+      id: 77,
+      username: 'charlie',
+      role: 'moderator',
+      language: 'en',
+      emailVerified: true,
+    });
     expect(userArg).not.toHaveProperty('userId');
   });
 

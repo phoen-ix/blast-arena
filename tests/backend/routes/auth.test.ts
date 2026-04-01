@@ -105,7 +105,8 @@ function mockRes() {
     _json: unknown;
     _cookie: any;
     _clearCookie: any;
-  } = { _status: 200, _json: null, _cookie: null, _clearCookie: null };
+    _redirect: { status: number; url: string } | null;
+  } = { _status: 200, _json: null, _cookie: null, _clearCookie: null, _redirect: null };
 
   const res: any = {
     get _status() {
@@ -119,6 +120,9 @@ function mockRes() {
     },
     get _clearCookie() {
       return data._clearCookie;
+    },
+    get _redirect() {
+      return data._redirect;
     },
     status(code: number) {
       data._status = code;
@@ -134,6 +138,10 @@ function mockRes() {
     },
     clearCookie(name: string, opts: any) {
       data._clearCookie = { name, opts };
+      return res;
+    },
+    redirect(url: string) {
+      data._redirect = { status: 302, url };
       return res;
     },
   };
@@ -424,14 +432,14 @@ describe('GET /auth/verify-email/:token', () => {
     handler = getHandler('get', '/auth/verify-email/:token');
   });
 
-  it('returns success message on valid token', async () => {
+  it('redirects to APP_URL with emailVerified param on valid token', async () => {
     mockVerifyEmail.mockResolvedValue(undefined);
 
     const req = mockReq({ params: { token: 'valid_token' } });
     const res = mockRes();
     await handler(req, res, jest.fn());
 
-    expect(res._json).toEqual({ message: 'Email verified successfully' });
+    expect(res._redirect).toEqual({ status: 302, url: 'http://localhost:8080?emailVerified=true' });
     expect(mockVerifyEmail).toHaveBeenCalledWith('valid_token');
   });
 

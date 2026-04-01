@@ -47,6 +47,7 @@ export interface RefreshTokenJoinRow extends RowDataPacket {
   role: string;
   language: string;
   is_deactivated: boolean;
+  email_verified: boolean;
 }
 
 /** User profile joined with stats */

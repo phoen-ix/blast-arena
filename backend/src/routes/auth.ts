@@ -141,7 +141,26 @@ router.get(
   async (req, res, next) => {
     try {
       await authService.verifyEmail(req.params.token);
-      res.json({ message: 'Email verified successfully' });
+      const config = getConfig();
+      res.redirect(`${config.APP_URL}?emailVerified=true`);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.post(
+  '/auth/resend-verification',
+  rateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 3 }),
+  authMiddleware,
+  async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+      await authService.resendVerificationEmail(req.user!.userId, email);
+      res.json({ message: 'If the email matches, a new verification link has been sent' });
     } catch (err) {
       next(err);
     }

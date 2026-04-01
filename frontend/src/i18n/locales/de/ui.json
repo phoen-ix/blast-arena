@@ -156,7 +156,10 @@
       "none": "Keine",
       "locked": "Gesperrt",
       "updated": "Kosmetik aktualisiert",
-      "loadFailed": "Kosmetik konnte nicht geladen werden: {{error}}"
+      "loadFailed": "Kosmetik konnte nicht geladen werden: {{error}}",
+      "previewPlayer": "Dein Spieler",
+      "previewBomb": "Deine Bombe",
+      "previewTrailNone": "Keine Spur"
     }
   },
   "profile": {

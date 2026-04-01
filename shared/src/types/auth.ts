@@ -16,6 +16,7 @@ export interface PublicUser {
   username: string;
   role: UserRole;
   language: string;
+  emailVerified: boolean;
 }
 
 export interface AuthPayload {

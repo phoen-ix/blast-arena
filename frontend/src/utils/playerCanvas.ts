@@ -105,6 +105,73 @@ export function getPlayerColorHex(index: number): string {
   return playerColorToHex(PLAYER_COLORS[index % PLAYER_COLORS.length]);
 }
 
+/** Draw a bomb sprite icon using Canvas2D (matches BootScene's Phaser rendering) */
+export function drawBombSprite(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  baseColor?: string,
+  fuseColor?: string,
+): void {
+  const s = size / 48;
+  const isCustom = !!baseColor;
+
+  // Body shadow (offset lower)
+  const bodyDark = isCustom ? darkenHex(baseColor!, 0.75) : '#111111';
+  ctx.fillStyle = bodyDark;
+  ctx.beginPath();
+  ctx.arc(x + 24 * s, y + 26 * s, 16 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body main
+  if (isCustom) {
+    ctx.fillStyle = baseColor!;
+    ctx.beginPath();
+    ctx.arc(x + 24 * s, y + 24 * s, 16 * s, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = '#222222';
+    ctx.beginPath();
+    ctx.arc(x + 22 * s, y + 23 * s, 12 * s, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Metallic highlight / shine
+  ctx.fillStyle = isCustom ? 'rgba(255,255,255,0.3)' : 'rgba(68,68,68,0.6)';
+  ctx.beginPath();
+  ctx.arc(x + 18 * s, y + (isCustom ? 18 : 20) * s, (isCustom ? 5 : 4) * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Fuse line
+  const fc = fuseColor || '#886644';
+  ctx.strokeStyle = fc;
+  ctx.lineWidth = (isCustom ? 3 : 2) * s;
+  ctx.beginPath();
+  if (isCustom) {
+    ctx.moveTo(x + 24 * s, y + 8 * s);
+    ctx.lineTo(x + 28 * s, y + 4 * s);
+    ctx.lineTo(x + 32 * s, y + 6 * s);
+  } else {
+    ctx.moveTo(x + 24 * s, y + 10 * s);
+    ctx.lineTo(x + 28 * s, y + 6 * s);
+    ctx.lineTo(x + 30 * s, y + 8 * s);
+  }
+  ctx.stroke();
+
+  // Spark tip
+  const sparkX = isCustom ? 32 : 30;
+  const sparkY = isCustom ? 6 : 7;
+  ctx.fillStyle = isCustom ? '#ffff00' : '#ff4400';
+  ctx.beginPath();
+  ctx.arc(x + sparkX * s, y + sparkY * s, (isCustom ? 3 : 4) * s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = isCustom ? '#ffffff' : '#ffaa00';
+  ctx.beginPath();
+  ctx.arc(x + sparkX * s, y + sparkY * s, (isCustom ? 1.5 : 2) * s, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function roundRect(
   ctx: CanvasRenderingContext2D,
   x: number,

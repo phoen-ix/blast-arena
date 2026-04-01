@@ -156,7 +156,10 @@
       "none": "Brak",
       "locked": "Zablokowane",
       "updated": "Kosmetyk zaktualizowany",
-      "loadFailed": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107 kosmetyk\u00f3w: {{error}}"
+      "loadFailed": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107 kosmetyk\u00f3w: {{error}}",
+      "previewPlayer": "Tw\u00f3j gracz",
+      "previewBomb": "Twoja bomba",
+      "previewTrailNone": "Brak \u015bladu"
     }
   },
   "profile": {

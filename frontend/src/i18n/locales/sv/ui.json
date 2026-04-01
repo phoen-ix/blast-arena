@@ -156,7 +156,10 @@
       "none": "Ingen",
       "locked": "Låst",
       "updated": "Kosmetik uppdaterad",
-      "loadFailed": "Kunde inte ladda kosmetika: {{error}}"
+      "loadFailed": "Kunde inte ladda kosmetika: {{error}}",
+      "previewPlayer": "Din spelare",
+      "previewBomb": "Din bomb",
+      "previewTrailNone": "Inget spår"
     }
   },
   "profile": {

@@ -156,7 +156,10 @@
       "none": "Geen",
       "locked": "Vergrendeld",
       "updated": "Cosmetisch item bijgewerkt",
-      "loadFailed": "Cosmetica laden mislukt: {{error}}"
+      "loadFailed": "Cosmetica laden mislukt: {{error}}",
+      "previewPlayer": "Je speler",
+      "previewBomb": "Je bom",
+      "previewTrailNone": "Geen spoor"
     }
   },
   "profile": {

@@ -95,7 +95,7 @@ XP-based leveling system separate from Elo. Earn XP from kills, bomb placements,
 
 ## Achievements & Cosmetics
 
-Admin-configurable achievement system with four condition types: cumulative stats, per-game feats, mode-specific milestones, and campaign progress. Ships with a default pack of 47 achievements and 25 cosmetic rewards across combat, victory, dedication, mode mastery, and campaign categories. Achievement progress tracking with progress bars on profiles (own profile only). Achievements can reward cosmetics. Four cosmetic types: player colors, eye styles, movement trails, and bomb skins. Unlocked via achievements, campaign stars, level milestones, or by default. Export/import achievements and cosmetics as JSON. Full-page profile views show rank, level, stats grid, season history, achievements, and equipped cosmetics with a privacy toggle.
+Admin-configurable achievement system with four condition types: cumulative stats, per-game feats, mode-specific milestones, and campaign progress. Ships with a default pack of 47 achievements and 25 cosmetic rewards across combat, victory, dedication, mode mastery, and campaign categories. Achievement progress tracking with progress bars on profiles (own profile only). Achievements can reward cosmetics. Four cosmetic types: player colors, eye styles, movement trails, and bomb skins. Unlocked via achievements, campaign stars, level milestones, or by default. Live preview panel in settings shows equipped player sprite, bomb, and trail. Export/import achievements and cosmetics as JSON. Full-page profile views show rank, level, stats grid, season history, achievements, and equipped cosmetics with a privacy toggle.
 
 ## Admin Panel
 
@@ -226,7 +226,7 @@ Full i18n support via [i18next](https://www.i18next.com/). All UI strings are ex
 | Backend | Node.js + Express + TypeScript |
 | Real-time | Socket.io |
 | Database | MariaDB 11 + Redis 7 |
-| Auth | JWT + bcrypt + httpOnly cookies, HMAC-SHA256 email hashing, email enumeration prevention |
+| Auth | JWT + bcrypt + httpOnly cookies, HMAC-SHA256 email hashing, email verification enforcement, email enumeration prevention |
 | Security | CSP + HSTS + COOP + Trusted Types, parameterized queries, nginx + Express rate limiting, Zod socket event validation, DOMPurify |
 | Validation | Zod |
 | Container | Docker Compose |

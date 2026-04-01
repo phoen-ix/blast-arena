@@ -156,7 +156,10 @@
       "none": "Aucun",
       "locked": "Verrouill\u00e9",
       "updated": "Cosm\u00e9tique mis \u00e0 jour",
-      "loadFailed": "\u00c9chec du chargement des cosm\u00e9tiques : {{error}}"
+      "loadFailed": "\u00c9chec du chargement des cosm\u00e9tiques : {{error}}",
+      "previewPlayer": "Votre joueur",
+      "previewBomb": "Votre bombe",
+      "previewTrailNone": "Aucune trace"
     }
   },
   "profile": {

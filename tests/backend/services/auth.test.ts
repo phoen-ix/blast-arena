@@ -76,7 +76,13 @@ describe('Auth Service', () => {
 
       const result = await authService.register('newuser', 'new@test.com', 'password123');
 
-      expect(result.user).toEqual({ id: 42, username: 'newuser', role: 'user', language: 'en' });
+      expect(result.user).toEqual({
+        id: 42,
+        username: 'newuser',
+        role: 'user',
+        language: 'en',
+        emailVerified: false,
+      });
       expect(result.accessToken).toBeDefined();
       expect(typeof result.accessToken).toBe('string');
     });
@@ -154,6 +160,7 @@ describe('Auth Service', () => {
         username: 'testuser',
         role: 'user',
         language: 'en',
+        emailVerified: true,
       });
       expect(result.auth.accessToken).toBeDefined();
       expect(result.refreshToken).toBeDefined();
@@ -235,6 +242,7 @@ describe('Auth Service', () => {
         username: 'testuser',
         role: 'user',
         language: 'en',
+        emailVerified: false,
       });
       expect(result.auth.accessToken).toBeDefined();
       expect(result.refreshToken).toBeDefined();

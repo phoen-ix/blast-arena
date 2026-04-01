@@ -156,7 +156,10 @@
       "none": "Ingen",
       "locked": "L\u00e5st",
       "updated": "Kosmetik opdateret",
-      "loadFailed": "Kunne ikke indl\u00e6se kosmetik: {{error}}"
+      "loadFailed": "Kunne ikke indl\u00e6se kosmetik: {{error}}",
+      "previewPlayer": "Din spiller",
+      "previewBomb": "Din bombe",
+      "previewTrailNone": "Intet spor"
     }
   },
   "profile": {

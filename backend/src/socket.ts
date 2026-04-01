@@ -36,6 +36,8 @@ import * as partyService from './services/party';
 import * as replayService from './services/replay';
 import * as customMapsService from './services/custom-maps';
 import { z } from 'zod';
+import { query } from './db/connection';
+import { UserRow } from './db/types';
 
 type TypedServer = Server<
   ClientToServerEvents,
@@ -136,7 +138,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
   const { inputLimiter, createLimiter, joinLimiter, removeSocket } = createRateLimiters();
 
   // Auth middleware
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) {
       return next(new Error('Authentication required'));
@@ -144,12 +146,37 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     try {
       const payload = jwt.verify(token, getConfig().JWT_SECRET) as AuthPayload;
+
+      // Check email verification status from database
+      const rows = await query<UserRow[]>(
+        'SELECT email_verified, is_deactivated FROM users WHERE id = ?',
+        [payload.userId],
+      );
+      if (rows.length === 0) {
+        return next(new Error('User not found'));
+      }
+      if (rows[0].is_deactivated) {
+        return next(new Error('Account deactivated'));
+      }
+      if (!rows[0].email_verified) {
+        return next(new Error('EMAIL_NOT_VERIFIED'));
+      }
+
       socket.data.userId = payload.userId;
       socket.data.username = payload.username;
       socket.data.role = payload.role;
       socket.data.locale = (socket.handshake.auth.locale as string) || 'en';
       next();
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.message === 'EMAIL_NOT_VERIFIED') {
+        return next(err);
+      }
+      if (
+        err instanceof Error &&
+        (err.message === 'User not found' || err.message === 'Account deactivated')
+      ) {
+        return next(err);
+      }
       next(new Error('Invalid token'));
     }
   });
@@ -192,6 +219,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       username: socket.data.username,
       role: socket.data.role,
       language: socket.data.locale || 'en',
+      emailVerified: true, // Socket middleware already verified this
     };
 
     // Auto-join admin room for simulation broadcasts

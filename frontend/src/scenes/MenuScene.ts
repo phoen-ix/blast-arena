@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { AuthManager } from '../network/AuthManager';
 import { SocketClient } from '../network/SocketClient';
 import { AuthUI } from '../ui/AuthUI';
+import { VerificationUI } from '../ui/VerificationUI';
 import { NotificationUI } from '../ui/NotificationUI';
 import { themeManager } from '../themes/ThemeManager';
 import { t } from '../i18n';
@@ -64,6 +65,13 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // Check for ?emailVerified=true from verification redirect
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('emailVerified') === 'true') {
+      window.history.replaceState({}, '', window.location.pathname);
+      this.notifications.success(t('auth:verification.verified'));
+    }
+
     // Try auto-login first
     this.authManager.tryAutoLogin().then((success) => {
       if (success) {
@@ -82,7 +90,21 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private onAuthenticated(): void {
+    const user = this.authManager.getUser();
+    if (user && !user.emailVerified) {
+      this.showVerification();
+      return;
+    }
     this.socketClient.connect();
     this.scene.start('LobbyScene');
+  }
+
+  private showVerification(): void {
+    const ui = new VerificationUI(this.authManager, this.notifications, () => {
+      // User verified — proceed to lobby
+      this.socketClient.connect();
+      this.scene.start('LobbyScene');
+    });
+    ui.show();
   }
 }

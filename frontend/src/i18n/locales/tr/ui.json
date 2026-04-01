@@ -156,7 +156,10 @@
       "none": "Yok",
       "locked": "Kilitli",
       "updated": "Kozmetik guncellendi",
-      "loadFailed": "Kozmetikler yuklenemedi: {{error}}"
+      "loadFailed": "Kozmetikler yuklenemedi: {{error}}",
+      "previewPlayer": "Oyuncun",
+      "previewBomb": "Bomban",
+      "previewTrailNone": "İz yok"
     }
   },
   "profile": {

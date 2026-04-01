@@ -156,7 +156,10 @@
       "none": "Nenhum",
       "locked": "Bloqueado",
       "updated": "Cosm\u00e9tico atualizado",
-      "loadFailed": "Falha ao carregar cosm\u00e9ticos: {{error}}"
+      "loadFailed": "Falha ao carregar cosm\u00e9ticos: {{error}}",
+      "previewPlayer": "Seu jogador",
+      "previewBomb": "Sua bomba",
+      "previewTrailNone": "Sem rastro"
     }
   },
   "profile": {

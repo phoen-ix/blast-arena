@@ -18,6 +18,7 @@ import { UIGamepadNavigator } from '../game/UIGamepadNavigator';
 import { themeManager } from '../themes/ThemeManager';
 import { THEME_DEFINITIONS } from '../themes/definitions';
 import { PLAYER_COLORS } from '../scenes/BootScene';
+import { drawPlayerSprite, drawBombSprite, getPlayerColorHex } from '../utils/playerCanvas';
 
 interface Tab {
   id: string;
@@ -763,10 +764,26 @@ export class SettingsUI {
     this.contentEl.innerHTML = `
       <div class="settings-panel wide">
         <h3 class="settings-section-title">${t('settings.cosmetics.title')}</h3>
+        <div class="cosmetic-preview">
+          <div class="cosmetic-preview-item">
+            <canvas id="cosmetic-preview-player" width="80" height="80" style="width:80px;height:80px;"></canvas>
+            <span class="cosmetic-preview-label">${t('settings.cosmetics.previewPlayer')}</span>
+          </div>
+          <div class="cosmetic-preview-item">
+            <canvas id="cosmetic-preview-bomb" width="56" height="56" style="width:56px;height:56px;"></canvas>
+            <span class="cosmetic-preview-label">${t('settings.cosmetics.previewBomb')}</span>
+          </div>
+          <div class="cosmetic-preview-item cosmetic-preview-trail">
+            <span class="cosmetic-preview-trail-dot" id="cosmetic-trail-dot"></span>
+            <span class="cosmetic-preview-label" id="cosmetic-trail-label">${t('settings.cosmetics.previewTrailNone')}</span>
+          </div>
+        </div>
         ${slots.map(renderSlot).join('')}
         <div id="cosmetics-status" class="settings-status"></div>
       </div>
     `;
+
+    this.drawCosmeticsPreview(allCosmetics, equipped);
 
     this.contentEl.querySelectorAll('.cosmetic-item').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -789,6 +806,88 @@ export class SettingsUI {
         }
       });
     });
+  }
+
+  private drawCosmeticsPreview(allCosmetics: Cosmetic[], equipped: EquippedCosmetics): void {
+    if (!this.contentEl) return;
+
+    // Resolve player color
+    let playerHex = getPlayerColorHex(0);
+    if (equipped.colorId !== null) {
+      const colorCosmetic = allCosmetics.find((c) => c.id === equipped.colorId);
+      if (colorCosmetic?.config.hex) {
+        const raw = colorCosmetic.config.hex as string;
+        playerHex = '#' + raw.replace('0x', '').replace('#', '');
+      }
+    }
+
+    // Resolve eye style
+    let eyeStyle: string | undefined;
+    if (equipped.eyesId !== null) {
+      const eyeCosmetic = allCosmetics.find((c) => c.id === equipped.eyesId);
+      if (eyeCosmetic?.config.style) {
+        eyeStyle = eyeCosmetic.config.style as string;
+      }
+    }
+
+    // Draw player sprite
+    const playerCanvas = this.contentEl.querySelector(
+      '#cosmetic-preview-player',
+    ) as HTMLCanvasElement;
+    if (playerCanvas) {
+      const ctx = playerCanvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, 80, 80);
+        drawPlayerSprite(ctx, 0, 0, 80, playerHex, eyeStyle);
+      }
+    }
+
+    // Resolve bomb skin
+    let bombBaseHex: string | undefined;
+    let bombFuseHex: string | undefined;
+    if (equipped.bombSkinId !== null) {
+      const bombCosmetic = allCosmetics.find((c) => c.id === equipped.bombSkinId);
+      if (bombCosmetic?.config.baseColor != null) {
+        const base = bombCosmetic.config.baseColor as number;
+        bombBaseHex = '#' + base.toString(16).padStart(6, '0');
+        if (bombCosmetic.config.fuseColor != null) {
+          const fuse = bombCosmetic.config.fuseColor as number;
+          bombFuseHex = '#' + fuse.toString(16).padStart(6, '0');
+        }
+      }
+    }
+
+    // Draw bomb sprite
+    const bombCanvas = this.contentEl.querySelector('#cosmetic-preview-bomb') as HTMLCanvasElement;
+    if (bombCanvas) {
+      const ctx = bombCanvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, 56, 56);
+        drawBombSprite(ctx, 0, 0, 56, bombBaseHex, bombFuseHex);
+      }
+    }
+
+    // Update trail info
+    const trailDot = this.contentEl.querySelector('#cosmetic-trail-dot') as HTMLElement;
+    const trailLabel = this.contentEl.querySelector('#cosmetic-trail-label') as HTMLElement;
+    if (trailDot && trailLabel) {
+      if (equipped.trailId !== null) {
+        const trailCosmetic = allCosmetics.find((c) => c.id === equipped.trailId);
+        if (trailCosmetic) {
+          if (trailCosmetic.config.tint != null) {
+            const tint = trailCosmetic.config.tint as number;
+            trailDot.style.background = '#' + tint.toString(16).padStart(6, '0');
+          } else {
+            trailDot.style.background = 'var(--text)';
+          }
+          trailDot.style.display = 'inline-block';
+          trailLabel.textContent = trailCosmetic.name;
+        }
+      } else {
+        trailDot.style.display = 'none';
+        trailLabel.textContent = t('settings.cosmetics.previewTrailNone');
+      }
+    }
   }
 
   async renderEmbedded(container: HTMLElement): Promise<void> {

@@ -156,7 +156,10 @@
       "none": "Nessuno",
       "locked": "Bloccato",
       "updated": "Cosmetico aggiornato",
-      "loadFailed": "Impossibile caricare i cosmetici: {{error}}"
+      "loadFailed": "Impossibile caricare i cosmetici: {{error}}",
+      "previewPlayer": "Il tuo giocatore",
+      "previewBomb": "La tua bomba",
+      "previewTrailNone": "Nessuna scia"
     }
   },
   "profile": {

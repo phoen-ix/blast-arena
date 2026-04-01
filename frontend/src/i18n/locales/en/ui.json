@@ -156,7 +156,10 @@
       "none": "None",
       "locked": "Locked",
       "updated": "Cosmetic updated",
-      "loadFailed": "Failed to load cosmetics: {{error}}"
+      "loadFailed": "Failed to load cosmetics: {{error}}",
+      "previewPlayer": "Your Player",
+      "previewBomb": "Your Bomb",
+      "previewTrailNone": "No Trail"
     }
   },
   "profile": {

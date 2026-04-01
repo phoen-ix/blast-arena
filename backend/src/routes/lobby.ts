@@ -62,7 +62,13 @@ router.get('/lobby/rooms', authMiddleware, async (_req, res, next) => {
 router.post('/lobby/rooms', authMiddleware, validate(createRoomSchema), async (req, res, next) => {
   try {
     const room = await lobbyService.createRoom(
-      { id: req.user!.userId, username: req.user!.username, role: req.user!.role, language: 'en' },
+      {
+        id: req.user!.userId,
+        username: req.user!.username,
+        role: req.user!.role,
+        language: 'en',
+        emailVerified: true,
+      },
       req.body.name,
       req.body.config,
     );
