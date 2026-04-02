@@ -471,3 +471,88 @@ export async function getActiveBanner() {
   );
   return rows.length > 0 ? rows[0] : null;
 }
+
+// --- Account Cleanup ---
+
+export type CleanupType = 'unverified' | 'inactive' | 'deactivated';
+
+function buildCleanupWhere(
+  type: CleanupType,
+  days?: number,
+  adminId?: number,
+): { where: string; params: (string | number)[] } {
+  const conditions: string[] = ["role = 'user'"];
+  const params: (string | number)[] = [];
+
+  if (adminId) {
+    conditions.push('id != ?');
+    params.push(adminId);
+  }
+
+  switch (type) {
+    case 'unverified':
+      conditions.push('email_verified = FALSE');
+      conditions.push('created_at < NOW() - INTERVAL ? DAY');
+      params.push(days!);
+      break;
+    case 'inactive':
+      conditions.push(
+        '((last_login IS NOT NULL AND last_login < NOW() - INTERVAL ? DAY) OR (last_login IS NULL AND created_at < NOW() - INTERVAL ? DAY))',
+      );
+      params.push(days!, days!);
+      break;
+    case 'deactivated':
+      conditions.push('is_deactivated = TRUE');
+      break;
+  }
+
+  return { where: conditions.join(' AND '), params };
+}
+
+export async function previewCleanup(type: CleanupType, days?: number): Promise<{ count: number }> {
+  const { where, params } = buildCleanupWhere(type, days);
+  const [row] = await query<CountRow[]>(
+    `SELECT COUNT(*) as total FROM users WHERE ${where}`,
+    params,
+  );
+  return { count: row.total };
+}
+
+export async function executeCleanup(
+  adminId: number,
+  type: CleanupType,
+  days?: number,
+): Promise<{ deleted: number }> {
+  const { where, params } = buildCleanupWhere(type, days, adminId);
+
+  // Get IDs of users to delete (for socket disconnect)
+  const rows = await query<IdRow[]>(`SELECT id FROM users WHERE ${where}`, params);
+  if (rows.length === 0) {
+    return { deleted: 0 };
+  }
+
+  const userIds = rows.map((r) => r.id);
+
+  // Audit log before deletion (FK cascade would remove if admin is in the set)
+  const details = JSON.stringify({ type, days: days ?? null, count: userIds.length });
+  await execute(
+    'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+    [adminId, 'bulk_delete', 'user', 0, details],
+  );
+
+  // Disconnect sockets for affected users
+  try {
+    const io = getIO();
+    for (const id of userIds) {
+      io.in(`user:${id}`).disconnectSockets(true);
+    }
+  } catch {
+    // Socket server may not be available
+  }
+
+  // Bulk delete — FK CASCADE handles related tables
+  const placeholders = userIds.map(() => '?').join(',');
+  await execute(`DELETE FROM users WHERE id IN (${placeholders})`, userIds);
+
+  return { deleted: userIds.length };
+}

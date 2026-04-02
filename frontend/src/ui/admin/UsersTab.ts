@@ -41,6 +41,7 @@ export class UsersTab {
           <input type="text" placeholder="${escapeAttr(t('admin:users.searchPlaceholder'))}" id="admin-user-search" value="${escapeHtml(this.search)}">
         </div>
         ${isAdmin ? `<button class="btn btn-primary" id="admin-create-user" style="flex-shrink:0;white-space:nowrap;">${t('admin:users.createUser')}</button>` : ''}
+        ${isAdmin ? `<button class="btn btn-secondary" id="admin-cleanup" style="flex-shrink:0;white-space:nowrap;">${t('admin:users.cleanup.button')}</button>` : ''}
       </div>
       <div id="admin-users-table">${t('admin:users.loading')}</div>
       <div id="admin-users-pagination"></div>
@@ -58,6 +59,9 @@ export class UsersTab {
 
     this.container.querySelector('#admin-create-user')?.addEventListener('click', () => {
       this.showCreateUserModal();
+    });
+    this.container.querySelector('#admin-cleanup')?.addEventListener('click', () => {
+      this.showCleanupModal();
     });
 
     await this.loadUsers();
@@ -363,6 +367,152 @@ export class UsersTab {
         errorEl.style.display = 'block';
       }
     });
+  }
+
+  private showCleanupModal(): void {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', t('admin:users.cleanup.title'));
+
+    let selectedType: 'unverified' | 'inactive' | 'deactivated' = 'unverified';
+    let previewCount: number | null = null;
+
+    const renderModal = () => {
+      const needsDays = selectedType !== 'deactivated';
+      modal.innerHTML = `
+        <div class="modal" style="max-width:480px;">
+          <h2 style="margin-bottom:8px;">${t('admin:users.cleanup.title')}</h2>
+          <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px;">${t('admin:users.cleanup.description')}</p>
+          <div style="margin-bottom:12px;">
+            <label style="color:var(--text-dim);font-size:13px;display:block;margin-bottom:6px;">${t('admin:users.cleanup.typeLabel')}</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="option-chip ${selectedType === 'unverified' ? 'active' : ''}" data-cleanup-type="unverified" title="${escapeAttr(t('admin:users.cleanup.typeUnverifiedDesc'))}">${t('admin:users.cleanup.typeUnverified')}</button>
+              <button class="option-chip ${selectedType === 'inactive' ? 'active' : ''}" data-cleanup-type="inactive" title="${escapeAttr(t('admin:users.cleanup.typeInactiveDesc'))}">${t('admin:users.cleanup.typeInactive')}</button>
+              <button class="option-chip ${selectedType === 'deactivated' ? 'active' : ''}" data-cleanup-type="deactivated" title="${escapeAttr(t('admin:users.cleanup.typeDeactivatedDesc'))}">${t('admin:users.cleanup.typeDeactivated')}</button>
+            </div>
+          </div>
+          <div style="margin-bottom:12px;${needsDays ? '' : 'display:none;'}">
+            <label style="color:var(--text-dim);font-size:13px;">${t('admin:users.cleanup.daysLabel')}</label>
+            <input type="number" class="admin-input" id="cleanup-days" min="1" placeholder="${escapeAttr(t('admin:users.cleanup.daysPlaceholder'))}" style="margin-top:4px;width:120px;">
+          </div>
+          <div style="margin-bottom:12px;">
+            <button class="btn btn-secondary btn-sm" id="cleanup-preview">${t('admin:users.cleanup.previewButton')}</button>
+            <span id="cleanup-preview-result" style="margin-left:8px;font-size:13px;color:var(--text-dim);">${
+              previewCount !== null
+                ? previewCount > 0
+                  ? t('admin:users.cleanup.previewResult', { count: previewCount })
+                  : t('admin:users.cleanup.previewNone')
+                : ''
+            }</span>
+          </div>
+          ${
+            previewCount && previewCount > 0
+              ? `
+            <div style="margin-bottom:12px;">
+              <label style="color:var(--text-dim);font-size:13px;">${t('admin:users.cleanup.confirmPrompt')}</label>
+              <input type="text" class="admin-input" id="cleanup-confirm-input" placeholder="${escapeAttr(t('admin:users.cleanup.confirmPlaceholder'))}" aria-label="${escapeAttr(t('admin:users.cleanup.confirmAriaLabel'))}" style="margin-top:4px;width:160px;">
+            </div>
+          `
+              : ''
+          }
+          <div id="cleanup-error" style="color:var(--danger);font-size:13px;margin-bottom:8px;display:none;"></div>
+          <div class="modal-actions" style="margin-top:16px;">
+            <button class="btn btn-secondary" id="cleanup-cancel">${t('admin:users.cleanup.cancel')}</button>
+            ${
+              previewCount && previewCount > 0
+                ? `<button class="btn-danger" style="padding:8px 16px;font-size:14px;opacity:0.5;" id="cleanup-execute" disabled>${t('admin:users.cleanup.deleteButton', { count: previewCount })}</button>`
+                : ''
+            }
+          </div>
+        </div>
+      `;
+
+      // Type chip selection
+      modal.querySelectorAll('[data-cleanup-type]').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          selectedType = (chip as HTMLElement).dataset.cleanupType as typeof selectedType;
+          previewCount = null;
+          renderModal();
+        });
+      });
+
+      // Preview
+      modal.querySelector('#cleanup-preview')?.addEventListener('click', async () => {
+        const errorEl = modal.querySelector('#cleanup-error') as HTMLElement;
+        const needsDaysNow = selectedType !== 'deactivated';
+        const daysInput = modal.querySelector('#cleanup-days') as HTMLInputElement | null;
+        const days = daysInput ? parseInt(daysInput.value) : undefined;
+
+        if (needsDaysNow && (!days || days < 1)) {
+          errorEl.textContent = t('admin:users.cleanup.errorDaysRequired');
+          errorEl.style.display = 'block';
+          return;
+        }
+        errorEl.style.display = 'none';
+
+        try {
+          const body: any = { type: selectedType };
+          if (needsDaysNow) body.days = days;
+          const result = await ApiClient.post<{ count: number }>(
+            '/admin/users/cleanup/preview',
+            body,
+          );
+          previewCount = result.count;
+          renderModal();
+          // Restore days value after re-render
+          const newDaysInput = modal.querySelector('#cleanup-days') as HTMLInputElement | null;
+          if (newDaysInput && days) newDaysInput.value = String(days);
+        } catch (err: unknown) {
+          errorEl.textContent = getErrorMessage(err);
+          errorEl.style.display = 'block';
+        }
+      });
+
+      // Confirm input enables execute button
+      const confirmInput = modal.querySelector('#cleanup-confirm-input') as HTMLInputElement | null;
+      const executeBtn = modal.querySelector('#cleanup-execute') as HTMLButtonElement | null;
+      if (confirmInput && executeBtn) {
+        confirmInput.addEventListener('input', () => {
+          const matches = confirmInput.value === 'DELETE';
+          executeBtn.disabled = !matches;
+          executeBtn.style.opacity = matches ? '1' : '0.5';
+        });
+
+        executeBtn.addEventListener('click', async () => {
+          const errorEl = modal.querySelector('#cleanup-error') as HTMLElement;
+          const daysInput = modal.querySelector('#cleanup-days') as HTMLInputElement | null;
+          const days = daysInput ? parseInt(daysInput.value) : undefined;
+
+          try {
+            const body: any = { type: selectedType };
+            if (selectedType !== 'deactivated') body.days = days;
+            const result = await ApiClient.post<{ deleted: number }>(
+              '/admin/users/cleanup/execute',
+              body,
+            );
+            modal.remove();
+            this.notifications.success(
+              t('admin:users.cleanup.success', { deleted: result.deleted }),
+            );
+            await this.loadUsers();
+          } catch (err: unknown) {
+            errorEl.textContent = getErrorMessage(err);
+            errorEl.style.display = 'block';
+          }
+        });
+      }
+
+      // Close handlers
+      modal.querySelector('#cleanup-cancel')?.addEventListener('click', () => modal.remove());
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+    };
+
+    renderModal();
+    document.getElementById('ui-overlay')!.appendChild(modal);
   }
 
   private async doRoleChange(userId: number, role: UserRole): Promise<void> {

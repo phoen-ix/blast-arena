@@ -117,6 +117,7 @@ Full-screen panel for admin/moderator roles. `staffMiddleware` (admin+moderator)
 - `registration_enabled` setting — when disabled, `/auth/register` returns 403 and AuthUI hides register link
 - `/admin/settings/public` batched endpoint returns `registrationEnabled`, `imprint`, `imprintText`, `displayGithub` in one request
 - **Session revocation**: Per-user (`POST /admin/users/:id/revoke-sessions`) and global nuke (`POST /admin/revoke-all-sessions`). Both revoke refresh tokens + force-disconnect sockets via `user:{userId}` rooms. Global nuke excludes the admin performing the action. Deactivation also disconnects sockets immediately
+- **Account cleanup**: Bulk delete by criteria — `POST /admin/users/cleanup/preview` (count) and `/execute` (delete). Three types: `unverified` (email not verified, older than N days), `inactive` (no login for N days), `deactivated` (already soft-deleted). Always excludes admin/moderator roles. Disconnects sockets before deletion. Audit-logged with `target_id = 0`
 - See [docs/admin-and-systems.md](docs/admin-and-systems.md) for full details
 
 ## AI Systems

@@ -902,6 +902,50 @@ router.post('/admin/revoke-all-sessions', adminOnlyMiddleware, async (req, res, 
   }
 });
 
+// --- Account Cleanup ---
+
+const cleanupSchema = z
+  .object({
+    type: z.enum(['unverified', 'inactive', 'deactivated']),
+    days: z.number().int().min(1).optional(),
+  })
+  .refine((data) => data.type === 'deactivated' || data.days !== undefined, {
+    message: 'days is required for unverified and inactive cleanup',
+    path: ['days'],
+  });
+
+router.post(
+  '/admin/users/cleanup/preview',
+  adminOnlyMiddleware,
+  validate(cleanupSchema),
+  async (req, res, next) => {
+    try {
+      const result = await adminService.previewCleanup(req.body.type, req.body.days);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.post(
+  '/admin/users/cleanup/execute',
+  adminOnlyMiddleware,
+  validate(cleanupSchema),
+  async (req, res, next) => {
+    try {
+      const result = await adminService.executeCleanup(
+        req.user!.userId,
+        req.body.type,
+        req.body.days,
+      );
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 // --- Stats ---
 
 router.get('/admin/stats', adminOnlyMiddleware, async (_req, res, next) => {
