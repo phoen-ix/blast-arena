@@ -42,7 +42,8 @@
       "kick": "Tritt",
       "pierce_bomb": "Durchschlagsbombe",
       "remote_bomb": "Fernbombe",
-      "line_bomb": "Reihenbombe"
+      "line_bomb": "Reihenbombe",
+      "bomb_throw": "Bombenwurf"
     }
   },
   "settings": {

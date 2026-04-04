@@ -42,7 +42,8 @@
       "kick": "tekme",
       "pierce_bomb": "delici bomba",
       "remote_bomb": "uzaktan bomba",
-      "line_bomb": "seri bomba"
+      "line_bomb": "seri bomba",
+      "bomb_throw": "bomba fırlatma"
     }
   },
   "settings": {

@@ -1528,6 +1528,7 @@ export class LevelEditorScene extends Phaser.Scene {
         'pierce_bomb',
         'remote_bomb',
         'line_bomb',
+        'bomb_throw',
       ];
       const puSection = document.createElement('div');
       puSection.style.marginTop = '8px';

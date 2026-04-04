@@ -42,7 +42,8 @@
       "kick": "kopni\u0119cie",
       "pierce_bomb": "bomba przebijaj\u0105ca",
       "remote_bomb": "bomba zdalna",
-      "line_bomb": "bomba liniowa"
+      "line_bomb": "bomba liniowa",
+      "bomb_throw": "rzut bombą"
     }
   },
   "settings": {

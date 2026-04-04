@@ -42,7 +42,8 @@
       "kick": "spark",
       "pierce_bomb": "genomborrbomb",
       "remote_bomb": "fjärrbomb",
-      "line_bomb": "linjebomb"
+      "line_bomb": "linjebomb",
+      "bomb_throw": "bombkast"
     }
   },
   "settings": {

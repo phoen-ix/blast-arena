@@ -42,7 +42,8 @@
       "kick": "patada",
       "pierce_bomb": "bomba perforante",
       "remote_bomb": "bomba remota",
-      "line_bomb": "bomba en línea"
+      "line_bomb": "bomba en línea",
+      "bomb_throw": "lanzar bomba"
     }
   },
   "settings": {

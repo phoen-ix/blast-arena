@@ -42,7 +42,8 @@
       "kick": "kick",
       "pierce_bomb": "pierce bomb",
       "remote_bomb": "remote bomb",
-      "line_bomb": "line bomb"
+      "line_bomb": "line bomb",
+      "bomb_throw": "bomb throw"
     }
   },
   "settings": {

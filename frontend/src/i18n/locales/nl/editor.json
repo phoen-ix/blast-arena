@@ -42,7 +42,8 @@
       "kick": "trap",
       "pierce_bomb": "doorboor-bom",
       "remote_bomb": "afstandsbom",
-      "line_bomb": "lijnbom"
+      "line_bomb": "lijnbom",
+      "bomb_throw": "bom gooien"
     }
   },
   "settings": {

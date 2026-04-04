@@ -42,7 +42,8 @@
       "kick": "chute",
       "pierce_bomb": "bomba perfurante",
       "remote_bomb": "bomba remota",
-      "line_bomb": "bomba em linha"
+      "line_bomb": "bomba em linha",
+      "bomb_throw": "arremesso de bomba"
     }
   },
   "settings": {

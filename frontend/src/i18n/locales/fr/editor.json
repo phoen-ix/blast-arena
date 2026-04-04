@@ -42,7 +42,8 @@
       "kick": "coup de pied",
       "pierce_bomb": "bombe per\u00e7ante",
       "remote_bomb": "bombe t\u00e9l\u00e9command\u00e9e",
-      "line_bomb": "bombe en ligne"
+      "line_bomb": "bombe en ligne",
+      "bomb_throw": "lancer bombe"
     }
   },
   "settings": {

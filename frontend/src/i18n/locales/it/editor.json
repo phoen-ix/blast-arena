@@ -42,7 +42,8 @@
       "kick": "calcio",
       "pierce_bomb": "bomba perforante",
       "remote_bomb": "bomba remota",
-      "line_bomb": "bomba lineare"
+      "line_bomb": "bomba lineare",
+      "bomb_throw": "lancio bomba"
     }
   },
   "settings": {
