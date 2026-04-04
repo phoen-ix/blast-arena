@@ -52,7 +52,9 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ## Campaign System
 Campaign with hand-crafted levels, enemies, and bosses. Solo, online co-op (2 players via party), and local co-op. 9 world themes with per-theme color palettes and themed tile textures. Theme stored on `CampaignGameState.theme` and `CampaignReplayMeta.theme`.
-- `CampaignGame` wraps `GameStateManager` with `customMap`. `checkWinCondition()`/time limit skip `campaign` mode
+- `CampaignGame` wraps `GameStateManager` with `customMap`. `checkWinCondition()`/time limit skip `campaign` mode. `onTickEvents` callback emits `game:explosion`, `game:bombThrown`, `game:powerupCollected` to campaign room so EffectSystem triggers sounds/shake
+- Enemy-explosion collision runs BEFORE enemy AI movement in `campaignTick()` (step 2 before step 3) to prevent enemies dodging same-tick explosions. Post-movement check (step 3b) catches enemies walking into active explosions
+- `completeLevelInternal()`/`gameOverInternal()` set `gameState.status = 'finished'` so replay final frame reflects completion
 - 3-2-1-GO countdown (36 ticks) and 30-tick grace period after win. `startTick` set on first 'playing' tick. Hard 60-minute safety cap for levels with no time limit
 - Pause: `campaign:pause`/`campaign:resume` events; input blocked while paused; pause blocked during countdown
 - Spawn fallback: empty/null tiles → default map. Otherwise: level spawns → scan for 'spawn' → first empty tile → (1,1); co-op spiral search for P2

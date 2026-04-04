@@ -61,7 +61,12 @@ class SeededRandom {
 
 export interface CampaignSessionCallbacks {
   onStateUpdate: (state: CampaignGameState) => void;
-  onBombThrown?: (data: { bombId: string; from: Position; to: Position }) => void;
+  /** Emits discrete tick events (explosions, bomb throws, power-up pickups) before state */
+  onTickEvents?: (events: {
+    explosions: { cells: { x: number; y: number }[]; ownerId: number }[];
+    bombThrown: { bombId: string; from: { x: number; y: number }; to: { x: number; y: number } }[];
+    powerupCollected: { playerId: number; type: string; position: { x: number; y: number } }[];
+  }) => void;
   onPlayerDied: (playerId: number, livesRemaining: number, respawnPosition: Position) => void;
   onEnemyDied: (enemyId: number, position: Position, isBoss: boolean) => void;
   onExitOpened: (position: Position) => void;
@@ -547,9 +552,18 @@ export class CampaignGame {
 
     this.campaignTick();
 
-    // Emit bomb thrown events BEFORE state so client can prepare arc animations
-    for (const thrown of this.gameState.tickEvents.bombThrown) {
-      this.callbacks.onBombThrown?.(thrown);
+    // Emit tick events BEFORE state so client can prepare animations and play sounds
+    const events = this.gameState.tickEvents;
+    if (
+      events.explosions.length > 0 ||
+      events.bombThrown.length > 0 ||
+      events.powerupCollected.length > 0
+    ) {
+      this.callbacks.onTickEvents?.({
+        explosions: events.explosions,
+        bombThrown: events.bombThrown,
+        powerupCollected: events.powerupCollected,
+      });
     }
 
     // Broadcast combined state
@@ -625,7 +639,20 @@ export class CampaignGame {
       }
     }
 
-    // 2. Enemy tick + conveyor + AI movement
+    // 2. Enemy-explosion collision (BEFORE movement so enemies can't dodge same-tick explosions)
+    for (const explosion of this.gameState.explosions.values()) {
+      for (const enemy of this.enemies.values()) {
+        if (!enemy.alive) continue;
+        if (explosion.containsCell(enemy.position.x, enemy.position.y)) {
+          const died = enemy.takeDamage(1);
+          if (died) {
+            this.onEnemyDied(enemy);
+          }
+        }
+      }
+    }
+
+    // 3. Enemy tick + conveyor + AI movement (after explosion check)
     const bombPositions = Array.from(this.gameState.bombs.values()).map((b) => b.position);
     for (const enemy of this.enemies.values()) {
       enemy.movedThisTick = false;
@@ -727,7 +754,7 @@ export class CampaignGame {
       }
     }
 
-    // 3. Enemy-explosion collision
+    // 3b. Post-movement enemy-explosion collision (catch enemies that walked into active explosions)
     for (const explosion of this.gameState.explosions.values()) {
       for (const enemy of this.enemies.values()) {
         if (!enemy.alive) continue;
@@ -1292,6 +1319,10 @@ export class CampaignGame {
     this.finished = true;
     this.gameLoop.stop();
 
+    // Set game state status so replay final frame reflects completion
+    this.gameState.status = 'finished';
+    this.gameState.winnerId = this.userIds[0];
+
     const elapsedTicks = this.gameState.tick - this.startTick;
     const timeSeconds = Math.round(elapsedTicks / TICK_RATE);
 
@@ -1302,6 +1333,10 @@ export class CampaignGame {
     if (this.finished) return;
     this.finished = true;
     this.gameLoop.stop();
+
+    // Set game state status so replay final frame reflects game over
+    this.gameState.status = 'finished';
+
     this.callbacks.onGameOver(reason);
   }
 
