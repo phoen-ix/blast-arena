@@ -491,6 +491,16 @@ export class SettingsUI {
               <div class="setting-row-desc">${t('settings.minimapDesc')}</div>
             </div>
           </div>
+          <div class="setting-row">
+            <label class="toggle-switch">
+              <input type="checkbox" name="sound" role="switch" aria-checked="${settings.sound ? 'true' : 'false'}" ${settings.sound ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="setting-row-info">
+              <div class="setting-row-label">${t('settings.sound')}</div>
+              <div class="setting-row-desc">${t('settings.soundDesc')}</div>
+            </div>
+          </div>
         </div>
 
         <h3 class="content-section-title mt-6">${t('settings.audio')}</h3>

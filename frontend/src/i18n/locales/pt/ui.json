@@ -79,6 +79,8 @@
     "particlesDesc": "Efeitos de fogo, fuma\u00e7a, detritos e fa\u00edscas",
     "minimap": "Minimap",
     "minimapDesc": "Show minimap overlay during gameplay",
+    "sound": "Som",
+    "soundDesc": "Ativar efeitos sonoros do jogo",
     "audio": "Audio",
     "mute": "Mute",
     "muteDesc": "Mute all game sounds",

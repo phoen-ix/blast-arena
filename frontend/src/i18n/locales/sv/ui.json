@@ -79,6 +79,8 @@
     "particlesDesc": "Eld-, rök-, bråk- och gnisteffekter",
     "minimap": "Minimap",
     "minimapDesc": "Show minimap overlay during gameplay",
+    "sound": "Ljud",
+    "soundDesc": "Aktivera spelljudeffekter",
     "audio": "Audio",
     "mute": "Mute",
     "muteDesc": "Mute all game sounds",

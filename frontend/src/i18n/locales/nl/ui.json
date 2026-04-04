@@ -79,6 +79,8 @@
     "particlesDesc": "Vuur-, rook-, puin- en vonkeffecten",
     "minimap": "Minimap",
     "minimapDesc": "Show minimap overlay during gameplay",
+    "sound": "Geluid",
+    "soundDesc": "Spelgeluidseffecten inschakelen",
     "audio": "Audio",
     "mute": "Mute",
     "muteDesc": "Mute all game sounds",

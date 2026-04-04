@@ -79,6 +79,8 @@
     "particlesDesc": "Efekty ognia, dymu, gruz\u00f3w i iskier",
     "minimap": "Minimap",
     "minimapDesc": "Show minimap overlay during gameplay",
+    "sound": "Dźwięk",
+    "soundDesc": "Włącz efekty dźwiękowe gry",
     "audio": "Audio",
     "mute": "Mute",
     "muteDesc": "Mute all game sounds",

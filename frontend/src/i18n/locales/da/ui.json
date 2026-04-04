@@ -79,6 +79,8 @@
     "particlesDesc": "Ild-, r\u00f8g-, affald- og gnisteffekter",
     "minimap": "Minimap",
     "minimapDesc": "Show minimap overlay during gameplay",
+    "sound": "Lyd",
+    "soundDesc": "Aktiver spillydeffekter",
     "audio": "Audio",
     "mute": "Mute",
     "muteDesc": "Mute all game sounds",

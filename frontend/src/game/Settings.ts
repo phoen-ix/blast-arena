@@ -4,6 +4,7 @@ export interface VisualSettings {
   animations: boolean;
   screenShake: boolean;
   particles: boolean;
+  sound: boolean;
   lobbyChat: boolean;
   minimap: boolean;
 }
@@ -12,6 +13,7 @@ const DEFAULTS: VisualSettings = {
   animations: true,
   screenShake: true,
   particles: true,
+  sound: true,
   lobbyChat: true,
   minimap: true,
 };

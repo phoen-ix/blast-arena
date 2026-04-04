@@ -126,10 +126,6 @@ export class EffectSystem {
   }
 
   private onExplosion(cells: { x: number; y: number }[]): void {
-    if (!this.localPlayerAlive) return;
-    const settings = getSettings();
-    if (!settings.screenShake) return;
-
     const cam = this.scene.cameras.main;
     const camCenterX = cam.scrollX + cam.width / 2;
     const camCenterY = cam.scrollY + cam.height / 2;
@@ -145,8 +141,12 @@ export class EffectSystem {
 
     const tilesDist = minDist / TILE_SIZE;
 
-    // Play explosion sound scaled by distance (audible beyond shake range)
+    // Play explosion sound scaled by distance (always, regardless of visual settings)
     audioManager.explosion(tilesDist);
+
+    if (!this.localPlayerAlive) return;
+    const settings = getSettings();
+    if (!settings.screenShake) return;
 
     if (tilesDist > 6) return;
 

@@ -79,6 +79,8 @@
     "particlesDesc": "Ates, duman, enkaz ve kivilcim efektleri",
     "minimap": "Minimap",
     "minimapDesc": "Show minimap overlay during gameplay",
+    "sound": "Ses",
+    "soundDesc": "Oyun ses efektlerini etkinleştir",
     "audio": "Audio",
     "mute": "Mute",
     "muteDesc": "Mute all game sounds",

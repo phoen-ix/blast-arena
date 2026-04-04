@@ -5,6 +5,7 @@
  */
 
 import { SoundGenerator } from './SoundGenerator';
+import { getSettings } from './Settings';
 
 const STORAGE_KEY = 'blast-arena-audio';
 
@@ -54,6 +55,7 @@ class AudioManagerImpl {
 
   private ensureResumed(): boolean {
     if (!this.ctx || !this.generator) return false;
+    if (!getSettings().sound) return false;
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
     }

@@ -181,7 +181,7 @@ Documentation served via backend API from `docs/` directory (bind-mounted in dev
 
 - **Server-authoritative**: All game logic runs on the server at 20 ticks/sec
 - **Grid-based movement**: Players occupy exactly one tile at a time
-- **Procedural audio**: All SFX synthesized via Web Audio API (explosions, bombs, power-ups, death, countdown, victory/defeat) — no external audio files. Volume controls in Settings
+- **Procedural audio**: All SFX synthesized via Web Audio API (explosions, bombs, power-ups, death, countdown, victory/defeat) — no external audio files. Sound toggle + volume controls in Settings
 - **In-game minimap**: Canvas2D overlay showing tiles, players, bombs, explosions, zone boundaries, and KOTH hill. Toggleable in settings
 - **Kill feed with cause**: Death causes tracked (bomb, zone, lava, quicksand, spikes, dark rift, self, disconnect) with icons in kill feed and death banner
 - **Monorepo**: npm workspaces — `shared/` (types + constants), `backend/` (server), `frontend/` (client)

@@ -79,6 +79,8 @@
     "particlesDesc": "Fire, smoke, debris, and spark effects",
     "minimap": "Minimap",
     "minimapDesc": "Show minimap overlay during gameplay",
+    "sound": "Sound",
+    "soundDesc": "Enable game sound effects",
     "audio": "Audio",
     "mute": "Mute",
     "muteDesc": "Mute all game sounds",
