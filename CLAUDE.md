@@ -166,6 +166,21 @@ Full-screen panel for admin/moderator roles. `staffMiddleware` (admin+moderator)
 - Game start: `room:start` uses atomic `START_ROOM_LUA` to prevent TOCTOU race. Cosmetics awaited before `game:start` broadcast
 - Play Again: `room:restart` resets to 'waiting'; other players auto-navigate via `room:state` listener
 
+## Open World Mode (WIP)
+Persistent bomb arena as the default landing experience. Players auto-join on page load. Developed on `feature/open-world` branch.
+- **Toroidal map**: Wrapping 51x41 grid (default, no border walls). Coordinates wrap via `wrapX`/`wrapY` from `shared/src/utils/wrap.ts`. CollisionSystem wraps coordinates, `Map.ts` generates borderless maps with distributed spawns, `getExplosionCells` wraps, BotAI uses `wrappedManhattanDistance`
+- **Guest access**: Unauthenticated players connect without JWT via `SocketClient.connectAsGuest()`. Guest IDs start at `OPENWORLD_GUEST_ID_START` (-3000)
+- **Backend**: `OpenWorldManager` singleton (`backend/src/game/OpenWorldManager.ts`) manages the persistent world. GameState time limit check excluded via `!this.isOpenWorld`
+- **Round cycle**: Configurable duration (default 300s), freeze period between rounds, map regeneration. Round timer managed by OpenWorldManager
+- **Stats**: Live score tracking with batched DB writes every `OPENWORLD_STATS_FLUSH_TICKS`, flushed on player leave
+- **Constants**: `shared/src/constants/openworld.ts`. Settings in `server_settings` table (keys prefixed `open_world_`)
+- **Admin**: `GET/PUT /admin/settings/open_world`, public status: `GET /admin/settings/open_world/status`
+- **Socket events**: `openworld:join` (with ack callback), `openworld:leave`, `openworld:input`, `openworld:state`, `openworld:info`, `openworld:roundEnd`, `openworld:roundStart`, `openworld:playerJoined`, `openworld:playerLeft`
+- **Frontend**: `OpenWorldView` (ILobbyView), auto-joins via socket emit in `render()`. Uses static `import game from '../../main'` (not dynamic import). MenuScene shows guest play option when not authenticated. LobbyScene defaults to openWorld view
+- **GameScene**: Handles open world via `openWorldMode` flag — uses `openworld:state`/`openworld:input` events, no game-over flow
+- **Migration**: `033_open_world.sql` seeds settings into `server_settings`
+- **WIP items**: Ghost tile rendering for wrapping edges, HUD round timer/leaderboard, camera wrapping smoothing still need work
+
 ## Game Reference
 
 ### Teams

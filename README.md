@@ -190,6 +190,19 @@ Documentation served via backend API from `docs/` directory (bind-mounted in dev
 - **Monorepo**: npm workspaces — `shared/` (types + constants), `backend/` (server), `frontend/` (client)
 - **Self-hosted assets**: All fonts, sounds, and static resources served locally — no external CDN dependencies
 
+## Open World Mode (WIP)
+
+> Developed on the `feature/open-world` branch. Not yet merged to master.
+
+Persistent bomb arena that serves as the default landing experience. Players auto-join on page load — no room creation needed. Supports guest access for unauthenticated players (no account required to play).
+
+- **Toroidal map**: Wrapping 51x41 grid with no border walls. Players, bombs, and explosions wrap seamlessly across edges
+- **Guest play**: Unauthenticated visitors can jump in immediately via the menu screen guest option
+- **Round cycle**: Configurable round duration (default 5 minutes) with freeze period between rounds and automatic map regeneration
+- **Live scoring**: Stats tracked in real-time with periodic database persistence
+- **Admin controls**: Server settings for enabling/disabling, round duration, and map configuration. Settings prefixed `open_world_` in the admin dashboard
+- **WIP items**: Ghost tile rendering for wrapping edges, HUD round timer and leaderboard, camera wrapping smoothing
+
 ## Internationalization
 
 Full i18n support via [i18next](https://www.i18next.com/). All UI strings are extracted into JSON locale files — no hardcoded text in source code.
