@@ -6,6 +6,7 @@
     "rooms": "Salas",
     "campaign": "Campanha",
     "myMaps": "Meus Mapas",
+    "challenge": "Desafio",
     "friends": "Amigos",
     "messages": "Mensagens",
     "party": "Grupo",
@@ -370,6 +371,8 @@
     "gameSettings": "Configura\u00e7\u00f5es do Jogo",
     "friendlyFire": "Fogo Amigo",
     "hazardTiles": "Blocos de Perigo",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "A\u00e7\u00f5es de Espectador",
     "mapEvents": "Eventos Din\u00e2micos do Mapa",
     "reinforcedWalls": "Paredes Refor\u00e7adas",
     "recordMatch": "Gravar Partida",
@@ -463,6 +466,10 @@
       "spikes": "Espinhos",
       "dark_rift": "Fenda Sombria"
     },
+    "puzzleTypes": {
+      "switches_and_gates": "Switches & Gates",
+      "crumbling": "Crumbling Floors"
+    },
     "eventTypes": {
       "meteor": "Chuva de Meteoros",
       "powerup_rain": "Chuva de Power-Ups",
@@ -475,6 +482,30 @@
   "spectatorChat": {
     "title": "Chat de Espectadores",
     "placeholder": "Digite uma mensagem..."
+  },
+  "spectator": {
+    "place_wall": "Colocar parede",
+    "trigger_meteor": "Lan\u00e7ar meteoro",
+    "drop_powerup": "Soltar b\u00f4nus",
+    "speed_zone": "Zona de velocidade",
+    "clickToPlace": "Clique no mapa para posicionar"
+  },
+  "challenge": {
+    "title": "Desafio de Mapa",
+    "loading": "Carregando desafio...",
+    "noActive": "Nenhum desafio ativo no momento. Volte em breve!",
+    "loadError": "Falha ao carregar desafio",
+    "map": "Mapa",
+    "creator": "Criador",
+    "mode": "Modo",
+    "dates": "Datas",
+    "play": "Jogar desafio",
+    "leaderboard": "Ranking",
+    "player": "Jogador",
+    "wins": "Vitórias",
+    "kills": "Eliminações",
+    "games": "Partidas",
+    "noScores": "Sem pontuações ainda — seja o primeiro a jogar!"
   },
   "hud": {
     "spectator": "ESPECTADOR \u2014 WASD/Setas/D-Pad para mover, 1-9/LB/RB ou clique para seguir",

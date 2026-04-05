@@ -12,7 +12,8 @@
     "announcements": "Annonces",
     "campaign": "Campagne",
     "seasons": "Saisons",
-    "achievements": "Succ\u00e8s"
+    "achievements": "Succ\u00e8s",
+    "challenges": "D\u00e9fis"
   },
   "users": {
     "searchPlaceholder": "Rechercher par nom d'utilisateur ou e-mail...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Murs renforc\u00e9s",
     "mapEvents": "\u00c9v\u00e9nements de carte",
     "hazardTiles": "Cases dangereuses",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Actions Spectateur",
     "friendlyFire": "Tir alli\u00e9",
     "recordReplays": "Enregistrer les replays",
     "powerUps": "Bonus",
@@ -974,6 +977,7 @@
       "reinforcedWalls": "Murs renforc\u00e9s",
       "mapEvents": "\u00c9v\u00e9nements de carte",
       "hazardTiles": "Cases dangereuses",
+      "puzzleTiles": "Puzzle Tiles",
       "friendlyFire": "Tir alli\u00e9",
       "recordReplays": "Enregistrer les replays",
       "powerUps": "Bonus",
@@ -1030,5 +1034,30 @@
         "full": "Compl\u00e8te"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "Système de défis",
+    "enabled": "Défis activés",
+    "toggleSaved": "Paramètre de défi enregistré",
+    "title": "Défis de carte",
+    "titleLabel": "Titre",
+    "description": "Description",
+    "map": "Carte",
+    "gameMode": "Mode de jeu",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "dates": "Dates",
+    "status": "Statut",
+    "actions": "Actions",
+    "create": "Créer un défi",
+    "cancel": "Annuler",
+    "created": "Défi créé",
+    "activated": "Défi activé",
+    "deactivated": "Défi désactivé",
+    "deleted": "Défi supprimé",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "deleteBtn": "Supprimer",
+    "none": "Pas encore de défis"
   }
 }

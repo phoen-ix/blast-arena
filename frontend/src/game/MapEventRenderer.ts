@@ -121,6 +121,33 @@ export class MapEventRenderer {
           this.updateUfoWarning(ufo, currentTick);
         }
       }
+
+      // Spectator wall placement — brief flash
+      if (event.type === 'spectator_wall' && event.position) {
+        const key = `specwall_${event.position.x}_${event.position.y}_${event.tick}`;
+        this.activeKeys.add(key);
+        if (!this.tracked.has(key)) {
+          this.createSpectatorFlash(key, event.position, 0x8888ff, currentTick);
+        }
+      }
+
+      // Spectator power-up drop — sparkle
+      if (event.type === 'spectator_powerup' && event.position) {
+        const key = `specpu_${event.position.x}_${event.position.y}_${event.tick}`;
+        this.activeKeys.add(key);
+        if (!this.tracked.has(key)) {
+          this.createSpectatorFlash(key, event.position, 0xffdd00, currentTick);
+        }
+      }
+
+      // Spectator speed zone — pulsing circle
+      if (event.type === 'spectator_speed_zone' && event.position) {
+        const key = `speczone_${event.position.x}_${event.position.y}_${event.tick}`;
+        this.activeKeys.add(key);
+        if (!this.tracked.has(key)) {
+          this.createSpectatorFlash(key, event.position, 0x44aaff, currentTick);
+        }
+      }
     }
 
     // Clean up meteors that are no longer in mapEvents (they've impacted)
@@ -662,5 +689,48 @@ export class MapEventRenderer {
       this.destroyUfo(ufo);
     }
     this.trackedUfos.clear();
+  }
+
+  /** Create a brief flash effect for spectator actions (wall/powerup/speed zone). */
+  private createSpectatorFlash(
+    key: string,
+    position: { x: number; y: number },
+    color: number,
+    _currentTick: number,
+  ): void {
+    const px = position.x * TILE_SIZE + TILE_SIZE / 2;
+    const py = position.y * TILE_SIZE + TILE_SIZE / 2;
+
+    const gfx = this.scene.add.graphics();
+    gfx.fillStyle(color, 0.6);
+    gfx.fillCircle(px, py, TILE_SIZE * 0.6);
+    gfx.setDepth(120);
+
+    // Animate: pulse then fade
+    this.scene.tweens.add({
+      targets: gfx,
+      alpha: { from: 0.8, to: 0 },
+      scale: { from: 1, to: 1.5 },
+      duration: 600,
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        gfx.destroy();
+        this.tracked.delete(key);
+      },
+    });
+
+    // Store as tracked meteor shape for cleanup compatibility
+    const dummyGfx = this.scene.add.graphics();
+    const dummyText = this.scene.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
+    this.tracked.set(key, {
+      tileX: position.x,
+      tileY: position.y,
+      impactTick: 0,
+      warningTick: 0,
+      targetGraphics: gfx,
+      shadowGraphics: dummyGfx,
+      warningText: dummyText,
+      impacted: true, // Already handled, no further impact needed
+    });
   }
 }

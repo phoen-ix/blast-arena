@@ -11,6 +11,7 @@ import * as settingsService from '../services/settings';
 import * as botaiService from '../services/botai';
 import * as enemyaiService from '../services/enemyai';
 import * as seasonService from '../services/season';
+import * as challengesService from '../services/challenges';
 import * as achievementsService from '../services/achievements';
 import * as cosmeticsService from '../services/cosmetics';
 import { invalidateTransporter, sendTestEmail } from '../services/email';
@@ -99,6 +100,16 @@ router.get('/admin/settings/registration_enabled', async (_req, res, next) => {
 router.get('/admin/settings/recordings_enabled', async (_req, res, next) => {
   try {
     const enabled = await settingsService.isRecordingEnabled();
+    res.json({ enabled });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Public: get spectator actions enabled setting
+router.get('/admin/settings/spectator_actions_enabled', async (_req, res, next) => {
+  try {
+    const enabled = await settingsService.isSpectatorActionsEnabled();
     res.json({ enabled });
   } catch (err) {
     next(err);
@@ -285,6 +296,35 @@ router.put(
       const io = getIO();
       io.to('role:staff').emit('admin:settingsChanged', {
         key: 'recordings_enabled',
+        value: req.body.enabled,
+      });
+      res.json({ message: 'Setting updated' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.put(
+  '/admin/settings/spectator_actions_enabled',
+  adminOnlyMiddleware,
+  validate(toggleSchema),
+  async (req, res, next) => {
+    try {
+      await settingsService.setSetting('spectator_actions_enabled', String(req.body.enabled));
+      await execute(
+        'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+        [
+          req.user!.userId,
+          'update_setting',
+          'setting',
+          0,
+          JSON.stringify({ key: 'spectator_actions_enabled', value: req.body.enabled }),
+        ],
+      );
+      const io = getIO();
+      io.to('role:staff').emit('admin:settingsChanged', {
+        key: 'spectator_actions_enabled',
         value: req.body.enabled,
       });
       res.json({ message: 'Setting updated' });
@@ -2161,5 +2201,140 @@ router.post('/admin/cosmetics/import', adminOnlyMiddleware, async (req, res, nex
     next(err);
   }
 });
+
+// ===== Map Challenges =====
+
+router.get('/admin/challenges', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const result = await challengesService.listChallenges(page, limit);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+const challengeSchema = z.object({
+  title: z.string().min(1).max(150),
+  description: z.string().max(2000).optional().default(''),
+  customMapId: z.number().int().positive(),
+  gameMode: z.string().min(1).max(30),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+router.post(
+  '/admin/challenges',
+  adminOnlyMiddleware,
+  validate(challengeSchema),
+  async (req, res, next) => {
+    try {
+      const challenge = await challengesService.createChallenge(
+        req.body.title,
+        req.body.description,
+        req.body.customMapId,
+        req.body.gameMode,
+        req.body.startDate,
+        req.body.endDate,
+        req.user!.userId,
+      );
+      await execute(
+        'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+        [
+          req.user!.userId,
+          'challenge_create',
+          'challenge',
+          challenge.id,
+          `Created challenge: ${challenge.title}`,
+        ],
+      );
+      res.json(challenge);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.put('/admin/challenges/:id', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+    await challengesService.updateChallenge(id, req.body);
+    res.json({ message: 'Challenge updated' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/admin/challenges/:id', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+    await challengesService.deleteChallenge(id);
+    await execute(
+      'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+      [req.user!.userId, 'challenge_delete', 'challenge', id, `Deleted challenge #${id}`],
+    );
+    res.json({ message: 'Challenge deleted' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/admin/challenges/:id/activate', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+    await challengesService.activateChallenge(id);
+    await execute(
+      'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+      [req.user!.userId, 'challenge_activate', 'challenge', id, `Activated challenge #${id}`],
+    );
+    res.json({ message: 'Challenge activated' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/admin/challenges/:id/deactivate', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+    await challengesService.deactivateChallenge(id);
+    await execute(
+      'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+      [req.user!.userId, 'challenge_deactivate', 'challenge', id, `Deactivated challenge #${id}`],
+    );
+    res.json({ message: 'Challenge deactivated' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Global challenges toggle
+router.put(
+  '/admin/settings/challenges_enabled',
+  adminOnlyMiddleware,
+  validate(toggleSchema),
+  async (req, res, next) => {
+    try {
+      await settingsService.setSetting('challenges_enabled', String(req.body.enabled));
+      await execute(
+        'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+        [
+          req.user!.userId,
+          'update_setting',
+          'setting',
+          0,
+          JSON.stringify({ key: 'challenges_enabled', value: req.body.enabled }),
+        ],
+      );
+      res.json({ message: 'Setting updated' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 export default router;

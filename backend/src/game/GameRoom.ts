@@ -9,6 +9,7 @@ import {
   SocketData,
   HAZARD_TILE_TYPES,
   MAP_EVENT_TYPES,
+  PUZZLE_TILE_CATEGORIES,
 } from '@blast-arena/shared';
 import {
   GAME_MODES,
@@ -37,6 +38,7 @@ import * as settingsService from '../services/settings';
 import * as cosmeticsService from '../services/cosmetics';
 import * as eloService from '../services/elo';
 import * as achievementsService from '../services/achievements';
+import * as challengesService from '../services/challenges';
 
 const DISCONNECT_GRACE_TICKS = 200; // 10 seconds at 20 tps
 const BOT_ONLY_TICK_RATE = 100; // 5x speed when only bots remain
@@ -83,7 +85,13 @@ export class GameRoom {
           ? room.config.selectedHazardTiles
           : [...HAZARD_TILE_TYPES]
         : [],
+      puzzleTiles: room.config.puzzleTiles
+        ? room.config.selectedPuzzleTiles?.length
+          ? room.config.selectedPuzzleTiles
+          : [...PUZZLE_TILE_CATEGORIES]
+        : [],
       botAiId: room.config.botAiId,
+      enableSpectatorActions: room.config.enableSpectatorActions ?? false,
       customMap,
     });
 
@@ -180,8 +188,8 @@ export class GameRoom {
     // Create match record in DB
     try {
       const result = await execute(
-        `INSERT INTO matches (room_code, game_mode, map_seed, map_width, map_height, max_players, status, started_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'playing', NOW())`,
+        `INSERT INTO matches (room_code, game_mode, map_seed, map_width, map_height, max_players, custom_map_id, status, started_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'playing', NOW())`,
         [
           this.code,
           this.room.config.gameMode,
@@ -189,6 +197,7 @@ export class GameRoom {
           this.gameState.map.width,
           this.gameState.map.height,
           this.room.config.maxPlayers,
+          this.room.config.customMapId ?? null,
         ],
       );
       this.matchId = result.insertId;
@@ -252,6 +261,14 @@ export class GameRoom {
 
   handleInput(playerId: number, input: PlayerInput): void {
     this.gameState.inputBuffer.addInput(playerId, input);
+  }
+
+  handleSpectatorAction(
+    playerId: number,
+    type: 'place_wall' | 'trigger_meteor' | 'drop_powerup' | 'speed_zone',
+    position: { x: number; y: number },
+  ): { success: boolean; error?: string } {
+    return this.gameState.addSpectatorAction(playerId, type, position);
   }
 
   handlePlayerDisconnect(playerId: number): void {
@@ -599,6 +616,29 @@ export class GameRoom {
           }
         } catch (xpErr) {
           logger.error({ err: xpErr }, 'Failed to process XP');
+        }
+
+        // --- Challenge scoring ---
+        if (this.room.config.customMapId) {
+          try {
+            const activeChallenge = await challengesService.getActiveChallenge();
+            if (activeChallenge && activeChallenge.customMapId === this.room.config.customMapId) {
+              for (const p of placements) {
+                if (p.isBot || p.userId < 0) continue;
+                const player = this.gameState.players.get(p.userId);
+                await challengesService.recordChallengeResult(
+                  activeChallenge.id,
+                  p.userId,
+                  state.winnerId === p.userId,
+                  player?.kills ?? 0,
+                  player?.deaths ?? 0,
+                  p.placement,
+                );
+              }
+            }
+          } catch (challengeErr) {
+            logger.error({ err: challengeErr }, 'Failed to record challenge results');
+          }
         }
       } catch (err) {
         logger.error({ err }, 'Failed to save match results');

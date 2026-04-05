@@ -12,7 +12,8 @@
     "announcements": "Ankündigungen",
     "campaign": "Kampagne",
     "seasons": "Seasons",
-    "achievements": "Erfolge"
+    "achievements": "Erfolge",
+    "challenges": "Herausforderungen"
   },
   "users": {
     "searchPlaceholder": "Nach Benutzername oder E-Mail suchen...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Verstärkte Wände",
     "mapEvents": "Karten-Events",
     "hazardTiles": "Gefahrenfelder",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Zuschaueraktionen",
     "friendlyFire": "Eigenbeschuss",
     "recordReplays": "Replays aufzeichnen",
     "powerUps": "Power-Ups",
@@ -974,6 +977,7 @@
       "reinforcedWalls": "Verstärkte Wände",
       "mapEvents": "Karten-Events",
       "hazardTiles": "Gefahrenfelder",
+      "puzzleTiles": "Puzzle Tiles",
       "friendlyFire": "Eigenbeschuss",
       "recordReplays": "Replays aufzeichnen",
       "powerUps": "Power-Ups",
@@ -1030,5 +1034,30 @@
         "full": "Vollständig"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "Herausforderungssystem",
+    "enabled": "Herausforderungen aktiviert",
+    "toggleSaved": "Herausforderungseinstellung gespeichert",
+    "title": "Karten-Herausforderungen",
+    "titleLabel": "Titel",
+    "description": "Beschreibung",
+    "map": "Karte",
+    "gameMode": "Spielmodus",
+    "startDate": "Startdatum",
+    "endDate": "Enddatum",
+    "dates": "Daten",
+    "status": "Status",
+    "actions": "Aktionen",
+    "create": "Herausforderung erstellen",
+    "cancel": "Abbrechen",
+    "created": "Herausforderung erstellt",
+    "activated": "Herausforderung aktiviert",
+    "deactivated": "Herausforderung deaktiviert",
+    "deleted": "Herausforderung gelöscht",
+    "activate": "Aktivieren",
+    "deactivate": "Deaktivieren",
+    "deleteBtn": "Löschen",
+    "none": "Noch keine Herausforderungen"
   }
 }

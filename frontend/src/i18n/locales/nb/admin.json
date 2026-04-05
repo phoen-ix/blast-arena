@@ -12,7 +12,8 @@
     "announcements": "Kunngjøringer",
     "campaign": "Kampanje",
     "seasons": "Sesonger",
-    "achievements": "Prestasjoner"
+    "achievements": "Prestasjoner",
+    "challenges": "Utfordringer"
   },
   "users": {
     "searchPlaceholder": "Søk etter brukernavn eller e-post...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Forsterkede vegger",
     "mapEvents": "Karthendelser",
     "hazardTiles": "Farefliser",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Tilskuerhandlinger",
     "friendlyFire": "Vennlig ild",
     "recordReplays": "Ta opp repriser",
     "powerUps": "Oppgraderinger",
@@ -974,6 +977,7 @@
       "reinforcedWalls": "Forsterkede vegger",
       "mapEvents": "Karthendelser",
       "hazardTiles": "Farefliser",
+      "puzzleTiles": "Puzzle Tiles",
       "friendlyFire": "Vennlig ild",
       "recordReplays": "Ta opp repriser",
       "powerUps": "Oppgraderinger",
@@ -1030,5 +1034,30 @@
         "full": "Full"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "Utfordringssystem",
+    "enabled": "Utfordringer aktivert",
+    "toggleSaved": "Utfordringsinnstilling lagret",
+    "title": "Kartutfordringer",
+    "titleLabel": "Tittel",
+    "description": "Beskrivelse",
+    "map": "Kart",
+    "gameMode": "Spillmodus",
+    "startDate": "Startdato",
+    "endDate": "Sluttdato",
+    "dates": "Datoer",
+    "status": "Status",
+    "actions": "Handlinger",
+    "create": "Opprett utfordring",
+    "cancel": "Avbryt",
+    "created": "Utfordring opprettet",
+    "activated": "Utfordring aktivert",
+    "deactivated": "Utfordring deaktivert",
+    "deleted": "Utfordring slettet",
+    "activate": "Aktiver",
+    "deactivate": "Deaktiver",
+    "deleteBtn": "Slett",
+    "none": "Ingen utfordringer ennå"
   }
 }

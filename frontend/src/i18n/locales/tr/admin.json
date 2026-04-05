@@ -12,7 +12,8 @@
     "announcements": "Duyurular",
     "campaign": "Kampanya",
     "seasons": "Sezonlar",
-    "achievements": "Basarimlar"
+    "achievements": "Basarimlar",
+    "challenges": "Meydan Okumalar"
   },
   "users": {
     "searchPlaceholder": "Kullanici adi veya e-postaya gore ara...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Guclendirilmis Duvarlar",
     "mapEvents": "Harita Olaylari",
     "hazardTiles": "Tehlike Kareleri",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Seyirci Eylemleri",
     "friendlyFire": "Dost Atesi",
     "recordReplays": "Tekrarlari Kaydet",
     "powerUps": "Guc-upler",
@@ -974,6 +977,7 @@
       "reinforcedWalls": "Guclendirilmis Duvarlar",
       "mapEvents": "Harita Olaylari",
       "hazardTiles": "Tehlike Kareleri",
+      "puzzleTiles": "Puzzle Tiles",
       "friendlyFire": "Dost Atesi",
       "recordReplays": "Tekrarlari Kaydet",
       "powerUps": "Guc-upler",
@@ -1030,5 +1034,30 @@
         "full": "Tam"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "Meydan okuma sistemi",
+    "enabled": "Meydan okumalar etkin",
+    "toggleSaved": "Meydan okuma ayarı kaydedildi",
+    "title": "Harita meydan okumaları",
+    "titleLabel": "Başlık",
+    "description": "Açıklama",
+    "map": "Harita",
+    "gameMode": "Oyun modu",
+    "startDate": "Başlangıç tarihi",
+    "endDate": "Bitiş tarihi",
+    "dates": "Tarihler",
+    "status": "Durum",
+    "actions": "İşlemler",
+    "create": "Meydan okuma oluştur",
+    "cancel": "İptal",
+    "created": "Meydan okuma oluşturuldu",
+    "activated": "Meydan okuma etkinleştirildi",
+    "deactivated": "Meydan okuma devre dışı bırakıldı",
+    "deleted": "Meydan okuma silindi",
+    "activate": "Etkinleştir",
+    "deactivate": "Devre dışı bırak",
+    "deleteBtn": "Sil",
+    "none": "Henüz meydan okuma yok"
   }
 }

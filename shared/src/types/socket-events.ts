@@ -159,6 +159,15 @@ export interface ClientToServerEvents {
   // Spectator chat
   'game:spectatorChat': (data: { message: string }) => void;
 
+  // Spectator Game Master actions
+  'spectator:action': (
+    data: {
+      type: 'place_wall' | 'trigger_meteor' | 'drop_powerup' | 'speed_zone';
+      position: { x: number; y: number };
+    },
+    callback: (response: { success: boolean; error?: string }) => void,
+  ) => void;
+
   // Rematch voting
   'rematch:vote': (
     data: { vote: boolean },
@@ -286,6 +295,12 @@ export interface ServerToClientEvents {
     role: UserRole;
     message: string;
     timestamp: number;
+  }) => void;
+
+  // Spectator Game Master
+  'spectator:actionApplied': (data: {
+    type: 'place_wall' | 'trigger_meteor' | 'drop_powerup' | 'speed_zone';
+    position: { x: number; y: number };
   }) => void;
 
   // Elo, XP & Achievements

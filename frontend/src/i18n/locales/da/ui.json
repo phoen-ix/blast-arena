@@ -6,6 +6,7 @@
     "rooms": "Rum",
     "campaign": "Kampagne",
     "myMaps": "Mine kort",
+    "challenge": "Udfordring",
     "friends": "Venner",
     "messages": "Beskeder",
     "party": "Gruppe",
@@ -370,6 +371,8 @@
     "gameSettings": "Spilindstillinger",
     "friendlyFire": "Venskabsild",
     "hazardTiles": "Farefelter",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Tilskuerhandlinger",
     "mapEvents": "Dynamiske korth\u00e6ndelser",
     "reinforcedWalls": "Forst\u00e6rkede v\u00e6gge",
     "recordMatch": "Optag kamp",
@@ -463,6 +466,10 @@
       "spikes": "Pigge",
       "dark_rift": "Mork sprække"
     },
+    "puzzleTypes": {
+      "switches_and_gates": "Switches & Gates",
+      "crumbling": "Crumbling Floors"
+    },
     "eventTypes": {
       "meteor": "Meteornedslag",
       "powerup_rain": "Power-up-regn",
@@ -475,6 +482,30 @@
   "spectatorChat": {
     "title": "Tilskuerchat",
     "placeholder": "Skriv en besked..."
+  },
+  "spectator": {
+    "place_wall": "Placer væg",
+    "trigger_meteor": "Udløs meteor",
+    "drop_powerup": "Drop power-up",
+    "speed_zone": "Hastighedszone",
+    "clickToPlace": "Klik på kortet for at placere"
+  },
+  "challenge": {
+    "title": "Kortudfordring",
+    "loading": "Indlæser udfordring...",
+    "noActive": "Ingen aktiv udfordring lige nu. Kig forbi igen snart!",
+    "loadError": "Kunne ikke indlæse udfordring",
+    "map": "Kort",
+    "creator": "Skaber",
+    "mode": "Tilstand",
+    "dates": "Datoer",
+    "play": "Spil udfordring",
+    "leaderboard": "Rangliste",
+    "player": "Spiller",
+    "wins": "Sejre",
+    "kills": "Drab",
+    "games": "Kampe",
+    "noScores": "Ingen resultater endnu — vær den første til at spille!"
   },
   "hud": {
     "spectator": "TILSKUER \u2014 WASD/Pile/D-Pad for at panorere, 1-9/LB/RB eller klik for at f\u00f8lge",

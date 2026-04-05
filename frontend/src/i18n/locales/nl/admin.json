@@ -12,7 +12,8 @@
     "announcements": "Aankondigingen",
     "campaign": "Campagne",
     "seasons": "Seizoenen",
-    "achievements": "Prestaties"
+    "achievements": "Prestaties",
+    "challenges": "Uitdagingen"
   },
   "users": {
     "searchPlaceholder": "Zoek op gebruikersnaam of e-mail...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Versterkte muren",
     "mapEvents": "Kaartgebeurtenissen",
     "hazardTiles": "Gevaarlijke tegels",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Toeschouweracties",
     "friendlyFire": "Friendly fire",
     "recordReplays": "Replays opnemen",
     "powerUps": "Power-ups",
@@ -974,6 +977,7 @@
       "reinforcedWalls": "Versterkte muren",
       "mapEvents": "Kaartgebeurtenissen",
       "hazardTiles": "Gevaarlijke tegels",
+      "puzzleTiles": "Puzzle Tiles",
       "friendlyFire": "Friendly fire",
       "recordReplays": "Replays opnemen",
       "powerUps": "Power-ups",
@@ -1030,5 +1034,30 @@
         "full": "Volledig"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "Uitdagingssysteem",
+    "enabled": "Uitdagingen ingeschakeld",
+    "toggleSaved": "Uitdagingsinstelling opgeslagen",
+    "title": "Kaartuitdagingen",
+    "titleLabel": "Titel",
+    "description": "Beschrijving",
+    "map": "Kaart",
+    "gameMode": "Spelmodus",
+    "startDate": "Startdatum",
+    "endDate": "Einddatum",
+    "dates": "Data",
+    "status": "Status",
+    "actions": "Acties",
+    "create": "Uitdaging aanmaken",
+    "cancel": "Annuleren",
+    "created": "Uitdaging aangemaakt",
+    "activated": "Uitdaging geactiveerd",
+    "deactivated": "Uitdaging gedeactiveerd",
+    "deleted": "Uitdaging verwijderd",
+    "activate": "Activeren",
+    "deactivate": "Deactiveren",
+    "deleteBtn": "Verwijderen",
+    "none": "Nog geen uitdagingen"
   }
 }

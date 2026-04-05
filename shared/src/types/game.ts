@@ -1,4 +1,5 @@
 import type { PlayerCosmeticData } from './cosmetics';
+import type { PuzzleConfig } from './campaign';
 
 export type TileType =
   | 'empty'
@@ -64,6 +65,10 @@ export type MapEventType =
   | 'freeze_wave'
   | 'bomb_surge'
   | 'ufo_abduction';
+
+export type PuzzleTileCategory = 'switches_and_gates' | 'crumbling';
+
+export const PUZZLE_TILE_CATEGORIES: PuzzleTileCategory[] = ['switches_and_gates', 'crumbling'];
 
 export const MAP_EVENT_TYPES: MapEventType[] = [
   'meteor',
@@ -168,6 +173,7 @@ export interface GameMap {
   tiles: TileType[][];
   spawnPoints: Position[];
   seed: number;
+  puzzleConfig?: PuzzleConfig;
 }
 
 export interface HillZone {
@@ -187,13 +193,25 @@ export interface MapEvent {
     | 'freeze_wave'
     | 'bomb_surge'
     | 'hill_move'
-    | 'ufo_abduction';
+    | 'ufo_abduction'
+    | 'spectator_wall'
+    | 'spectator_powerup'
+    | 'spectator_speed_zone';
   position?: Position;
   tick: number;
   warningTick?: number;
   direction?: 'row' | 'column';
   index?: number;
   targetPlayerId?: number;
+}
+
+export type SpectatorActionType = 'place_wall' | 'trigger_meteor' | 'drop_powerup' | 'speed_zone';
+
+export interface SpectatorEnergyState {
+  playerId: number;
+  energy: number;
+  maxEnergy: number;
+  cooldownTicksRemaining: number;
 }
 
 export interface GameState {
@@ -210,6 +228,8 @@ export interface GameState {
   pendingHillZone?: HillZone;
   kothScores?: Record<number, number>;
   mapEvents?: MapEvent[];
+  spectatorEnergy?: SpectatorEnergyState[];
+  spectatorActions?: boolean;
   status: 'countdown' | 'playing' | 'finished';
   winnerId: number | null;
   winnerTeam: number | null;

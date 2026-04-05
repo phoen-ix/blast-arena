@@ -6,6 +6,7 @@
     "rooms": "Rooms",
     "campaign": "Campaign",
     "myMaps": "My Maps",
+    "challenge": "Challenge",
     "friends": "Friends",
     "messages": "Messages",
     "party": "Party",
@@ -370,6 +371,8 @@
     "gameSettings": "Game Settings",
     "friendlyFire": "Friendly Fire",
     "hazardTiles": "Hazard Tiles",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Spectator Actions",
     "mapEvents": "Dynamic Map Events",
     "reinforcedWalls": "Reinforced Walls",
     "recordMatch": "Record Match",
@@ -436,6 +439,10 @@
       "spikes": "Spikes",
       "dark_rift": "Dark Rift"
     },
+    "puzzleTypes": {
+      "switches_and_gates": "Switches & Gates",
+      "crumbling": "Crumbling Floors"
+    },
     "eventTypes": {
       "meteor": "Meteor Strike",
       "powerup_rain": "Power-Up Rain",
@@ -475,6 +482,30 @@
   "spectatorChat": {
     "title": "Spectator Chat",
     "placeholder": "Type a message..."
+  },
+  "spectator": {
+    "place_wall": "Place Wall",
+    "trigger_meteor": "Trigger Meteor",
+    "drop_powerup": "Drop Power-Up",
+    "speed_zone": "Speed Zone",
+    "clickToPlace": "Click on the map to place"
+  },
+  "challenge": {
+    "title": "Map Challenge",
+    "loading": "Loading challenge...",
+    "noActive": "No active challenge right now. Check back soon!",
+    "loadError": "Failed to load challenge",
+    "map": "Map",
+    "creator": "Creator",
+    "mode": "Mode",
+    "dates": "Dates",
+    "play": "Play Challenge",
+    "leaderboard": "Leaderboard",
+    "player": "Player",
+    "wins": "Wins",
+    "kills": "Kills",
+    "games": "Games",
+    "noScores": "No scores yet — be the first to play!"
   },
   "hud": {
     "spectator": "SPECTATOR — WASD/Arrows/D-Pad to pan, 1-9/LB/RB or click to follow",

@@ -221,6 +221,10 @@ export class LobbyUI {
         const { MapsView } = await import('./views/MapsView');
         return new MapsView(deps);
       }
+      case 'challenge': {
+        const { ChallengeView } = await import('./views/ChallengeView');
+        return new ChallengeView(deps);
+      }
       case 'create-room': {
         const { CreateRoomView } = await import('./views/CreateRoomView');
         return new CreateRoomView(
@@ -296,6 +300,10 @@ export class LobbyUI {
           <button class="sidebar-nav-item" id="nav-maps">
             <span class="nav-icon">&#9638;</span>
             <span class="nav-label">${t('ui:sidebar.myMaps')}</span>
+          </button>
+          <button class="sidebar-nav-item" id="nav-challenge">
+            <span class="nav-icon">&#9813;</span>
+            <span class="nav-label">${t('ui:sidebar.challenge')}</span>
           </button>
 
           <div class="sidebar-section-label">${t('ui:sidebar.social')}</div>
@@ -387,6 +395,9 @@ export class LobbyUI {
     this.container
       .querySelector('#nav-maps')!
       .addEventListener('click', () => this.navigateTo('maps'));
+    this.container
+      .querySelector('#nav-challenge')!
+      .addEventListener('click', () => this.navigateTo('challenge'));
     this.container
       .querySelector('#nav-friends')!
       .addEventListener('click', () => this.navigateTo('friends'));

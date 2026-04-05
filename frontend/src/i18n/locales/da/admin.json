@@ -12,7 +12,8 @@
     "announcements": "Meddelelser",
     "campaign": "Kampagne",
     "seasons": "S\u00e6soner",
-    "achievements": "Pr\u00e6stationer"
+    "achievements": "Pr\u00e6stationer",
+    "challenges": "Udfordringer"
   },
   "users": {
     "searchPlaceholder": "S\u00f8g p\u00e5 brugernavn eller email...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Forst\u00e6rkede v\u00e6gge",
     "mapEvents": "Korth\u00e6ndelser",
     "hazardTiles": "Farefelter",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Tilskuerhandlinger",
     "friendlyFire": "Venskabsild",
     "recordReplays": "Optag genafspilninger",
     "powerUps": "Power-ups",
@@ -974,6 +977,7 @@
       "reinforcedWalls": "Forst\u00e6rkede v\u00e6gge",
       "mapEvents": "Korth\u00e6ndelser",
       "hazardTiles": "Farefelter",
+      "puzzleTiles": "Puzzle Tiles",
       "friendlyFire": "Venskabsild",
       "recordReplays": "Optag genafspilninger",
       "powerUps": "Power-ups",
@@ -1030,5 +1034,30 @@
         "full": "Fuld"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "Udfordringssystem",
+    "enabled": "Udfordringer aktiveret",
+    "toggleSaved": "Udfordringsindstilling gemt",
+    "title": "Kortudfordringer",
+    "titleLabel": "Titel",
+    "description": "Beskrivelse",
+    "map": "Kort",
+    "gameMode": "Spiltilstand",
+    "startDate": "Startdato",
+    "endDate": "Slutdato",
+    "dates": "Datoer",
+    "status": "Status",
+    "actions": "Handlinger",
+    "create": "Opret udfordring",
+    "cancel": "Annuller",
+    "created": "Udfordring oprettet",
+    "activated": "Udfordring aktiveret",
+    "deactivated": "Udfordring deaktiveret",
+    "deleted": "Udfordring slettet",
+    "activate": "Aktiver",
+    "deactivate": "Deaktiver",
+    "deleteBtn": "Slet",
+    "none": "Ingen udfordringer endnu"
   }
 }

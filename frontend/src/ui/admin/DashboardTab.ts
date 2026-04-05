@@ -828,6 +828,8 @@ export class DashboardTab {
         ${chk(`${prefix}-reinforcedWalls`, t('admin:dashboard.reinforcedWalls'), '#b8884d', defaults.reinforcedWalls)}
         ${chk(`${prefix}-enableMapEvents`, t('admin:dashboard.mapEvents'), 'var(--warning)', defaults.enableMapEvents)}
         ${chk(`${prefix}-hazardTiles`, t('admin:dashboard.hazardTiles'), 'var(--info)', defaults.hazardTiles)}
+        ${chk(`${prefix}-puzzleTiles`, t('admin:dashboard.puzzleTiles'), 'var(--success)', defaults.puzzleTiles)}
+        ${chk(`${prefix}-enableSpectatorActions`, t('admin:dashboard.spectatorActions'), 'var(--accent)', defaults.enableSpectatorActions)}
         ${chk(`${prefix}-friendlyFire`, t('admin:dashboard.friendlyFire'), 'var(--danger)', defaults.friendlyFire)}
         ${type === 'simulation' ? chk(`${prefix}-recordReplays`, t('admin:dashboard.recordReplays'), 'var(--accent)', (defaults as SimulationDefaults).recordReplays) : ''}
       </div>
@@ -963,6 +965,8 @@ export class DashboardTab {
       'reinforcedWalls',
       'enableMapEvents',
       'hazardTiles',
+      'puzzleTiles',
+      'enableSpectatorActions',
       'friendlyFire',
     ] as const;
     for (const field of boolFields) {

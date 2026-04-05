@@ -6,6 +6,7 @@
     "rooms": "Odalar",
     "campaign": "Kampanya",
     "myMaps": "Haritalarim",
+    "challenge": "Meydan Okuma",
     "friends": "Arkadaslar",
     "messages": "Mesajlar",
     "party": "Parti",
@@ -370,6 +371,8 @@
     "gameSettings": "Oyun Ayarlari",
     "friendlyFire": "Dost Atesi",
     "hazardTiles": "Tehlike Kareleri",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Seyirci Eylemleri",
     "mapEvents": "Dinamik Harita Olaylari",
     "reinforcedWalls": "Guclendirilmis Duvarlar",
     "recordMatch": "Maci Kaydet",
@@ -463,6 +466,10 @@
       "spikes": "Dikenler",
       "dark_rift": "Karanlık Yarık"
     },
+    "puzzleTypes": {
+      "switches_and_gates": "Switches & Gates",
+      "crumbling": "Crumbling Floors"
+    },
     "eventTypes": {
       "meteor": "Meteor Yağmuru",
       "powerup_rain": "Güç-up Yağmuru",
@@ -475,6 +482,30 @@
   "spectatorChat": {
     "title": "Izleyici Sohbeti",
     "placeholder": "Mesaj yazin..."
+  },
+  "spectator": {
+    "place_wall": "Duvar yerleştir",
+    "trigger_meteor": "Meteor tetikle",
+    "drop_powerup": "Güçlendirme bırak",
+    "speed_zone": "Hız bölgesi",
+    "clickToPlace": "Yerleştirmek için haritaya tıklayın"
+  },
+  "challenge": {
+    "title": "Harita Meydan Okuması",
+    "loading": "Meydan okuma yükleniyor...",
+    "noActive": "Şu anda aktif meydan okuma yok. Yakında tekrar gelin!",
+    "loadError": "Meydan okuma yüklenemedi",
+    "map": "Harita",
+    "creator": "Oluşturan",
+    "mode": "Mod",
+    "dates": "Tarihler",
+    "play": "Meydan okumayı oyna",
+    "leaderboard": "Skor Tablosu",
+    "player": "Oyuncu",
+    "wins": "Galibiyetler",
+    "kills": "Elemeler",
+    "games": "Oyunlar",
+    "noScores": "Henüz skor yok — ilk oynayan siz olun!"
   },
   "hud": {
     "spectator": "IZLEYICI — WASD/Yonler/D-Pad ile kaydir, 1-9/LB/RB veya tikla ile takip et",

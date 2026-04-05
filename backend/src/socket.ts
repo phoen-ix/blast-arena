@@ -62,6 +62,7 @@ const ROOM_CLEANUP_INTERVAL_MS = 30000;
 // Per-player emote cooldown
 const emoteLastUsed = new Map<number, number>();
 const spectatorChatLimiter = createSocketRateLimiter(3);
+const spectatorActionLimiter = createSocketRateLimiter(2);
 
 /** Extract active room code from socket, optionally sending error callback */
 function requireRoom(
@@ -117,6 +118,9 @@ const matchConfigSchema = z.object({
   enableMapEvents: z.boolean().optional(),
   selectedMapEvents: z.array(z.string()).optional(),
   reinforcedWalls: z.boolean().optional(),
+  puzzleTiles: z.boolean().optional(),
+  selectedPuzzleTiles: z.array(z.string()).optional(),
+  enableSpectatorActions: z.boolean().optional(),
   recordGame: z.boolean().optional(),
   botAiId: z.string().optional(),
   customMapId: z.number().int().positive().optional(),
@@ -766,6 +770,60 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         message,
         timestamp: Date.now(),
       });
+    });
+
+    // Spectator Game Master action
+    socket.on('spectator:action', async (data, callback) => {
+      const roomCode = requireRoom(socket, callback);
+      if (!roomCode) return;
+      if (!data || !data.type || !data.position) {
+        return callback({ success: false, error: 'Invalid data' });
+      }
+
+      const validTypes = ['place_wall', 'trigger_meteor', 'drop_powerup', 'speed_zone'];
+      if (!validTypes.includes(data.type)) {
+        return callback({ success: false, error: 'Invalid action type' });
+      }
+
+      if (
+        typeof data.position.x !== 'number' ||
+        typeof data.position.y !== 'number' ||
+        !Number.isInteger(data.position.x) ||
+        !Number.isInteger(data.position.y)
+      ) {
+        return callback({ success: false, error: 'Invalid position' });
+      }
+
+      // Rate limit
+      if (!spectatorActionLimiter.isAllowed(socket.id)) {
+        return callback({ success: false, error: 'Too many actions' });
+      }
+
+      // Global admin toggle
+      const enabled = await settingsService.isSpectatorActionsEnabled();
+      if (!enabled) {
+        return callback({ success: false, error: 'Spectator actions are globally disabled' });
+      }
+
+      const gameRoom = roomManager.getRoom(roomCode);
+      if (!gameRoom) {
+        return callback({ success: false, error: 'Game not found' });
+      }
+
+      const result = gameRoom.handleSpectatorAction(
+        socket.data.userId,
+        data.type as 'place_wall' | 'trigger_meteor' | 'drop_powerup' | 'speed_zone',
+        data.position,
+      );
+
+      if (result.success) {
+        io.to(`room:${roomCode}`).emit('spectator:actionApplied', {
+          type: data.type as 'place_wall' | 'trigger_meteor' | 'drop_powerup' | 'speed_zone',
+          position: data.position,
+        });
+      }
+
+      callback(result);
     });
 
     // Admin: kick player from room
@@ -1446,6 +1504,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       cleanupDMLimiters(socket.id);
       emoteLastUsed.delete(socket.data.userId);
       spectatorChatLimiter.remove(socket.id);
+      spectatorActionLimiter.remove(socket.id);
       socket.data.activeRoomCode = undefined;
 
       // Clean up rematch votes for the disconnecting player

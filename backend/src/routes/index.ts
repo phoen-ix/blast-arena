@@ -11,6 +11,7 @@ import leaderboardRouter from './leaderboard';
 import cosmeticsRouter from './cosmetics';
 import docsRouter from './docs';
 import customMapsRouter from './custom-maps';
+import challengesRouter from './challenges';
 
 export function registerRoutes(app: Express): void {
   app.use('/api', healthRouter);
@@ -25,4 +26,5 @@ export function registerRoutes(app: Express): void {
   app.use('/api', cosmeticsRouter);
   app.use('/api', docsRouter);
   app.use('/api', customMapsRouter);
+  app.use('/api', challengesRouter);
 }

@@ -12,7 +12,8 @@
     "announcements": "Annunci",
     "campaign": "Campagna",
     "seasons": "Stagioni",
-    "achievements": "Obiettivi"
+    "achievements": "Obiettivi",
+    "challenges": "Sfide"
   },
   "users": {
     "searchPlaceholder": "Cerca per nome utente o email...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Muri rinforzati",
     "mapEvents": "Eventi mappa",
     "hazardTiles": "Caselle pericolose",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Azioni Spettatore",
     "friendlyFire": "Fuoco amico",
     "recordReplays": "Registra replay",
     "powerUps": "Potenziamenti",
@@ -974,6 +977,7 @@
       "reinforcedWalls": "Muri rinforzati",
       "mapEvents": "Eventi mappa",
       "hazardTiles": "Caselle pericolose",
+      "puzzleTiles": "Puzzle Tiles",
       "friendlyFire": "Fuoco amico",
       "recordReplays": "Registra replay",
       "powerUps": "Potenziamenti",
@@ -1030,5 +1034,30 @@
         "full": "Completo"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "Sistema sfide",
+    "enabled": "Sfide attivate",
+    "toggleSaved": "Impostazione sfida salvata",
+    "title": "Sfide mappa",
+    "titleLabel": "Titolo",
+    "description": "Descrizione",
+    "map": "Mappa",
+    "gameMode": "Modalità di gioco",
+    "startDate": "Data inizio",
+    "endDate": "Data fine",
+    "dates": "Date",
+    "status": "Stato",
+    "actions": "Azioni",
+    "create": "Crea sfida",
+    "cancel": "Annulla",
+    "created": "Sfida creata",
+    "activated": "Sfida attivata",
+    "deactivated": "Sfida disattivata",
+    "deleted": "Sfida eliminata",
+    "activate": "Attiva",
+    "deactivate": "Disattiva",
+    "deleteBtn": "Elimina",
+    "none": "Nessuna sfida ancora"
   }
 }

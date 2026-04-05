@@ -1,4 +1,5 @@
 import { TileType } from '../types/game';
+import { getSwitchColor, getGateColor } from './puzzle';
 
 const ALLOWED_CUSTOM_MAP_TILES: Set<string> = new Set([
   'empty',
@@ -11,6 +12,24 @@ const ALLOWED_CUSTOM_MAP_TILES: Set<string> = new Set([
   'conveyor_down',
   'conveyor_left',
   'conveyor_right',
+  // Puzzle tiles
+  'switch_red',
+  'switch_blue',
+  'switch_green',
+  'switch_yellow',
+  'switch_red_active',
+  'switch_blue_active',
+  'switch_green_active',
+  'switch_yellow_active',
+  'gate_red',
+  'gate_blue',
+  'gate_green',
+  'gate_yellow',
+  'gate_red_open',
+  'gate_blue_open',
+  'gate_green_open',
+  'gate_yellow_open',
+  'crumbling',
 ]);
 
 export function validateCustomMap(tiles: TileType[][], width: number, height: number): string[] {
@@ -42,10 +61,12 @@ export function validateCustomMap(tiles: TileType[][], width: number, height: nu
     }
   }
 
-  // Check tile types and collect spawn/teleporter info
+  // Check tile types and collect spawn/teleporter/puzzle info
   let spawnCount = 0;
   let hasTeleA = false;
   let hasTeleB = false;
+  const switchColors = new Set<string>();
+  const gateColors = new Set<string>();
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -59,6 +80,10 @@ export function validateCustomMap(tiles: TileType[][], width: number, height: nu
       if (tile === 'spawn') spawnCount++;
       if (tile === 'teleporter_a') hasTeleA = true;
       if (tile === 'teleporter_b') hasTeleB = true;
+      const sc = getSwitchColor(tile);
+      if (sc) switchColors.add(sc);
+      const gc = getGateColor(tile);
+      if (gc) gateColors.add(gc);
 
       // Border must be walls
       const isBorder = x === 0 || x === width - 1 || y === 0 || y === height - 1;
@@ -82,6 +107,13 @@ export function validateCustomMap(tiles: TileType[][], width: number, height: nu
   }
   if (hasTeleB && !hasTeleA) {
     errors.push('Teleporter B exists but no Teleporter A found');
+  }
+
+  // Gate-switch pairing: gates need at least one switch of the same color
+  for (const color of gateColors) {
+    if (!switchColors.has(color)) {
+      errors.push(`Gate (${color}) exists but no matching switch found`);
+    }
   }
 
   return errors;

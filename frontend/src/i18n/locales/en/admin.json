@@ -12,7 +12,8 @@
     "announcements": "Announcements",
     "campaign": "Campaign",
     "seasons": "Seasons",
-    "achievements": "Achievements"
+    "achievements": "Achievements",
+    "challenges": "Challenges"
   },
   "users": {
     "searchPlaceholder": "Search by username or email...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Reinforced Walls",
     "mapEvents": "Map Events",
     "hazardTiles": "Hazard Tiles",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Spectator Actions",
     "friendlyFire": "Friendly Fire",
     "recordReplays": "Record Replays",
     "powerUps": "Power-Ups",
@@ -1030,5 +1033,30 @@
         "full": "Full"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "Challenge System",
+    "enabled": "Challenges Enabled",
+    "toggleSaved": "Challenge setting saved",
+    "title": "Map Challenges",
+    "titleLabel": "Title",
+    "description": "Description",
+    "map": "Map",
+    "gameMode": "Game Mode",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "dates": "Dates",
+    "status": "Status",
+    "actions": "Actions",
+    "create": "Create Challenge",
+    "cancel": "Cancel",
+    "created": "Challenge created",
+    "activated": "Challenge activated",
+    "deactivated": "Challenge deactivated",
+    "deleted": "Challenge deleted",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "deleteBtn": "Delete",
+    "none": "No challenges yet"
   }
 }

@@ -8,6 +8,7 @@ import {
 } from '@blast-arena/shared';
 import { escapeHtml } from '../utils/html';
 import { SpectatorChat } from '../game/SpectatorChat';
+import { SpectatorActionBar } from '../game/SpectatorActionBar';
 import { t } from '../i18n';
 import { getSettings } from '../game/Settings';
 import { PLAYER_COLORS } from './BootScene';
@@ -59,6 +60,8 @@ export class HUDScene extends Phaser.Scene {
   private lastCampaignEnemyCount: number = -1;
   private spectatorChat: SpectatorChat | null = null;
   private spectatorChatMounted: boolean = false;
+  public spectatorActionBar: SpectatorActionBar | null = null;
+  private spectatorActionBarMounted: boolean = false;
 
   // Minimap
   private minimapContainer: HTMLElement | null = null;
@@ -103,6 +106,9 @@ export class HUDScene extends Phaser.Scene {
     this.lastCampaignEnemyCount = -1;
     this.campaignHudEl?.remove();
     this.campaignHudEl = null;
+    this.spectatorActionBar?.destroy();
+    this.spectatorActionBar = null;
+    this.spectatorActionBarMounted = false;
 
     this.socketClient = this.registry.get('socketClient');
 
@@ -349,8 +355,23 @@ export class HUDScene extends Phaser.Scene {
       ) {
         this.mountSpectatorChat();
       }
+      // Mount spectator action bar when player dies + feature enabled
+      if (
+        !this.campaignMode &&
+        !this.spectatorActionBarMounted &&
+        !this.registry.get('replayMode') &&
+        !this.registry.get('simulationSpectate') &&
+        state.spectatorActions
+      ) {
+        this.mountSpectatorActionBar();
+      }
     } else if (this.localPlayerDead && this.campaignMode && me && me.alive) {
       this.localPlayerDead = false;
+    }
+
+    // Update spectator action bar energy
+    if (this.spectatorActionBar && state.spectatorEnergy) {
+      this.spectatorActionBar.updateFromState(state.spectatorEnergy, this.localPlayerId);
     }
 
     // Spectator banner (not useful in campaign — single player, respawns)
@@ -725,6 +746,27 @@ export class HUDScene extends Phaser.Scene {
     }
   }
 
+  private mountSpectatorActionBar(): void {
+    const socketClient = this.registry.get('socketClient');
+    if (!socketClient) return;
+
+    this.spectatorActionBar = new SpectatorActionBar(socketClient);
+    const uiOverlay = document.getElementById('ui-overlay');
+    if (uiOverlay) {
+      this.spectatorActionBar.mount(uiOverlay);
+      this.spectatorActionBarMounted = true;
+
+      // Wire up targeting callbacks to GameScene
+      const gameScene = this.scene.get('GameScene');
+      if (gameScene) {
+        this.spectatorActionBar.setCallbacks(
+          (type) => gameScene.events.emit('spectatorTargeting', type),
+          () => gameScene.events.emit('spectatorTargetingCancel'),
+        );
+      }
+    }
+  }
+
   shutdown(): void {
     if (this.boundClickHandler) {
       this.playerListEl?.removeEventListener('mousedown', this.boundClickHandler);
@@ -748,6 +790,11 @@ export class HUDScene extends Phaser.Scene {
       this.spectatorChat.destroy();
       this.spectatorChat = null;
       this.spectatorChatMounted = false;
+    }
+    if (this.spectatorActionBar) {
+      this.spectatorActionBar.destroy();
+      this.spectatorActionBar = null;
+      this.spectatorActionBarMounted = false;
     }
     this.hudContainer?.remove();
     this.statsEl?.remove();

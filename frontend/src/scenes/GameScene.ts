@@ -126,6 +126,10 @@ export class GameScene extends Phaser.Scene {
   private dragStartX: number = 0;
   private dragStartY: number = 0;
 
+  // Spectator Game Master targeting
+  private spectatorTargeting: string | null = null;
+  private spectatorClickHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -202,6 +206,39 @@ export class GameScene extends Phaser.Scene {
     this.events.once('shutdown', this.shutdown, this);
     this.installSpectatorListeners();
     this.installMouseDragPan();
+
+    // Spectator Game Master targeting
+    this.spectatorTargeting = null;
+    this.events.on('spectatorTargeting', (type: string) => {
+      this.spectatorTargeting = type;
+      this.input.setDefaultCursor('crosshair');
+    });
+    this.events.on('spectatorTargetingCancel', () => {
+      this.spectatorTargeting = null;
+      this.input.setDefaultCursor('default');
+    });
+    if (this.spectatorClickHandler) {
+      this.input.off('pointerdown', this.spectatorClickHandler);
+    }
+    this.spectatorClickHandler = (pointer: Phaser.Input.Pointer) => {
+      if (!this.spectatorTargeting || !this.lastGameState) return;
+      // Convert screen coords to tile coords
+      const cam = this.cameras.main;
+      const worldX = pointer.x + cam.scrollX;
+      const worldY = pointer.y + cam.scrollY;
+      const tileX = Math.floor(worldX / 48);
+      const tileY = Math.floor(worldY / 48);
+      if (tileX < 0 || tileY < 0) return;
+
+      // Get the SpectatorActionBar from HUDScene and execute
+      const hudScene = this.scene.get('HUDScene') as any;
+      if (hudScene?.spectatorActionBar) {
+        hudScene.spectatorActionBar.executeAction(tileX, tileY);
+      }
+      this.spectatorTargeting = null;
+      this.input.setDefaultCursor('default');
+    };
+    this.input.on('pointerdown', this.spectatorClickHandler);
 
     // Setup Phaser input
     if (this.input.keyboard) {
@@ -1572,6 +1609,17 @@ export class GameScene extends Phaser.Scene {
     this.replayLogPanel = null;
     this.removeSpectatorListeners();
     this.removeAllTrackedKeys();
+
+    // Clean up spectator game master targeting
+    if (this.spectatorClickHandler) {
+      this.input.off('pointerdown', this.spectatorClickHandler);
+      this.spectatorClickHandler = null;
+    }
+    this.spectatorTargeting = null;
+    this.events.off('spectatorTargeting');
+    this.events.off('spectatorTargetingCancel');
+    this.input.setDefaultCursor('default');
+
     this.cleanupRenderers();
   }
 }

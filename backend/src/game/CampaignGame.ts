@@ -4,7 +4,6 @@ import {
   CampaignEnemyState,
   EnemyTypeConfig,
   StartingPowerUps,
-  SwitchVariant,
   PlayerInput,
   Position,
   GameMap,
@@ -20,16 +19,6 @@ import {
   MOVE_COOLDOWN_BASE,
 } from '@blast-arena/shared';
 import {
-  isSwitchTile,
-  isSwitchActive,
-  getSwitchColor,
-  getSwitchTile,
-  isGateOpen,
-  getGateColor,
-  getGateTile,
-  CRUMBLE_DELAY_TICKS,
-} from '@blast-arena/shared';
-import {
   CampaignWorldTheme,
   QUICKSAND_KILL_TICKS,
   SPIKE_SAFE_TICKS,
@@ -42,6 +31,7 @@ import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { processEnemyAI, IEnemyAI, EnemyAIContext, EnemyAIResult } from './EnemyAI';
 import { getEnemyAIRegistry } from './registry';
+import { PuzzleTileProcessor } from './PuzzleTileProcessor';
 import { ReplayRecorder } from '../utils/replayRecorder';
 import { GameLogger } from '../utils/gameLogger';
 import { logger } from '../utils/logger';
@@ -175,13 +165,8 @@ export class CampaignGame {
   // Covered tiles: special tiles hidden under destructible walls, revealed on destruction
   private coveredTiles: Map<string, TileType> = new Map();
 
-  // Puzzle state
-  private switchStates: Map<string, boolean> = new Map(); // "x,y" → active/inactive
-  private switchVariants: Map<string, SwitchVariant> = new Map(); // "x,y" → variant
-  private crumblingVisited: Map<string, number> = new Map(); // "x,y" → tick when entity last stood on it
-  private crumblingOccupied: Set<string> = new Set(); // positions currently occupied
-  private prevSwitchOccupied: Set<string> = new Set(); // switch positions occupied last tick
-  private prevSwitchBlasted: Set<string> = new Set(); // switch positions blasted last tick
+  // Puzzle tile processing (switches, gates, crumbling floors)
+  private puzzleProcessor: PuzzleTileProcessor;
 
   // Hazard tile state
   private worldTheme: CampaignWorldTheme = 'classic';
@@ -309,22 +294,13 @@ export class CampaignGame {
       this.coveredTiles.set(`${ct.x},${ct.y}`, ct.type);
     }
 
-    // Load puzzle config (switch variants)
-    if (level.puzzleConfig?.switchVariants) {
-      for (const [key, variant] of Object.entries(level.puzzleConfig.switchVariants)) {
-        this.switchVariants.set(key, variant);
-      }
-    }
+    // Initialize puzzle tile processor (switches, gates, crumbling floors)
+    this.puzzleProcessor = new PuzzleTileProcessor(this.gameState, level.puzzleConfig ?? undefined);
 
-    // Initialize switch states from tile grid (detect pre-placed switches)
-    // Also cache spike positions for hazard tile processing
+    // Cache spike positions for hazard tile processing
     for (let y = 0; y < level.mapHeight; y++) {
       for (let x = 0; x < level.mapWidth; x++) {
         const tile = this.gameState.map.tiles[y][x];
-        if (isSwitchTile(tile)) {
-          const key = `${x},${y}`;
-          this.switchStates.set(key, isSwitchActive(tile));
-        }
         if (tile === 'spikes' || tile === 'spikes_active') {
           this.spikePositions.push({ x, y });
         }
@@ -815,7 +791,14 @@ export class CampaignGame {
     }
 
     // 7.5. Puzzle tile processing (switches, gates, crumbling floors)
-    this.processPuzzleTiles();
+    this.puzzleProcessor.processTick(
+      this.gameState,
+      Array.from(this.enemies.values()).map((e) => ({
+        position: e.position,
+        alive: e.alive,
+        canPassWalls: e.typeConfig.canPassWalls ?? false,
+      })),
+    );
 
     // 7.6. Hazard tile processing (theme-specific tiles)
     this.processHazardTiles();
@@ -1036,189 +1019,6 @@ export class CampaignGame {
     if (this.completionTick === null) {
       this.completionTick = this.gameState.tick;
     }
-  }
-
-  /**
-   * Process puzzle tile mechanics: switches, gates, and crumbling floors.
-   * Called each tick after hidden power-up reveals, before boss phase transitions.
-   */
-  private processPuzzleTiles(): void {
-    // Skip if no puzzle state to process
-    if (this.switchStates.size === 0 && this.crumblingVisited.size === 0) {
-      // Still check for crumbling tiles that entities might be standing on
-      this.processCrumblingFloors();
-      return;
-    }
-
-    this.processSwitchesAndGates();
-    this.processCrumblingFloors();
-  }
-
-  private processSwitchesAndGates(): void {
-    if (this.switchStates.size === 0) return;
-
-    // Build set of positions currently occupied by players or bombs
-    const currentOccupied = new Set<string>();
-    for (const player of this.gameState.players.values()) {
-      if (!player.alive) continue;
-      currentOccupied.add(`${player.position.x},${player.position.y}`);
-    }
-    for (const bomb of this.gameState.bombs.values()) {
-      currentOccupied.add(`${bomb.position.x},${bomb.position.y}`);
-    }
-
-    // Build set of positions covered by active explosions
-    const explodedPositions = new Set<string>();
-    for (const explosion of this.gameState.explosions.values()) {
-      for (const cell of explosion.cells) {
-        explodedPositions.add(`${cell.x},${cell.y}`);
-      }
-    }
-
-    // Track which colors changed state (for gate toggling)
-    const colorStateChanged = new Map<string, boolean>(); // color → new gate-open state
-
-    for (const [key, wasActive] of this.switchStates) {
-      const variant = this.switchVariants.get(key) ?? 'toggle';
-      const isOccupied = currentOccupied.has(key);
-      const wasOccupied = this.prevSwitchOccupied.has(key);
-      const isBlasted = explodedPositions.has(key);
-      const wasBlasted = this.prevSwitchBlasted.has(key);
-      const blastHit = isBlasted && !wasBlasted; // rising edge — first tick of explosion
-      const color = getSwitchColor(
-        this.gameState.map.tiles[Number(key.split(',')[1])][Number(key.split(',')[0])],
-      );
-      if (!color) continue;
-
-      let newActive = wasActive;
-
-      switch (variant) {
-        case 'toggle': {
-          // Flip on step-on (transition) or blast hit (first tick only)
-          const steppedOn = isOccupied && !wasOccupied;
-          if (steppedOn || blastHit) {
-            newActive = !wasActive;
-          }
-          break;
-        }
-        case 'pressure': {
-          // Active while occupied; blast activates only on first tick
-          newActive = isOccupied || blastHit;
-          break;
-        }
-        case 'oneshot': {
-          // Once activated, stays active forever
-          if (!wasActive) {
-            const steppedOn = isOccupied && !wasOccupied;
-            if (steppedOn || blastHit) {
-              newActive = true;
-            }
-          }
-          break;
-        }
-      }
-
-      if (newActive !== wasActive) {
-        this.switchStates.set(key, newActive);
-        const [sx, sy] = key.split(',').map(Number);
-        this.gameState.setTileTracked(sx, sy, getSwitchTile(color, newActive));
-        // Mark this color as needing gate update
-        colorStateChanged.set(color, newActive);
-      }
-    }
-
-    // Update gates for colors whose switch state changed
-    if (colorStateChanged.size > 0) {
-      for (const [color] of colorStateChanged) {
-        // OR logic: gates are open if ANY switch of that color is active
-        let anyActive = false;
-        for (const [switchKey, active] of this.switchStates) {
-          const switchColor = getSwitchColor(
-            this.gameState.map.tiles[Number(switchKey.split(',')[1])][
-              Number(switchKey.split(',')[0])
-            ],
-          );
-          if (switchColor === color && active) {
-            anyActive = true;
-            break;
-          }
-        }
-
-        // Toggle all gates of this color
-        for (let y = 0; y < this.gameState.map.height; y++) {
-          for (let x = 0; x < this.gameState.map.width; x++) {
-            const tile = this.gameState.map.tiles[y][x];
-            const gateColor = getGateColor(tile);
-            if (gateColor === color) {
-              const shouldBeOpen = anyActive;
-              const isOpen = isGateOpen(tile);
-              if (shouldBeOpen !== isOpen) {
-                this.gameState.setTileTracked(x, y, getGateTile(gateColor, shouldBeOpen));
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Update previous occupied/blasted sets for next tick
-    this.prevSwitchOccupied = new Set<string>();
-    this.prevSwitchBlasted = new Set<string>();
-    for (const key of this.switchStates.keys()) {
-      if (currentOccupied.has(key)) {
-        this.prevSwitchOccupied.add(key);
-      }
-      if (explodedPositions.has(key)) {
-        this.prevSwitchBlasted.add(key);
-      }
-    }
-  }
-
-  private processCrumblingFloors(): void {
-    const tick = this.gameState.tick;
-
-    // Build set of currently occupied crumbling positions
-    // (alive players except buddies, alive enemies except those with canPassWalls)
-    const currentCrumbling = new Set<string>();
-    for (const player of this.gameState.players.values()) {
-      if (!player.alive || player.isBuddy) continue;
-      const key = `${player.position.x},${player.position.y}`;
-      if (this.gameState.map.tiles[player.position.y]?.[player.position.x] === 'crumbling') {
-        currentCrumbling.add(key);
-      }
-    }
-    for (const enemy of this.enemies.values()) {
-      if (!enemy.alive || enemy.typeConfig.canPassWalls) continue;
-      const key = `${enemy.position.x},${enemy.position.y}`;
-      if (this.gameState.map.tiles[enemy.position.y]?.[enemy.position.x] === 'crumbling') {
-        currentCrumbling.add(key);
-      }
-    }
-
-    // Check previously visited crumbling tiles that are no longer occupied
-    for (const [key, visitedTick] of this.crumblingVisited) {
-      if (!currentCrumbling.has(key) && !this.crumblingOccupied.has(key)) {
-        // Already stepped off — waiting for crumble delay
-        if (tick - visitedTick >= CRUMBLE_DELAY_TICKS) {
-          const [cx, cy] = key.split(',').map(Number);
-          this.gameState.setTileTracked(cx, cy, 'pit');
-          this.crumblingVisited.delete(key);
-        }
-      } else if (!currentCrumbling.has(key) && this.crumblingOccupied.has(key)) {
-        // Entity just stepped off this tick — record the step-off tick
-        this.crumblingVisited.set(key, tick);
-      }
-    }
-
-    // Track currently occupied crumbling positions
-    for (const key of currentCrumbling) {
-      if (!this.crumblingVisited.has(key)) {
-        this.crumblingVisited.set(key, tick);
-      }
-    }
-
-    // Update occupied set for next tick comparison
-    this.crumblingOccupied = currentCrumbling;
   }
 
   private checkWinCondition(): void {

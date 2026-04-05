@@ -12,7 +12,8 @@
     "announcements": "Og\u0142oszenia",
     "campaign": "Kampania",
     "seasons": "Sezony",
-    "achievements": "Osi\u0105gni\u0119cia"
+    "achievements": "Osi\u0105gni\u0119cia",
+    "challenges": "Wyzwania"
   },
   "users": {
     "searchPlaceholder": "Szukaj po nazwie u\u017cytkownika lub e-mailu...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Wzmocnione \u015bciany",
     "mapEvents": "Zdarzenia na mapie",
     "hazardTiles": "Kafelki zagro\u017ce\u0144",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Akcje widza",
     "friendlyFire": "Ogie\u0144 przyjazny",
     "recordReplays": "Nagrywaj powt\u00f3rki",
     "powerUps": "Bonusy",
@@ -974,6 +977,7 @@
       "reinforcedWalls": "Wzmocnione \u015bciany",
       "mapEvents": "Zdarzenia na mapie",
       "hazardTiles": "Kafelki zagro\u017ce\u0144",
+      "puzzleTiles": "Puzzle Tiles",
       "friendlyFire": "Ogie\u0144 przyjazny",
       "recordReplays": "Nagrywaj powt\u00f3rki",
       "powerUps": "Bonusy",
@@ -1030,5 +1034,30 @@
         "full": "Pe\u0142ny"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "System wyzwań",
+    "enabled": "Wyzwania włączone",
+    "toggleSaved": "Ustawienie wyzwania zapisane",
+    "title": "Wyzwania map",
+    "titleLabel": "Tytuł",
+    "description": "Opis",
+    "map": "Mapa",
+    "gameMode": "Tryb gry",
+    "startDate": "Data rozpoczęcia",
+    "endDate": "Data zakończenia",
+    "dates": "Daty",
+    "status": "Status",
+    "actions": "Akcje",
+    "create": "Utwórz wyzwanie",
+    "cancel": "Anuluj",
+    "created": "Wyzwanie utworzone",
+    "activated": "Wyzwanie aktywowane",
+    "deactivated": "Wyzwanie dezaktywowane",
+    "deleted": "Wyzwanie usunięte",
+    "activate": "Aktywuj",
+    "deactivate": "Dezaktywuj",
+    "deleteBtn": "Usuń",
+    "none": "Brak wyzwań"
   }
 }

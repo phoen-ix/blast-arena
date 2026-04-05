@@ -6,6 +6,7 @@
     "rooms": "Stanze",
     "campaign": "Campagna",
     "myMaps": "Le mie mappe",
+    "challenge": "Sfida",
     "friends": "Amici",
     "messages": "Messaggi",
     "party": "Gruppo",
@@ -370,6 +371,8 @@
     "gameSettings": "Impostazioni di gioco",
     "friendlyFire": "Fuoco amico",
     "hazardTiles": "Caselle pericolose",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Azioni Spettatore",
     "mapEvents": "Eventi mappa dinamici",
     "reinforcedWalls": "Muri rinforzati",
     "recordMatch": "Registra partita",
@@ -436,6 +439,10 @@
       "spikes": "Spuntoni",
       "dark_rift": "Squarcio oscuro"
     },
+    "puzzleTypes": {
+      "switches_and_gates": "Switches & Gates",
+      "crumbling": "Crumbling Floors"
+    },
     "eventTypes": {
       "meteor": "Impatto di meteorite",
       "powerup_rain": "Pioggia di potenziamenti",
@@ -475,6 +482,30 @@
   "spectatorChat": {
     "title": "Chat spettatori",
     "placeholder": "Scrivi un messaggio..."
+  },
+  "spectator": {
+    "place_wall": "Piazza muro",
+    "trigger_meteor": "Scatena meteora",
+    "drop_powerup": "Lascia potenziamento",
+    "speed_zone": "Zona velocit\u00e0",
+    "clickToPlace": "Clicca sulla mappa per posizionare"
+  },
+  "challenge": {
+    "title": "Sfida Mappa",
+    "loading": "Caricamento sfida...",
+    "noActive": "Nessuna sfida attiva al momento. Torna presto!",
+    "loadError": "Impossibile caricare la sfida",
+    "map": "Mappa",
+    "creator": "Creatore",
+    "mode": "Modalità",
+    "dates": "Date",
+    "play": "Gioca alla sfida",
+    "leaderboard": "Classifica",
+    "player": "Giocatore",
+    "wins": "Vittorie",
+    "kills": "Eliminazioni",
+    "games": "Partite",
+    "noScores": "Nessun punteggio ancora — sii il primo a giocare!"
   },
   "hud": {
     "spectator": "SPETTATORE — WASD/Frecce/D-Pad per panoramica, 1-9/LB/RB o clic per seguire",

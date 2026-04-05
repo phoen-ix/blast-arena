@@ -31,3 +31,16 @@ export const INVULNERABILITY_TICKS = 40; // 2 seconds after spawn
 export const MAX_PLAYERS_PER_ROOM = 8;
 export const MIN_PLAYERS_TO_START = 2;
 export const MAX_ROOMS = 50;
+
+// Spectator Game Master
+export const SPECTATOR_ENERGY_PER_TICK = 1; // 1 energy per tick = 20/sec
+export const SPECTATOR_MAX_ENERGY = 100;
+export const SPECTATOR_COOLDOWN_TICKS = 20; // 1 second between actions
+export const SPECTATOR_WALL_COST = 30;
+export const SPECTATOR_METEOR_COST = 50;
+export const SPECTATOR_POWERUP_COST = 40;
+export const SPECTATOR_SPEED_ZONE_COST = 25;
+export const SPECTATOR_WALL_DURATION_TICKS = 200; // 10 seconds at 20 tps
+export const SPECTATOR_SPEED_ZONE_DURATION_TICKS = 160; // 8 seconds
+export const SPECTATOR_SPAWN_EXCLUSION_RADIUS = 2;
+export const SPECTATOR_WARNING_TICKS = 30; // 1.5 second warning before impact

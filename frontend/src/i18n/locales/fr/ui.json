@@ -6,6 +6,7 @@
     "rooms": "Salons",
     "campaign": "Campagne",
     "myMaps": "Mes cartes",
+    "challenge": "Défi",
     "friends": "Amis",
     "messages": "Messages",
     "party": "Groupe",
@@ -370,6 +371,8 @@
     "gameSettings": "Param\u00e8tres de jeu",
     "friendlyFire": "Tir alli\u00e9",
     "hazardTiles": "Cases dangereuses",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Actions Spectateur",
     "mapEvents": "\u00c9v\u00e9nements dynamiques",
     "reinforcedWalls": "Murs renforc\u00e9s",
     "recordMatch": "Enregistrer la partie",
@@ -436,6 +439,10 @@
       "spikes": "Piques",
       "dark_rift": "Faille sombre"
     },
+    "puzzleTypes": {
+      "switches_and_gates": "Switches & Gates",
+      "crumbling": "Crumbling Floors"
+    },
     "eventTypes": {
       "meteor": "Chute de météore",
       "powerup_rain": "Pluie de bonus",
@@ -475,6 +482,30 @@
   "spectatorChat": {
     "title": "Chat spectateur",
     "placeholder": "\u00c9crivez un message..."
+  },
+  "spectator": {
+    "place_wall": "Placer un mur",
+    "trigger_meteor": "D\u00e9clencher un m\u00e9t\u00e9ore",
+    "drop_powerup": "Larguer un bonus",
+    "speed_zone": "Zone de vitesse",
+    "clickToPlace": "Cliquez sur la carte pour placer"
+  },
+  "challenge": {
+    "title": "Défi de Carte",
+    "loading": "Chargement du défi...",
+    "noActive": "Pas de défi actif pour le moment. Revenez bientôt !",
+    "loadError": "Échec du chargement du défi",
+    "map": "Carte",
+    "creator": "Créateur",
+    "mode": "Mode",
+    "dates": "Dates",
+    "play": "Jouer au défi",
+    "leaderboard": "Classement",
+    "player": "Joueur",
+    "wins": "Victoires",
+    "kills": "Éliminations",
+    "games": "Parties",
+    "noScores": "Pas encore de scores — soyez le premier à jouer !"
   },
   "hud": {
     "spectator": "SPECTATEUR \u2014 ZQSD/Fl\u00e8ches/D-Pad pour d\u00e9placer, 1-9/LB/RB ou clic pour suivre",

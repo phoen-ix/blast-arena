@@ -382,6 +382,7 @@ describe('Custom Maps Service', () => {
 
   describe('deleteMap', () => {
     it('should DELETE with ownership check', async () => {
+      mockQuery.mockResolvedValue([]);
       mockExecute.mockResolvedValue({ affectedRows: 1 });
 
       await customMapsService.deleteMap(10, 42);
@@ -393,6 +394,7 @@ describe('Custom Maps Service', () => {
     });
 
     it('should return true when delete succeeds', async () => {
+      mockQuery.mockResolvedValue([]);
       mockExecute.mockResolvedValue({ affectedRows: 1 });
 
       const result = await customMapsService.deleteMap(10, 42);
@@ -401,11 +403,21 @@ describe('Custom Maps Service', () => {
     });
 
     it('should return false when map not found or not owned', async () => {
+      mockQuery.mockResolvedValue([]);
       mockExecute.mockResolvedValue({ affectedRows: 0 });
 
       const result = await customMapsService.deleteMap(999, 42);
 
       expect(result).toBe(false);
+    });
+
+    it('should throw when map is linked to an active or upcoming challenge', async () => {
+      mockQuery.mockResolvedValue([{ id: 1 }]);
+
+      await expect(customMapsService.deleteMap(10, 42)).rejects.toThrow(
+        'Cannot delete map: linked to an active or upcoming challenge',
+      );
+      expect(mockExecute).not.toHaveBeenCalled();
     });
   });
 

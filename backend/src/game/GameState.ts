@@ -7,6 +7,8 @@ import {
   PowerUpType,
   Direction,
   KillCause,
+  SpectatorActionType,
+  SpectatorEnergyState,
 } from '@blast-arena/shared';
 import { getExplosionCells } from '@blast-arena/shared';
 import {
@@ -14,6 +16,17 @@ import {
   DEFAULT_POWERUP_DROP_RATE,
   TICK_RATE,
   MOVE_COOLDOWN_BASE,
+  SPECTATOR_ENERGY_PER_TICK,
+  SPECTATOR_MAX_ENERGY,
+  SPECTATOR_COOLDOWN_TICKS,
+  SPECTATOR_WALL_COST,
+  SPECTATOR_METEOR_COST,
+  SPECTATOR_POWERUP_COST,
+  SPECTATOR_SPEED_ZONE_COST,
+  SPECTATOR_WALL_DURATION_TICKS,
+  SPECTATOR_SPEED_ZONE_DURATION_TICKS,
+  SPECTATOR_SPAWN_EXCLUSION_RADIUS,
+  SPECTATOR_WARNING_TICKS,
 } from '@blast-arena/shared';
 import { QUICKSAND_KILL_TICKS, SPIKE_SAFE_TICKS, SPIKE_CYCLE_TICKS } from '@blast-arena/shared';
 import { isSlowingTile } from '@blast-arena/shared';
@@ -37,6 +50,7 @@ import { InputBuffer } from './InputBuffer';
 import { IBotAI } from './BotAI';
 import { getBotAIRegistry } from '../services/botai-registry';
 import { GameLogger } from '../utils/gameLogger';
+import { PuzzleTileProcessor } from './PuzzleTileProcessor';
 
 /** Single-pass Map-to-array transform (avoids intermediate Array.from allocation) */
 function mapToArray<K, V, R>(map: Map<K, V>, fn: (v: V) => R): R[] {
@@ -75,7 +89,11 @@ export interface GameConfig {
   enabledMapEvents?: string[];
   /** Array of hazard tile types to place on the map */
   hazardTiles?: string[];
+  /** Array of puzzle tile categories to place on the map */
+  puzzleTiles?: string[];
   botAiId?: string;
+  /** Enable spectator game master (dead players can interact with the match) */
+  enableSpectatorActions?: boolean;
   /** If provided, use this pre-built map instead of generating one */
   customMap?: ReturnType<typeof generateMap>;
 }
@@ -155,7 +173,10 @@ export class GameStateManager {
           | 'freeze_wave'
           | 'bomb_surge'
           | 'hill_move'
-          | 'ufo_abduction';
+          | 'ufo_abduction'
+          | 'spectator_wall'
+          | 'spectator_powerup'
+          | 'spectator_speed_zone';
         position?: Position;
         tick: number;
         warningTick?: number;
@@ -176,6 +197,21 @@ export class GameStateManager {
   private frozenTilesRevertTick: number = 0;
   // Enabled map event types (granular control)
   private enabledMapEventTypes: Set<string> = new Set();
+
+  // Puzzle tile processor (switches, gates, crumbling floors)
+  private puzzleProcessor: PuzzleTileProcessor | null = null;
+
+  // Spectator Game Master state
+  public enableSpectatorActions: boolean = false;
+  private spectatorActionBuffer: {
+    playerId: number;
+    type: SpectatorActionType;
+    position: Position;
+  }[] = [];
+  private spectatorEnergy: Map<number, number> = new Map();
+  private spectatorCooldowns: Map<number, number> = new Map();
+  private temporaryWalls: Map<string, { revertTick: number; originalType: TileType }> = new Map();
+  private temporarySpeedZones: Map<string, { expiryTick: number; boost: boolean }> = new Map();
 
   // Hazard tile state
   private hazardTileTypes: string[] = [];
@@ -208,12 +244,16 @@ export class GameStateManager {
       enableMapEvents = false,
       enabledMapEvents = [],
       hazardTiles = [],
+      puzzleTiles = [],
       botAiId = 'builtin',
+      enableSpectatorActions = false,
     } = config;
     this.botAiId = botAiId;
+    this.enableSpectatorActions = enableSpectatorActions;
 
     this.map =
-      config.customMap ?? generateMap(mapWidth, mapHeight, mapSeed, wallDensity, hazardTiles);
+      config.customMap ??
+      generateMap(mapWidth, mapHeight, mapSeed, wallDensity, hazardTiles, puzzleTiles);
     this.collisionSystem = new CollisionSystem(
       this.map.tiles,
       this.map.width,
@@ -263,6 +303,15 @@ export class GameStateManager {
             this.spikePositions.push({ x, y });
           }
         }
+      }
+    }
+
+    // Initialize puzzle tile processor if puzzle tiles are present (procedural or custom map)
+    // For custom maps, always try — the processor scans the grid and sets hasPuzzleTiles
+    if (puzzleTiles.length > 0 || this.map.puzzleConfig || config.customMap) {
+      const processor = new PuzzleTileProcessor(this, this.map.puzzleConfig);
+      if (processor.hasPuzzleTiles) {
+        this.puzzleProcessor = processor;
       }
     }
 
@@ -463,6 +512,23 @@ export class GameStateManager {
           }
         }
       }
+
+      // 1d. Speed zone effects (spectator game master)
+      if (this.enableSpectatorActions && this.temporarySpeedZones.size > 0) {
+        for (const player of this.players.values()) {
+          if (!player.alive || !player.movedThisTick) continue;
+          const zone = this.getSpeedZoneAt(player.position.x, player.position.y);
+          if (zone) {
+            if (zone.boost) {
+              // Speed boost: reduce cooldown by half
+              player.moveCooldown = Math.max(1, Math.floor(player.moveCooldown / 2));
+            } else {
+              // Slow zone: add extra cooldown
+              player.moveCooldown += MOVE_COOLDOWN_BASE;
+            }
+          }
+        }
+      }
     }
 
     // 2. Update bomb timers and slide kicked bombs
@@ -644,6 +710,11 @@ export class GameStateManager {
     // 6.3 Hazard tile processing
     if (this.hazardTileTypes.length > 0 && this.finishTick === null) {
       this.processHazardTiles();
+    }
+
+    // 6.4 Puzzle tile processing (switches, gates, crumbling floors)
+    if (this.puzzleProcessor && this.finishTick === null) {
+      this.puzzleProcessor.processTick(this);
     }
 
     // 6.5 King of the Hill scoring
@@ -927,6 +998,11 @@ export class GameStateManager {
       const prevLen = this.mapEvents.length;
       this.mapEvents = this.mapEvents.filter((e) => this.tick - e.tick < 200);
       if (this.mapEvents.length !== prevLen) this._mapEventsDirty = true;
+    }
+
+    // 6.8 Spectator Game Master actions
+    if (this.enableSpectatorActions && this.finishTick === null) {
+      this.processSpectatorActions();
     }
 
     // 7. Update Battle Royale zone
@@ -1217,7 +1293,10 @@ export class GameStateManager {
                 | 'freeze_wave'
                 | 'bomb_surge'
                 | 'hill_move'
-                | 'ufo_abduction',
+                | 'ufo_abduction'
+                | 'spectator_wall'
+                | 'spectator_powerup'
+                | 'spectator_speed_zone',
               position: e.position,
               tick: e.tick,
               warningTick: e.warningTick,
@@ -1229,6 +1308,244 @@ export class GameStateManager {
       this._mapEventsDirty = false;
     }
     return this._mapEventsCache;
+  }
+
+  // --- Spectator Game Master ---
+
+  private static readonly SPECTATOR_ACTION_COSTS: Record<SpectatorActionType, number> = {
+    place_wall: SPECTATOR_WALL_COST,
+    trigger_meteor: SPECTATOR_METEOR_COST,
+    drop_powerup: SPECTATOR_POWERUP_COST,
+    speed_zone: SPECTATOR_SPEED_ZONE_COST,
+  };
+
+  /** Validate and buffer a spectator action for processing on the next tick. */
+  addSpectatorAction(
+    playerId: number,
+    type: SpectatorActionType,
+    position: Position,
+  ): { success: boolean; error?: string } {
+    if (!this.enableSpectatorActions)
+      return { success: false, error: 'Spectator actions disabled' };
+    if (this.status !== 'playing') return { success: false, error: 'Game not in progress' };
+    if (this.finishTick !== null) return { success: false, error: 'Game is finishing' };
+
+    const player = this.players.get(playerId);
+    if (!player) return { success: false, error: 'Player not found' };
+    if (player.alive)
+      return { success: false, error: 'Only dead players can use spectator actions' };
+    if (player.isBot) return { success: false, error: 'Bots cannot use spectator actions' };
+
+    // Energy check
+    const cost = GameStateManager.SPECTATOR_ACTION_COSTS[type];
+    const energy = this.spectatorEnergy.get(playerId) ?? 0;
+    if (energy < cost) return { success: false, error: 'Not enough energy' };
+
+    // Cooldown check
+    const cooldown = this.spectatorCooldowns.get(playerId) ?? 0;
+    if (cooldown > this.tick) return { success: false, error: 'Action on cooldown' };
+
+    // Position bounds check
+    const { x, y } = position;
+    if (x < 1 || x >= this.map.width - 1 || y < 1 || y >= this.map.height - 1) {
+      return { success: false, error: 'Position out of bounds' };
+    }
+
+    // Spawn exclusion check
+    for (const sp of this.map.spawnPoints) {
+      const dx = Math.abs(sp.x - x);
+      const dy = Math.abs(sp.y - y);
+      if (dx <= SPECTATOR_SPAWN_EXCLUSION_RADIUS && dy <= SPECTATOR_SPAWN_EXCLUSION_RADIUS) {
+        return { success: false, error: 'Too close to a spawn point' };
+      }
+    }
+
+    // Cannot target tiles with players or bombs
+    const posKey = `${x},${y}`;
+    for (const p of this.players.values()) {
+      if (p.alive && `${p.position.x},${p.position.y}` === posKey) {
+        return { success: false, error: 'Tile occupied by a player' };
+      }
+    }
+    for (const b of this.bombs.values()) {
+      if (`${b.position.x},${b.position.y}` === posKey) {
+        return { success: false, error: 'Tile occupied by a bomb' };
+      }
+    }
+
+    // Team restriction: cannot target within 2 tiles of alive teammates
+    if (player.team !== null) {
+      for (const p of this.players.values()) {
+        if (!p.alive || p.team !== player.team) continue;
+        const tdx = Math.abs(p.position.x - x);
+        const tdy = Math.abs(p.position.y - y);
+        if (tdx <= 2 && tdy <= 2) {
+          return { success: false, error: 'Too close to a teammate' };
+        }
+      }
+    }
+
+    // Wall placement requires empty/spawn tile
+    if (type === 'place_wall') {
+      const tile = this.collisionSystem.getTileAt(x, y);
+      if (tile !== 'empty' && tile !== 'spawn') {
+        return { success: false, error: 'Can only place walls on empty tiles' };
+      }
+    }
+
+    // Deduct energy and set cooldown
+    this.spectatorEnergy.set(playerId, energy - cost);
+    this.spectatorCooldowns.set(playerId, this.tick + SPECTATOR_COOLDOWN_TICKS);
+
+    this.spectatorActionBuffer.push({ playerId, type, position });
+    return { success: true };
+  }
+
+  /** Process spectator energy accumulation, execute buffered actions, expire temporary effects. */
+  private processSpectatorActions(): void {
+    // Accumulate energy for dead non-bot players
+    for (const player of this.players.values()) {
+      if (player.isBot) continue;
+      if (player.alive) {
+        // Reset energy when alive (so it starts at 0 on death)
+        this.spectatorEnergy.delete(player.id);
+        this.spectatorCooldowns.delete(player.id);
+        continue;
+      }
+      const current = this.spectatorEnergy.get(player.id) ?? 0;
+      if (current < SPECTATOR_MAX_ENERGY) {
+        this.spectatorEnergy.set(
+          player.id,
+          Math.min(current + SPECTATOR_ENERGY_PER_TICK, SPECTATOR_MAX_ENERGY),
+        );
+      }
+    }
+
+    // Execute buffered actions
+    for (const action of this.spectatorActionBuffer) {
+      switch (action.type) {
+        case 'place_wall':
+          this.applySpectatorWall(action.position);
+          break;
+        case 'trigger_meteor':
+          this.applySpectatorMeteor(action.position);
+          break;
+        case 'drop_powerup':
+          this.applySpectatorPowerup(action.position);
+          break;
+        case 'speed_zone':
+          this.applySpectatorSpeedZone(action.position);
+          break;
+      }
+    }
+    this.spectatorActionBuffer = [];
+
+    // Expire temporary walls
+    for (const [key, wallData] of this.temporaryWalls) {
+      if (this.tick >= wallData.revertTick) {
+        const [xStr, yStr] = key.split(',');
+        const x = parseInt(xStr);
+        const y = parseInt(yStr);
+        // Only revert if the tile is still 'destructible' (hasn't been blown up)
+        if (this.map.tiles[y][x] === 'destructible') {
+          this.setTileTracked(x, y, wallData.originalType);
+        }
+        this.temporaryWalls.delete(key);
+      }
+    }
+
+    // Expire temporary speed zones
+    for (const [key, zoneData] of this.temporarySpeedZones) {
+      if (this.tick >= zoneData.expiryTick) {
+        this.temporarySpeedZones.delete(key);
+      }
+    }
+  }
+
+  private applySpectatorWall(position: Position): void {
+    const { x, y } = position;
+    const originalType = this.map.tiles[y][x] as TileType;
+    this.setTileTracked(x, y, 'destructible');
+    this.temporaryWalls.set(`${x},${y}`, {
+      revertTick: this.tick + SPECTATOR_WALL_DURATION_TICKS,
+      originalType,
+    });
+    this.mapEvents.push({
+      type: 'spectator_wall',
+      position: { x, y },
+      tick: this.tick,
+    });
+    this._mapEventsDirty = true;
+  }
+
+  private applySpectatorMeteor(position: Position): void {
+    const impactTick = this.tick + SPECTATOR_WARNING_TICKS;
+    this.mapEvents.push({
+      type: 'spectator_powerup', // warning marker (reuses visual)
+      position: { ...position },
+      tick: impactTick,
+      warningTick: this.tick,
+    });
+    // Schedule the actual meteor as a standard meteor event
+    this.mapEvents.push({
+      type: 'meteor',
+      position: { ...position },
+      tick: impactTick,
+      warningTick: this.tick,
+    });
+    this._mapEventsDirty = true;
+  }
+
+  private applySpectatorPowerup(position: Position): void {
+    // Drop a random enabled power-up
+    const type = this.enabledPowerUps[Math.floor(this.rng.next() * this.enabledPowerUps.length)];
+    const powerUp = new PowerUp(position, type);
+    this.powerUps.set(powerUp.id, powerUp);
+    this.mapEvents.push({
+      type: 'spectator_powerup',
+      position: { ...position },
+      tick: this.tick,
+    });
+    this._mapEventsDirty = true;
+  }
+
+  private applySpectatorSpeedZone(position: Position): void {
+    // Alternate between boost and slow based on RNG
+    const boost = this.rng.next() > 0.5;
+    this.temporarySpeedZones.set(`${position.x},${position.y}`, {
+      expiryTick: this.tick + SPECTATOR_SPEED_ZONE_DURATION_TICKS,
+      boost,
+    });
+    this.mapEvents.push({
+      type: 'spectator_speed_zone',
+      position: { ...position },
+      tick: this.tick + SPECTATOR_SPEED_ZONE_DURATION_TICKS,
+      warningTick: this.tick,
+    });
+    this._mapEventsDirty = true;
+  }
+
+  /** Check if a position has a temporary speed zone and return its effect. */
+  getSpeedZoneAt(x: number, y: number): { boost: boolean } | null {
+    const zone = this.temporarySpeedZones.get(`${x},${y}`);
+    return zone ?? null;
+  }
+
+  /** Get spectator energy states for tick state broadcast. */
+  getSpectatorEnergyStates(): SpectatorEnergyState[] {
+    const states: SpectatorEnergyState[] = [];
+    for (const player of this.players.values()) {
+      if (player.isBot || player.alive) continue;
+      const energy = this.spectatorEnergy.get(player.id) ?? 0;
+      const cooldownTick = this.spectatorCooldowns.get(player.id) ?? 0;
+      states.push({
+        playerId: player.id,
+        energy,
+        maxEnergy: SPECTATOR_MAX_ENERGY,
+        cooldownTicksRemaining: Math.max(0, cooldownTick - this.tick),
+      });
+    }
+    return states;
   }
 
   /** Set a tile type and track the change for tile diff broadcast */
@@ -1838,6 +2155,7 @@ export class GameStateManager {
         : undefined,
       kothScores: this.hillZone ? Object.fromEntries(this.kothScores) : undefined,
       mapEvents: this.getSerializedMapEvents(),
+      spectatorActions: this.enableSpectatorActions || undefined,
       status: this.status,
       winnerId: this.winnerId,
       winnerTeam: this.winnerTeam,
@@ -1882,6 +2200,8 @@ export class GameStateManager {
         : undefined,
       kothScores: this.hillZone ? Object.fromEntries(this.kothScores) : undefined,
       mapEvents: this.getSerializedMapEvents(),
+      spectatorEnergy: this.enableSpectatorActions ? this.getSpectatorEnergyStates() : undefined,
+      spectatorActions: this.enableSpectatorActions || undefined,
       status: this.status,
       winnerId: this.winnerId,
       winnerTeam: this.winnerTeam,

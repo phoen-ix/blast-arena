@@ -6,6 +6,7 @@
     "rooms": "Kamers",
     "campaign": "Campagne",
     "myMaps": "Mijn kaarten",
+    "challenge": "Uitdaging",
     "friends": "Vrienden",
     "messages": "Berichten",
     "party": "Groep",
@@ -370,6 +371,8 @@
     "gameSettings": "Spelinstellingen",
     "friendlyFire": "Friendly fire",
     "hazardTiles": "Gevaarlijke tegels",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Toeschouweracties",
     "mapEvents": "Dynamische kaartgebeurtenissen",
     "reinforcedWalls": "Versterkte muren",
     "recordMatch": "Wedstrijd opnemen",
@@ -463,6 +466,10 @@
       "spikes": "Stekels",
       "dark_rift": "Duistere scheur"
     },
+    "puzzleTypes": {
+      "switches_and_gates": "Switches & Gates",
+      "crumbling": "Crumbling Floors"
+    },
     "eventTypes": {
       "meteor": "Meteorinslag",
       "powerup_rain": "Power-upregen",
@@ -475,6 +482,30 @@
   "spectatorChat": {
     "title": "Toeschouwerschat",
     "placeholder": "Typ een bericht..."
+  },
+  "spectator": {
+    "place_wall": "Muur plaatsen",
+    "trigger_meteor": "Meteoor activeren",
+    "drop_powerup": "Power-up droppen",
+    "speed_zone": "Snelheidszone",
+    "clickToPlace": "Klik op de kaart om te plaatsen"
+  },
+  "challenge": {
+    "title": "Kaartuitdaging",
+    "loading": "Uitdaging laden...",
+    "noActive": "Geen actieve uitdaging op dit moment. Kom snel terug!",
+    "loadError": "Kan uitdaging niet laden",
+    "map": "Kaart",
+    "creator": "Maker",
+    "mode": "Modus",
+    "dates": "Data",
+    "play": "Speel uitdaging",
+    "leaderboard": "Ranglijst",
+    "player": "Speler",
+    "wins": "Overwinningen",
+    "kills": "Eliminaties",
+    "games": "Potjes",
+    "noScores": "Nog geen scores — wees de eerste om te spelen!"
   },
   "hud": {
     "spectator": "TOESCHOUWER — WASD/Pijltjes/D-Pad om te bewegen, 1-9/LB/RB of klik om te volgen",

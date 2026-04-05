@@ -6,6 +6,7 @@
     "rooms": "Pokoje",
     "campaign": "Kampania",
     "myMaps": "Moje mapy",
+    "challenge": "Wyzwanie",
     "friends": "Znajomi",
     "messages": "Wiadomo\u015bci",
     "party": "Dru\u017cyna",
@@ -370,6 +371,8 @@
     "gameSettings": "Ustawienia gry",
     "friendlyFire": "Ogie\u0144 przyjazny",
     "hazardTiles": "Kafelki zagro\u017ce\u0144",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Akcje widza",
     "mapEvents": "Dynamiczne zdarzenia na mapie",
     "reinforcedWalls": "Wzmocnione \u015bciany",
     "recordMatch": "Nagraj mecz",
@@ -463,6 +466,10 @@
       "spikes": "Kolce",
       "dark_rift": "Mroczny rozłam"
     },
+    "puzzleTypes": {
+      "switches_and_gates": "Switches & Gates",
+      "crumbling": "Crumbling Floors"
+    },
     "eventTypes": {
       "meteor": "Uderzenie meteoru",
       "powerup_rain": "Deszcz bonusów",
@@ -475,6 +482,30 @@
   "spectatorChat": {
     "title": "Czat obserwator\u00f3w",
     "placeholder": "Napisz wiadomo\u015b\u0107..."
+  },
+  "spectator": {
+    "place_wall": "Postaw \u015bcian\u0119",
+    "trigger_meteor": "Wyzw\u00f3l meteor",
+    "drop_powerup": "Zrzu\u0107 wzmocnienie",
+    "speed_zone": "Strefa pr\u0119dko\u015bci",
+    "clickToPlace": "Kliknij na map\u0119 aby umie\u015bci\u0107"
+  },
+  "challenge": {
+    "title": "Wyzwanie Mapy",
+    "loading": "Wczytywanie wyzwania...",
+    "noActive": "Brak aktywnego wyzwania. Wróć wkrótce!",
+    "loadError": "Nie udało się załadować wyzwania",
+    "map": "Mapa",
+    "creator": "Twórca",
+    "mode": "Tryb",
+    "dates": "Daty",
+    "play": "Graj w wyzwanie",
+    "leaderboard": "Ranking",
+    "player": "Gracz",
+    "wins": "Zwycięstwa",
+    "kills": "Eliminacje",
+    "games": "Gry",
+    "noScores": "Brak wyników — bądź pierwszy!"
   },
   "hud": {
     "spectator": "OBSERWATOR \u2014 WASD/Strza\u0142ki/Krzy\u017cak do przesuwania, 1-9/LB/RB lub klikni\u0119cie, aby \u015bledzi\u0107",

@@ -6,6 +6,7 @@
     "rooms": "Rum",
     "campaign": "Kampanj",
     "myMaps": "Mina kartor",
+    "challenge": "Utmaning",
     "friends": "Vänner",
     "messages": "Meddelanden",
     "party": "Grupp",
@@ -370,6 +371,8 @@
     "gameSettings": "Spelinställningar",
     "friendlyFire": "Friendly fire",
     "hazardTiles": "Farorutor",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Åskådarhandlingar",
     "mapEvents": "Dynamiska karthändelser",
     "reinforcedWalls": "Förstärkta väggar",
     "recordMatch": "Spela in match",
@@ -463,6 +466,10 @@
       "spikes": "Spikar",
       "dark_rift": "Mörk spricka"
     },
+    "puzzleTypes": {
+      "switches_and_gates": "Switches & Gates",
+      "crumbling": "Crumbling Floors"
+    },
     "eventTypes": {
       "meteor": "Meteorregn",
       "powerup_rain": "Power-up-regn",
@@ -475,6 +482,30 @@
   "spectatorChat": {
     "title": "Åskådarchatt",
     "placeholder": "Skriv ett meddelande..."
+  },
+  "spectator": {
+    "place_wall": "Placera vägg",
+    "trigger_meteor": "Utlös meteor",
+    "drop_powerup": "Släpp power-up",
+    "speed_zone": "Hastighetszon",
+    "clickToPlace": "Klicka på kartan för att placera"
+  },
+  "challenge": {
+    "title": "Kartutmaning",
+    "loading": "Laddar utmaning...",
+    "noActive": "Ingen aktiv utmaning just nu. Kom tillbaka snart!",
+    "loadError": "Kunde inte ladda utmaning",
+    "map": "Karta",
+    "creator": "Skapare",
+    "mode": "Läge",
+    "dates": "Datum",
+    "play": "Spela utmaning",
+    "leaderboard": "Topplista",
+    "player": "Spelare",
+    "wins": "Vinster",
+    "kills": "Elimineringar",
+    "games": "Matcher",
+    "noScores": "Inga poäng ännu — bli den första att spela!"
   },
   "hud": {
     "spectator": "ÅSKÅDARE — WASD/Pilar/Styrplatta för att panorera, 1-9/LB/RB eller klicka för att följa",

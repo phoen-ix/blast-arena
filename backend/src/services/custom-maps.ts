@@ -1,6 +1,6 @@
 import { CustomMap, CustomMapSummary, TileType, Position } from '@blast-arena/shared';
 import { query, execute } from '../db/connection';
-import { CustomMapRow } from '../db/types';
+import { CustomMapRow, IdRow } from '../db/types';
 import { RowDataPacket } from 'mysql2';
 
 interface RatingAggRow extends RowDataPacket {
@@ -158,6 +158,15 @@ export async function updateMap(
 }
 
 export async function deleteMap(id: number, userId: number): Promise<boolean> {
+  // Block deletion if map is linked to an active or future challenge
+  const challengeRows = await query<IdRow[]>(
+    `SELECT id FROM map_challenges WHERE custom_map_id = ? AND (is_active = TRUE OR end_date >= CURDATE()) LIMIT 1`,
+    [id],
+  );
+  if (challengeRows.length > 0) {
+    throw new Error('Cannot delete map: linked to an active or upcoming challenge');
+  }
+
   const result = await execute('DELETE FROM custom_maps WHERE id = ? AND created_by = ?', [
     id,
     userId,

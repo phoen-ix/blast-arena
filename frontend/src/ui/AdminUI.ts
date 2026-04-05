@@ -13,6 +13,7 @@ import { SimulationsTab } from './admin/SimulationsTab';
 import { AITab } from './admin/AITab';
 import { CampaignTab } from './admin/CampaignTab';
 import { SeasonsTab } from './admin/SeasonsTab';
+import { ChallengesTab } from './admin/ChallengesTab';
 import { AchievementsTab } from './admin/AchievementsTab';
 import { t } from '../i18n';
 
@@ -117,6 +118,12 @@ export class AdminUI {
         label: t('admin:tabs.achievements'),
         adminOnly: true,
         instance: new AchievementsTab(notifications),
+      },
+      {
+        id: 'challenges',
+        label: t('admin:tabs.challenges'),
+        adminOnly: true,
+        instance: new ChallengesTab(notifications),
       },
     ];
 

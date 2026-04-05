@@ -213,6 +213,14 @@ export class CreateRoomView implements ILobbyView {
                 <input type="checkbox" id="cr-hazard-tiles" style="accent-color:var(--info);">
                 <span style="color:var(--info);">${t('ui:createRoom.hazardTiles')}</span>
               </label>
+              <label class="option-chip">
+                <input type="checkbox" id="cr-puzzle-tiles" style="accent-color:var(--success);">
+                <span style="color:var(--success);">${t('ui:createRoom.puzzleTiles')}</span>
+              </label>
+              <label class="option-chip">
+                <input type="checkbox" id="cr-spectator-actions" style="accent-color:var(--accent);">
+                <span style="color:var(--accent);">${t('ui:createRoom.spectatorActions')}</span>
+              </label>
             </div>
             <div id="cr-event-types" class="create-room-options" style="display:none; margin-left:1rem; margin-top:0.25rem; padding-left:0.5rem; border-left:2px solid var(--warning);">
               ${[
@@ -239,6 +247,17 @@ export class CreateRoomView implements ILobbyView {
               <label class="option-chip">
                 <input type="checkbox" class="cr-hazard-type" value="${hz}" checked style="accent-color:var(--info);">
                 <span style="color:var(--info);">${t(`ui:createRoom.hazardTypes.${hz}`)}</span>
+              </label>`,
+                )
+                .join('')}
+            </div>
+            <div id="cr-puzzle-types" class="create-room-options" style="display:none; margin-left:1rem; margin-top:0.25rem; padding-left:0.5rem; border-left:2px solid var(--success);">
+              ${['switches_and_gates', 'crumbling']
+                .map(
+                  (pt) => `
+              <label class="option-chip">
+                <input type="checkbox" class="cr-puzzle-type" value="${pt}" checked style="accent-color:var(--success);">
+                <span style="color:var(--success);">${t(`ui:createRoom.puzzleTypes.${pt}`)}</span>
               </label>`,
                 )
                 .join('')}
@@ -316,6 +335,8 @@ export class CreateRoomView implements ILobbyView {
     setCheckbox('#cr-reinforced-walls', d.reinforcedWalls);
     setCheckbox('#cr-map-events', d.enableMapEvents);
     setCheckbox('#cr-hazard-tiles', d.hazardTiles);
+    setCheckbox('#cr-puzzle-tiles', d.puzzleTiles);
+    setCheckbox('#cr-spectator-actions', d.enableSpectatorActions);
     setCheckbox('#cr-friendly-fire', d.friendlyFire);
     setSelect('#cr-bot-ai', d.botAiId);
 
@@ -353,10 +374,18 @@ export class CreateRoomView implements ILobbyView {
     const updateHazardPanel = () => {
       hazardTypesPanel.style.display = hazardCheck.checked ? 'flex' : 'none';
     };
+    const puzzleCheck = this.container.querySelector('#cr-puzzle-tiles') as HTMLInputElement;
+    const puzzleTypesPanel = this.container.querySelector('#cr-puzzle-types') as HTMLElement;
+
+    const updatePuzzlePanel = () => {
+      puzzleTypesPanel.style.display = puzzleCheck.checked ? 'flex' : 'none';
+    };
     mapEventsCheck.addEventListener('change', updateEventPanel);
     hazardCheck.addEventListener('change', updateHazardPanel);
+    puzzleCheck.addEventListener('change', updatePuzzlePanel);
     updateEventPanel();
     updateHazardPanel();
+    updatePuzzlePanel();
 
     // Bot difficulty/AI enable
     const botsSelect = this.container.querySelector('#cr-bots') as HTMLSelectElement;
@@ -532,6 +561,16 @@ export class CreateRoomView implements ILobbyView {
           (cb) => (cb as HTMLInputElement).value,
         )
       : undefined;
+    const puzzleTiles = (this.container.querySelector('#cr-puzzle-tiles') as HTMLInputElement)
+      .checked;
+    const selectedPuzzleTiles = puzzleTiles
+      ? Array.from(this.container.querySelectorAll('.cr-puzzle-type:checked')).map(
+          (cb) => (cb as HTMLInputElement).value,
+        )
+      : undefined;
+    const enableSpectatorActions = (
+      this.container.querySelector('#cr-spectator-actions') as HTMLInputElement
+    ).checked;
     const recordGame = this.recordingsEnabled
       ? ((this.container.querySelector('#cr-record-game') as HTMLInputElement)?.checked ?? true)
       : false;
@@ -557,6 +596,9 @@ export class CreateRoomView implements ILobbyView {
           selectedMapEvents,
           hazardTiles,
           selectedHazardTiles,
+          puzzleTiles,
+          selectedPuzzleTiles,
+          enableSpectatorActions,
           recordGame,
           botAiId: effectiveBots > 0 && botAiSelect ? botAiSelect.value : undefined,
           customMapId,

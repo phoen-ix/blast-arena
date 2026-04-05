@@ -14,6 +14,7 @@ export * from './types/leaderboard';
 export * from './types/achievements';
 export * from './types/cosmetics';
 export * from './types/custom-maps';
+export * from './types/challenges';
 export * from './constants/game';
 export * from './constants/powerups';
 export * from './constants/modes';

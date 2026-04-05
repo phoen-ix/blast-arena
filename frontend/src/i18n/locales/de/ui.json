@@ -6,6 +6,7 @@
     "rooms": "Räume",
     "campaign": "Kampagne",
     "myMaps": "Meine Karten",
+    "challenge": "Herausforderung",
     "friends": "Freunde",
     "messages": "Nachrichten",
     "party": "Gruppe",
@@ -370,6 +371,8 @@
     "gameSettings": "Spieleinstellungen",
     "friendlyFire": "Eigenbeschuss",
     "hazardTiles": "Gefahrenfelder",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Zuschaueraktionen",
     "mapEvents": "Dynamische Karten-Events",
     "reinforcedWalls": "Verstärkte Wände",
     "recordMatch": "Spiel aufzeichnen",
@@ -436,6 +439,10 @@
       "spikes": "Stacheln",
       "dark_rift": "Dunkler Riss"
     },
+    "puzzleTypes": {
+      "switches_and_gates": "Switches & Gates",
+      "crumbling": "Crumbling Floors"
+    },
     "eventTypes": {
       "meteor": "Meteoriteneinschlag",
       "powerup_rain": "Power-Up-Regen",
@@ -475,6 +482,30 @@
   "spectatorChat": {
     "title": "Zuschauer-Chat",
     "placeholder": "Nachricht eingeben..."
+  },
+  "spectator": {
+    "place_wall": "Wand platzieren",
+    "trigger_meteor": "Meteor auslösen",
+    "drop_powerup": "Power-Up ablegen",
+    "speed_zone": "Geschwindigkeitszone",
+    "clickToPlace": "Klicke auf die Karte zum Platzieren"
+  },
+  "challenge": {
+    "title": "Karten-Herausforderung",
+    "loading": "Lade Herausforderung...",
+    "noActive": "Keine aktive Herausforderung gerade. Schau bald wieder vorbei!",
+    "loadError": "Herausforderung konnte nicht geladen werden",
+    "map": "Karte",
+    "creator": "Ersteller",
+    "mode": "Modus",
+    "dates": "Daten",
+    "play": "Herausforderung spielen",
+    "leaderboard": "Rangliste",
+    "player": "Spieler",
+    "wins": "Siege",
+    "kills": "Absch\u00fcsse",
+    "games": "Spiele",
+    "noScores": "Noch keine Ergebnisse \u2014 sei der Erste!"
   },
   "hud": {
     "spectator": "ZUSCHAUER — WASD/Pfeiltasten/D-Pad zum Bewegen, 1-9/LB/RB oder Klick zum Folgen",

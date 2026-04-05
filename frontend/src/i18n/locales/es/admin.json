@@ -12,7 +12,8 @@
     "announcements": "Anuncios",
     "campaign": "Campaña",
     "seasons": "Temporadas",
-    "achievements": "Logros"
+    "achievements": "Logros",
+    "challenges": "Desafíos"
   },
   "users": {
     "searchPlaceholder": "Buscar por nombre de usuario o correo...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Muros Reforzados",
     "mapEvents": "Eventos del Mapa",
     "hazardTiles": "Casillas de Peligro",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Acciones de Espectador",
     "friendlyFire": "Fuego Amigo",
     "recordReplays": "Grabar Repeticiones",
     "powerUps": "Power-Ups",
@@ -974,6 +977,7 @@
       "reinforcedWalls": "Muros Reforzados",
       "mapEvents": "Eventos del Mapa",
       "hazardTiles": "Casillas de Peligro",
+      "puzzleTiles": "Puzzle Tiles",
       "friendlyFire": "Fuego Amigo",
       "recordReplays": "Grabar Repeticiones",
       "powerUps": "Power-Ups",
@@ -1030,5 +1034,30 @@
         "full": "Completo"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "Sistema de desafíos",
+    "enabled": "Desafíos activados",
+    "toggleSaved": "Configuración de desafío guardada",
+    "title": "Desafíos de mapa",
+    "titleLabel": "Título",
+    "description": "Descripción",
+    "map": "Mapa",
+    "gameMode": "Modo de juego",
+    "startDate": "Fecha de inicio",
+    "endDate": "Fecha de fin",
+    "dates": "Fechas",
+    "status": "Estado",
+    "actions": "Acciones",
+    "create": "Crear desafío",
+    "cancel": "Cancelar",
+    "created": "Desafío creado",
+    "activated": "Desafío activado",
+    "deactivated": "Desafío desactivado",
+    "deleted": "Desafío eliminado",
+    "activate": "Activar",
+    "deactivate": "Desactivar",
+    "deleteBtn": "Eliminar",
+    "none": "Aún no hay desafíos"
   }
 }

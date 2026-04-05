@@ -14,6 +14,8 @@ export interface GameDefaults {
   reinforcedWalls?: boolean;
   enableMapEvents?: boolean;
   hazardTiles?: boolean;
+  puzzleTiles?: boolean;
+  enableSpectatorActions?: boolean;
   friendlyFire?: boolean;
   enabledPowerUps?: PowerUpType[];
   botAiId?: string;

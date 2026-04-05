@@ -12,7 +12,8 @@
     "announcements": "Meddelanden",
     "campaign": "Kampanj",
     "seasons": "Säsonger",
-    "achievements": "Prestationer"
+    "achievements": "Prestationer",
+    "challenges": "Utmaningar"
   },
   "users": {
     "searchPlaceholder": "Sök efter användarnamn eller e-post...",
@@ -560,6 +561,8 @@
     "reinforcedWalls": "Förstärkta väggar",
     "mapEvents": "Karthändelser",
     "hazardTiles": "Farorutor",
+    "puzzleTiles": "Puzzle Tiles",
+    "spectatorActions": "Åskådarhandlingar",
     "friendlyFire": "Friendly fire",
     "recordReplays": "Spela in repriser",
     "powerUps": "Power-ups",
@@ -974,6 +977,7 @@
       "reinforcedWalls": "Förstärkta väggar",
       "mapEvents": "Karthändelser",
       "hazardTiles": "Farorutor",
+      "puzzleTiles": "Puzzle Tiles",
       "friendlyFire": "Friendly fire",
       "recordReplays": "Spela in repriser",
       "powerUps": "Power-ups",
@@ -1030,5 +1034,30 @@
         "full": "Fullständig"
       }
     }
+  },
+  "challenges": {
+    "globalToggle": "Utmaningssystem",
+    "enabled": "Utmaningar aktiverade",
+    "toggleSaved": "Utmaningsinställning sparad",
+    "title": "Kartutmaningar",
+    "titleLabel": "Titel",
+    "description": "Beskrivning",
+    "map": "Karta",
+    "gameMode": "Spelläge",
+    "startDate": "Startdatum",
+    "endDate": "Slutdatum",
+    "dates": "Datum",
+    "status": "Status",
+    "actions": "Åtgärder",
+    "create": "Skapa utmaning",
+    "cancel": "Avbryt",
+    "created": "Utmaning skapad",
+    "activated": "Utmaning aktiverad",
+    "deactivated": "Utmaning inaktiverad",
+    "deleted": "Utmaning borttagen",
+    "activate": "Aktivera",
+    "deactivate": "Inaktivera",
+    "deleteBtn": "Ta bort",
+    "none": "Inga utmaningar ännu"
   }
 }

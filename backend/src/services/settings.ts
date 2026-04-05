@@ -1,6 +1,13 @@
 import { query, execute } from '../db/connection';
 import { SettingRow } from '../db/types';
-import { GameDefaults, SimulationDefaults, EmailSettings, ChatMode, RankConfig, DEFAULT_RANK_CONFIG } from '@blast-arena/shared';
+import {
+  GameDefaults,
+  SimulationDefaults,
+  EmailSettings,
+  ChatMode,
+  RankConfig,
+  DEFAULT_RANK_CONFIG,
+} from '@blast-arena/shared';
 
 export async function getSetting(key: string): Promise<string | null> {
   const rows = await query<SettingRow[]>(
@@ -24,6 +31,11 @@ export async function isRecordingEnabled(): Promise<boolean> {
 
 export async function isRegistrationEnabled(): Promise<boolean> {
   const value = await getSetting('registration_enabled');
+  return value !== 'false';
+}
+
+export async function isSpectatorActionsEnabled(): Promise<boolean> {
+  const value = await getSetting('spectator_actions_enabled');
   return value !== 'false';
 }
 

@@ -62,7 +62,7 @@ Killed players drop one random collected power-up at their death position. All p
 
 ## Map Features
 
-All optional, toggled per-room with individually selectable types: **Reinforced Walls** (2-hit destructible walls), **Map Events** (choose which events can occur — meteor strikes with 2-second visual warning, pulsing crosshair, exclamation mark, growing shadow followed by a falling meteor animation with screen shake and particle effects; power-up rain every 60s; wall collapse destroys a 3x3 area with dust warning; freeze wave converts a row or column to ice temporarily; bomb surge reduces all bomb fuse timers with a screen pulse; UFO abduction teleports a random player to a new location with tractor beam warning and brief invulnerability), **Hazard Tiles** (choose which hazard types appear — teleporter pairs with random A↔B transport, conveyor belts with animated moving stripes that auto-push players and bombs, vine slows movement, quicksand slows and kills over time, ice causes sliding momentum, lava kills instantly and detonates adjacent bombs, mud slows movement, spikes cycle between safe and lethal phases, dark rift teleports to a random tile). Hazard tiles are placed as clustered groups on the map. Special tiles and power-ups can be hidden under destructible walls — revealed when the wall is destroyed. **Puzzle Tiles** (campaign only): color-coded switches (toggle, pressure plate, one-shot) that open/close matching gates (explosions pass through gates in both states), and crumbling floors that collapse into pits after being stepped on — enables environmental puzzle design with bomb-triggered switches, timed pressure plate rushes, and path-planning challenges.
+All optional, toggled per-room with individually selectable types: **Reinforced Walls** (2-hit destructible walls), **Map Events** (choose which events can occur — meteor strikes with 2-second visual warning, pulsing crosshair, exclamation mark, growing shadow followed by a falling meteor animation with screen shake and particle effects; power-up rain every 60s; wall collapse destroys a 3x3 area with dust warning; freeze wave converts a row or column to ice temporarily; bomb surge reduces all bomb fuse timers with a screen pulse; UFO abduction teleports a random player to a new location with tractor beam warning and brief invulnerability), **Hazard Tiles** (choose which hazard types appear — teleporter pairs with random A↔B transport, conveyor belts with animated moving stripes that auto-push players and bombs, vine slows movement, quicksand slows and kills over time, ice causes sliding momentum, lava kills instantly and detonates adjacent bombs, mud slows movement, spikes cycle between safe and lethal phases, dark rift teleports to a random tile). Hazard tiles are placed as clustered groups on the map. Special tiles and power-ups can be hidden under destructible walls — revealed when the wall is destroyed. **Puzzle Tiles** (campaign + multiplayer): color-coded switches (toggle, pressure plate, one-shot) that open/close matching gates (explosions pass through gates in both states), and crumbling floors that collapse into pits after being stepped on — enables environmental puzzle design with bomb-triggered switches, timed pressure plate rushes, and path-planning challenges. In multiplayer, puzzle tiles are procedurally placed with category selection (switches & gates, crumbling floors).
 
 ## Campaign
 
@@ -77,6 +77,7 @@ Create and share custom maps for multiplayer rooms. The built-in map editor (ada
 - **Validation**: Maps must have odd dimensions (9-51), wall borders, 2-8 spawn points, and valid tile types. Validated both client-side and server-side
 - **Play count tracking**: Each game played on a custom map increments its play counter
 - **Community ratings**: Players can rate published maps 1-5 stars. Maps sorted by average rating on the community listing. Star ratings shown in room creation dropdown
+- **Map Challenges**: Admin-created weekly challenges featuring published community maps. Players compete on the featured map with results auto-recorded to a challenge-specific leaderboard (wins, kills, games played). Challenge view in lobby sidebar shows active challenge with map preview, creator spotlight, and top scores. "Play Challenge" creates a room with locked map and game mode. Maps linked to active/upcoming challenges are protected from deletion. Admin panel tab for CRUD, activate/deactivate (one active at a time), and global toggle
 
 ## Bot AI
 
@@ -103,7 +104,7 @@ Admin-configurable achievement system with four condition types: cumulative stat
 
 | Tab | Access | Key Features |
 |-----|--------|-------------|
-| Dashboard | Admin | Stats, server settings (recordings, registration, email/SMTP, chat modes, XP multiplier, default theme, GitHub/imprint display), game/simulation defaults, revoke all sessions |
+| Dashboard | Admin | Stats, server settings (recordings, registration, email/SMTP, chat modes, XP multiplier, default theme, GitHub/imprint display), game/simulation defaults (incl. puzzle tiles, spectator actions), revoke all sessions |
 | Users | Staff | Search, roles, deactivate, delete (simple confirmation), password reset, revoke sessions, bulk account cleanup (unverified/inactive/deactivated) |
 | Matches | Staff | History, per-player stats, replay viewer, delete |
 | Rooms | Staff | Live rooms, spectate, kick, force close |
@@ -114,6 +115,7 @@ Admin-configurable achievement system with four condition types: cumulative stat
 | Announcements | Staff | Toast broadcasts, persistent banners |
 | Seasons | Admin | Season CRUD, activate/end (hard/soft reset), rank tier config with color pickers |
 | Achievements | Admin | Achievement CRUD (4 condition types), cosmetic CRUD (4 types), reward linking, JSON export/import |
+| Challenges | Admin | Map challenge CRUD, activate/deactivate, global toggle, published map selection |
 
 All actions audit-logged. See [docs/admin-and-systems.md](docs/admin-and-systems.md).
 
@@ -129,6 +131,7 @@ All actions audit-logged. See [docs/admin-and-systems.md](docs/admin-and-systems
 - **Direct Messages**: Full-page two-column view (conversation sidebar + active conversation). Persistent messages between friends with unread badges, real-time delivery, read receipts.
 - **In-Game Emotes**: 12 emotes (GG, Help!, Nice!, Oops, Taunt, Thanks, Wow, Sorry, Let's Go!, No!, Wait, Boom!) — keys 1-6 for quick emotes, backtick (`) opens radial emote wheel for all 12. Floating bubbles above player sprites with 3s cooldown.
 - **Spectator Chat**: Dead players can text chat during live games. Collapsible panel bottom-left, role-colored usernames, 3/sec rate limit.
+- **Spectator Game Master**: Dead players accumulate energy (1/tick, cap 100) and spend it to interact with the live match: place temporary walls (30 energy, 10s duration), trigger targeted meteors (50 energy, 1.5s warning), drop random power-ups (40 energy), or create speed boost/slow zones (25 energy, 8s duration). Anti-griefing: 1s cooldown, rate limited, cannot target occupied tiles or near spawns/allies. Admin global toggle + per-room setting. Frontend action bar (Q/W/E/R hotkeys) with energy display and click-to-place targeting.
 - **Rematch Voting**: After game over, players vote for rematch. >50% triggers auto-restart with same settings. 30s timeout. Solo games (1 human + bots) show direct "Play Again" button instead of voting.
 - **Admin Chat Controls**: All chat features (party chat, lobby chat, DMs, emotes, spectator chat) individually configurable: everyone (default), staff only, admin only, or fully disabled.
 - **Imprint & GitHub**: Admin-toggled links displayed on the login page footer and as right-aligned items in the Help tab bar. Imprint text editable in Dashboard; shown as modal on login, inline tab in Help. GitHub link opens repo in new tab.

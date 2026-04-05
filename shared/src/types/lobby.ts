@@ -22,6 +22,9 @@ export interface MatchConfig {
   enableMapEvents?: boolean;
   selectedMapEvents?: string[];
   reinforcedWalls?: boolean;
+  puzzleTiles?: boolean;
+  selectedPuzzleTiles?: string[];
+  enableSpectatorActions?: boolean;
   recordGame?: boolean;
   botAiId?: string;
   customMapId?: number;

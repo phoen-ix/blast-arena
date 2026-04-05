@@ -73,13 +73,14 @@ Campaign modifier — P2 is a smaller, invulnerable support character for young/
 - `isCoopMode` is false for buddy mode. Campaign retry must preserve `buddyMode` flag — check buddy before localCoop in if/else chain
 - Buddy ID: `-(2000 + (Date.now() % 10000))`. Sprite size enforced every frame to survive texture swaps/tweens
 
-### Puzzle Tiles (Campaign Only)
+### Puzzle Tiles
 18 tile types: switches (4 colors × 2 states), gates (4 colors × 2 states), crumbling floors.
 - **Switches**: 3 variants in `puzzleConfig.switchVariants` — `toggle` (flips on step/blast, rising-edge), `pressure` (active while occupied), `oneshot` (permanent on first trigger). Rising-edge: reacts only on first tick of explosion via `prevSwitchBlasted`
 - **Gates**: linked by color (OR logic: any active switch → gates open). Explosions pass through gates in both states; only movement blocked when closed
 - **Crumbling floor**: `crumbling` → `pit` after entity steps off (10-tick delay). Enemies trigger crumbling (unless `canPassWalls`), buddy does NOT
 - `GameStateManager.setTileTracked(x, y, type)` for puzzle state changes (records tileDiff + updates collision)
-- `CampaignGame.processPuzzleTiles()` runs in campaignTick between hidden power-up reveals and boss phases
+- **Campaign**: `CampaignGame.processPuzzleTiles()` runs in campaignTick between hidden power-up reveals and boss phases
+- **Multiplayer**: `PuzzleTileProcessor` extracted from campaign logic, used by both `CampaignGame` and `GameStateManager`. `MatchConfig.puzzleTiles` + `selectedPuzzleTiles` (categories: `switches_and_gates`, `crumbling`). Admin-toggleable global default. Procedural placement: ~3% of empty tiles, 1-2 switch colors with toggle variant, 3-5 crumbling clusters. Runs in `processTick()` step 6.5 (after hazards, before KOTH)
 - Switches/gates can be covered tiles (hidden under destructible walls). Buddy blocked by closed gates and pits
 - Editor: puzzle palette with color/variant selectors, link mode. `drawPuzzleLinks()` shows colored lines. Dirty state tracking with unsaved changes modal
 
@@ -93,6 +94,24 @@ User-created maps for multiplayer. `LevelEditorScene` with `editorMode: 'custom_
 - **Room integration**: `MatchConfig.customMapId` validated in `room:create`. `selectedHazardTiles`/`selectedMapEvents` specify active types (all enabled by default). Map loaded from DB on `room:start`, passed to `GameStateManager`
 - **Ratings**: `map_ratings` table (migration 031, user_id + map_id unique). 1-5 star rating via `POST /maps/:id/rate`. `GET /maps/:id/rating` for user's rating. Published maps sorted by avg_rating DESC. `rateMap()` uses INSERT ON DUPLICATE KEY UPDATE
 - **Frontend**: `MapsView` for listing. Room creation shows map dropdown with star ratings, disables size/density when custom map selected
+
+## Spectator Game Master
+Dead players accumulate energy and spend it to interact with the match. Admin global toggle (`spectator_actions_enabled`) + per-room `MatchConfig.enableSpectatorActions`.
+- **Energy**: 1/tick for dead non-bot players, cap 100. Resets when alive. 20-tick cooldown between actions
+- **Actions**: place_wall (30 energy, destructible wall for 200 ticks), trigger_meteor (50, injected as MapEvent with 30-tick warning), drop_powerup (40, random enabled power-up), speed_zone (25, boost/slow zone for 160 ticks)
+- **Anti-griefing**: Rate limited 2/sec, cannot target occupied tiles, within 2 tiles of spawns, or within 2 tiles of allied alive players (team mode). Walls only on empty/spawn tiles. No actions during countdown
+- **Frontend**: `SpectatorActionBar` (fixed bottom-center) with Q/W/E/R hotkeys. Targeting mode with crosshair cursor. Mounted by HUDScene on player death. GameScene handles pointer→tile conversion for placement
+- **Rendering**: `MapEventRenderer` handles spectator_wall, spectator_powerup, spectator_speed_zone with colored flash effects
+- **Socket**: `spectator:action` client→server with callback, `spectator:actionApplied` broadcast. Energy states in `toTickState()`
+
+## Community Map Challenges
+Weekly featured community maps with competitive leaderboards. Admin creates challenges linking to published custom maps.
+- **DB**: `map_challenges` table (migration 032), `challenge_scores` per-user per-challenge (UPSERT with best_placement). `matches.custom_map_id` column links matches to maps
+- **Service**: `backend/src/services/challenges.ts` — CRUD, activate/deactivate (atomic transaction, only one active at a time), leaderboard (ordered by wins DESC, kills DESC), `recordChallengeResult()` called in GameRoom after match finish
+- **Routes**: `GET /challenges/active` (public, checks `challenges_enabled` setting), `GET /challenges/:id/leaderboard`, `GET /challenges/history`. Admin CRUD at `/admin/challenges` with activate/deactivate endpoints
+- **Frontend**: `ChallengeView` (ILobbyView) shows active challenge card with map preview, creator spotlight, mini leaderboard. "Play Challenge" creates room with locked customMapId + gameMode. `ChallengesTab` in admin panel with global toggle, create form, challenge table
+- **Map protection**: `deleteMap()` blocks deletion if map linked to active or upcoming challenge
+- **Lobby**: Sidebar nav item `#nav-challenge` in Play section after Maps
 
 ## Progression & Rewards
 - **Elo**: K=32 for <30 games, K=16 otherwise. FFA: pairwise with placement-based scores. Teams: average Elo per team
@@ -130,7 +149,7 @@ Full-screen panel for admin/moderator roles. `staffMiddleware` (admin+moderator)
 
 ## Game Architecture
 - 20 tick/sec server game loop (GameLoop.ts → GameState.ts)
-- GameState.processTick(): bot AI → inputs → movement → conveyors → bomb slide → bomb timers → explosions → collisions → power-ups → hazards → KOTH scoring → map events → zone → deathmatch respawns → time check → win check
+- GameState.processTick(): bot AI → inputs → movement → conveyors → bomb slide → bomb timers → explosions → collisions → power-ups → hazards → puzzle tiles → KOTH scoring → map events → spectator actions → zone → deathmatch respawns → time check → win check
 - Bomb kick: player with hasKick walking into bomb sets bomb.sliding; advances 1 tile/tick until blocked
 - Bomb throw: `game:bombThrown` event emitted before `game:state` with `{ bombId, from, to }`. `BombSpriteRenderer.registerThrow()` queues arc animation (parabolic tween, 300ms). Also recorded in `ReplayTickEvents.bombThrown` for replay playback
 - Spawn position randomization: Fisher-Yates shuffle using seeded RNG, deterministic for replays
@@ -164,7 +183,7 @@ bomb_up, fire_up, speed_up, shield, kick, pierce_bomb (through destructibles), r
 - **Dynamic map events** (optional, individually selectable via `selectedMapEvents`): meteor, power_up_rain, wall_collapse, freeze_wave, bomb_surge, ufo_abduction. `ownerId: -999` for system explosions. `enabledMapEventTypes` Set on GameState. `MapEventRenderer` in frontend. Shared types: `MapEventType`, `MAP_EVENT_TYPES`, `MapEvent` (includes `targetPlayerId` for UFO)
 - **Hazard tiles** (optional, individually selectable via `selectedHazardTiles`): teleporter pairs (A↔B), conveyors (push players/bombs/enemies; kicked bombs ignore conveyors; conveyors push before enemy AI), vine/mud (slow), quicksand (slow + kill), ice (sliding momentum), lava (instant kill, detonates adjacent bombs), spikes (cycling damage), dark_rift (random teleport). Slowing tiles use `movedThisTick` flag — applied once per move, not every tick. ~4% of empty tiles in multiplayer maps. Types/constants in `shared/src/utils/hazard.ts`
 - **Covered tiles**: Special tiles hidden under destructible walls via `coveredTiles` array. `reservedPowerUpTiles` Set prevents drops at hidden power-up positions
-- **Puzzle tiles** (campaign only): See Campaign System → Puzzle Tiles
+- **Puzzle tiles** (campaign + multiplayer): See Campaign System → Puzzle Tiles. In multiplayer, toggleable via `MatchConfig.puzzleTiles` with category selection (`selectedPuzzleTiles`)
 
 ## Replay System
 Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-system.md). `GameLogger` and `ReplayRecorder` log leave/disconnect events. Campaign replays stored in `campaign_replays` table, recorded via `ReplayRecorder` in `CampaignGame` (controlled by `recordings_enabled`). `ReplayFrame.enemies` for enemy states during playback.
@@ -235,7 +254,7 @@ npm test                    # Run all workspace tests (backend + frontend)
 npx jest --config tests/backend/jest.config.ts  # Backend only (from project root)
 cd frontend && npx vitest run                   # Frontend only
 ```
-- 2407 tests: 2365 backend (Jest, 75 suites) + 42 frontend (Vitest, 3 suites)
+- 2408 tests: 2366 backend (Jest, 75 suites) + 42 frontend (Vitest, 3 suites)
 - See [docs/testing.md](docs/testing.md) for full inventory, mocking patterns, and guide for writing new tests
 
 ## Documentation

@@ -1,10 +1,12 @@
 import { GameMap, TileType, Position } from '@blast-arena/shared';
+import { PuzzleConfig, PuzzleColor } from '@blast-arena/shared';
 import {
   DEFAULT_MAP_WIDTH,
   DEFAULT_MAP_HEIGHT,
   DEFAULT_WALL_DENSITY,
   SPAWN_CLEAR_RADIUS,
 } from '@blast-arena/shared';
+import { PUZZLE_COLORS, getSwitchTile, getGateTile } from '@blast-arena/shared';
 
 // Simple seeded random number generator
 class SeededRandom {
@@ -26,6 +28,7 @@ export function generateMap(
   seed?: number,
   wallDensity: number = DEFAULT_WALL_DENSITY,
   hazardTiles: string[] = [],
+  puzzleTiles: string[] = [],
 ): GameMap {
   const mapSeed = seed ?? Math.floor(Math.random() * 2147483647);
   const rng = new SeededRandom(mapSeed);
@@ -170,11 +173,141 @@ export function generateMap(
     }
   }
 
+  // Place puzzle tiles (switches, gates, crumbling floors)
+  let puzzleConfig: PuzzleConfig | undefined;
+  if (puzzleTiles.length > 0) {
+    const switchVariants: Record<string, 'toggle' | 'pressure'> = {};
+
+    if (puzzleTiles.includes('switches_and_gates')) {
+      // Pick 1-2 colors for switch/gate pairs
+      const shuffledColors = [...PUZZLE_COLORS];
+      for (let i = shuffledColors.length - 1; i > 0; i--) {
+        const j = Math.floor(rng.next() * (i + 1));
+        [shuffledColors[i], shuffledColors[j]] = [shuffledColors[j], shuffledColors[i]];
+      }
+      const numColors = rng.next() < 0.5 ? 1 : 2;
+      const selectedColors = shuffledColors.slice(0, numColors) as PuzzleColor[];
+
+      for (const color of selectedColors) {
+        // Find available empty tiles not in clear zones for switches
+        const switchCandidates: Position[] = [];
+        for (let y = 1; y < height - 1; y++) {
+          for (let x = 1; x < width - 1; x++) {
+            if (tiles[y][x] === 'empty' && !clearCells.has(`${x},${y}`)) {
+              switchCandidates.push({ x, y });
+            }
+          }
+        }
+        if (switchCandidates.length < 3) continue;
+
+        // Place 1-2 switches
+        const numSwitches = rng.next() < 0.4 ? 1 : 2;
+        const switchPositions: Position[] = [];
+        for (let s = 0; s < numSwitches && switchCandidates.length > 0; s++) {
+          const idx = Math.floor(rng.next() * switchCandidates.length);
+          const pos = switchCandidates[idx];
+          tiles[pos.y][pos.x] = getSwitchTile(color, false);
+          switchPositions.push(pos);
+          // Assign variant: mostly toggle, sometimes pressure
+          const variant = rng.next() < 0.7 ? 'toggle' : 'pressure';
+          switchVariants[`${pos.x},${pos.y}`] = variant;
+          switchCandidates.splice(idx, 1);
+        }
+
+        // Place 1-2 gates at corridor-like positions (tiles adjacent to walls on 2+ sides)
+        const gateCandidates: Position[] = [];
+        for (let y = 2; y < height - 2; y++) {
+          for (let x = 2; x < width - 2; x++) {
+            if (tiles[y][x] !== 'empty' || clearCells.has(`${x},${y}`)) continue;
+            // Count adjacent walls
+            let wallCount = 0;
+            if (tiles[y - 1][x] === 'wall') wallCount++;
+            if (tiles[y + 1][x] === 'wall') wallCount++;
+            if (tiles[y][x - 1] === 'wall') wallCount++;
+            if (tiles[y][x + 1] === 'wall') wallCount++;
+            if (wallCount >= 2) gateCandidates.push({ x, y });
+          }
+        }
+
+        // Fallback: use any empty tile if no corridor positions found
+        const gatePool =
+          gateCandidates.length > 0
+            ? gateCandidates
+            : switchCandidates.filter(
+                (p) =>
+                  !switchPositions.some((sp) => sp.x === p.x && sp.y === p.y) &&
+                  tiles[p.y][p.x] === 'empty',
+              );
+
+        const numGates = Math.min(rng.next() < 0.4 ? 1 : 2, gatePool.length);
+        for (let g = 0; g < numGates && gatePool.length > 0; g++) {
+          const idx = Math.floor(rng.next() * gatePool.length);
+          const pos = gatePool[idx];
+          tiles[pos.y][pos.x] = getGateTile(color, false);
+          gatePool.splice(idx, 1);
+        }
+      }
+    }
+
+    if (puzzleTiles.includes('crumbling')) {
+      // Place a cluster of 3-5 crumbling tiles
+      const crumbleCandidates: Position[] = [];
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          if (tiles[y][x] === 'empty' && !clearCells.has(`${x},${y}`)) {
+            crumbleCandidates.push({ x, y });
+          }
+        }
+      }
+      if (crumbleCandidates.length > 0) {
+        const clusterSize = 3 + Math.floor(rng.next() * 3); // 3-5
+        const seedIdx = Math.floor(rng.next() * crumbleCandidates.length);
+        const seedPos = crumbleCandidates[seedIdx];
+        const placed: Position[] = [];
+        tiles[seedPos.y][seedPos.x] = 'crumbling' as TileType;
+        placed.push(seedPos);
+
+        for (let i = 0; i < clusterSize - 1 && placed.length < clusterSize; i++) {
+          const base = placed[Math.floor(rng.next() * placed.length)];
+          const dirs = [
+            { x: base.x + 1, y: base.y },
+            { x: base.x - 1, y: base.y },
+            { x: base.x, y: base.y + 1 },
+            { x: base.x, y: base.y - 1 },
+          ];
+          for (let d = dirs.length - 1; d > 0; d--) {
+            const j = Math.floor(rng.next() * (d + 1));
+            [dirs[d], dirs[j]] = [dirs[j], dirs[d]];
+          }
+          for (const nb of dirs) {
+            if (
+              nb.x >= 1 &&
+              nb.x < width - 1 &&
+              nb.y >= 1 &&
+              nb.y < height - 1 &&
+              tiles[nb.y][nb.x] === 'empty' &&
+              !clearCells.has(`${nb.x},${nb.y}`)
+            ) {
+              tiles[nb.y][nb.x] = 'crumbling' as TileType;
+              placed.push(nb);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (Object.keys(switchVariants).length > 0) {
+      puzzleConfig = { switchVariants };
+    }
+  }
+
   return {
     width,
     height,
     tiles,
     spawnPoints,
     seed: mapSeed,
+    puzzleConfig,
   };
 }
