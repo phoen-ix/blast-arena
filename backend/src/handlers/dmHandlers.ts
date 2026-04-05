@@ -10,9 +10,21 @@ import {
 import * as settingsService from '../services/settings';
 import * as messageService from '../services/messages';
 import { createSocketRateLimiter } from '../utils/socketRateLimit';
+import { validateSocket, dmReadSchema } from '../utils/socketValidation';
+import { logger } from '../utils/logger';
 
-type TypedServer = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
-type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
+type TypedServer = Server<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>;
+type TypedSocket = Socket<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>;
 
 const dmChatLimiter = createSocketRateLimiter(5);
 
@@ -23,7 +35,8 @@ export function setupDMHandlers(socket: TypedSocket, io: TypedServer): void {
     if (!dmChatLimiter.isAllowed(socket.id)) return;
 
     const dmMode = await settingsService.getDMMode();
-    if (dmMode === 'disabled') return callback({ success: false, error: 'Direct messages are disabled' });
+    if (dmMode === 'disabled')
+      return callback({ success: false, error: 'Direct messages are disabled' });
     if (dmMode === 'admin_only' && socket.data.role !== 'admin')
       return callback({ success: false, error: 'Direct messages are restricted' });
     if (dmMode === 'staff' && socket.data.role !== 'admin' && socket.data.role !== 'moderator')
@@ -32,6 +45,10 @@ export function setupDMHandlers(socket: TypedSocket, io: TypedServer): void {
     const message =
       typeof data.message === 'string' ? data.message.trim().substring(0, DM_MAX_LENGTH) : '';
     if (!message) return callback({ success: false, error: 'Message cannot be empty' });
+
+    if (typeof data.toUserId !== 'number' || data.toUserId <= 0) {
+      return callback({ success: false, error: 'Invalid input' });
+    }
 
     try {
       const msg = await messageService.sendMessage(userId, data.toUserId, message);
@@ -45,15 +62,17 @@ export function setupDMHandlers(socket: TypedSocket, io: TypedServer): void {
   });
 
   socket.on('dm:read', async (data) => {
+    const parsed = validateSocket(dmReadSchema, data);
+    if (!parsed) return;
     try {
-      await messageService.markRead(userId, data.fromUserId);
+      await messageService.markRead(userId, parsed.fromUserId);
       // Notify sender that messages were read
-      io.to(`user:${data.fromUserId}`).emit('dm:read', {
+      io.to(`user:${parsed.fromUserId}`).emit('dm:read', {
         fromUserId: userId,
         readAt: new Date().toISOString(),
       });
-    } catch {
-      // Silent failure for read receipts
+    } catch (err) {
+      logger.warn({ err: getErrorMessage(err), userId }, 'Failed to mark DM as read');
     }
   });
 }

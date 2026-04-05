@@ -34,6 +34,8 @@ export class SettingsUI {
   private activeTabId: string;
   private contentEl: HTMLElement | null = null;
   private onLanguageChanged: () => void;
+  private rendering = false;
+  private delegationBound = false;
   private get tabs(): Tab[] {
     return [
       { id: 'account', label: t('settings.tabs.account') },
@@ -76,37 +78,49 @@ export class SettingsUI {
   }
 
   private async render(): Promise<void> {
-    this.container.innerHTML = `
-      <div class="admin-header">
-        <h1>${t('settings.title')}</h1>
-        <button class="btn btn-secondary" id="settings-ui-close">${t('settings.backToLobby')}</button>
-      </div>
-      <div class="admin-tabs" id="settings-tab-bar">
-        ${this.tabs
-          .map(
-            (tab) => `
-          <button class="admin-tab ${tab.id === this.activeTabId ? 'active' : ''}" data-tab="${tab.id}">${tab.label}</button>
-        `,
-          )
-          .join('')}
-      </div>
-      <div class="admin-tab-content" id="settings-tab-content"></div>
-    `;
+    if (this.rendering) return;
+    this.rendering = true;
 
-    this.container.querySelector('#settings-ui-close')!.addEventListener('click', () => {
-      this.hide();
-      this.onClose();
-    });
-
-    this.container.querySelector('#settings-tab-bar')!.addEventListener('click', (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (target.dataset.tab && target.dataset.tab !== this.activeTabId) {
-        this.switchTab(target.dataset.tab);
+    try {
+      // Bind event delegation once on the stable container element
+      if (!this.delegationBound) {
+        this.delegationBound = true;
+        this.container.addEventListener('click', (e: Event) => {
+          const target = e.target as HTMLElement;
+          if (target.id === 'settings-ui-close' || target.closest('#settings-ui-close')) {
+            this.hide();
+            this.onClose();
+            return;
+          }
+          const tabBtn = target.closest<HTMLElement>('[data-tab]');
+          if (tabBtn?.dataset.tab && tabBtn.dataset.tab !== this.activeTabId) {
+            this.switchTab(tabBtn.dataset.tab);
+          }
+        });
       }
-    });
 
-    this.contentEl = this.container.querySelector('#settings-tab-content');
-    await this.renderActiveTab();
+      this.container.innerHTML = `
+        <div class="admin-header">
+          <h1>${t('settings.title')}</h1>
+          <button class="btn btn-secondary" id="settings-ui-close">${t('settings.backToLobby')}</button>
+        </div>
+        <div class="admin-tabs" id="settings-tab-bar">
+          ${this.tabs
+            .map(
+              (tab) => `
+            <button class="admin-tab ${tab.id === this.activeTabId ? 'active' : ''}" data-tab="${tab.id}">${tab.label}</button>
+          `,
+            )
+            .join('')}
+        </div>
+        <div class="admin-tab-content" id="settings-tab-content"></div>
+      `;
+
+      this.contentEl = this.container.querySelector('#settings-tab-content');
+      await this.renderActiveTab();
+    } finally {
+      this.rendering = false;
+    }
   }
 
   private async switchTab(tabId: string): Promise<void> {

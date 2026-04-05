@@ -250,6 +250,80 @@ redis.call('SET', KEYS[1], updated, 'EX', ${ROOM_TTL_SECONDS})
 return updated
 `;
 
+// Lua script for atomic host-checked team assignment
+// KEYS[1] = room key
+// ARGV[1] = hostUserId, ARGV[2] = targetUserId, ARGV[3] = team number or "null"
+// Returns: updated room JSON or ERR:*
+const SET_TEAM_AS_HOST_LUA = `
+local data = redis.call('GET', KEYS[1])
+if not data then
+  return 'ERR:NOT_FOUND'
+end
+
+local room = cjson.decode(data)
+
+if room.host.id ~= tonumber(ARGV[1]) then
+  return 'ERR:NOT_HOST'
+end
+
+local found = false
+local userId = tonumber(ARGV[2])
+local team = ARGV[3] == 'null' and cjson.null or tonumber(ARGV[3])
+
+for _, p in ipairs(room.players) do
+  if p.user.id == userId then
+    p.team = team
+    found = true
+    break
+  end
+end
+
+if not found then
+  return 'ERR:NOT_IN_ROOM'
+end
+
+local updated = cjson.encode(room)
+redis.call('SET', KEYS[1], updated, 'EX', ${ROOM_TTL_SECONDS})
+return updated
+`;
+
+// Lua script for atomic host-checked bot team assignment
+// KEYS[1] = room key
+// ARGV[1] = hostUserId, ARGV[2] = botIndex, ARGV[3] = team number or "null"
+// Returns: updated room JSON or ERR:*
+const SET_BOT_TEAM_AS_HOST_LUA = `
+local data = redis.call('GET', KEYS[1])
+if not data then
+  return 'ERR:NOT_FOUND'
+end
+
+local room = cjson.decode(data)
+
+if room.host.id ~= tonumber(ARGV[1]) then
+  return 'ERR:NOT_HOST'
+end
+
+local botIndex = tonumber(ARGV[2])
+local botCount = room.config.botCount or 0
+if botIndex < 0 or botIndex >= botCount then
+  return 'ERR:INVALID_BOT_INDEX'
+end
+
+local team = ARGV[3] == 'null' and cjson.null or tonumber(ARGV[3])
+
+if not room.config.botTeams then
+  room.config.botTeams = {}
+end
+while #room.config.botTeams < botCount do
+  table.insert(room.config.botTeams, cjson.null)
+end
+room.config.botTeams[botIndex + 1] = team
+
+local updated = cjson.encode(room)
+redis.call('SET', KEYS[1], updated, 'EX', ${ROOM_TTL_SECONDS})
+return updated
+`;
+
 // Lua script for atomic room start: only succeeds if status is 'waiting'
 // KEYS[1] = room key
 // ARGV[1] = new status ('countdown')
@@ -323,6 +397,58 @@ export async function setPlayerTeam(
   if (result === 'ERR:NOT_FOUND') throw new AppError('Room not found', 404, 'NOT_FOUND');
   if (result === 'ERR:NOT_IN_ROOM')
     throw new AppError('Player not in this room', 400, 'NOT_IN_ROOM');
+
+  return JSON.parse(result);
+}
+
+export async function setPlayerTeamAsHost(
+  code: string,
+  hostUserId: number,
+  targetUserId: number,
+  team: number | null,
+): Promise<Room> {
+  const redis = getRedis();
+
+  const result = (await redis.eval(
+    SET_TEAM_AS_HOST_LUA,
+    1,
+    `room:${code}`,
+    String(hostUserId),
+    String(targetUserId),
+    team === null ? 'null' : String(team),
+  )) as string;
+
+  if (result === 'ERR:NOT_FOUND') throw new AppError('Room not found', 404, 'NOT_FOUND');
+  if (result === 'ERR:NOT_HOST')
+    throw new AppError('Only the host can assign teams', 403, 'NOT_HOST');
+  if (result === 'ERR:NOT_IN_ROOM')
+    throw new AppError('Player not in this room', 400, 'NOT_IN_ROOM');
+
+  return JSON.parse(result);
+}
+
+export async function setBotTeamAsHost(
+  code: string,
+  hostUserId: number,
+  botIndex: number,
+  team: number | null,
+): Promise<Room> {
+  const redis = getRedis();
+
+  const result = (await redis.eval(
+    SET_BOT_TEAM_AS_HOST_LUA,
+    1,
+    `room:${code}`,
+    String(hostUserId),
+    String(botIndex),
+    team === null ? 'null' : String(team),
+  )) as string;
+
+  if (result === 'ERR:NOT_FOUND') throw new AppError('Room not found', 404, 'NOT_FOUND');
+  if (result === 'ERR:NOT_HOST')
+    throw new AppError('Only the host can assign bot teams', 403, 'NOT_HOST');
+  if (result === 'ERR:INVALID_BOT_INDEX')
+    throw new AppError('Invalid bot index', 400, 'INVALID_BOT_INDEX');
 
   return JSON.parse(result);
 }

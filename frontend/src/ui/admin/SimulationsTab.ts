@@ -14,6 +14,7 @@ import {
   BotAIEntry,
 } from '@blast-arena/shared';
 import { escapeHtml } from '../../utils/html';
+import { createModal } from '../../utils/modal';
 import game from '../../main';
 import { t } from '../../i18n';
 
@@ -675,13 +676,16 @@ export class SimulationsTab {
 
     const allPowerUps = Object.values(POWERUP_DEFINITIONS);
 
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', t('admin:simulations.modal.title'));
-    modal.innerHTML = `
-      <div class="modal sim-modal">
+    const {
+      overlay: modal,
+      content: modalContent,
+      close: closeModal,
+    } = createModal({
+      ariaLabel: t('admin:simulations.modal.title'),
+      className: 'modal sim-modal',
+      parent: document.getElementById('ui-overlay')!,
+    });
+    modalContent.innerHTML = `
         <h2>${t('admin:simulations.modal.title')}</h2>
 
         <div class="sim-modal-grid">
@@ -830,10 +834,7 @@ export class SimulationsTab {
           <button class="btn btn-secondary" id="sim-config-cancel">${t('admin:simulations.modal.cancel')}</button>
           <button class="btn btn-primary" id="sim-config-start">${t('admin:simulations.modal.startBatch')}</button>
         </div>
-      </div>
     `;
-
-    document.getElementById('ui-overlay')!.appendChild(modal);
 
     // Apply admin-configured simulation defaults
     this.applySimulationDefaults(modal, simDefaults);
@@ -847,10 +848,7 @@ export class SimulationsTab {
     modeSelect.addEventListener('change', updateFFVisibility);
     updateFFVisibility();
 
-    modal.querySelector('#sim-config-cancel')!.addEventListener('click', () => modal.remove());
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.remove();
-    });
+    modal.querySelector('#sim-config-cancel')!.addEventListener('click', closeModal);
 
     modal.querySelector('#sim-config-start')!.addEventListener('click', () => {
       const mapSize = parseInt((modal.querySelector('#sim-map-size') as HTMLSelectElement).value);
@@ -905,7 +903,7 @@ export class SimulationsTab {
         return;
       }
 
-      modal.remove();
+      closeModal();
 
       this.socketClient.emit('sim:start', config, (res) => {
         if (!res.success) {

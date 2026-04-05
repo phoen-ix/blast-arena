@@ -3,6 +3,7 @@ import { SocketClient } from '../../network/SocketClient';
 import { NotificationUI } from '../NotificationUI';
 import { UserRole } from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../../utils/html';
+import { createModal } from '../../utils/modal';
 import { t } from '../../i18n';
 
 export class RoomsTab {
@@ -113,29 +114,23 @@ export class RoomsTab {
   };
 
   private showMessageModal(code: string): void {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', t('admin:rooms.sendMessageTitle'));
-    modal.innerHTML = `
-      <div class="modal" style="max-width:400px;">
-        <h2 style="margin-bottom:12px;">${t('admin:rooms.sendMessageTitle')}</h2>
-        <input type="text" class="admin-input" id="room-message-input" placeholder="${escapeAttr(t('admin:rooms.messagePlaceholder'))}" aria-label="${escapeAttr(t('admin:rooms.messageAriaLabel'))}">
-        <div class="modal-actions" style="margin-top:16px;">
-          <button class="btn btn-secondary" id="msg-cancel">${t('admin:rooms.cancelBtn')}</button>
-          <button class="btn btn-primary" id="msg-send">${t('admin:rooms.sendBtn')}</button>
-        </div>
+    const { overlay, content, close } = createModal({
+      ariaLabel: t('admin:rooms.sendMessageTitle'),
+      style: 'max-width:400px;',
+      parent: document.getElementById('ui-overlay')!,
+    });
+    content.innerHTML = `
+      <h2 style="margin-bottom:12px;">${t('admin:rooms.sendMessageTitle')}</h2>
+      <input type="text" class="admin-input" id="room-message-input" placeholder="${escapeAttr(t('admin:rooms.messagePlaceholder'))}" aria-label="${escapeAttr(t('admin:rooms.messageAriaLabel'))}">
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-secondary" id="msg-cancel">${t('admin:rooms.cancelBtn')}</button>
+        <button class="btn btn-primary" id="msg-send">${t('admin:rooms.sendBtn')}</button>
       </div>
     `;
-    document.getElementById('ui-overlay')!.appendChild(modal);
 
-    modal.querySelector('#msg-cancel')!.addEventListener('click', () => modal.remove());
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.remove();
-    });
-    modal.querySelector('#msg-send')!.addEventListener('click', () => {
-      const input = modal.querySelector('#room-message-input') as HTMLInputElement;
+    overlay.querySelector('#msg-cancel')!.addEventListener('click', close);
+    overlay.querySelector('#msg-send')!.addEventListener('click', () => {
+      const input = overlay.querySelector('#room-message-input') as HTMLInputElement;
       if (input.value.trim()) {
         this.socketClient.emit('admin:roomMessage', {
           roomCode: code,
@@ -143,7 +138,7 @@ export class RoomsTab {
         });
         this.notifications.success(t('admin:rooms.messageSent'));
       }
-      modal.remove();
+      close();
     });
   }
 
@@ -166,38 +161,32 @@ export class RoomsTab {
     // We need more detail about players. For now, show a simple input for user ID.
     // The room list endpoint returns playerCount but not player details.
     // Let's ask for the player to kick by prompting.
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', t('admin:rooms.kickPlayerTitle', { code }));
-    modal.innerHTML = `
-      <div class="modal" style="max-width:400px;">
-        <h2 style="margin-bottom:12px;">${t('admin:rooms.kickPlayerTitle', { code: escapeHtml(code) })}</h2>
-        <label style="color:var(--text-dim);font-size:13px;">${t('admin:rooms.playerUserIdLabel')}</label>
-        <input type="number" class="admin-input" id="kick-user-id" placeholder="${escapeAttr(t('admin:rooms.enterUserIdPlaceholder'))}" style="margin-top:6px;">
-        <label style="color:var(--text-dim);font-size:13px;margin-top:8px;display:block;">${t('admin:rooms.reasonLabel')}</label>
-        <input type="text" class="admin-input" id="kick-reason" placeholder="${escapeAttr(t('admin:rooms.reasonPlaceholder'))}" style="margin-top:6px;">
-        <div class="modal-actions" style="margin-top:16px;">
-          <button class="btn btn-secondary" id="kick-cancel">${t('admin:rooms.cancelBtn')}</button>
-          <button class="btn-warn" style="padding:8px 16px;font-size:14px;" id="kick-confirm">${t('admin:rooms.kickConfirmBtn')}</button>
-        </div>
+    const { overlay, content, close } = createModal({
+      ariaLabel: t('admin:rooms.kickPlayerTitle', { code }),
+      style: 'max-width:400px;',
+      parent: document.getElementById('ui-overlay')!,
+    });
+    content.innerHTML = `
+      <h2 style="margin-bottom:12px;">${t('admin:rooms.kickPlayerTitle', { code: escapeHtml(code) })}</h2>
+      <label style="color:var(--text-dim);font-size:13px;">${t('admin:rooms.playerUserIdLabel')}</label>
+      <input type="number" class="admin-input" id="kick-user-id" placeholder="${escapeAttr(t('admin:rooms.enterUserIdPlaceholder'))}" style="margin-top:6px;">
+      <label style="color:var(--text-dim);font-size:13px;margin-top:8px;display:block;">${t('admin:rooms.reasonLabel')}</label>
+      <input type="text" class="admin-input" id="kick-reason" placeholder="${escapeAttr(t('admin:rooms.reasonPlaceholder'))}" style="margin-top:6px;">
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-secondary" id="kick-cancel">${t('admin:rooms.cancelBtn')}</button>
+        <button class="btn-warn" style="padding:8px 16px;font-size:14px;" id="kick-confirm">${t('admin:rooms.kickConfirmBtn')}</button>
       </div>
     `;
-    document.getElementById('ui-overlay')!.appendChild(modal);
 
-    modal.querySelector('#kick-cancel')!.addEventListener('click', () => modal.remove());
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.remove();
-    });
-    modal.querySelector('#kick-confirm')!.addEventListener('click', () => {
-      const userId = parseInt((modal.querySelector('#kick-user-id') as HTMLInputElement).value);
-      const reason = (modal.querySelector('#kick-reason') as HTMLInputElement).value;
+    overlay.querySelector('#kick-cancel')!.addEventListener('click', close);
+    overlay.querySelector('#kick-confirm')!.addEventListener('click', () => {
+      const userId = parseInt((overlay.querySelector('#kick-user-id') as HTMLInputElement).value);
+      const reason = (overlay.querySelector('#kick-reason') as HTMLInputElement).value;
       if (!userId || isNaN(userId)) {
         this.notifications.error(t('admin:rooms.invalidUserId'));
         return;
       }
-      modal.remove();
+      close();
       this.socketClient.emit('admin:kick', { roomCode: code, userId, reason }, (res) => {
         if (res.success) {
           this.notifications.success(t('admin:rooms.playerKicked'));
@@ -210,29 +199,23 @@ export class RoomsTab {
   }
 
   private showCloseConfirmation(code: string): void {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', t('admin:rooms.closeRoomTitle'));
-    modal.innerHTML = `
-      <div class="modal" style="max-width:380px;">
-        <h2 style="margin-bottom:12px;color:var(--danger);">${t('admin:rooms.closeRoomTitle')}</h2>
-        <p style="color:var(--text-dim);">${t('admin:rooms.closeRoomConfirmation', { code: escapeHtml(code) })}</p>
-        <div class="modal-actions" style="margin-top:16px;">
-          <button class="btn btn-secondary" id="close-cancel">${t('admin:rooms.cancelBtn')}</button>
-          <button class="btn-danger" style="padding:8px 16px;font-size:14px;" id="close-confirm">${t('admin:rooms.closeRoomBtn')}</button>
-        </div>
+    const { overlay, content, close } = createModal({
+      ariaLabel: t('admin:rooms.closeRoomTitle'),
+      style: 'max-width:380px;',
+      parent: document.getElementById('ui-overlay')!,
+    });
+    content.innerHTML = `
+      <h2 style="margin-bottom:12px;color:var(--danger);">${t('admin:rooms.closeRoomTitle')}</h2>
+      <p style="color:var(--text-dim);">${t('admin:rooms.closeRoomConfirmation', { code: escapeHtml(code) })}</p>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-secondary" id="close-cancel">${t('admin:rooms.cancelBtn')}</button>
+        <button class="btn-danger" style="padding:8px 16px;font-size:14px;" id="close-confirm">${t('admin:rooms.closeRoomBtn')}</button>
       </div>
     `;
-    document.getElementById('ui-overlay')!.appendChild(modal);
 
-    modal.querySelector('#close-cancel')!.addEventListener('click', () => modal.remove());
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.remove();
-    });
-    modal.querySelector('#close-confirm')!.addEventListener('click', () => {
-      modal.remove();
+    overlay.querySelector('#close-cancel')!.addEventListener('click', close);
+    overlay.querySelector('#close-confirm')!.addEventListener('click', () => {
+      close();
       this.socketClient.emit('admin:closeRoom', { roomCode: code }, (res) => {
         if (res.success) {
           this.notifications.success(t('admin:rooms.roomClosed'));

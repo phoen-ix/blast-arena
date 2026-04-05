@@ -19,6 +19,7 @@ export class SocketClient {
   private overlay: HTMLElement | null = null;
   private knownBuildId: string | null = null;
   private healthPollTimer: ReturnType<typeof setInterval> | null = null;
+  private localeHandler: (() => void) | null = null;
 
   constructor(authManager: AuthManager) {
     this.authManager = authManager;
@@ -45,12 +46,15 @@ export class SocketClient {
     });
 
     // Keep socket auth locale in sync with language changes
-    const updateLocale = () => {
+    if (this.localeHandler) {
+      window.removeEventListener('language-changed', this.localeHandler);
+    }
+    this.localeHandler = () => {
       if (this.socket) {
         (this.socket.auth as Record<string, string>).locale = i18n.language;
       }
     };
-    window.addEventListener('language-changed', updateLocale);
+    window.addEventListener('language-changed', this.localeHandler);
 
     this.socket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
@@ -72,6 +76,10 @@ export class SocketClient {
   }
 
   disconnect(): void {
+    if (this.localeHandler) {
+      window.removeEventListener('language-changed', this.localeHandler);
+      this.localeHandler = null;
+    }
     this.socket?.disconnect();
     this.socket = null;
     this.hideOverlay();

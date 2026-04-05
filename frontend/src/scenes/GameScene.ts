@@ -936,7 +936,7 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
 
     if (this.localPlayerDead) {
-      (cam as any).useBounds = false;
+      cam.removeBounds();
 
       if (this.spectateTargetId !== null) {
         const targetPlayer = this.lastGameState?.players.find(

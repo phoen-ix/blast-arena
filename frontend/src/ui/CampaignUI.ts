@@ -33,6 +33,26 @@ interface CampaignLevel {
   locked: boolean;
 }
 
+interface CampaignLevelResponse {
+  id: number;
+  name: string;
+  description?: string;
+  enemyCount?: number;
+  lives?: number;
+  timeLimit?: number;
+  progress?: { completed?: boolean; stars?: number; bestTimeSeconds?: number | null };
+}
+
+interface CampaignWorldResponse {
+  id: number;
+  name: string;
+  description?: string;
+  theme?: string;
+  levelCount?: number;
+  completedCount?: number;
+  levels?: CampaignLevelResponse[];
+}
+
 interface CampaignWorld {
   id: number;
   name: string;
@@ -47,7 +67,7 @@ export class CampaignUI {
   private container: HTMLElement;
   private notifications: NotificationUI;
   private socketClient: SocketClient;
-  private authManager: AuthManager;
+  private authManager: AuthManager | null;
   private onClose: () => void;
   private partyBar: PartyBar | null;
   private expandedWorldId: number | null = null;
@@ -66,7 +86,7 @@ export class CampaignUI {
     this.notifications = notifications;
     this.onClose = onClose;
     this.partyBar = partyBar ?? null;
-    this.authManager = authManager ?? ({} as AuthManager);
+    this.authManager = authManager ?? null;
     this.container = document.createElement('div');
     this.container.style.cssText = `
       position: absolute;
@@ -115,11 +135,12 @@ export class CampaignUI {
 
   private async loadCampaignData(): Promise<void> {
     try {
-      const data = await ApiClient.get<{ worlds: any[] }>('/campaign/worlds');
+      const data = await ApiClient.get<{ worlds: CampaignWorldResponse[] }>('/campaign/worlds');
       // Map API response into local CampaignWorld shape
-      this.worlds = data.worlds.map((w: any) => {
-        const levels: CampaignLevel[] = (w.levels || []).map((l: any, i: number) => {
-          const prevCompleted = i === 0 || (w.levels[i - 1]?.progress?.completed ?? false);
+      this.worlds = data.worlds.map((w) => {
+        const wLevels = w.levels || [];
+        const levels: CampaignLevel[] = wLevels.map((l, i: number) => {
+          const prevCompleted = i === 0 || (wLevels[i - 1]?.progress?.completed ?? false);
           return {
             id: l.id,
             name: l.name,
@@ -732,7 +753,7 @@ export class CampaignUI {
       () => {
         /* cancel — do nothing */
       },
-      this.authManager,
+      this.authManager!,
     );
   }
 

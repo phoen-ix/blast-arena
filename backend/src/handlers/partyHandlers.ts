@@ -11,10 +11,21 @@ import * as partyService from '../services/party';
 import * as friendsService from '../services/friends';
 import * as settingsService from '../services/settings';
 import { createSocketRateLimiter } from '../utils/socketRateLimit';
+import { validateSocket, userIdSchema, inviteIdSchema } from '../utils/socketValidation';
 import { logger } from '../utils/logger';
 
-type TypedServer = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
-type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
+type TypedServer = Server<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>;
+type TypedSocket = Socket<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>;
 
 const partyChatLimiter = createSocketRateLimiter(5);
 const inviteLimiter = createSocketRateLimiter(3);
@@ -38,31 +49,34 @@ export function setupPartyHandlers(socket: TypedSocket, io: TypedServer): void {
   // Invite to party
   socket.on('party:invite', async (data, callback) => {
     if (!inviteLimiter.isAllowed(socket.id)) return;
+    const parsed = validateSocket(userIdSchema, data, callback);
+    if (!parsed) return;
     try {
       const partyId = socket.data.activePartyId;
       if (!partyId) return callback({ success: false, error: 'Not in a party' });
 
       const party = await partyService.getParty(partyId);
       if (!party) return callback({ success: false, error: 'Party not found' });
-      if (party.leaderId !== userId) return callback({ success: false, error: 'Only the leader can invite' });
+      if (party.leaderId !== userId)
+        return callback({ success: false, error: 'Only the leader can invite' });
 
       // Check friendship
-      const friends = await friendsService.areFriends(userId, data.userId);
+      const friends = await friendsService.areFriends(userId, parsed.userId);
       if (!friends) return callback({ success: false, error: 'Can only invite friends' });
 
       // Check if already in party
-      if (party.members.some((m) => m.userId === data.userId)) {
+      if (party.members.some((m) => m.userId === parsed.userId)) {
         return callback({ success: false, error: 'Already in your party' });
       }
 
-      const inviteId = await partyService.createInvite(data.userId, {
+      const inviteId = await partyService.createInvite(parsed.userId, {
         type: 'party',
         fromUserId: userId,
         fromUsername: username,
         partyId,
       });
 
-      io.to(`user:${data.userId}`).emit('party:invite', {
+      io.to(`user:${parsed.userId}`).emit('party:invite', {
         inviteId,
         type: 'party',
         fromUserId: userId,
@@ -80,13 +94,16 @@ export function setupPartyHandlers(socket: TypedSocket, io: TypedServer): void {
   // Accept party invite
   socket.on('party:acceptInvite', async (data, callback) => {
     try {
-      const invite = await partyService.getInvite(userId, data.inviteId);
+      const parsed = validateSocket(inviteIdSchema, data, callback);
+      if (!parsed) return;
+
+      const invite = await partyService.getInvite(userId, parsed.inviteId);
       if (!invite || invite.type !== 'party') {
         return callback({ success: false, error: 'Invite expired or not found' });
       }
 
       const party = await partyService.joinParty(invite.partyId, userId, username);
-      await partyService.removeInvite(userId, data.inviteId);
+      await partyService.removeInvite(userId, parsed.inviteId);
 
       socket.data.activePartyId = party.id;
       socket.join(`party:${party.id}`);
@@ -102,7 +119,9 @@ export function setupPartyHandlers(socket: TypedSocket, io: TypedServer): void {
 
   // Decline party invite
   socket.on('party:declineInvite', async (data) => {
-    await partyService.removeInvite(userId, data.inviteId);
+    const parsed = validateSocket(inviteIdSchema, data);
+    if (!parsed) return;
+    await partyService.removeInvite(userId, parsed.inviteId);
   });
 
   // Leave party
@@ -143,15 +162,18 @@ export function setupPartyHandlers(socket: TypedSocket, io: TypedServer): void {
       const partyId = socket.data.activePartyId;
       if (!partyId) return callback({ success: false, error: 'Not in a party' });
 
-      const party = await partyService.kickFromParty(partyId, userId, data.userId);
+      const parsed = validateSocket(userIdSchema, data, callback);
+      if (!parsed) return;
+
+      const party = await partyService.kickFromParty(partyId, userId, parsed.userId);
 
       // Notify kicked user
-      io.to(`user:${data.userId}`).emit('party:disbanded');
+      io.to(`user:${parsed.userId}`).emit('party:disbanded');
 
       // Clean up kicked user's socket
       const sockets = await io.in(`party:${partyId}`).fetchSockets();
       for (const s of sockets) {
-        if (s.data.userId === data.userId) {
+        if (s.data.userId === parsed.userId) {
           s.data.activePartyId = undefined;
           s.leave(`party:${partyId}`);
         }
@@ -176,11 +198,13 @@ export function setupPartyHandlers(socket: TypedSocket, io: TypedServer): void {
     const chatMode = await settingsService.getChatMode();
     if (chatMode === 'disabled') return;
     if (chatMode === 'admin_only' && socket.data.role !== 'admin') return;
-    if (chatMode === 'staff' && socket.data.role !== 'admin' && socket.data.role !== 'moderator') return;
+    if (chatMode === 'staff' && socket.data.role !== 'admin' && socket.data.role !== 'moderator')
+      return;
 
-    const message = typeof data.message === 'string'
-      ? data.message.trim().substring(0, PARTY_CHAT_MAX_LENGTH)
-      : '';
+    const message =
+      typeof data.message === 'string'
+        ? data.message.trim().substring(0, PARTY_CHAT_MAX_LENGTH)
+        : '';
     if (!message) return;
 
     io.to(`party:${partyId}`).emit('party:chat', {
@@ -198,18 +222,21 @@ export function setupPartyHandlers(socket: TypedSocket, io: TypedServer): void {
       const roomCode = socket.data.activeRoomCode;
       if (!roomCode) return callback({ success: false, error: 'Not in a room' });
 
+      const parsed = validateSocket(userIdSchema, data, callback);
+      if (!parsed) return;
+
       // Check friendship
-      const friends = await friendsService.areFriends(userId, data.userId);
+      const friends = await friendsService.areFriends(userId, parsed.userId);
       if (!friends) return callback({ success: false, error: 'Can only invite friends' });
 
-      const inviteId = await partyService.createInvite(data.userId, {
+      const inviteId = await partyService.createInvite(parsed.userId, {
         type: 'room',
         fromUserId: userId,
         fromUsername: username,
         roomCode,
       });
 
-      io.to(`user:${data.userId}`).emit('invite:room', {
+      io.to(`user:${parsed.userId}`).emit('invite:room', {
         inviteId,
         type: 'room',
         fromUserId: userId,
@@ -227,12 +254,15 @@ export function setupPartyHandlers(socket: TypedSocket, io: TypedServer): void {
   // Accept room invite
   socket.on('invite:acceptRoom', async (data, callback) => {
     try {
-      const invite = await partyService.getInvite(userId, data.inviteId);
+      const parsed = validateSocket(inviteIdSchema, data, callback);
+      if (!parsed) return;
+
+      const invite = await partyService.getInvite(userId, parsed.inviteId);
       if (!invite || invite.type !== 'room') {
         return callback({ success: false, error: 'Invite expired or not found' });
       }
 
-      await partyService.removeInvite(userId, data.inviteId);
+      await partyService.removeInvite(userId, parsed.inviteId);
 
       // Client will handle the actual room join via room:join
       callback({ success: true });
@@ -243,15 +273,14 @@ export function setupPartyHandlers(socket: TypedSocket, io: TypedServer): void {
 
   // Decline room invite
   socket.on('invite:declineRoom', async (data) => {
-    await partyService.removeInvite(userId, data.inviteId);
+    const parsed = validateSocket(inviteIdSchema, data);
+    if (!parsed) return;
+    await partyService.removeInvite(userId, parsed.inviteId);
   });
 }
 
 /** Handle party cleanup when a user disconnects */
-export async function handlePartyDisconnect(
-  socket: TypedSocket,
-  io: TypedServer,
-): Promise<void> {
+export async function handlePartyDisconnect(socket: TypedSocket, io: TypedServer): Promise<void> {
   const partyId = socket.data.activePartyId;
   if (!partyId) return;
 

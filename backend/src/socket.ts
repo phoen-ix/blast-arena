@@ -38,6 +38,12 @@ import * as partyService from './services/party';
 import * as replayService from './services/replay';
 import * as customMapsService from './services/custom-maps';
 import { z } from 'zod';
+import {
+  validateSocket,
+  rematchVoteSchema,
+  setBotTeamSchema,
+  setTeamSchema,
+} from './utils/socketValidation';
 import { query } from './db/connection';
 import { UserRow } from './db/types';
 import { verifyLocalCoopSocketToken } from './services/auth';
@@ -55,6 +61,20 @@ const ROOM_CLEANUP_INTERVAL_MS = 30000;
 
 // Per-player emote cooldown
 const emoteLastUsed = new Map<number, number>();
+const spectatorChatLimiter = createSocketRateLimiter(3);
+
+/** Extract active room code from socket, optionally sending error callback */
+function requireRoom(
+  socket: { data: SocketData },
+  callback?: (response: { success: boolean; error?: string }) => void,
+): string | null {
+  const roomCode = socket.data.activeRoomCode;
+  if (!roomCode) {
+    if (callback) callback({ success: false, error: 'Not in a room' });
+    return null;
+  }
+  return roomCode;
+}
 
 // MatchConfig validation for room:create socket events
 const VALID_GAME_MODES = [
@@ -350,7 +370,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Leave room
     socket.on('room:leave', async () => {
-      const roomCode = socket.data.activeRoomCode;
+      const roomCode = requireRoom(socket);
       if (!roomCode) return;
 
       try {
@@ -400,7 +420,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Ready toggle
     socket.on('room:ready', async (data) => {
-      const roomCode = socket.data.activeRoomCode;
+      const roomCode = requireRoom(socket);
       if (!roomCode) return;
 
       try {
@@ -416,7 +436,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Start game
     socket.on('room:start', async () => {
-      const roomCode = socket.data.activeRoomCode;
+      const roomCode = requireRoom(socket);
       if (!roomCode) return;
 
       const room = await lobbyService.getRoom(roomCode);
@@ -547,16 +567,19 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Rematch voting
     socket.on('rematch:vote', async (data, callback) => {
-      const roomCode = socket.data.activeRoomCode;
-      if (!roomCode) return callback({ success: false, error: 'Not in a room' });
+      const parsed = validateSocket(rematchVoteSchema, data, callback);
+      if (!parsed) return;
+      const roomCode = requireRoom(socket, callback);
+      if (!roomCode) return;
 
       const room = await lobbyService.getRoom(roomCode);
       if (!room) return callback({ success: false, error: 'Room not found' });
       if (room.status !== 'finished')
         return callback({ success: false, error: 'Game not finished' });
 
-      // Initialize vote tracking if needed
-      if (!rematchVotes.has(roomCode)) {
+      // Atomic get-or-create — no await between check and set prevents race
+      let voteState = rematchVotes.get(roomCode);
+      if (!voteState) {
         const humanPlayerIds = new Set(
           room.players.filter((p) => p.user.id > 0).map((p) => p.user.id),
         );
@@ -568,17 +591,17 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
             totalPlayers: humanPlayerIds.size,
           });
         }, REMATCH_VOTE_TIMEOUT_MS);
-        rematchVotes.set(roomCode, { votes: new Map(), humanPlayerIds, timeout });
+        voteState = { votes: new Map(), humanPlayerIds, timeout };
+        rematchVotes.set(roomCode, voteState);
       }
 
-      const voteState = rematchVotes.get(roomCode)!;
       if (!voteState.humanPlayerIds.has(socket.data.userId)) {
         return callback({ success: false, error: 'Not a player in this game' });
       }
 
       voteState.votes.set(socket.data.userId, {
         username: socket.data.username,
-        vote: data.vote,
+        vote: parsed.vote,
       });
 
       const threshold = Math.floor(voteState.humanPlayerIds.size / 2) + 1;
@@ -617,20 +640,19 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Set player team (host only, teams mode)
     socket.on('room:setTeam', async (data) => {
-      const roomCode = socket.data.activeRoomCode;
+      const roomCode = requireRoom(socket);
       if (!roomCode) return;
 
-      const room = await lobbyService.getRoom(roomCode);
-      if (!room) return;
-
-      // Only host can assign teams
-      if (room.host.id !== socket.data.userId) {
-        socket.emit('error', { message: 'Only the host can assign teams' });
-        return;
-      }
+      const parsed = validateSocket(setTeamSchema, data);
+      if (!parsed) return;
 
       try {
-        const updatedRoom = await lobbyService.setPlayerTeam(roomCode, data.userId, data.team);
+        const updatedRoom = await lobbyService.setPlayerTeamAsHost(
+          roomCode,
+          socket.data.userId,
+          parsed.userId,
+          parsed.team,
+        );
         io.to(`room:${roomCode}`).emit('room:state', updatedRoom);
       } catch (err: unknown) {
         socket.emit('error', { message: getErrorMessage(err) });
@@ -639,32 +661,23 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Set bot team (host only, teams mode)
     socket.on('room:setBotTeam', async (data) => {
-      const roomCode = socket.data.activeRoomCode;
+      const roomCode = requireRoom(socket);
       if (!roomCode) return;
 
-      const room = await lobbyService.getRoom(roomCode);
-      if (!room) return;
+      const parsed = validateSocket(setBotTeamSchema, data);
+      if (!parsed) return;
 
-      if (room.host.id !== socket.data.userId) {
-        socket.emit('error', { message: 'Only the host can assign bot teams' });
-        return;
+      try {
+        const updatedRoom = await lobbyService.setBotTeamAsHost(
+          roomCode,
+          socket.data.userId,
+          parsed.botIndex,
+          parsed.team,
+        );
+        io.to(`room:${roomCode}`).emit('room:state', updatedRoom);
+      } catch (err: unknown) {
+        socket.emit('error', { message: getErrorMessage(err) });
       }
-
-      const botCount = room.config.botCount || 0;
-      if (data.botIndex < 0 || data.botIndex >= botCount) return;
-
-      // Initialize botTeams array if needed
-      if (!room.config.botTeams) {
-        room.config.botTeams = [];
-      }
-      // Fill to length
-      while (room.config.botTeams.length < botCount) {
-        room.config.botTeams.push(null);
-      }
-      room.config.botTeams[data.botIndex] = data.team;
-
-      await lobbyService.updateRoom(roomCode, room);
-      io.to(`room:${roomCode}`).emit('room:state', room);
     });
 
     // Game input — hot path, avoid Redis lookup per input
@@ -691,7 +704,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         return;
       }
 
-      const roomCode = socket.data.activeRoomCode;
+      const roomCode = requireRoom(socket);
       if (!roomCode) return;
 
       const gameRoom = roomManager.getRoom(roomCode);
@@ -702,7 +715,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // In-game emotes
     socket.on('game:emote', async (data) => {
-      const roomCode = socket.data.activeRoomCode;
+      const roomCode = requireRoom(socket);
       if (!roomCode) return;
 
       if (typeof data.emoteId !== 'number' || data.emoteId < 0 || data.emoteId >= EMOTES.length)
@@ -726,10 +739,8 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
     });
 
     // Spectator chat
-    const spectatorChatLimiter = createSocketRateLimiter(3);
-
     socket.on('game:spectatorChat', async (data) => {
-      const roomCode = socket.data.activeRoomCode;
+      const roomCode = requireRoom(socket);
       if (!roomCode) return;
       if (!data || typeof data.message !== 'string') return;
 
@@ -1434,6 +1445,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       cleanupLobbyLimiters(socket.id);
       cleanupDMLimiters(socket.id);
       emoteLastUsed.delete(socket.data.userId);
+      spectatorChatLimiter.remove(socket.id);
       socket.data.activeRoomCode = undefined;
 
       // Clean up rematch votes for the disconnecting player

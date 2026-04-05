@@ -1,6 +1,7 @@
 import { ApiClient } from '../../network/ApiClient';
 import { NotificationUI } from '../NotificationUI';
 import { escapeHtml } from '../../utils/html';
+import { createModal } from '../../utils/modal';
 import { GameState, ReplayData } from '@blast-arena/shared';
 import game from '../../main';
 import { t } from '../../i18n';
@@ -181,13 +182,12 @@ export class MatchesTab {
         })
         .join('');
 
-      const modal = document.createElement('div');
-      modal.className = 'modal-overlay';
-      modal.setAttribute('role', 'dialog');
-      modal.setAttribute('aria-modal', 'true');
-      modal.setAttribute('aria-label', t('admin:matches.detailAriaLabel', { matchId: match.id }));
-      modal.innerHTML = `
-        <div class="modal" style="max-width:520px;">
+      const { overlay, content, close } = createModal({
+        ariaLabel: t('admin:matches.detailAriaLabel', { matchId: match.id }),
+        style: 'max-width:520px;',
+        parent: document.getElementById('ui-overlay')!,
+      });
+      content.innerHTML = `
           <h2 style="margin-bottom:16px;">${t('admin:matches.detailTitle', { matchId: match.id })}</h2>
           <div style="margin-bottom:16px;">
             <div class="match-detail-row"><span class="label">${t('admin:matches.detailRoomCode')}</span><span class="value">${escapeHtml(match.roomCode)}</span></div>
@@ -218,16 +218,11 @@ export class MatchesTab {
             ${match.hasReplay ? `<button class="btn btn-primary" id="match-watch-replay" style="margin-right:8px;">${t('admin:matches.watchReplay')}</button>` : ''}
             <button class="btn btn-secondary" id="match-detail-close">${t('admin:matches.close')}</button>
           </div>
-        </div>
       `;
-      document.getElementById('ui-overlay')!.appendChild(modal);
-      modal.querySelector('#match-detail-close')!.addEventListener('click', () => modal.remove());
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-      });
+      overlay.querySelector('#match-detail-close')!.addEventListener('click', close);
 
       // Watch Replay button
-      const replayBtn = modal.querySelector('#match-watch-replay');
+      const replayBtn = overlay.querySelector('#match-watch-replay');
       if (replayBtn) {
         replayBtn.addEventListener('click', async () => {
           await this.launchReplay(matchId);

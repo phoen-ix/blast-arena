@@ -77,6 +77,9 @@ function createMockIO() {
   return io;
 }
 
+const FAKE_INVITE_ID = '00000000-0000-4000-8000-000000000001';
+const FAKE_ROOM_INVITE_ID = '00000000-0000-4000-8000-000000000002';
+
 const fakeParty = {
   id: 'party-abc',
   leaderId: 1,
@@ -236,11 +239,11 @@ describe('partyHandlers', () => {
       const callback = jest.fn();
 
       const handler = socket._handlers['party:acceptInvite'];
-      await handler({ inviteId: 'inv-1' }, callback);
+      await handler({ inviteId: FAKE_INVITE_ID }, callback);
 
-      expect(mockGetInvite).toHaveBeenCalledWith(1, 'inv-1');
+      expect(mockGetInvite).toHaveBeenCalledWith(1, FAKE_INVITE_ID);
       expect(mockJoinParty).toHaveBeenCalledWith('party-abc', 1, 'alice');
-      expect(mockRemoveInvite).toHaveBeenCalledWith(1, 'inv-1');
+      expect(mockRemoveInvite).toHaveBeenCalledWith(1, FAKE_INVITE_ID);
       expect(socket.data.activePartyId).toBe(updatedParty.id);
       expect(socket.join).toHaveBeenCalledWith('party:party-abc');
       expect(io.to).toHaveBeenCalledWith('party:party-abc');
@@ -253,7 +256,7 @@ describe('partyHandlers', () => {
       const callback = jest.fn();
 
       const handler = socket._handlers['party:acceptInvite'];
-      await handler({ inviteId: 'inv-gone' }, callback);
+      await handler({ inviteId: FAKE_INVITE_ID }, callback);
 
       expect(callback).toHaveBeenCalledWith({
         success: false,
@@ -464,10 +467,10 @@ describe('partyHandlers', () => {
       const callback = jest.fn();
 
       const handler = socket._handlers['invite:acceptRoom'];
-      await handler({ inviteId: 'rinv-1' }, callback);
+      await handler({ inviteId: FAKE_ROOM_INVITE_ID }, callback);
 
-      expect(mockGetInvite).toHaveBeenCalledWith(1, 'rinv-1');
-      expect(mockRemoveInvite).toHaveBeenCalledWith(1, 'rinv-1');
+      expect(mockGetInvite).toHaveBeenCalledWith(1, FAKE_ROOM_INVITE_ID);
+      expect(mockRemoveInvite).toHaveBeenCalledWith(1, FAKE_ROOM_INVITE_ID);
       expect(callback).toHaveBeenCalledWith({ success: true });
     });
   });

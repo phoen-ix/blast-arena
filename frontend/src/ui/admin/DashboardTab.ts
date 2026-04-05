@@ -1,5 +1,6 @@
 import { ApiClient } from '../../network/ApiClient';
 import { escapeAttr, escapeHtml } from '../../utils/html';
+import { createModal } from '../../utils/modal';
 import { t } from '../../i18n';
 import { NotificationUI } from '../NotificationUI';
 import {
@@ -462,13 +463,12 @@ export class DashboardTab {
   }
 
   private showRevokeAllModal(): void {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', t('admin:dashboard.revokeAllSessions'));
-    modal.innerHTML = `
-      <div class="modal" style="max-width:420px;">
+    const { overlay, content, close } = createModal({
+      ariaLabel: t('admin:dashboard.revokeAllSessions'),
+      style: 'max-width:420px;',
+      parent: document.getElementById('ui-overlay')!,
+    });
+    content.innerHTML = `
         <h2 style="margin-bottom:12px;color:var(--danger);">${t('admin:dashboard.revokeAllSessions')}</h2>
         <p style="color:var(--text-dim);font-size:14px;">${t('admin:dashboard.revokeAllDescription')}</p>
         <p style="color:var(--text-dim);font-size:13px;margin-top:8px;">${t('admin:dashboard.revokeAllConfirmPrompt')}</p>
@@ -477,12 +477,10 @@ export class DashboardTab {
           <button class="btn btn-secondary" id="revoke-all-cancel">${t('admin:dashboard.revokeAllCancel')}</button>
           <button class="btn-danger" style="padding:8px 16px;font-size:14px;opacity:0.5;" id="revoke-all-confirm" disabled>${t('admin:dashboard.revokeAllConfirm')}</button>
         </div>
-      </div>
     `;
-    document.getElementById('ui-overlay')!.appendChild(modal);
 
-    const input = modal.querySelector('#revoke-all-confirm-input') as HTMLInputElement;
-    const confirmBtn = modal.querySelector('#revoke-all-confirm') as HTMLButtonElement;
+    const input = overlay.querySelector('#revoke-all-confirm-input') as HTMLInputElement;
+    const confirmBtn = overlay.querySelector('#revoke-all-confirm') as HTMLButtonElement;
 
     input.addEventListener('input', () => {
       const matches = input.value === 'CONFIRM';
@@ -490,12 +488,9 @@ export class DashboardTab {
       confirmBtn.style.opacity = matches ? '1' : '0.5';
     });
 
-    modal.querySelector('#revoke-all-cancel')!.addEventListener('click', () => modal.remove());
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.remove();
-    });
+    overlay.querySelector('#revoke-all-cancel')!.addEventListener('click', close);
     confirmBtn.addEventListener('click', async () => {
-      modal.remove();
+      close();
       try {
         await ApiClient.post('/admin/revoke-all-sessions', {});
         this.notifications.success(t('admin:dashboard.revokeAllSuccess'));

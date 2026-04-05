@@ -25,6 +25,7 @@ import {
   getErrorMessage,
 } from '@blast-arena/shared';
 import { escapeHtml, escapeAttr } from '../../utils/html';
+import { createModal } from '../../utils/modal';
 import { EnemyTextureGenerator } from '../../game/EnemyTextureGenerator';
 import game from '../../main';
 
@@ -594,54 +595,44 @@ export class CampaignTab {
 
   private showWorldModal(existing?: CampaignWorld): void {
     const isEdit = !!existing;
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute(
-      'aria-label',
-      isEdit
-        ? t('admin:campaign.worldModal.editAriaLabel')
-        : t('admin:campaign.worldModal.createAriaLabel'),
-    );
 
     const themeOptions = THEME_OPTIONS.map(
       (th) =>
         `<option value="${th}" ${existing?.theme === th ? 'selected' : ''}>${th.charAt(0).toUpperCase() + th.slice(1)}</option>`,
     ).join('');
 
-    overlay.innerHTML = `
-      <div class="camp-modal-body md">
-        <h3 class="camp-modal-title">${isEdit ? t('admin:campaign.worldModal.editTitle') : t('admin:campaign.worldModal.createTitle')}</h3>
-        <div class="camp-modal-form">
-          <div class="form-group">
-            <label class="camp-form-label">${t('admin:campaign.worldModal.nameLabel')}</label>
-            <input type="text" id="world-name" class="admin-input w-full" value="${escapeAttr(existing?.name || '')}" placeholder="${t('admin:campaign.worldModal.namePlaceholder')}" maxlength="100">
-          </div>
-          <div class="form-group">
-            <label class="camp-form-label">${t('admin:campaign.worldModal.descriptionLabel')}</label>
-            <textarea id="world-desc" class="admin-textarea" placeholder="${t('admin:campaign.worldModal.descriptionPlaceholder')}" maxlength="500" rows="2">${escapeHtml(existing?.description || '')}</textarea>
-          </div>
-          <div class="form-group">
-            <label class="camp-form-label">${t('admin:campaign.worldModal.themeLabel')}</label>
-            <select id="world-theme" class="admin-input w-full">
-              ${themeOptions}
-            </select>
-          </div>
-          <div class="camp-modal-actions">
-            <button class="btn btn-secondary" id="world-modal-cancel">${t('admin:campaign.worldModal.cancel')}</button>
-            <button class="btn btn-primary" id="world-modal-submit">${isEdit ? t('admin:campaign.worldModal.save') : t('admin:campaign.worldModal.create')}</button>
-          </div>
+    const { overlay, content, close } = createModal({
+      ariaLabel: isEdit
+        ? t('admin:campaign.worldModal.editAriaLabel')
+        : t('admin:campaign.worldModal.createAriaLabel'),
+      className: 'camp-modal-body md',
+    });
+
+    content.innerHTML = `
+      <h3 class="camp-modal-title">${isEdit ? t('admin:campaign.worldModal.editTitle') : t('admin:campaign.worldModal.createTitle')}</h3>
+      <div class="camp-modal-form">
+        <div class="form-group">
+          <label class="camp-form-label">${t('admin:campaign.worldModal.nameLabel')}</label>
+          <input type="text" id="world-name" class="admin-input w-full" value="${escapeAttr(existing?.name || '')}" placeholder="${t('admin:campaign.worldModal.namePlaceholder')}" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label class="camp-form-label">${t('admin:campaign.worldModal.descriptionLabel')}</label>
+          <textarea id="world-desc" class="admin-textarea" placeholder="${t('admin:campaign.worldModal.descriptionPlaceholder')}" maxlength="500" rows="2">${escapeHtml(existing?.description || '')}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="camp-form-label">${t('admin:campaign.worldModal.themeLabel')}</label>
+          <select id="world-theme" class="admin-input w-full">
+            ${themeOptions}
+          </select>
+        </div>
+        <div class="camp-modal-actions">
+          <button class="btn btn-secondary" id="world-modal-cancel">${t('admin:campaign.worldModal.cancel')}</button>
+          <button class="btn btn-primary" id="world-modal-submit">${isEdit ? t('admin:campaign.worldModal.save') : t('admin:campaign.worldModal.create')}</button>
         </div>
       </div>
     `;
 
-    document.body.appendChild(overlay);
-
-    overlay.querySelector('#world-modal-cancel')!.addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
+    overlay.querySelector('#world-modal-cancel')!.addEventListener('click', close);
 
     overlay.querySelector('#world-modal-submit')!.addEventListener('click', async () => {
       const name = (overlay.querySelector('#world-name') as HTMLInputElement).value.trim();
@@ -667,7 +658,7 @@ export class CampaignTab {
           await ApiClient.post('/admin/campaign/worlds', { name, description, theme });
           this.notifications.success(t('admin:campaign.worldModal.worldCreated'));
         }
-        overlay.remove();
+        close();
         await this.loadWorlds();
       } catch (err: unknown) {
         this.notifications.error(getErrorMessage(err));
@@ -807,17 +798,6 @@ export class CampaignTab {
     const config: EnemyTypeConfig = existing ? { ...existing.config } : defaultEnemyConfig();
     const sprite: EnemySpriteConfig = { ...config.sprite };
 
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute(
-      'aria-label',
-      isEdit
-        ? t('admin:campaign.enemyModal.editAriaLabel')
-        : t('admin:campaign.enemyModal.createAriaLabel'),
-    );
-
     const bodyShapeOptions = ENEMY_BODY_SHAPES.map(
       (s) =>
         `<option value="${s}" ${sprite.bodyShape === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`,
@@ -835,155 +815,158 @@ export class CampaignTab {
         `<option value="${p}" ${config.movementPattern === p ? 'selected' : ''}>${p.replace(/_/g, ' ')}</option>`,
     ).join('');
 
-    overlay.innerHTML = `
-      <div class="camp-modal-body lg">
-        <h3 class="camp-modal-title">${isEdit ? t('admin:campaign.enemyModal.editTitle') : t('admin:campaign.enemyModal.createTitle')}</h3>
+    const { overlay, content, close } = createModal({
+      ariaLabel: isEdit
+        ? t('admin:campaign.enemyModal.editAriaLabel')
+        : t('admin:campaign.enemyModal.createAriaLabel'),
+      className: 'camp-modal-body lg',
+    });
 
-        <div class="camp-enemy-columns">
-          <!-- Left column: fields -->
-          <div class="camp-enemy-left">
-            <div class="form-group">
-              <label class="camp-form-label">${t('admin:campaign.enemyModal.nameLabel')}</label>
-              <input type="text" id="enemy-name" class="admin-input w-full" value="${escapeAttr(existing?.name || '')}" placeholder="${t('admin:campaign.enemyModal.namePlaceholder')}" maxlength="100">
-            </div>
-            <div class="form-group">
-              <label class="camp-form-label">${t('admin:campaign.enemyModal.descriptionLabel')}</label>
-              <input type="text" id="enemy-desc" class="admin-input w-full" value="${escapeAttr(existing?.description || '')}" placeholder="${t('admin:campaign.enemyModal.descriptionPlaceholder')}" maxlength="200">
-            </div>
+    content.innerHTML = `
+      <h3 class="camp-modal-title">${isEdit ? t('admin:campaign.enemyModal.editTitle') : t('admin:campaign.enemyModal.createTitle')}</h3>
 
-            <div class="camp-form-row">
-              <div class="camp-form-col">
-                <label class="camp-form-label">${t('admin:campaign.enemyModal.hpLabel')}</label>
-                <input type="number" id="enemy-hp" class="admin-input w-full" value="${config.hp}" min="1" max="100">
-              </div>
-              <div class="camp-form-col">
-                <label class="camp-form-label">${t('admin:campaign.enemyModal.speedLabel')}</label>
-                <input type="number" id="enemy-speed" class="admin-input w-full" value="${config.speed}" min="0.1" max="5" step="0.1">
-              </div>
-              <div class="camp-form-col">
-                <label class="camp-form-label">${t('admin:campaign.enemyModal.sizeLabel')}</label>
-                <input type="number" id="enemy-size" class="admin-input w-full" value="${config.sizeMultiplier}" min="1" max="3" step="0.1">
-              </div>
-            </div>
+      <div class="camp-enemy-columns">
+        <!-- Left column: fields -->
+        <div class="camp-enemy-left">
+          <div class="form-group">
+            <label class="camp-form-label">${t('admin:campaign.enemyModal.nameLabel')}</label>
+            <input type="text" id="enemy-name" class="admin-input w-full" value="${escapeAttr(existing?.name || '')}" placeholder="${t('admin:campaign.enemyModal.namePlaceholder')}" maxlength="100">
+          </div>
+          <div class="form-group">
+            <label class="camp-form-label">${t('admin:campaign.enemyModal.descriptionLabel')}</label>
+            <input type="text" id="enemy-desc" class="admin-input w-full" value="${escapeAttr(existing?.description || '')}" placeholder="${t('admin:campaign.enemyModal.descriptionPlaceholder')}" maxlength="200">
+          </div>
 
-            <div class="form-group">
-              <label class="camp-form-label">${t('admin:campaign.enemyModal.movementPatternLabel')}</label>
-              <select id="enemy-movement" class="admin-input w-full">
-                ${movementOptions}
-              </select>
+          <div class="camp-form-row">
+            <div class="camp-form-col">
+              <label class="camp-form-label">${t('admin:campaign.enemyModal.hpLabel')}</label>
+              <input type="number" id="enemy-hp" class="admin-input w-full" value="${config.hp}" min="1" max="100">
             </div>
-
-            <div class="form-group">
-              <label class="camp-form-label">${t('admin:campaign.enemyModal.customAiLabel')}</label>
-              <select id="enemy-ai-select" class="admin-input w-full">
-                <option value="">${t('admin:campaign.enemyModal.customAiNone')}</option>
-              </select>
+            <div class="camp-form-col">
+              <label class="camp-form-label">${t('admin:campaign.enemyModal.speedLabel')}</label>
+              <input type="number" id="enemy-speed" class="admin-input w-full" value="${config.speed}" min="0.1" max="5" step="0.1">
             </div>
-            <div class="form-group" id="enemy-difficulty-group" style="display:none">
-              <label class="camp-form-label">${t('admin:campaign.enemyModal.aiDifficultyLabel')}</label>
-              <select id="enemy-difficulty" class="admin-input w-full">
-                <option value="easy">${t('admin:campaign.enemyModal.difficultyEasy')}</option>
-                <option value="normal" selected>${t('admin:campaign.enemyModal.difficultyNormal')}</option>
-                <option value="hard">${t('admin:campaign.enemyModal.difficultyHard')}</option>
-              </select>
-            </div>
-
-            <div class="camp-checkbox-row">
-              <label class="camp-checkbox-label">
-                <input type="checkbox" id="enemy-boss" ${config.isBoss ? 'checked' : ''}> ${t('admin:campaign.enemyModal.bossCheckbox')}
-              </label>
-              <label class="camp-checkbox-label">
-                <input type="checkbox" id="enemy-contact-dmg" ${config.contactDamage ? 'checked' : ''}> ${t('admin:campaign.enemyModal.contactDamageCheckbox')}
-              </label>
-              <label class="camp-checkbox-label">
-                <input type="checkbox" id="enemy-can-bomb" ${config.canBomb ? 'checked' : ''}> ${t('admin:campaign.enemyModal.canBombCheckbox')}
-              </label>
-              <label class="camp-checkbox-label">
-                <input type="checkbox" id="enemy-pass-walls" ${config.canPassWalls ? 'checked' : ''}> ${t('admin:campaign.enemyModal.passWallsCheckbox')}
-              </label>
-              <label class="camp-checkbox-label">
-                <input type="checkbox" id="enemy-pass-bombs" ${config.canPassBombs ? 'checked' : ''}> ${t('admin:campaign.enemyModal.passBombsCheckbox')}
-              </label>
-            </div>
-
-            <div class="camp-form-row">
-              <div class="camp-form-col">
-                <label class="camp-form-label">${t('admin:campaign.enemyModal.dropChanceLabel')}</label>
-                <input type="number" id="enemy-drop-chance" class="admin-input w-full" value="${config.dropChance}" min="0" max="1" step="0.05">
-              </div>
+            <div class="camp-form-col">
+              <label class="camp-form-label">${t('admin:campaign.enemyModal.sizeLabel')}</label>
+              <input type="number" id="enemy-size" class="admin-input w-full" value="${config.sizeMultiplier}" min="1" max="3" step="0.1">
             </div>
           </div>
 
-          <!-- Right column: sprite config + preview -->
-          <div class="camp-enemy-right">
-            <div class="camp-preview-center">
-              <canvas id="enemy-modal-preview" width="80" height="80" class="camp-modal-preview"></canvas>
-            </div>
+          <div class="form-group">
+            <label class="camp-form-label">${t('admin:campaign.enemyModal.movementPatternLabel')}</label>
+            <select id="enemy-movement" class="admin-input w-full">
+              ${movementOptions}
+            </select>
+          </div>
 
-            <div class="form-group">
-              <label class="camp-form-label sm">${t('admin:campaign.enemyModal.bodyShapeLabel')}</label>
-              <select id="enemy-body-shape" class="admin-input w-full text-xs">
-                ${bodyShapeOptions}
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="camp-form-label sm">${t('admin:campaign.enemyModal.eyeStyleLabel')}</label>
-              <select id="enemy-eye-style" class="admin-input w-full text-xs">
-                ${eyeStyleOptions}
-              </select>
-            </div>
-            <div class="camp-color-row">
-              <div class="camp-form-col">
-                <label class="camp-form-label sm">${t('admin:campaign.enemyModal.primaryColorLabel')}</label>
-                <input type="color" id="enemy-primary-color" value="${sprite.primaryColor}" class="camp-color-input">
-              </div>
-              <div class="camp-form-col">
-                <label class="camp-form-label sm">${t('admin:campaign.enemyModal.secondaryColorLabel')}</label>
-                <input type="color" id="enemy-secondary-color" value="${sprite.secondaryColor}" class="camp-color-input">
-              </div>
-            </div>
-            <div class="camp-checkbox-row">
-              <label class="camp-checkbox-label sm">
-                <input type="checkbox" id="enemy-has-teeth" ${sprite.hasTeeth ? 'checked' : ''}> ${t('admin:campaign.enemyModal.teethCheckbox')}
-              </label>
-              <label class="camp-checkbox-label sm">
-                <input type="checkbox" id="enemy-has-horns" ${sprite.hasHorns ? 'checked' : ''}> ${t('admin:campaign.enemyModal.hornsCheckbox')}
-              </label>
-              <label class="camp-checkbox-label sm">
-                <input type="checkbox" id="enemy-has-crown" ${sprite.hasCrown ? 'checked' : ''}> ${t('admin:campaign.enemyModal.crownCheckbox')}
-              </label>
-            </div>
-            <div class="camp-checkbox-row">
-              <label class="camp-checkbox-label sm">
-                <input type="checkbox" id="enemy-has-tail" ${sprite.hasTail ? 'checked' : ''}> ${t('admin:campaign.enemyModal.tailCheckbox')}
-              </label>
-              <label class="camp-checkbox-label sm">
-                <input type="checkbox" id="enemy-has-aura" ${sprite.hasAura ? 'checked' : ''}> ${t('admin:campaign.enemyModal.auraCheckbox')}
-              </label>
-              <label class="camp-checkbox-label sm">
-                <input type="checkbox" id="enemy-has-scar" ${sprite.hasScar ? 'checked' : ''}> ${t('admin:campaign.enemyModal.scarCheckbox')}
-              </label>
-              <label class="camp-checkbox-label sm">
-                <input type="checkbox" id="enemy-has-wings" ${sprite.hasWings ? 'checked' : ''}> ${t('admin:campaign.enemyModal.wingsCheckbox')}
-              </label>
-            </div>
-            <div class="form-group">
-              <label class="camp-form-label sm">${t('admin:campaign.enemyModal.accessoryLabel')}</label>
-              <select id="enemy-accessory" class="admin-input w-full text-xs">
-                ${accessoryOptions}
-              </select>
+          <div class="form-group">
+            <label class="camp-form-label">${t('admin:campaign.enemyModal.customAiLabel')}</label>
+            <select id="enemy-ai-select" class="admin-input w-full">
+              <option value="">${t('admin:campaign.enemyModal.customAiNone')}</option>
+            </select>
+          </div>
+          <div class="form-group" id="enemy-difficulty-group" style="display:none">
+            <label class="camp-form-label">${t('admin:campaign.enemyModal.aiDifficultyLabel')}</label>
+            <select id="enemy-difficulty" class="admin-input w-full">
+              <option value="easy">${t('admin:campaign.enemyModal.difficultyEasy')}</option>
+              <option value="normal" selected>${t('admin:campaign.enemyModal.difficultyNormal')}</option>
+              <option value="hard">${t('admin:campaign.enemyModal.difficultyHard')}</option>
+            </select>
+          </div>
+
+          <div class="camp-checkbox-row">
+            <label class="camp-checkbox-label">
+              <input type="checkbox" id="enemy-boss" ${config.isBoss ? 'checked' : ''}> ${t('admin:campaign.enemyModal.bossCheckbox')}
+            </label>
+            <label class="camp-checkbox-label">
+              <input type="checkbox" id="enemy-contact-dmg" ${config.contactDamage ? 'checked' : ''}> ${t('admin:campaign.enemyModal.contactDamageCheckbox')}
+            </label>
+            <label class="camp-checkbox-label">
+              <input type="checkbox" id="enemy-can-bomb" ${config.canBomb ? 'checked' : ''}> ${t('admin:campaign.enemyModal.canBombCheckbox')}
+            </label>
+            <label class="camp-checkbox-label">
+              <input type="checkbox" id="enemy-pass-walls" ${config.canPassWalls ? 'checked' : ''}> ${t('admin:campaign.enemyModal.passWallsCheckbox')}
+            </label>
+            <label class="camp-checkbox-label">
+              <input type="checkbox" id="enemy-pass-bombs" ${config.canPassBombs ? 'checked' : ''}> ${t('admin:campaign.enemyModal.passBombsCheckbox')}
+            </label>
+          </div>
+
+          <div class="camp-form-row">
+            <div class="camp-form-col">
+              <label class="camp-form-label">${t('admin:campaign.enemyModal.dropChanceLabel')}</label>
+              <input type="number" id="enemy-drop-chance" class="admin-input w-full" value="${config.dropChance}" min="0" max="1" step="0.05">
             </div>
           </div>
         </div>
 
-        <div class="camp-modal-actions mt-md">
-          <button class="btn btn-secondary" id="enemy-modal-cancel">${t('admin:campaign.enemyModal.cancel')}</button>
-          <button class="btn btn-primary" id="enemy-modal-submit">${isEdit ? t('admin:campaign.enemyModal.save') : t('admin:campaign.enemyModal.create')}</button>
+        <!-- Right column: sprite config + preview -->
+        <div class="camp-enemy-right">
+          <div class="camp-preview-center">
+            <canvas id="enemy-modal-preview" width="80" height="80" class="camp-modal-preview"></canvas>
+          </div>
+
+          <div class="form-group">
+            <label class="camp-form-label sm">${t('admin:campaign.enemyModal.bodyShapeLabel')}</label>
+            <select id="enemy-body-shape" class="admin-input w-full text-xs">
+              ${bodyShapeOptions}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="camp-form-label sm">${t('admin:campaign.enemyModal.eyeStyleLabel')}</label>
+            <select id="enemy-eye-style" class="admin-input w-full text-xs">
+              ${eyeStyleOptions}
+            </select>
+          </div>
+          <div class="camp-color-row">
+            <div class="camp-form-col">
+              <label class="camp-form-label sm">${t('admin:campaign.enemyModal.primaryColorLabel')}</label>
+              <input type="color" id="enemy-primary-color" value="${sprite.primaryColor}" class="camp-color-input">
+            </div>
+            <div class="camp-form-col">
+              <label class="camp-form-label sm">${t('admin:campaign.enemyModal.secondaryColorLabel')}</label>
+              <input type="color" id="enemy-secondary-color" value="${sprite.secondaryColor}" class="camp-color-input">
+            </div>
+          </div>
+          <div class="camp-checkbox-row">
+            <label class="camp-checkbox-label sm">
+              <input type="checkbox" id="enemy-has-teeth" ${sprite.hasTeeth ? 'checked' : ''}> ${t('admin:campaign.enemyModal.teethCheckbox')}
+            </label>
+            <label class="camp-checkbox-label sm">
+              <input type="checkbox" id="enemy-has-horns" ${sprite.hasHorns ? 'checked' : ''}> ${t('admin:campaign.enemyModal.hornsCheckbox')}
+            </label>
+            <label class="camp-checkbox-label sm">
+              <input type="checkbox" id="enemy-has-crown" ${sprite.hasCrown ? 'checked' : ''}> ${t('admin:campaign.enemyModal.crownCheckbox')}
+            </label>
+          </div>
+          <div class="camp-checkbox-row">
+            <label class="camp-checkbox-label sm">
+              <input type="checkbox" id="enemy-has-tail" ${sprite.hasTail ? 'checked' : ''}> ${t('admin:campaign.enemyModal.tailCheckbox')}
+            </label>
+            <label class="camp-checkbox-label sm">
+              <input type="checkbox" id="enemy-has-aura" ${sprite.hasAura ? 'checked' : ''}> ${t('admin:campaign.enemyModal.auraCheckbox')}
+            </label>
+            <label class="camp-checkbox-label sm">
+              <input type="checkbox" id="enemy-has-scar" ${sprite.hasScar ? 'checked' : ''}> ${t('admin:campaign.enemyModal.scarCheckbox')}
+            </label>
+            <label class="camp-checkbox-label sm">
+              <input type="checkbox" id="enemy-has-wings" ${sprite.hasWings ? 'checked' : ''}> ${t('admin:campaign.enemyModal.wingsCheckbox')}
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="camp-form-label sm">${t('admin:campaign.enemyModal.accessoryLabel')}</label>
+            <select id="enemy-accessory" class="admin-input w-full text-xs">
+              ${accessoryOptions}
+            </select>
+          </div>
         </div>
       </div>
-    `;
 
-    document.body.appendChild(overlay);
+      <div class="camp-modal-actions mt-md">
+        <button class="btn btn-secondary" id="enemy-modal-cancel">${t('admin:campaign.enemyModal.cancel')}</button>
+        <button class="btn btn-primary" id="enemy-modal-submit">${isEdit ? t('admin:campaign.enemyModal.save') : t('admin:campaign.enemyModal.create')}</button>
+      </div>
+    `;
 
     // Populate enemy AI dropdown
     const aiSelect = overlay.querySelector('#enemy-ai-select') as HTMLSelectElement;
@@ -1070,10 +1053,7 @@ export class CampaignTab {
       this.updateEnemyPreview(overlay, previewCanvas);
     });
 
-    overlay.querySelector('#enemy-modal-cancel')!.addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
+    overlay.querySelector('#enemy-modal-cancel')!.addEventListener('click', close);
 
     overlay.querySelector('#enemy-modal-submit')!.addEventListener('click', async () => {
       const name = (overlay.querySelector('#enemy-name') as HTMLInputElement).value.trim();
@@ -1139,7 +1119,7 @@ export class CampaignTab {
           });
           this.notifications.success(t('admin:campaign.enemyModal.enemyCreated'));
         }
-        overlay.remove();
+        close();
         await this.loadEnemyTypes();
       } catch (err: unknown) {
         this.notifications.error(getErrorMessage(err));
@@ -1213,30 +1193,25 @@ export class CampaignTab {
   }
 
   private showImportLevelModal(worldId: number): void {
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', t('admin:campaign.importLevelModal.ariaLabel'));
+    const { overlay, content, close } = createModal({
+      ariaLabel: t('admin:campaign.importLevelModal.ariaLabel'),
+      className: 'camp-modal-body md',
+    });
 
-    overlay.innerHTML = `
-      <div class="camp-modal-body md">
-        <h3 class="camp-modal-title">${t('admin:campaign.importLevelModal.title')}</h3>
-        <p class="camp-import-hint">
-          ${t('admin:campaign.importLevelModal.hint')}
-        </p>
-        <div class="camp-import-file-wrap">
-          <input type="file" id="import-level-file" accept=".json" class="camp-import-file">
-        </div>
-        <div id="import-level-status" class="camp-import-status"></div>
-        <div class="camp-modal-actions">
-          <button class="btn btn-secondary" id="import-level-cancel">${t('admin:campaign.importLevelModal.cancel')}</button>
-          <button class="btn btn-primary" id="import-level-submit" disabled>${t('admin:campaign.importLevelModal.import')}</button>
-        </div>
+    content.innerHTML = `
+      <h3 class="camp-modal-title">${t('admin:campaign.importLevelModal.title')}</h3>
+      <p class="camp-import-hint">
+        ${t('admin:campaign.importLevelModal.hint')}
+      </p>
+      <div class="camp-import-file-wrap">
+        <input type="file" id="import-level-file" accept=".json" class="camp-import-file">
+      </div>
+      <div id="import-level-status" class="camp-import-status"></div>
+      <div class="camp-modal-actions">
+        <button class="btn btn-secondary" id="import-level-cancel">${t('admin:campaign.importLevelModal.cancel')}</button>
+        <button class="btn btn-primary" id="import-level-submit" disabled>${t('admin:campaign.importLevelModal.import')}</button>
       </div>
     `;
-
-    document.body.appendChild(overlay);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSON.parse result with dynamic format detection
     let parsedData: any = null;
@@ -1274,12 +1249,7 @@ export class CampaignTab {
       }
     });
 
-    overlay
-      .querySelector('#import-level-cancel')!
-      .addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
+    overlay.querySelector('#import-level-cancel')!.addEventListener('click', close);
 
     submitBtn.addEventListener('click', async () => {
       if (!parsedData) return;
@@ -1308,11 +1278,11 @@ export class CampaignTab {
         );
 
         if (res.conflicts && res.conflicts.length > 0) {
-          overlay.remove();
+          close();
           this.showConflictResolutionModal(res.conflicts, levelPayload, enemyTypes, worldId);
         } else {
           this.notifications.success(t('admin:campaign.importLevelModal.importSuccess'));
-          overlay.remove();
+          close();
           await this.loadWorlds();
         }
       } catch (err: unknown) {
@@ -1329,12 +1299,6 @@ export class CampaignTab {
     enemyTypes: Record<string, unknown>[] | undefined,
     worldId: number,
   ): void {
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', t('admin:campaign.conflictModal.ariaLabel'));
-
     const conflictRows = conflicts
       .map((c, i) => {
         const existingOption = c.existingId
@@ -1367,26 +1331,24 @@ export class CampaignTab {
       })
       .join('');
 
-    overlay.innerHTML = `
-      <div class="camp-modal-body conflict">
-        <h3 class="camp-modal-title warning">${t('admin:campaign.conflictModal.title')}</h3>
-        <p class="camp-import-hint mb-md">
-          ${t('admin:campaign.conflictModal.hint')}
-        </p>
-        ${conflictRows}
-        <div class="camp-modal-actions mt-sm">
-          <button class="btn btn-secondary" id="conflict-cancel">${t('admin:campaign.conflictModal.cancel')}</button>
-          <button class="btn btn-primary" id="conflict-submit">${t('admin:campaign.conflictModal.import')}</button>
-        </div>
+    const { overlay, content, close } = createModal({
+      ariaLabel: t('admin:campaign.conflictModal.ariaLabel'),
+      className: 'camp-modal-body conflict',
+    });
+
+    content.innerHTML = `
+      <h3 class="camp-modal-title warning">${t('admin:campaign.conflictModal.title')}</h3>
+      <p class="camp-import-hint mb-md">
+        ${t('admin:campaign.conflictModal.hint')}
+      </p>
+      ${conflictRows}
+      <div class="camp-modal-actions mt-sm">
+        <button class="btn btn-secondary" id="conflict-cancel">${t('admin:campaign.conflictModal.cancel')}</button>
+        <button class="btn btn-primary" id="conflict-submit">${t('admin:campaign.conflictModal.import')}</button>
       </div>
     `;
 
-    document.body.appendChild(overlay);
-
-    overlay.querySelector('#conflict-cancel')!.addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
+    overlay.querySelector('#conflict-cancel')!.addEventListener('click', close);
 
     overlay.querySelector('#conflict-submit')!.addEventListener('click', async () => {
       const enemyIdMap: Record<string, number | 'create' | 'skip'> = {};
@@ -1415,7 +1377,7 @@ export class CampaignTab {
           enemyIdMap,
         });
         this.notifications.success(t('admin:campaign.conflictModal.importSuccess'));
-        overlay.remove();
+        close();
         await this.loadWorlds();
       } catch (err: unknown) {
         this.notifications.error(getErrorMessage(err));
@@ -1435,29 +1397,21 @@ export class CampaignTab {
     const entityLabel = t(`admin:campaign.deleteModal.entityLabels.${entityType}`);
     const warningText = t(`admin:campaign.deleteModal.warnings.${entityType}`);
 
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute(
-      'aria-label',
-      t('admin:campaign.deleteModal.ariaLabel', { entity: entityLabel }),
-    );
+    const { overlay, content, close } = createModal({
+      ariaLabel: t('admin:campaign.deleteModal.ariaLabel', { entity: entityLabel }),
+      className: 'camp-modal-body sm',
+    });
 
-    overlay.innerHTML = `
-      <div class="camp-modal-body sm">
-        <h3 class="camp-modal-title danger">${t('admin:campaign.deleteModal.title', { entity: entityLabel })}</h3>
-        <p class="camp-delete-confirm-text">${warningText} <strong>${escapeHtml(name)}</strong></p>
-        <p class="camp-delete-confirm-hint">${t('admin:campaign.deleteModal.confirmHint')}</p>
-        <input type="text" id="camp-delete-confirm" class="admin-input w-full mb-md" placeholder="${escapeAttr(name)}" aria-label="${t('admin:campaign.deleteModal.confirmAriaLabel')}">
-        <div class="camp-modal-actions">
-          <button class="btn btn-secondary" id="camp-delete-cancel">${t('admin:campaign.deleteModal.cancel')}</button>
-          <button class="btn btn-danger" id="camp-delete-submit" disabled>${t('admin:campaign.deleteModal.deleteBtn')}</button>
-        </div>
+    content.innerHTML = `
+      <h3 class="camp-modal-title danger">${t('admin:campaign.deleteModal.title', { entity: entityLabel })}</h3>
+      <p class="camp-delete-confirm-text">${warningText} <strong>${escapeHtml(name)}</strong></p>
+      <p class="camp-delete-confirm-hint">${t('admin:campaign.deleteModal.confirmHint')}</p>
+      <input type="text" id="camp-delete-confirm" class="admin-input w-full mb-md" placeholder="${escapeAttr(name)}" aria-label="${t('admin:campaign.deleteModal.confirmAriaLabel')}">
+      <div class="camp-modal-actions">
+        <button class="btn btn-secondary" id="camp-delete-cancel">${t('admin:campaign.deleteModal.cancel')}</button>
+        <button class="btn btn-danger" id="camp-delete-submit" disabled>${t('admin:campaign.deleteModal.deleteBtn')}</button>
       </div>
     `;
-
-    document.body.appendChild(overlay);
 
     const confirmInput = overlay.querySelector('#camp-delete-confirm') as HTMLInputElement;
     const deleteBtn = overlay.querySelector('#camp-delete-submit') as HTMLButtonElement;
@@ -1466,10 +1420,7 @@ export class CampaignTab {
       deleteBtn.disabled = confirmInput.value !== name;
     });
 
-    overlay.querySelector('#camp-delete-cancel')!.addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
+    overlay.querySelector('#camp-delete-cancel')!.addEventListener('click', close);
 
     deleteBtn.addEventListener('click', async () => {
       try {
@@ -1482,7 +1433,7 @@ export class CampaignTab {
         this.notifications.success(
           t('admin:campaign.deleteModal.deleteSuccess', { entity: entityLabel }),
         );
-        overlay.remove();
+        close();
 
         if (entityType === 'world' || entityType === 'level') {
           await this.loadWorlds();
