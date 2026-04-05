@@ -17,6 +17,8 @@ export class ReplayControls {
   private speedBtn: HTMLElement | null = null;
   private onBack: () => void;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private gamepadRAF: number | null = null;
+  private prevGamepadButtons: boolean[] = [];
 
   private static SPEEDS = [0.5, 1, 2, 4];
 
@@ -177,6 +179,9 @@ export class ReplayControls {
     };
     window.addEventListener('keydown', this.keyHandler);
 
+    // Gamepad controls: A=play/pause, LB/RB=seek, Y=speed, B=back
+    this.startGamepadPolling();
+
     this.update();
   }
 
@@ -192,8 +197,74 @@ export class ReplayControls {
       window.removeEventListener('keydown', this.keyHandler);
       this.keyHandler = null;
     }
+    this.stopGamepadPolling();
     this.container?.remove();
     this.container = null;
+  }
+
+  private startGamepadPolling(): void {
+    const poll = () => {
+      this.gamepadRAF = requestAnimationFrame(poll);
+
+      const pad = this.getPad();
+      if (!pad) {
+        this.prevGamepadButtons = [];
+        return;
+      }
+
+      const justPressed = (index: number): boolean => {
+        const down = pad.buttons[index]?.pressed ?? false;
+        const prev = this.prevGamepadButtons[index] ?? false;
+        return down && !prev;
+      };
+
+      // A (0) = play/pause
+      if (justPressed(0)) {
+        this.player.togglePlayPause();
+        this.updatePlayButton();
+      }
+
+      // B (1) = back
+      if (justPressed(1)) {
+        this.onBack();
+      }
+
+      // LB (4) = rewind 5s
+      if (justPressed(4)) {
+        this.player.seekTo(this.player.getCurrentFrame() - 100);
+        this.update();
+      }
+
+      // RB (5) = forward 5s
+      if (justPressed(5)) {
+        this.player.seekTo(this.player.getCurrentFrame() + 100);
+        this.update();
+      }
+
+      // Y (3) = cycle speed
+      if (justPressed(3)) {
+        this.cycleSpeed();
+      }
+
+      this.prevGamepadButtons = pad.buttons.map((b) => b.pressed);
+    };
+
+    this.gamepadRAF = requestAnimationFrame(poll);
+  }
+
+  private stopGamepadPolling(): void {
+    if (this.gamepadRAF !== null) {
+      cancelAnimationFrame(this.gamepadRAF);
+      this.gamepadRAF = null;
+    }
+  }
+
+  private getPad(): Gamepad | null {
+    const gamepads = navigator.getGamepads();
+    for (const pad of gamepads) {
+      if (pad && pad.connected) return pad;
+    }
+    return null;
   }
 
   private createControlBtn(label: string, title: string): HTMLElement {

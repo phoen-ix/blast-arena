@@ -2,7 +2,7 @@ import { GamepadManager, GamepadInput } from './GamepadManager';
 
 export interface LocalPlayerInput {
   direction: 'up' | 'down' | 'left' | 'right' | null;
-  action: 'bomb' | 'detonate' | null;
+  action: 'bomb' | 'detonate' | 'throw' | null;
 }
 
 export type ControlPreset = 'wasd' | 'arrows' | 'numpad' | 'gamepad1' | 'gamepad2';
@@ -24,9 +24,9 @@ export interface LocalCoopConfig {
 }
 
 export const CONTROL_PRESET_LABELS: Record<ControlPreset, string> = {
-  wasd: 'WASD + Space/E',
-  arrows: 'Arrows + Enter/Shift',
-  numpad: 'Numpad 8462 + Plus/Minus',
+  wasd: 'WASD + Space/E/Q',
+  arrows: 'Arrows + Enter/Shift/Slash',
+  numpad: 'Numpad 8462 + Plus/Minus/Multiply',
   gamepad1: 'Gamepad 1',
   gamepad2: 'Gamepad 2',
 };
@@ -93,7 +93,7 @@ export function saveLocalCoopConfig(config: LocalCoopConfig): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 }
 
-const WASD_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyE']);
+const WASD_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyE', 'KeyQ']);
 const ARROW_KEYS = new Set([
   'ArrowUp',
   'ArrowDown',
@@ -102,6 +102,7 @@ const ARROW_KEYS = new Set([
   'Enter',
   'ShiftLeft',
   'ShiftRight',
+  'Slash',
 ]);
 const NUMPAD_KEYS = new Set([
   'Numpad8',
@@ -110,6 +111,7 @@ const NUMPAD_KEYS = new Set([
   'Numpad2',
   'NumpadAdd',
   'NumpadSubtract',
+  'NumpadMultiply',
 ]);
 
 function getPresetKeyCodes(preset: ControlPreset): Set<string> {
@@ -141,8 +143,10 @@ export class LocalCoopInput {
 
   private p1PrevBomb = false;
   private p1PrevDetonate = false;
+  private p1PrevThrow = false;
   private p2PrevBomb = false;
   private p2PrevDetonate = false;
+  private p2PrevThrow = false;
 
   private keyDownHandler: (e: KeyboardEvent) => void;
   private keyUpHandler: (e: KeyboardEvent) => void;
@@ -212,33 +216,41 @@ export class LocalCoopInput {
 
     let bombDown = false;
     let detDown = false;
+    let throwDown = false;
     switch (preset) {
       case 'wasd':
         bombDown = this.keysDown.has('Space');
         detDown = this.keysDown.has('KeyE');
+        throwDown = this.keysDown.has('KeyQ');
         break;
       case 'arrows':
         bombDown = this.keysDown.has('Enter');
         detDown = this.keysDown.has('ShiftLeft') || this.keysDown.has('ShiftRight');
+        throwDown = this.keysDown.has('Slash');
         break;
       case 'numpad':
         bombDown = this.keysDown.has('NumpadAdd');
         detDown = this.keysDown.has('NumpadSubtract');
+        throwDown = this.keysDown.has('NumpadMultiply');
         break;
     }
 
     const prevBomb = player === 'p1' ? this.p1PrevBomb : this.p2PrevBomb;
     const prevDet = player === 'p1' ? this.p1PrevDetonate : this.p2PrevDetonate;
+    const prevThrow = player === 'p1' ? this.p1PrevThrow : this.p2PrevThrow;
 
     if (bombDown && !prevBomb) action = 'bomb';
     if (detDown && !prevDet) action = 'detonate';
+    if (throwDown && !prevThrow) action = 'throw';
 
     if (player === 'p1') {
       this.p1PrevBomb = bombDown;
       this.p1PrevDetonate = detDown;
+      this.p1PrevThrow = throwDown;
     } else {
       this.p2PrevBomb = bombDown;
       this.p2PrevDetonate = detDown;
+      this.p2PrevThrow = throwDown;
     }
 
     return { direction, action };
@@ -255,7 +267,9 @@ export class LocalCoopInput {
     this.keysDown.clear();
     this.p1PrevBomb = false;
     this.p1PrevDetonate = false;
+    this.p1PrevThrow = false;
     this.p2PrevBomb = false;
     this.p2PrevDetonate = false;
+    this.p2PrevThrow = false;
   }
 }

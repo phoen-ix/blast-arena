@@ -2,7 +2,12 @@ import Phaser from 'phaser';
 
 export interface GamepadInput {
   direction: 'up' | 'down' | 'left' | 'right' | null;
-  action: 'bomb' | 'detonate' | null;
+  action: 'bomb' | 'detonate' | 'throw' | null;
+}
+
+export interface GamepadMenuInput {
+  pause: boolean;
+  emoteWheel: boolean;
 }
 
 export interface SpectatorGamepadInput {
@@ -18,12 +23,16 @@ export class GamepadManager {
 
   private prevBombButton = false;
   private prevDetonateButton = false;
+  private prevThrowButton = false;
+  private prevStartButton = false;
+  private prevEmoteButton = false;
   private prevLB = false;
   private prevRB = false;
 
   // Indexed gamepad state for local co-op
   private prevIndexedBomb: Map<string, boolean> = new Map();
   private prevIndexedDetonate: Map<string, boolean> = new Map();
+  private prevIndexedThrow: Map<string, boolean> = new Map();
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -51,18 +60,22 @@ export class GamepadManager {
 
     const bombDown = pad.buttons[0]?.pressed ?? false;
     const detonateDown = pad.buttons[1]?.pressed ?? false;
+    const throwDown = pad.buttons[2]?.pressed ?? false;
 
     // Use separate just-pressed state keyed by index
     const key = `pad${index}`;
     const prevBomb = this.prevIndexedBomb.get(key) ?? false;
     const prevDet = this.prevIndexedDetonate.get(key) ?? false;
+    const prevThrow = this.prevIndexedThrow.get(key) ?? false;
 
-    let action: 'bomb' | 'detonate' | null = null;
+    let action: 'bomb' | 'detonate' | 'throw' | null = null;
     if (bombDown && !prevBomb) action = 'bomb';
     if (detonateDown && !prevDet) action = 'detonate';
+    if (throwDown && !prevThrow) action = 'throw';
 
     this.prevIndexedBomb.set(key, bombDown);
     this.prevIndexedDetonate.set(key, detonateDown);
+    this.prevIndexedThrow.set(key, throwDown);
 
     return { direction, action };
   }
@@ -72,6 +85,7 @@ export class GamepadManager {
     if (!pad) {
       this.prevBombButton = false;
       this.prevDetonateButton = false;
+      this.prevThrowButton = false;
       return { direction: null, action: null };
     }
 
@@ -79,13 +93,16 @@ export class GamepadManager {
 
     const bombDown = pad.buttons[0]?.pressed ?? false;
     const detonateDown = pad.buttons[1]?.pressed ?? false;
+    const throwDown = pad.buttons[2]?.pressed ?? false;
 
-    let action: 'bomb' | 'detonate' | null = null;
+    let action: 'bomb' | 'detonate' | 'throw' | null = null;
     if (bombDown && !this.prevBombButton) action = 'bomb';
     if (detonateDown && !this.prevDetonateButton) action = 'detonate';
+    if (throwDown && !this.prevThrowButton) action = 'throw';
 
     this.prevBombButton = bombDown;
     this.prevDetonateButton = detonateDown;
+    this.prevThrowButton = throwDown;
 
     return { direction, action };
   }
@@ -112,6 +129,27 @@ export class GamepadManager {
     this.prevLB = lbDown;
 
     return { panX, panY, nextPlayer, prevPlayer };
+  }
+
+  /** Poll menu buttons (Start = pause, Y = emote wheel) — edge-detected */
+  pollMenu(): GamepadMenuInput {
+    const pad = this.getPad();
+    if (!pad) {
+      this.prevStartButton = false;
+      this.prevEmoteButton = false;
+      return { pause: false, emoteWheel: false };
+    }
+
+    const startDown = pad.buttons[9]?.pressed ?? false;
+    const emoteDown = pad.buttons[3]?.pressed ?? false;
+
+    const pause = startDown && !this.prevStartButton;
+    const emoteWheel = emoteDown && !this.prevEmoteButton;
+
+    this.prevStartButton = startDown;
+    this.prevEmoteButton = emoteDown;
+
+    return { pause, emoteWheel };
   }
 
   isConnected(): boolean {
@@ -152,10 +190,14 @@ export class GamepadManager {
   reset(): void {
     this.prevBombButton = false;
     this.prevDetonateButton = false;
+    this.prevThrowButton = false;
+    this.prevStartButton = false;
+    this.prevEmoteButton = false;
     this.prevLB = false;
     this.prevRB = false;
     this.prevIndexedBomb.clear();
     this.prevIndexedDetonate.clear();
+    this.prevIndexedThrow.clear();
   }
 
   destroy(): void {

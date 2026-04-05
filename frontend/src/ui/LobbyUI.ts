@@ -476,7 +476,7 @@ export class LobbyUI {
       elements: () => [
         ...this.container.querySelectorAll<HTMLElement>('.sidebar-nav-item'),
         ...this.container.querySelectorAll<HTMLElement>(
-          '.main-body input, .main-body select, .main-body textarea, .main-body button, .main-body .btn, .main-body .room-card, .main-body .admin-tab, .main-body .tab-item',
+          '.main-body input, .main-body select, .main-body textarea, .main-body button, .main-body .btn, .main-body .room-card, .main-body .admin-tab, .main-body .tab-item, .main-body .messages-conv-item',
         ),
         ...this.container.querySelectorAll<HTMLElement>('.main-header .btn'),
       ],

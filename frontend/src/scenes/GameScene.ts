@@ -672,6 +672,9 @@ export class GameScene extends Phaser.Scene {
       this.registry.set('spectateTargetId', null);
     }
 
+    // Gamepad menu buttons (pause/emote) — polled every frame, not throttled
+    this.pollGamepadMenu();
+
     this.processInput();
     this.updateCamera();
     this.updatePartnerArrows();
@@ -1017,6 +1020,34 @@ export class GameScene extends Phaser.Scene {
     cam.scrollY = Phaser.Math.Linear(cam.scrollY, sprite.y - cam.height / 2, 0.15);
   }
 
+  /** Poll gamepad Start (pause) and Y (emote wheel) — runs every frame, unthrottled */
+  private pollGamepadMenu(): void {
+    if (!this.gamepadManager) return;
+    const menu = this.gamepadManager.pollMenu();
+
+    // Start button = pause toggle (campaign) or leave overlay (multiplayer)
+    if (menu.pause) {
+      if (this.campaignMode) {
+        if (this.paused) this.resumeCampaign();
+        else this.pauseCampaign();
+      } else if (!this.registry.get('replayMode') && !this.registry.get('simulationSpectate')) {
+        if (this.paused) this.hideLeaveOverlay();
+        else this.showLeaveOverlay();
+      }
+    }
+
+    // Y button = emote wheel toggle (only when alive and playing)
+    if (menu.emoteWheel && !this.localPlayerDead && this.lastGameState?.status === 'playing') {
+      if (this.emoteWheel!.isVisible()) {
+        this.emoteWheel!.hide();
+      } else {
+        this.emoteWheel!.show((emoteId) => {
+          this.socketClient.emit('game:emote', { emoteId });
+        });
+      }
+    }
+  }
+
   private processInput(): void {
     if (this.localPlayerDead) {
       const panSpeed = 5;
@@ -1325,6 +1356,15 @@ export class GameScene extends Phaser.Scene {
     overlay.querySelector('#leave-cancel')!.addEventListener('click', () => {
       this.hideLeaveOverlay();
     });
+
+    // Enable gamepad navigation for overlay buttons
+    const gpNav = UIGamepadNavigator.getInstance();
+    gpNav.setActive(true);
+    gpNav.pushContext({
+      id: 'leave-overlay',
+      elements: () => [...overlay.querySelectorAll<HTMLElement>('.pause-btn')],
+      onBack: () => this.hideLeaveOverlay(),
+    });
   }
 
   private hideLeaveOverlay(): void {
@@ -1373,10 +1413,23 @@ export class GameScene extends Phaser.Scene {
       this.scene.stop('HUDScene');
       this.scene.start('LobbyScene');
     });
+
+    // Enable gamepad navigation for overlay buttons
+    const gpNav = UIGamepadNavigator.getInstance();
+    gpNav.setActive(true);
+    gpNav.pushContext({
+      id: 'pause-overlay',
+      elements: () => [...overlay.querySelectorAll<HTMLElement>('.pause-btn')],
+      onBack: () => this.resumeCampaign(),
+    });
   }
 
   private hidePauseOverlay(): void {
     if (this.pauseOverlay) {
+      const gpNav = UIGamepadNavigator.getInstance();
+      gpNav.popContext('pause-overlay');
+      gpNav.popContext('leave-overlay');
+      gpNav.setActive(false);
       this.pauseOverlay.remove();
       this.pauseOverlay = null;
     }
