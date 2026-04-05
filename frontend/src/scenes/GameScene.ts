@@ -9,6 +9,7 @@ import {
   ReplayTickEvents,
   PlayerCosmeticData,
   CampaignWorldTheme,
+  OpenWorldScoreEntry,
   TILE_SIZE,
   TICK_MS,
 } from '@blast-arena/shared';
@@ -109,6 +110,19 @@ export class GameScene extends Phaser.Scene {
   private emoteKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private _emotePositions = new Map<number, { x: number; y: number }>();
 
+  // Open world mode
+  private openWorldMode: boolean = false;
+  private openWorldRoundEndHandler:
+    | ((data: {
+        roundNumber: number;
+        leaderboard: OpenWorldScoreEntry[];
+        nextRoundIn: number;
+      }) => void)
+    | null = null;
+  private openWorldRoundStartHandler:
+    | ((data: { roundNumber: number; state: GameState }) => void)
+    | null = null;
+
   // Campaign pause
   private paused: boolean = false;
   private pauseOverlay: HTMLElement | null = null;
@@ -161,7 +175,6 @@ export class GameScene extends Phaser.Scene {
 
     this.socketClient = this.registry.get('socketClient');
     this.authManager = this.registry.get('authManager');
-    this.localPlayerId = this.authManager.getUser()?.id ?? 0;
     const initialState: GameState = this.registry.get('initialGameState');
 
     // Clean up stale state from previous game
@@ -189,6 +202,26 @@ export class GameScene extends Phaser.Scene {
     }
     this.hidePauseOverlay();
     this.cleanupRenderers();
+
+    // Open world cleanup
+    this.socketClient.off('openworld:state');
+    if (this.openWorldRoundEndHandler) {
+      this.socketClient.off('openworld:roundEnd', this.openWorldRoundEndHandler);
+      this.openWorldRoundEndHandler = null;
+    }
+    if (this.openWorldRoundStartHandler) {
+      this.socketClient.off('openworld:roundStart', this.openWorldRoundStartHandler);
+      this.openWorldRoundStartHandler = null;
+    }
+
+    // Detect open world mode
+    this.openWorldMode = !!this.registry.get('openWorldMode');
+    this.registry.remove('openWorldMode');
+    const openWorldPlayerId = this.registry.get('openWorldPlayerId') as number | undefined;
+    this.registry.remove('openWorldPlayerId');
+
+    // Set local player ID — open world guests get server-assigned negative IDs
+    this.localPlayerId = openWorldPlayerId ?? this.authManager.getUser()?.id ?? 0;
 
     // Reset state
     this.paused = false;
@@ -576,6 +609,45 @@ export class GameScene extends Phaser.Scene {
         }
       };
       window.addEventListener('keydown', this.pauseKeyHandler);
+    } else if (this.openWorldMode) {
+      // Open world uses its own state event
+      this.socketClient.on('openworld:state', (state) => {
+        this.updateState(state);
+      });
+
+      // Handle round transitions
+      this.openWorldRoundEndHandler = (data) => {
+        // HUDScene handles the scoreboard overlay via Phaser events
+        this.events.emit('openWorldRoundEnd', data);
+      };
+      this.socketClient.on('openworld:roundEnd', this.openWorldRoundEndHandler);
+
+      this.openWorldRoundStartHandler = (data) => {
+        // New round — update stored tiles and camera
+        if (data.state.map?.tiles) {
+          this.storedTiles = data.state.map.tiles.map(
+            (row: import('@blast-arena/shared').TileType[]) => [...row],
+          );
+          this.tileMap?.updateTiles(data.state.map.tiles);
+          this.applyCameraBounds(data.state.map.width, data.state.map.height);
+        }
+        this.updateState(data.state);
+        this.events.emit('openWorldRoundStart', data);
+      };
+      this.socketClient.on('openworld:roundStart', this.openWorldRoundStartHandler);
+
+      // Escape key to toggle leave menu
+      this.pauseKeyHandler = (e: KeyboardEvent) => {
+        if (e.code === 'Escape') {
+          e.preventDefault();
+          if (this.paused) {
+            this.hideLeaveOverlay();
+          } else {
+            this.showLeaveOverlay();
+          }
+        }
+      };
+      window.addEventListener('keydown', this.pauseKeyHandler);
     } else {
       this.socketClient.on('game:state', (state) => {
         this.updateState(state);
@@ -743,6 +815,13 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const worldW = mapW * TILE_SIZE;
     const worldH = mapH * TILE_SIZE;
+
+    // Wrapping maps: no camera bounds, camera follows player freely
+    if (this.lastGameState?.map?.wrapping || this.openWorldMode) {
+      cam.removeBounds();
+      cam.centerOn(worldW / 2, worldH / 2);
+      return;
+    }
 
     if (this.coopCameraMode !== 'shared' && this.p2Camera) {
       // Split-screen: use tight bounds and auto-zoom to fill each viewport
@@ -1199,6 +1278,8 @@ export class GameScene extends Phaser.Scene {
       };
       if (this.campaignMode) {
         this.socketClient.emit('campaign:input', input);
+      } else if (this.openWorldMode) {
+        this.socketClient.emit('openworld:input', input);
       } else {
         this.socketClient.emit('game:input', input);
       }
@@ -1385,7 +1466,11 @@ export class GameScene extends Phaser.Scene {
     overlay.querySelector('#leave-confirm')!.addEventListener('click', () => {
       this.paused = false;
       this.hidePauseOverlay();
-      this.socketClient.emit('room:leave');
+      if (this.openWorldMode) {
+        this.socketClient.emit('openworld:leave');
+      } else {
+        this.socketClient.emit('room:leave');
+      }
       this.registry.remove('currentRoom');
       this.scene.stop('HUDScene');
       this.scene.start('LobbyScene');
@@ -1557,6 +1642,15 @@ export class GameScene extends Phaser.Scene {
     this.socketClient.off('game:state');
     this.socketClient.off('game:over');
     this.socketClient.off('game:bombThrown');
+    this.socketClient.off('openworld:state');
+    if (this.openWorldRoundEndHandler) {
+      this.socketClient.off('openworld:roundEnd', this.openWorldRoundEndHandler);
+      this.openWorldRoundEndHandler = null;
+    }
+    if (this.openWorldRoundStartHandler) {
+      this.socketClient.off('openworld:roundStart', this.openWorldRoundStartHandler);
+      this.openWorldRoundStartHandler = null;
+    }
     this.socketClient.off('sim:state');
     this.socketClient.off('sim:gameTransition');
     this.socketClient.off('sim:completed');
@@ -1584,6 +1678,7 @@ export class GameScene extends Phaser.Scene {
     this.campaignCoopMode = false;
     this.localCoopMode = false;
     this.buddyMode = false;
+    this.openWorldMode = false;
     this.localCoopInput?.destroy();
     this.localCoopInput = null;
     this.localP2Id = 0;

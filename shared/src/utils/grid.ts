@@ -1,5 +1,6 @@
 import { Position, TileType } from '../types/game';
 import { TILE_SIZE } from '../constants/game';
+import { wrapX, wrapY } from './wrap';
 
 export function posToTile(pixelX: number, pixelY: number): Position {
   return {
@@ -30,6 +31,7 @@ export function getExplosionCells(
   mapHeight: number,
   tiles: TileType[][],
   pierce: boolean = false,
+  wrapping: boolean = false,
 ): Position[] {
   const cells: Position[] = [{ x: originX, y: originY }];
   const directions = [
@@ -41,10 +43,17 @@ export function getExplosionCells(
 
   for (const { dx, dy } of directions) {
     for (let i = 1; i <= range; i++) {
-      const nx = originX + dx * i;
-      const ny = originY + dy * i;
+      let nx = originX + dx * i;
+      let ny = originY + dy * i;
 
-      if (nx < 0 || nx >= mapWidth || ny < 0 || ny >= mapHeight) break;
+      if (wrapping) {
+        nx = wrapX(nx, mapWidth);
+        ny = wrapY(ny, mapHeight);
+        // Cycle detection: explosion wrapped all the way around
+        if (nx === originX && ny === originY) break;
+      } else {
+        if (nx < 0 || nx >= mapWidth || ny < 0 || ny >= mapHeight) break;
+      }
 
       const tile = tiles[ny][nx];
       if (tile === 'wall') break;

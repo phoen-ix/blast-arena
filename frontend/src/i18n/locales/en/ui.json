@@ -18,7 +18,8 @@
     "logout": "Logout",
     "expand": "Expand sidebar",
     "collapse": "Collapse sidebar",
-    "viewProfile": "View profile"
+    "viewProfile": "View profile",
+    "openWorld": "Open World"
   },
   "rooms": {
     "title": "Available Rooms",
@@ -62,7 +63,12 @@
   },
   "menu": {
     "tagline": "Multiplayer Explosive Combat",
-    "connecting": "Connecting..."
+    "connecting": "Connecting...",
+    "playAsGuest": "Play as Guest",
+    "login": "Login",
+    "register": "Register",
+    "onlinePlayers": "{{count}} online",
+    "guestUnavailable": "Guest access is currently disabled"
   },
   "settings": {
     "title": "Settings",
@@ -617,5 +623,25 @@
     "toggleLog": "Toggle log panel",
     "gameLog": "Game Log",
     "clickToSeek": "Click to seek"
+  },
+  "openWorld": {
+    "title": "Open World",
+    "playerCount": "{{current}}/{{max}} players",
+    "roundTimer": "Round ends in {{time}}",
+    "roundNumber": "Round {{number}}",
+    "leaderboard": "Leaderboard",
+    "joinButton": "Join World",
+    "leaveButton": "Leave World",
+    "joining": "Joining...",
+    "kills": "Kills",
+    "deaths": "Deaths",
+    "score": "Score",
+    "noPlayers": "No players yet",
+    "disabled": "Open World is currently offline",
+    "full": "Open World is full",
+    "respawning": "Respawning in {{seconds}}s...",
+    "roundEnd": "Round Over",
+    "roundStart": "New Round Starting",
+    "nextRound": "Next round in {{seconds}}s"
   }
 }

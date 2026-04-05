@@ -38,6 +38,25 @@ export class DashboardTab {
   private displayImprint: boolean = false;
   private imprintText: string = '';
   private displayGithub: boolean = false;
+  private owSettings: {
+    enabled: boolean;
+    guestAccess: boolean;
+    maxPlayers: number;
+    roundTime: number;
+    mapWidth: number;
+    mapHeight: number;
+    wallDensity: number;
+    respawnDelay: number;
+  } = {
+    enabled: true,
+    guestAccess: true,
+    maxPlayers: 32,
+    roundTime: 300,
+    mapWidth: 51,
+    mapHeight: 41,
+    wallDensity: 0.5,
+    respawnDelay: 3,
+  };
 
   constructor(notifications: NotificationUI) {
     this.notifications = notifications;
@@ -119,6 +138,13 @@ export class DashboardTab {
       this.emailSettings = emailResp.settings ?? {};
     } catch {
       // Non-admin or fetch failure — leave as empty
+    }
+    // Open world settings
+    try {
+      const owResp = await ApiClient.get<typeof this.owSettings>('/admin/settings/open_world');
+      this.owSettings = owResp;
+    } catch {
+      // Leave defaults
     }
     this.renderSettingsCard();
   }
@@ -234,6 +260,49 @@ export class DashboardTab {
         </div>
       </div>
 
+      <h3 style="margin-top:var(--sp-4);">Open World</h3>
+      <div class="settings-grid" id="ow-settings-grid">
+        <div class="setting-item">
+          <label class="setting-item-checkbox">
+            <input type="checkbox" id="ow-enabled" ${this.owSettings.enabled ? 'checked' : ''}>
+            <span class="setting-item-label">Enabled</span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <label class="setting-item-checkbox">
+            <input type="checkbox" id="ow-guest-access" ${this.owSettings.guestAccess ? 'checked' : ''}>
+            <span class="setting-item-label">Guest Access</span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <span class="setting-item-label">Max Players</span>
+          <input id="ow-max-players" type="number" min="2" max="50" value="${this.owSettings.maxPlayers}" class="admin-select" style="width:70px;">
+        </div>
+        <div class="setting-item">
+          <span class="setting-item-label">Round Time (s)</span>
+          <input id="ow-round-time" type="number" min="60" max="3600" value="${this.owSettings.roundTime}" class="admin-select" style="width:80px;">
+        </div>
+        <div class="setting-item">
+          <span class="setting-item-label">Map Width</span>
+          <input id="ow-map-width" type="number" min="21" max="101" step="2" value="${this.owSettings.mapWidth}" class="admin-select" style="width:70px;">
+        </div>
+        <div class="setting-item">
+          <span class="setting-item-label">Map Height</span>
+          <input id="ow-map-height" type="number" min="21" max="101" step="2" value="${this.owSettings.mapHeight}" class="admin-select" style="width:70px;">
+        </div>
+        <div class="setting-item">
+          <span class="setting-item-label">Wall Density</span>
+          <input id="ow-wall-density" type="number" min="0.1" max="0.9" step="0.1" value="${this.owSettings.wallDensity}" class="admin-select" style="width:70px;">
+        </div>
+        <div class="setting-item">
+          <span class="setting-item-label">Respawn Delay (s)</span>
+          <input id="ow-respawn-delay" type="number" min="1" max="30" value="${this.owSettings.respawnDelay}" class="admin-select" style="width:70px;">
+        </div>
+        <div class="setting-item">
+          <button id="ow-save-btn" class="btn btn-primary" style="padding:6px 16px;font-size:13px;">Save Open World Settings</button>
+        </div>
+      </div>
+
       <div class="danger-zone">
         <h4 style="color:var(--danger);margin-bottom:var(--sp-2);">${t('admin:dashboard.dangerZone')}</h4>
         <div class="setting-item" style="border:1px solid var(--danger);border-radius:var(--radius-sm);padding:var(--sp-3);">
@@ -285,6 +354,27 @@ export class DashboardTab {
 
     card.querySelector('#btn-revoke-all-sessions')!.addEventListener('click', () => {
       this.showRevokeAllModal();
+    });
+
+    // Open World save
+    card.querySelector('#ow-save-btn')?.addEventListener('click', async () => {
+      const settings = {
+        enabled: (card.querySelector('#ow-enabled') as HTMLInputElement).checked,
+        guestAccess: (card.querySelector('#ow-guest-access') as HTMLInputElement).checked,
+        maxPlayers: parseInt((card.querySelector('#ow-max-players') as HTMLInputElement).value),
+        roundTime: parseInt((card.querySelector('#ow-round-time') as HTMLInputElement).value),
+        mapWidth: parseInt((card.querySelector('#ow-map-width') as HTMLInputElement).value),
+        mapHeight: parseInt((card.querySelector('#ow-map-height') as HTMLInputElement).value),
+        wallDensity: parseFloat((card.querySelector('#ow-wall-density') as HTMLInputElement).value),
+        respawnDelay: parseInt((card.querySelector('#ow-respawn-delay') as HTMLInputElement).value),
+      };
+      try {
+        await ApiClient.put('/admin/settings/open_world', settings);
+        this.owSettings = settings;
+        this.notifications.success('Open World settings saved');
+      } catch {
+        this.notifications.error('Failed to save Open World settings');
+      }
     });
 
     const chatModeSelect = card.querySelector('#select-chat-mode') as HTMLSelectElement;

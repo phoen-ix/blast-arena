@@ -150,7 +150,7 @@ export class LobbyUI {
     }
 
     // Views with their own sub-header hide .main-header; others show it
-    const viewsWithOwnHeader = ['admin', 'settings', 'help', 'friends'];
+    const viewsWithOwnHeader = ['admin', 'settings', 'help', 'friends', 'openWorld'];
     const mainHeader = this.container.querySelector('.main-header') as HTMLElement;
     if (mainHeader) {
       mainHeader.style.display = viewsWithOwnHeader.includes(viewId) ? 'none' : '';
@@ -175,6 +175,10 @@ export class LobbyUI {
     };
 
     switch (viewId) {
+      case 'openWorld': {
+        const { OpenWorldView } = await import('./views/OpenWorldView');
+        return new OpenWorldView(deps);
+      }
       case 'rooms': {
         const view = new RoomsView(deps, (room) => {
           this.hide();
@@ -275,24 +279,16 @@ export class LobbyUI {
 
   private render(): void {
     const user = this.authManager.getUser();
+    const isGuest = this.authManager.isGuest;
     const isStaff = user?.role === 'admin' || user?.role === 'moderator';
     const username = escapeHtml(user?.username ?? '');
     const initial = (user?.username ?? 'U')[0].toUpperCase();
     const collapsedClass = this.sidebarCollapsed ? ' collapsed' : '';
 
-    this.container.innerHTML = `
-      <nav class="sidebar${collapsedClass}">
-        <div class="sidebar-brand">
-          <h1 class="sidebar-brand-full"><span>BLAST</span>ARENA</h1>
-          <div class="sidebar-brand-icon"><span>B</span>A</div>
-        </div>
-
-        <div class="sidebar-nav">
-          <div class="sidebar-section-label">${t('ui:sidebar.play')}</div>
-          <button class="sidebar-nav-item active" id="nav-rooms">
-            <span class="nav-icon">&#9776;</span>
-            <span class="nav-label">${t('ui:sidebar.rooms')}</span>
-          </button>
+    // Guest users see a limited sidebar
+    const authOnlyNav = isGuest
+      ? ''
+      : `
           <button class="sidebar-nav-item" id="nav-campaign">
             <span class="nav-icon">&#9876;</span>
             <span class="nav-label">${t('ui:sidebar.campaign')}</span>
@@ -304,8 +300,11 @@ export class LobbyUI {
           <button class="sidebar-nav-item" id="nav-challenge">
             <span class="nav-icon">&#9813;</span>
             <span class="nav-label">${t('ui:sidebar.challenge')}</span>
-          </button>
+          </button>`;
 
+    const socialNav = isGuest
+      ? ''
+      : `
           <div class="sidebar-section-label">${t('ui:sidebar.social')}</div>
           <button class="sidebar-nav-item" id="nav-friends">
             <span class="nav-icon">&#9829;</span>
@@ -318,8 +317,11 @@ export class LobbyUI {
           <button class="sidebar-nav-item" id="nav-party">
             <span class="nav-icon">&#9733;</span>
             <span class="nav-label">${t('ui:sidebar.party')}</span>
-          </button>
+          </button>`;
 
+    const progressNav = isGuest
+      ? ''
+      : `
           <div class="sidebar-section-label">${t('ui:sidebar.progress')}</div>
           <button class="sidebar-nav-item" id="nav-leaderboard">
             <span class="nav-icon">&#9818;</span>
@@ -328,7 +330,60 @@ export class LobbyUI {
           <button class="sidebar-nav-item" id="nav-matchHistory">
             <span class="nav-icon">&#9776;</span>
             <span class="nav-label">${t('ui:sidebar.matchHistory')}</span>
+          </button>`;
+
+    const footerHtml = isGuest
+      ? `
+        <div class="sidebar-footer">
+          <div class="sidebar-user">
+            <div class="sidebar-user-avatar">${initial}</div>
+            <div class="sidebar-user-info">
+              <div class="sidebar-user-name">${username}</div>
+            </div>
+          </div>
+          <button class="sidebar-nav-item" id="nav-logout">
+            <span class="nav-icon">&#10132;</span>
+            <span class="nav-label">${t('ui:menu.login')}</span>
           </button>
+        </div>`
+      : `
+        <div class="sidebar-footer">
+          <div class="sidebar-user" id="sidebar-user-profile" style="cursor:pointer;" title="${t('ui:sidebar.viewProfile')}">
+            <div class="sidebar-user-avatar">${initial}</div>
+            <div class="sidebar-user-info">
+              <div class="sidebar-user-name">${username}</div>
+              <div class="sidebar-user-rank">
+                <span id="sidebar-level"></span>
+                <span id="sidebar-rank"></span>
+              </div>
+            </div>
+          </div>
+          <button class="sidebar-nav-item" id="nav-logout">
+            <span class="nav-icon">&#10132;</span>
+            <span class="nav-label">${t('ui:sidebar.logout')}</span>
+          </button>
+        </div>`;
+
+    this.container.innerHTML = `
+      <nav class="sidebar${collapsedClass}">
+        <div class="sidebar-brand">
+          <h1 class="sidebar-brand-full"><span>BLAST</span>ARENA</h1>
+          <div class="sidebar-brand-icon"><span>B</span>A</div>
+        </div>
+
+        <div class="sidebar-nav">
+          <div class="sidebar-section-label">${t('ui:sidebar.play')}</div>
+          <button class="sidebar-nav-item active" id="nav-openWorld">
+            <span class="nav-icon">&#9672;</span>
+            <span class="nav-label">${t('ui:sidebar.openWorld')}</span>
+          </button>
+          <button class="sidebar-nav-item" id="nav-rooms">
+            <span class="nav-icon">&#9776;</span>
+            <span class="nav-label">${t('ui:sidebar.rooms')}</span>
+          </button>
+          ${authOnlyNav}
+          ${socialNav}
+          ${progressNav}
 
           <div class="sidebar-divider"></div>
 
@@ -352,22 +407,7 @@ export class LobbyUI {
           }
         </div>
 
-        <div class="sidebar-footer">
-          <div class="sidebar-user" id="sidebar-user-profile" style="cursor:pointer;" title="${t('ui:sidebar.viewProfile')}">
-            <div class="sidebar-user-avatar">${initial}</div>
-            <div class="sidebar-user-info">
-              <div class="sidebar-user-name">${username}</div>
-              <div class="sidebar-user-rank">
-                <span id="sidebar-level"></span>
-                <span id="sidebar-rank"></span>
-              </div>
-            </div>
-          </div>
-          <button class="sidebar-nav-item" id="nav-logout">
-            <span class="nav-icon">&#10132;</span>
-            <span class="nav-label">${t('ui:sidebar.logout')}</span>
-          </button>
-        </div>
+        ${footerHtml}
       </nav>
       <button class="sidebar-ear" id="sidebar-toggle" title="${this.sidebarCollapsed ? t('ui:sidebar.expand') : t('ui:sidebar.collapse')}">
         <span class="sidebar-ear-icon">${this.sidebarCollapsed ? '&#9654;' : '&#9664;'}</span>
@@ -385,31 +425,15 @@ export class LobbyUI {
   }
 
   private bindEvents(): void {
-    // Navigation items
+    const isGuest = this.authManager.isGuest;
+
+    // Navigation items — always present
+    this.container
+      .querySelector('#nav-openWorld')!
+      .addEventListener('click', () => this.navigateTo('openWorld'));
     this.container
       .querySelector('#nav-rooms')!
       .addEventListener('click', () => this.navigateTo('rooms'));
-    this.container
-      .querySelector('#nav-campaign')!
-      .addEventListener('click', () => this.navigateTo('campaign'));
-    this.container
-      .querySelector('#nav-maps')!
-      .addEventListener('click', () => this.navigateTo('maps'));
-    this.container
-      .querySelector('#nav-challenge')!
-      .addEventListener('click', () => this.navigateTo('challenge'));
-    this.container
-      .querySelector('#nav-friends')!
-      .addEventListener('click', () => this.navigateTo('friends'));
-    this.container
-      .querySelector('#nav-messages')!
-      .addEventListener('click', () => this.navigateTo('messages'));
-    this.container
-      .querySelector('#nav-leaderboard')!
-      .addEventListener('click', () => this.navigateTo('leaderboard'));
-    this.container
-      .querySelector('#nav-matchHistory')!
-      .addEventListener('click', () => this.navigateTo('matchHistory'));
     this.container
       .querySelector('#nav-settings')!
       .addEventListener('click', () => this.navigateTo('settings'));
@@ -417,22 +441,54 @@ export class LobbyUI {
       .querySelector('#nav-help')!
       .addEventListener('click', () => this.navigateTo('help'));
 
+    // Auth-only nav items
+    if (!isGuest) {
+      this.container
+        .querySelector('#nav-campaign')
+        ?.addEventListener('click', () => this.navigateTo('campaign'));
+      this.container
+        .querySelector('#nav-maps')
+        ?.addEventListener('click', () => this.navigateTo('maps'));
+      this.container
+        .querySelector('#nav-challenge')
+        ?.addEventListener('click', () => this.navigateTo('challenge'));
+      this.container
+        .querySelector('#nav-friends')
+        ?.addEventListener('click', () => this.navigateTo('friends'));
+      this.container
+        .querySelector('#nav-messages')
+        ?.addEventListener('click', () => this.navigateTo('messages'));
+      this.container
+        .querySelector('#nav-leaderboard')
+        ?.addEventListener('click', () => this.navigateTo('leaderboard'));
+      this.container
+        .querySelector('#nav-matchHistory')
+        ?.addEventListener('click', () => this.navigateTo('matchHistory'));
+      this.container
+        .querySelector('#nav-party')
+        ?.addEventListener('click', () => this.navigateTo('party'));
+
+      const profileEl = this.container.querySelector('#sidebar-user-profile');
+      if (profileEl) {
+        profileEl.addEventListener('click', () => {
+          const user = this.authManager.getUser();
+          if (user) this.navigateTo('profile', { userId: user.id });
+        });
+      }
+    }
+
     const adminBtn = this.container.querySelector('#nav-admin');
     if (adminBtn) {
       adminBtn.addEventListener('click', () => this.navigateTo('admin'));
     }
 
-    this.container
-      .querySelector('#nav-party')!
-      .addEventListener('click', () => this.navigateTo('party'));
-
-    this.container.querySelector('#sidebar-user-profile')!.addEventListener('click', () => {
-      const user = this.authManager.getUser();
-      if (user) this.navigateTo('profile', { userId: user.id });
-    });
-
     this.container.querySelector('#nav-logout')!.addEventListener('click', () => {
-      this.authManager.logout();
+      if (isGuest) {
+        this.socketClient.disconnect();
+        this.authManager.clearGuest();
+      } else {
+        this.authManager.logout();
+      }
       this.hide();
     });
 
@@ -492,8 +548,8 @@ export class LobbyUI {
         ...this.container.querySelectorAll<HTMLElement>('.main-header .btn'),
       ],
       onBack: () => {
-        if (this.activeViewId !== 'rooms') {
-          this.navigateTo('rooms');
+        if (this.activeViewId !== 'openWorld') {
+          this.navigateTo('openWorld');
         }
       },
     });

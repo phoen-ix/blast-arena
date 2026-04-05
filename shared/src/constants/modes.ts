@@ -4,7 +4,8 @@ export type GameMode =
   | 'battle_royale'
   | 'sudden_death'
   | 'deathmatch'
-  | 'king_of_the_hill';
+  | 'king_of_the_hill'
+  | 'open_world';
 
 export interface GameModeConfig {
   mode: GameMode;
@@ -85,6 +86,17 @@ export const GAME_MODES: Record<GameMode, GameModeConfig> = {
     defaultMapHeight: 31,
     roundTimeSeconds: 240,
     hasHill: true,
+  },
+  open_world: {
+    mode: 'open_world',
+    name: 'Open World',
+    description: 'Persistent arena with respawns - join anytime',
+    minPlayers: 1,
+    maxPlayers: 50,
+    defaultMapWidth: 51,
+    defaultMapHeight: 41,
+    roundTimeSeconds: 300,
+    hasRespawn: true,
   },
 };
 

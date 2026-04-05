@@ -5,6 +5,8 @@ import {
   DEFAULT_MAP_HEIGHT,
   DEFAULT_WALL_DENSITY,
   SPAWN_CLEAR_RADIUS,
+  wrapX,
+  wrapY,
 } from '@blast-arena/shared';
 import { PUZZLE_COLORS, getSwitchTile, getGateTile } from '@blast-arena/shared';
 
@@ -29,6 +31,7 @@ export function generateMap(
   wallDensity: number = DEFAULT_WALL_DENSITY,
   hazardTiles: string[] = [],
   puzzleTiles: string[] = [],
+  wrapping: boolean = false,
 ): GameMap {
   const mapSeed = seed ?? Math.floor(Math.random() * 2147483647);
   const rng = new SeededRandom(mapSeed);
@@ -45,33 +48,42 @@ export function generateMap(
   // Place indestructible walls in a grid pattern (every other cell)
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      // Border walls
-      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) {
-        tiles[y][x] = 'wall';
-        continue;
+      if (!wrapping) {
+        // Border walls for non-wrapping maps
+        if (x === 0 || y === 0 || x === width - 1 || y === height - 1) {
+          tiles[y][x] = 'wall';
+          continue;
+        }
       }
-      // Internal grid pattern: walls on even row AND even column (1-indexed inner grid)
+      // Internal grid pattern: walls on even row AND even column
       if (x % 2 === 0 && y % 2 === 0) {
         tiles[y][x] = 'wall';
       }
     }
   }
 
-  // Define spawn points at corners and edges
-  // Ensure mid-points are on odd coordinates to avoid indestructible wall grid
-  const midX = Math.floor(width / 2) % 2 === 0 ? Math.floor(width / 2) - 1 : Math.floor(width / 2);
-  const midY =
-    Math.floor(height / 2) % 2 === 0 ? Math.floor(height / 2) - 1 : Math.floor(height / 2);
-  const spawnPoints: Position[] = [
-    { x: 1, y: 1 }, // top-left
-    { x: width - 2, y: 1 }, // top-right
-    { x: 1, y: height - 2 }, // bottom-left
-    { x: width - 2, y: height - 2 }, // bottom-right
-    { x: midX, y: 1 }, // top-center
-    { x: midX, y: height - 2 }, // bottom-center
-    { x: 1, y: midY }, // left-center
-    { x: width - 2, y: midY }, // right-center
-  ];
+  let spawnPoints: Position[];
+  if (wrapping) {
+    // Distribute spawn points evenly across the wrapping map on odd coordinates
+    spawnPoints = generateWrappingSpawns(width, height);
+  } else {
+    // Define spawn points at corners and edges
+    // Ensure mid-points are on odd coordinates to avoid indestructible wall grid
+    const midX =
+      Math.floor(width / 2) % 2 === 0 ? Math.floor(width / 2) - 1 : Math.floor(width / 2);
+    const midY =
+      Math.floor(height / 2) % 2 === 0 ? Math.floor(height / 2) - 1 : Math.floor(height / 2);
+    spawnPoints = [
+      { x: 1, y: 1 }, // top-left
+      { x: width - 2, y: 1 }, // top-right
+      { x: 1, y: height - 2 }, // bottom-left
+      { x: width - 2, y: height - 2 }, // bottom-right
+      { x: midX, y: 1 }, // top-center
+      { x: midX, y: height - 2 }, // bottom-center
+      { x: 1, y: midY }, // left-center
+      { x: width - 2, y: midY }, // right-center
+    ];
+  }
 
   // Mark spawn points
   for (const sp of spawnPoints) {
@@ -83,20 +95,26 @@ export function generateMap(
   for (const sp of spawnPoints) {
     for (let dy = -SPAWN_CLEAR_RADIUS; dy <= SPAWN_CLEAR_RADIUS; dy++) {
       for (let dx = -SPAWN_CLEAR_RADIUS; dx <= SPAWN_CLEAR_RADIUS; dx++) {
-        const nx = sp.x + dx;
-        const ny = sp.y + dy;
-        if (nx >= 1 && nx < width - 1 && ny >= 1 && ny < height - 1) {
-          if (Math.abs(dx) + Math.abs(dy) <= SPAWN_CLEAR_RADIUS) {
-            clearCells.add(`${nx},${ny}`);
-          }
+        if (Math.abs(dx) + Math.abs(dy) > SPAWN_CLEAR_RADIUS) continue;
+        let nx = sp.x + dx;
+        let ny = sp.y + dy;
+        if (wrapping) {
+          nx = wrapX(nx, width);
+          ny = wrapY(ny, height);
+        } else {
+          if (nx < 1 || nx >= width - 1 || ny < 1 || ny >= height - 1) continue;
         }
+        clearCells.add(`${nx},${ny}`);
       }
     }
   }
 
   // Place destructible walls randomly
-  for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
+  const startXY = wrapping ? 0 : 1;
+  const endX = wrapping ? width : width - 1;
+  const endY = wrapping ? height : height - 1;
+  for (let y = startXY; y < endY; y++) {
+    for (let x = startXY; x < endX; x++) {
       if (tiles[y][x] !== 'empty') continue;
       if (clearCells.has(`${x},${y}`)) continue;
 
@@ -110,8 +128,8 @@ export function generateMap(
   if (hazardTiles.length > 0) {
     // Collect empty tiles not in spawn clear zones
     const emptyTiles: Position[] = [];
-    for (let y = 1; y < height - 1; y++) {
-      for (let x = 1; x < width - 1; x++) {
+    for (let y = startXY; y < endY; y++) {
+      for (let x = startXY; x < endX; x++) {
         if (tiles[y][x] === 'empty' && !clearCells.has(`${x},${y}`)) {
           emptyTiles.push({ x, y });
         }
@@ -156,17 +174,15 @@ export function generateMap(
           [dirs[d], dirs[j]] = [dirs[j], dirs[d]];
         }
         for (const nb of dirs) {
-          if (
-            nb.x >= 1 &&
-            nb.x < width - 1 &&
-            nb.y >= 1 &&
-            nb.y < height - 1 &&
-            tiles[nb.y][nb.x] === 'empty' &&
-            !clearCells.has(`${nb.x},${nb.y}`)
-          ) {
-            tiles[nb.y][nb.x] = tileToPlace as TileType;
-            placed.push(nb);
-            break;
+          {
+            const cx = wrapping ? wrapX(nb.x, width) : nb.x;
+            const cy = wrapping ? wrapY(nb.y, height) : nb.y;
+            const inBounds = wrapping || (cx >= 1 && cx < width - 1 && cy >= 1 && cy < height - 1);
+            if (inBounds && tiles[cy][cx] === 'empty' && !clearCells.has(`${cx},${cy}`)) {
+              tiles[cy][cx] = tileToPlace as TileType;
+              placed.push({ x: cx, y: cy });
+              break;
+            }
           }
         }
       }
@@ -309,5 +325,33 @@ export function generateMap(
     spawnPoints,
     seed: mapSeed,
     puzzleConfig,
+    ...(wrapping ? { wrapping: true } : {}),
   };
+}
+
+/** Generate evenly distributed spawn points on odd coordinates for wrapping maps */
+function generateWrappingSpawns(width: number, height: number): Position[] {
+  const spawns: Position[] = [];
+  // 4 columns x 4 rows = up to 16 spawns, distributed evenly
+  const cols = 4;
+  const rows = 4;
+  const xSpacing = Math.floor(width / cols);
+  const ySpacing = Math.floor(height / rows);
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      let px = Math.floor(xSpacing * (col + 0.5));
+      let py = Math.floor(ySpacing * (row + 0.5));
+      // Ensure odd coordinates to avoid the indestructible wall grid
+      if (px % 2 === 0) px = px + 1 < width ? px + 1 : px - 1;
+      if (py % 2 === 0) py = py + 1 < height ? py + 1 : py - 1;
+      px = wrapX(px, width);
+      py = wrapY(py, height);
+      // Avoid duplicates
+      if (!spawns.some((s) => s.x === px && s.y === py)) {
+        spawns.push({ x: px, y: py });
+      }
+    }
+  }
+  return spawns;
 }

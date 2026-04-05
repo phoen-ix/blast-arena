@@ -174,6 +174,7 @@ export interface GameMap {
   spawnPoints: Position[];
   seed: number;
   puzzleConfig?: PuzzleConfig;
+  wrapping?: boolean;
 }
 
 export interface HillZone {
@@ -235,6 +236,17 @@ export interface GameState {
   winnerTeam: number | null;
   roundTime: number;
   timeElapsed: number;
+  isOpenWorld?: boolean;
+}
+
+/** Score entry for open world leaderboard */
+export interface OpenWorldScoreEntry {
+  playerId: number;
+  username: string;
+  kills: number;
+  deaths: number;
+  score: number;
+  isGuest: boolean;
 }
 
 export interface ZoneState {

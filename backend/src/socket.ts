@@ -47,6 +47,7 @@ import {
 import { query } from './db/connection';
 import { UserRow } from './db/types';
 import { verifyLocalCoopSocketToken } from './services/auth';
+import { openWorldManager } from './game/OpenWorldManager';
 
 type TypedServer = Server<
   ClientToServerEvents,
@@ -164,9 +165,30 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
   setRegistry(roomManager, io);
   const { inputLimiter, createLimiter, joinLimiter, removeSocket } = createRateLimiters();
 
-  // Auth middleware
+  // Auth middleware — allows guest connections for open world
   io.use(async (socket, next) => {
     const token = socket.handshake.auth.token;
+    const guestMode = socket.handshake.auth.guest === true;
+
+    // Guest connection (no token required — for open world only)
+    if (!token && guestMode) {
+      try {
+        const guestAllowed = await settingsService.isOpenWorldGuestAccessEnabled();
+        if (!guestAllowed) {
+          return next(new Error('Guest access is disabled'));
+        }
+        // Guest identity assigned later in openworld:join handler
+        socket.data.userId = 0; // Placeholder, assigned on join
+        socket.data.username = '';
+        socket.data.role = 'user';
+        socket.data.locale = (socket.handshake.auth.locale as string) || 'en';
+        socket.data.isGuest = true;
+        return next();
+      } catch {
+        return next(new Error('Guest access check failed'));
+      }
+    }
+
     if (!token) {
       return next(new Error('Authentication required'));
     }
@@ -193,6 +215,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
       socket.data.username = payload.username;
       socket.data.role = rows[0].role as UserRole;
       socket.data.locale = (socket.handshake.auth.locale as string) || 'en';
+      socket.data.isGuest = false;
       next();
     } catch (err) {
       if (err instanceof Error && err.message === 'EMAIL_NOT_VERIFIED') {
@@ -239,66 +262,73 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
   }
 
   io.on('connection', async (socket) => {
-    logger.info({ userId: socket.data.userId, username: socket.data.username }, 'Socket connected');
-
+    logger.info(
+      { userId: socket.data.userId, username: socket.data.username, guest: socket.data.isGuest },
+      'Socket connected',
+    );
     const currentUser: PublicUser = {
       id: socket.data.userId,
       username: socket.data.username,
       role: socket.data.role,
       language: socket.data.locale || 'en',
-      emailVerified: true, // Socket middleware already verified this
+      emailVerified: !socket.data.isGuest,
     };
 
-    // Auto-join admin room for simulation broadcasts
-    if (socket.data.role === 'admin') {
-      socket.join('sim:admin');
-    }
-
-    // Join role-based room for scoped admin broadcasts
-    if (socket.data.role === 'admin' || socket.data.role === 'moderator') {
-      socket.join('role:staff');
-    }
-
-    // Join user-specific room for friend/party notifications
-    socket.join(`user:${socket.data.userId}`);
-
-    // Set online presence and notify friends
-    presenceService.setPresence(socket.data.userId, 'in_lobby').catch((err) => {
-      logger.warn({ err: getErrorMessage(err) }, 'Presence update failed');
-    });
-    notifyFriendsOnline(io, socket.data.userId, 'in_lobby');
-
-    // Restore party membership if reconnecting
-    const existingPartyId = await partyService.getPlayerParty(socket.data.userId);
-    if (existingPartyId) {
-      socket.data.activePartyId = existingPartyId;
-      socket.join(`party:${existingPartyId}`);
-    }
-
-    // Setup friend and party handlers
-    setupFriendHandlers(socket, io);
-    setupPartyHandlers(socket, io);
-    setupLobbyHandlers(socket, io);
-    setupDMHandlers(socket, io);
-
-    // Check if player was in an active game (reconnection after disconnect)
-    const existingRoomCode = await lobbyService.getPlayerRoom(socket.data.userId);
-    if (existingRoomCode) {
-      const gameRoom = roomManager.getRoom(existingRoomCode);
-      if (gameRoom && gameRoom.isRunning() && gameRoom.isPlayerDisconnected(socket.data.userId)) {
-        // Rejoin socket room and resume game
-        socket.join(`room:${existingRoomCode}`);
-        socket.data.activeRoomCode = existingRoomCode;
-        gameRoom.handlePlayerReconnect(socket.data.userId);
-        // Send current game state so client can resume
-        const fullState = gameRoom.getFullState();
-        socket.emit('game:start', fullState);
-        logger.info(
-          { userId: socket.data.userId, roomCode: existingRoomCode },
-          'Player reconnected to active game',
-        );
+    // Guest connections only need open world handlers — skip room/lobby/friend setup
+    if (socket.data.isGuest) {
+      // Open world handlers are set up below alongside other handlers
+    } else {
+      // Auto-join admin room for simulation broadcasts
+      if (socket.data.role === 'admin') {
+        socket.join('sim:admin');
       }
-    }
+
+      // Join role-based room for scoped admin broadcasts
+      if (socket.data.role === 'admin' || socket.data.role === 'moderator') {
+        socket.join('role:staff');
+      }
+
+      // Join user-specific room for friend/party notifications
+      socket.join(`user:${socket.data.userId}`);
+
+      // Set online presence and notify friends
+      presenceService.setPresence(socket.data.userId, 'in_lobby').catch((err) => {
+        logger.warn({ err: getErrorMessage(err) }, 'Presence update failed');
+      });
+      notifyFriendsOnline(io, socket.data.userId, 'in_lobby');
+
+      // Restore party membership if reconnecting
+      const existingPartyId = await partyService.getPlayerParty(socket.data.userId);
+      if (existingPartyId) {
+        socket.data.activePartyId = existingPartyId;
+        socket.join(`party:${existingPartyId}`);
+      }
+
+      // Setup friend and party handlers
+      setupFriendHandlers(socket, io);
+      setupPartyHandlers(socket, io);
+      setupLobbyHandlers(socket, io);
+      setupDMHandlers(socket, io);
+
+      // Check if player was in an active game (reconnection after disconnect)
+      const existingRoomCode = await lobbyService.getPlayerRoom(socket.data.userId);
+      if (existingRoomCode) {
+        const gameRoom = roomManager.getRoom(existingRoomCode);
+        if (gameRoom && gameRoom.isRunning() && gameRoom.isPlayerDisconnected(socket.data.userId)) {
+          // Rejoin socket room and resume game
+          socket.join(`room:${existingRoomCode}`);
+          socket.data.activeRoomCode = existingRoomCode;
+          gameRoom.handlePlayerReconnect(socket.data.userId);
+          // Send current game state so client can resume
+          const fullState = gameRoom.getFullState();
+          socket.emit('game:start', fullState);
+          logger.info(
+            { userId: socket.data.userId, roomCode: existingRoomCode },
+            'Player reconnected to active game',
+          );
+        }
+      }
+    } // end if (!socket.data.isGuest)
 
     // Room creation
     socket.on('room:create', async (data, callback) => {
@@ -1494,9 +1524,69 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Buddy mode input — routed through campaign:input with playerId (same as local co-op)
 
+    // ---- Open World events ----
+    socket.on('openworld:join', (_data, callback) => {
+      if (!openWorldManager.isEnabled()) {
+        return callback({ success: false, error: 'Open world is not available' });
+      }
+
+      const isGuest = socket.data.isGuest === true;
+      const result = openWorldManager.handleJoin(
+        socket.id,
+        socket.data.userId,
+        isGuest ? _data?.username || '' : socket.data.username,
+        isGuest,
+      );
+
+      if (result.success) {
+        socket.join('openworld');
+        socket.data.inOpenWorld = true;
+        if (isGuest && result.playerId !== undefined && result.username) {
+          socket.data.userId = result.playerId;
+          socket.data.username = result.username;
+        }
+      }
+
+      callback({
+        success: result.success,
+        playerId: result.playerId,
+        username: result.username,
+        isGuest: isGuest || undefined,
+        state: result.state,
+        error: result.error,
+      });
+    });
+
+    socket.on('openworld:leave', () => {
+      if (socket.data.inOpenWorld) {
+        openWorldManager.handleLeave(socket.id);
+        socket.leave('openworld');
+        socket.data.inOpenWorld = false;
+      }
+    });
+
+    socket.on('openworld:input', (input) => {
+      if (socket.data.inOpenWorld) {
+        openWorldManager.handleInput(socket.id, input);
+      }
+    });
+
     // Disconnect
     socket.on('disconnect', async () => {
       logger.info({ userId: socket.data.userId }, 'Socket disconnected');
+
+      // Open world cleanup
+      if (socket.data.inOpenWorld) {
+        openWorldManager.handleLeave(socket.id);
+        socket.data.inOpenWorld = false;
+      }
+
+      // Guest connections skip room/lobby/friend cleanup
+      if (socket.data.isGuest) {
+        removeSocket(socket.id);
+        return;
+      }
+
       removeSocket(socket.id);
       cleanupFriendLimiters(socket.id);
       cleanupPartyLimiters(socket.id);
@@ -1582,9 +1672,15 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
     roomManager.cleanup();
   }, ROOM_CLEANUP_INTERVAL_MS);
 
+  // Initialize open world manager
+  openWorldManager.init(io).catch((err) => {
+    logger.error({ err }, 'Failed to initialize open world manager');
+  });
+
   // Clear cleanup interval on server shutdown
   const shutdown = () => {
     clearInterval(cleanupInterval);
+    openWorldManager.shutdown();
   };
   process.once('SIGTERM', shutdown);
   process.once('SIGINT', shutdown);

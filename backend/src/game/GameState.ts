@@ -38,6 +38,7 @@ import {
   KOTH_POINTS_PER_TICK,
   KOTH_HILL_MOVE_INTERVAL,
   KOTH_HILL_MOVE_WARNING,
+  OPENWORLD_RESPAWN_TICKS,
 } from '@blast-arena/shared';
 import { Player } from './Player';
 import { Bomb, BombType } from './Bomb';
@@ -96,6 +97,10 @@ export interface GameConfig {
   enableSpectatorActions?: boolean;
   /** If provided, use this pre-built map instead of generating one */
   customMap?: ReturnType<typeof generateMap>;
+  /** Whether the map wraps (toroidal topology) */
+  wrapping?: boolean;
+  /** Whether this is an open world game (persistent, no win condition) */
+  isOpenWorld?: boolean;
 }
 
 export class GameStateManager {
@@ -136,6 +141,8 @@ export class GameStateManager {
   public campaignEnemyPositions: Set<string> | null = null;
   public reinforcedWalls: boolean;
   public enableMapEvents: boolean;
+  public isOpenWorld: boolean = false;
+  public openWorldRespawnTicks: number = 60;
   private static readonly FINISH_DELAY_TICKS = 30; // 1.5s grace period to show final explosions
 
   // Cached per-tick data (invalidated at start of each processTick)
@@ -247,18 +254,25 @@ export class GameStateManager {
       puzzleTiles = [],
       botAiId = 'builtin',
       enableSpectatorActions = false,
+      wrapping = false,
+      isOpenWorld = false,
     } = config;
     this.botAiId = botAiId;
     this.enableSpectatorActions = enableSpectatorActions;
+    this.isOpenWorld = isOpenWorld;
+    if (isOpenWorld) {
+      this.openWorldRespawnTicks = OPENWORLD_RESPAWN_TICKS;
+    }
 
     this.map =
       config.customMap ??
-      generateMap(mapWidth, mapHeight, mapSeed, wallDensity, hazardTiles, puzzleTiles);
+      generateMap(mapWidth, mapHeight, mapSeed, wallDensity, hazardTiles, puzzleTiles, wrapping);
     this.collisionSystem = new CollisionSystem(
       this.map.tiles,
       this.map.width,
       this.map.height,
       reinforcedWalls,
+      this.map.wrapping ?? false,
     );
     this.rng = new SeededRandom(this.map.seed + 1);
     this.gameMode = gameMode;
@@ -372,6 +386,59 @@ export class GameStateManager {
     this.inputBuffer.clear(id);
     this.players.delete(id);
     this.botAIs.delete(id);
+    this._alivePlayersCache = null;
+  }
+
+  /** Add a player to a live open world game at a safe spawn position */
+  addPlayerLive(id: number, username: string): Player {
+    const spawnPos = this.findSafeSpawnPosition();
+    const player = new Player(id, username, spawnPos, null, false, false, null);
+    this.players.set(id, player);
+    this.placementCounter++;
+    this._alivePlayersCache = null;
+    return player;
+  }
+
+  /** Find a spawn position away from explosions and other players */
+  findSafeSpawnPosition(): Position {
+    const explosionCells = new Set<string>();
+    for (const explosion of this.explosions.values()) {
+      for (const cell of explosion.cells) {
+        explosionCells.add(`${cell.x},${cell.y}`);
+      }
+    }
+    const playerCells = new Set<string>();
+    for (const player of this.players.values()) {
+      if (player.alive) playerCells.add(`${player.position.x},${player.position.y}`);
+    }
+
+    // Try spawn points first (shuffled)
+    const shuffled = [...this.map.spawnPoints];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rng.next() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    for (const sp of shuffled) {
+      const key = `${sp.x},${sp.y}`;
+      if (!explosionCells.has(key) && !playerCells.has(key)) return sp;
+    }
+
+    // Fallback: find any empty walkable tile
+    for (let attempts = 0; attempts < 100; attempts++) {
+      const x = Math.floor(this.rng.next() * this.map.width);
+      const y = Math.floor(this.rng.next() * this.map.height);
+      const key = `${x},${y}`;
+      if (
+        this.collisionSystem.isWalkable(x, y) &&
+        !explosionCells.has(key) &&
+        !playerCells.has(key)
+      ) {
+        return { x, y };
+      }
+    }
+
+    // Ultimate fallback: first spawn point
+    return this.map.spawnPoints[0] || { x: 1, y: 1 };
   }
 
   /** Spawn a power-up at a specific tile position (used by campaign mode) */
@@ -557,8 +624,13 @@ export class GameStateManager {
       if (bomb.sliding && slideBombPosSet && slidePlayerPosSet) {
         const dx = bomb.sliding === 'left' ? -1 : bomb.sliding === 'right' ? 1 : 0;
         const dy = bomb.sliding === 'up' ? -1 : bomb.sliding === 'down' ? 1 : 0;
-        const nextX = bomb.position.x + dx;
-        const nextY = bomb.position.y + dy;
+        let nextX = bomb.position.x + dx;
+        let nextY = bomb.position.y + dy;
+        // Wrap for toroidal maps
+        if (this.map.wrapping) {
+          nextX = ((nextX % this.map.width) + this.map.width) % this.map.width;
+          nextY = ((nextY % this.map.height) + this.map.height) % this.map.height;
+        }
         const nextKey = `${nextX},${nextY}`;
 
         // Stop if hitting a wall, another bomb, a player, or a campaign enemy
@@ -917,6 +989,8 @@ export class GameStateManager {
             this.map.width,
             this.map.height,
             this.map.tiles,
+            false,
+            this.map.wrapping ?? false,
           );
           const explosion = new Explosion(cells, -999); // System-owned
           this.explosions.set(explosion.id, explosion);
@@ -1028,24 +1102,25 @@ export class GameStateManager {
       }
     }
 
-    // 7.5 Deathmatch respawns
-    if (this.gameMode === 'deathmatch') {
+    // 7.5 Deathmatch / Open World respawns
+    if (this.gameMode === 'deathmatch' || this.isOpenWorld) {
+      const respawnDelay = this.isOpenWorld ? this.openWorldRespawnTicks : DEATHMATCH_RESPAWN_TICKS;
       for (const player of this.players.values()) {
         if (!player.alive && player.respawnTick === null) {
-          player.respawnTick = this.tick + DEATHMATCH_RESPAWN_TICKS;
+          player.respawnTick = this.tick + respawnDelay;
         }
         if (!player.alive && player.respawnTick !== null && this.tick >= player.respawnTick) {
-          // Find a random safe spawn point
-          const spawnPoints = this.map.spawnPoints;
-          const spawnPos = spawnPoints[Math.floor(this.rng.next() * spawnPoints.length)];
+          const spawnPos = this.isOpenWorld
+            ? this.findSafeSpawnPosition()
+            : this.map.spawnPoints[Math.floor(this.rng.next() * this.map.spawnPoints.length)];
           player.respawn(spawnPos);
           this.invalidateAliveCache();
         }
       }
     }
 
-    // 8. Time limit check (campaign handles its own timer via CampaignGame)
-    if (this.finishTick === null && this.gameMode !== 'campaign') {
+    // 8. Time limit check (campaign handles its own timer; open world manages rounds externally)
+    if (this.finishTick === null && this.gameMode !== 'campaign' && !this.isOpenWorld) {
       const timeElapsed = this.tick / TICK_RATE;
       if (timeElapsed >= this.roundTime && this.status === 'playing') {
         const alive = this.getAlivePlayers();
@@ -1745,10 +1820,15 @@ export class GameStateManager {
       // Find the landing position: fly over everything, land on last valid tile
       let landPos: Position | null = null;
       for (let i = throwRange; i >= 1; i--) {
-        const tx = player.position.x + dx * i;
-        const ty = player.position.y + dy * i;
-        // Must be in bounds
-        if (tx < 0 || tx >= this.map.width || ty < 0 || ty >= this.map.height) continue;
+        let tx = player.position.x + dx * i;
+        let ty = player.position.y + dy * i;
+        // Wrap for toroidal maps, or bounds check for normal maps
+        if (this.map.wrapping) {
+          tx = ((tx % this.map.width) + this.map.width) % this.map.width;
+          ty = ((ty % this.map.height) + this.map.height) % this.map.height;
+        } else {
+          if (tx < 0 || tx >= this.map.width || ty < 0 || ty >= this.map.height) continue;
+        }
         // Must be walkable (can't land on walls)
         if (!this.collisionSystem.isWalkable(tx, ty)) continue;
         // Must not already have a bomb
@@ -1937,6 +2017,7 @@ export class GameStateManager {
       this.map.height,
       tilesForCalc,
       bomb.isPierce,
+      this.map.wrapping ?? false,
     );
 
     // Create explosion with only non-wall cells — blast stops at walls and destroys them,
@@ -2047,6 +2128,8 @@ export class GameStateManager {
   private checkWinCondition(): void {
     // Campaign mode handles its own win conditions in CampaignGame
     if (this.gameMode === 'campaign') return;
+    // Open world never has a traditional win condition
+    if (this.isOpenWorld) return;
 
     const alivePlayers = this.getAlivePlayers();
 
@@ -2137,7 +2220,9 @@ export class GameStateManager {
         tiles: this.map.tiles,
         spawnPoints: this.map.spawnPoints,
         seed: this.map.seed,
+        ...(this.map.wrapping ? { wrapping: true } : {}),
       },
+      ...(this.isOpenWorld ? { isOpenWorld: true } : {}),
       zone: this.zone?.toState(),
       hillZone: this.hillZone
         ? {
@@ -2181,8 +2266,10 @@ export class GameStateManager {
         tiles: [], // Empty — client uses stored map from game:start
         spawnPoints: this.map.spawnPoints,
         seed: this.map.seed,
+        ...(this.map.wrapping ? { wrapping: true } : {}),
       },
       tileDiffs,
+      ...(this.isOpenWorld ? { isOpenWorld: true } : {}),
       zone: this.zone?.toState(),
       hillZone: this.hillZone
         ? {

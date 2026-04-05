@@ -1,4 +1,4 @@
-import { GameState, PlayerInput, Position } from './game';
+import { GameState, PlayerInput, Position, OpenWorldScoreEntry } from './game';
 import { Room, RoomPlayer, CreateRoomRequest, RoomListItem } from './lobby';
 import { UserRole } from './auth';
 import { SimulationConfig, SimulationBatchStatus, SimulationGameResult } from './simulation';
@@ -174,6 +174,21 @@ export interface ClientToServerEvents {
     callback: (response: { success: boolean; error?: string }) => void,
   ) => void;
 
+  // Open world
+  'openworld:join': (
+    data: { username?: string } | undefined,
+    callback: (response: {
+      success: boolean;
+      playerId?: number;
+      username?: string;
+      isGuest?: boolean;
+      state?: GameState;
+      error?: string;
+    }) => void,
+  ) => void;
+  'openworld:leave': () => void;
+  'openworld:input': (input: PlayerInput) => void;
+
   // Room invites
   'invite:room': (
     data: { userId: number },
@@ -316,6 +331,24 @@ export interface ServerToClientEvents {
   }) => void;
   'rematch:triggered': () => void;
 
+  // Open world
+  'openworld:state': (state: GameState) => void;
+  'openworld:playerJoined': (data: { id: number; username: string; isGuest: boolean }) => void;
+  'openworld:playerLeft': (data: { id: number; username: string }) => void;
+  'openworld:roundEnd': (data: {
+    roundNumber: number;
+    leaderboard: OpenWorldScoreEntry[];
+    nextRoundIn: number;
+  }) => void;
+  'openworld:roundStart': (data: { roundNumber: number; state: GameState }) => void;
+  'openworld:scoreUpdate': (data: OpenWorldScoreEntry) => void;
+  'openworld:info': (data: {
+    playerCount: number;
+    maxPlayers: number;
+    roundTimeRemaining: number;
+    roundNumber: number;
+  }) => void;
+
   // Admin settings broadcast
   'admin:settingsChanged': (data: { key: string; value?: unknown }) => void;
 
@@ -343,4 +376,8 @@ export interface SocketData {
   activeCampaignSession?: string;
   /** Active party ID */
   activePartyId?: string;
+  /** Whether this socket is a guest (open world only, no DB account) */
+  isGuest?: boolean;
+  /** Whether this socket is currently in the open world */
+  inOpenWorld?: boolean;
 }

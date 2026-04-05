@@ -136,3 +136,53 @@ export async function getRankConfig(): Promise<RankConfig> {
 export async function setRankConfig(config: RankConfig): Promise<void> {
   await setSetting('rank_tiers', JSON.stringify(config));
 }
+
+// Open World settings
+export interface OpenWorldSettings {
+  enabled: boolean;
+  guestAccess: boolean;
+  maxPlayers: number;
+  roundTime: number;
+  mapWidth: number;
+  mapHeight: number;
+  wallDensity: number;
+  respawnDelay: number;
+}
+
+export async function getOpenWorldSettings(): Promise<OpenWorldSettings> {
+  const keys = [
+    'open_world_enabled',
+    'open_world_guest_access',
+    'open_world_max_players',
+    'open_world_round_time',
+    'open_world_map_width',
+    'open_world_map_height',
+    'open_world_wall_density',
+    'open_world_respawn_delay',
+  ];
+  const rows = await query<SettingRow[]>(
+    `SELECT setting_key, setting_value FROM server_settings WHERE setting_key IN (${keys.map(() => '?').join(',')})`,
+    keys,
+  );
+  const map = new Map(rows.map((r) => [r.setting_key, r.setting_value]));
+  return {
+    enabled: map.get('open_world_enabled') !== 'false',
+    guestAccess: map.get('open_world_guest_access') !== 'false',
+    maxPlayers: parseInt(map.get('open_world_max_players') ?? '32', 10),
+    roundTime: parseInt(map.get('open_world_round_time') ?? '300', 10),
+    mapWidth: parseInt(map.get('open_world_map_width') ?? '51', 10),
+    mapHeight: parseInt(map.get('open_world_map_height') ?? '41', 10),
+    wallDensity: parseFloat(map.get('open_world_wall_density') ?? '0.5'),
+    respawnDelay: parseInt(map.get('open_world_respawn_delay') ?? '3', 10),
+  };
+}
+
+export async function isOpenWorldEnabled(): Promise<boolean> {
+  const value = await getSetting('open_world_enabled');
+  return value !== 'false';
+}
+
+export async function isOpenWorldGuestAccessEnabled(): Promise<boolean> {
+  const value = await getSetting('open_world_guest_access');
+  return value !== 'false';
+}

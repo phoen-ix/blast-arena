@@ -1,8 +1,8 @@
 -- Community Map Challenges: weekly featured maps with leaderboards
 
 -- Link matches to custom maps for challenge tracking
-ALTER TABLE matches ADD COLUMN custom_map_id INT DEFAULT NULL;
-ALTER TABLE matches ADD INDEX idx_matches_custom_map (custom_map_id);
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS custom_map_id INT DEFAULT NULL;
+ALTER TABLE matches ADD INDEX IF NOT EXISTS idx_matches_custom_map (custom_map_id);
 
 -- Challenge definitions
 CREATE TABLE IF NOT EXISTS map_challenges (
@@ -38,4 +38,5 @@ CREATE TABLE IF NOT EXISTS challenge_scores (
 );
 
 -- Seed global toggle
-INSERT IGNORE INTO settings (`key`, `value`) VALUES ('challenges_enabled', 'true');
+INSERT INTO server_settings (setting_key, setting_value) VALUES ('challenges_enabled', 'true')
+ON DUPLICATE KEY UPDATE setting_key = setting_key;

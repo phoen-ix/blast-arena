@@ -5,13 +5,22 @@ import { AuthUI } from '../ui/AuthUI';
 import { VerificationUI } from '../ui/VerificationUI';
 import { NotificationUI } from '../ui/NotificationUI';
 import { themeManager } from '../themes/ThemeManager';
+import { API_URL } from '../config';
 import { t } from '../i18n';
+
+interface OpenWorldStatus {
+  enabled: boolean;
+  playerCount: number;
+  maxPlayers: number;
+  guestAccess: boolean;
+}
 
 export class MenuScene extends Phaser.Scene {
   private authManager!: AuthManager;
   private socketClient!: SocketClient;
   private notifications!: NotificationUI;
   private authUI!: AuthUI;
+  private landingContainer: HTMLElement | null = null;
 
   constructor() {
     super({ key: 'MenuScene' });
@@ -77,9 +86,78 @@ export class MenuScene extends Phaser.Scene {
       if (success) {
         this.onAuthenticated();
       } else {
-        this.showAuth();
+        this.showLanding();
       }
     });
+  }
+
+  /** Show landing page with guest play, login, and register options */
+  private async showLanding(): Promise<void> {
+    // Fetch open world status for guest button visibility
+    let owStatus: OpenWorldStatus | null = null;
+    try {
+      const res = await fetch(`${API_URL}/admin/settings/open_world/status`);
+      if (res.ok) {
+        owStatus = await res.json();
+      }
+    } catch {
+      // Ignore — landing page works without status
+    }
+
+    const showGuest = owStatus?.enabled && owStatus?.guestAccess;
+    const playerCount = owStatus?.playerCount ?? 0;
+
+    this.landingContainer = document.createElement('div');
+    this.landingContainer.className = 'menu-landing';
+    this.landingContainer.innerHTML = `
+      <div class="menu-landing-buttons">
+        ${
+          showGuest
+            ? `<button class="btn btn-primary btn-lg" id="menu-guest-btn">
+                ${t('ui:menu.playAsGuest')}
+              </button>
+              ${playerCount > 0 ? `<div class="menu-player-count">${t('ui:menu.onlinePlayers', { count: playerCount })}</div>` : ''}`
+            : ''
+        }
+        <button class="btn btn-secondary" id="menu-login-btn">${t('ui:menu.login')}</button>
+        <button class="btn btn-ghost" id="menu-register-btn">${t('ui:menu.register')}</button>
+      </div>
+    `;
+
+    const uiOverlay = document.getElementById('ui-overlay');
+    if (uiOverlay) {
+      uiOverlay.appendChild(this.landingContainer);
+    }
+
+    // Bind events
+    const guestBtn = this.landingContainer.querySelector('#menu-guest-btn');
+    if (guestBtn) {
+      guestBtn.addEventListener('click', () => this.onGuestPlay());
+    }
+
+    this.landingContainer.querySelector('#menu-login-btn')!.addEventListener('click', () => {
+      this.hideLanding();
+      this.showAuth();
+    });
+
+    this.landingContainer.querySelector('#menu-register-btn')!.addEventListener('click', () => {
+      this.hideLanding();
+      this.showAuth();
+    });
+  }
+
+  private hideLanding(): void {
+    if (this.landingContainer) {
+      this.landingContainer.remove();
+      this.landingContainer = null;
+    }
+  }
+
+  private onGuestPlay(): void {
+    this.hideLanding();
+    this.socketClient.connectAsGuest();
+    this.registry.set('guestOpenWorld', true);
+    this.scene.start('LobbyScene');
   }
 
   private showAuth(): void {

@@ -1,21 +1,24 @@
-import { TileType, Position, Direction } from '@blast-arena/shared';
+import { TileType, Position, Direction, wrapX, wrapY } from '@blast-arena/shared';
 
 export class CollisionSystem {
   private tiles: TileType[][];
   private width: number;
   private height: number;
   private reinforcedWalls: boolean;
+  private wrapping: boolean;
 
   constructor(
     tiles: TileType[][],
     width: number,
     height: number,
     reinforcedWalls: boolean = false,
+    wrapping: boolean = false,
   ) {
     this.tiles = tiles;
     this.width = width;
     this.height = height;
     this.reinforcedWalls = reinforcedWalls;
+    this.wrapping = wrapping;
   }
 
   updateTiles(tiles: TileType[][]): void {
@@ -23,7 +26,12 @@ export class CollisionSystem {
   }
 
   isWalkable(x: number, y: number): boolean {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false;
+    if (this.wrapping) {
+      x = wrapX(x, this.width);
+      y = wrapY(y, this.height);
+    } else if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+      return false;
+    }
     const tile = this.tiles[y][x];
     return (
       tile === 'empty' ||
@@ -86,6 +94,12 @@ export class CollisionSystem {
         break;
     }
 
+    // Wrap coordinates for toroidal maps
+    if (this.wrapping) {
+      newX = wrapX(newX, this.width);
+      newY = wrapY(newY, this.height);
+    }
+
     if (!this.isWalkable(newX, newY)) return null;
 
     // Check for bombs blocking the path
@@ -119,8 +133,13 @@ export class CollisionSystem {
         break;
     }
 
-    // Out of bounds
-    if (newX < 0 || newX >= this.width || newY < 0 || newY >= this.height) return null;
+    // Wrap or bounds check
+    if (this.wrapping) {
+      newX = wrapX(newX, this.width);
+      newY = wrapY(newY, this.height);
+    } else if (newX < 0 || newX >= this.width || newY < 0 || newY >= this.height) {
+      return null;
+    }
 
     // Only indestructible walls block the buddy
     const tile = this.tiles[newY][newX];
@@ -139,12 +158,22 @@ export class CollisionSystem {
   }
 
   getTileAt(x: number, y: number): TileType {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return 'wall';
+    if (this.wrapping) {
+      x = wrapX(x, this.width);
+      y = wrapY(y, this.height);
+    } else if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+      return 'wall';
+    }
     return this.tiles[y][x];
   }
 
   destroyTile(x: number, y: number): boolean {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false;
+    if (this.wrapping) {
+      x = wrapX(x, this.width);
+      y = wrapY(y, this.height);
+    } else if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+      return false;
+    }
     const tile = this.tiles[y][x];
     if (tile === 'destructible') {
       if (this.reinforcedWalls) {

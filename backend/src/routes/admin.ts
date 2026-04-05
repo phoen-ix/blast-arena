@@ -16,6 +16,7 @@ import * as achievementsService from '../services/achievements';
 import * as cosmeticsService from '../services/cosmetics';
 import { invalidateTransporter, sendTestEmail } from '../services/email';
 import { getSimulationManager, getIO } from '../game/registry';
+import { openWorldManager } from '../game/OpenWorldManager';
 import { execute } from '../db/connection';
 import {
   SimulationConfig,
@@ -68,11 +69,20 @@ const createUserSchema = z.object({
 // Public: batched public settings (no auth required) — reduces 3 requests to 1
 router.get('/admin/settings/public', async (_req, res, next) => {
   try {
-    const [registrationEnabled, displayImprint, imprintText, displayGithub] = await Promise.all([
+    const [
+      registrationEnabled,
+      displayImprint,
+      imprintText,
+      displayGithub,
+      openWorldEnabled,
+      openWorldGuestAccess,
+    ] = await Promise.all([
       settingsService.isRegistrationEnabled(),
       settingsService.getSetting('display_imprint'),
       settingsService.getSetting('imprint_text'),
       settingsService.getSetting('display_github'),
+      settingsService.isOpenWorldEnabled(),
+      settingsService.isOpenWorldGuestAccessEnabled(),
     ]);
     const imprint = displayImprint === 'true';
     res.json({
@@ -80,6 +90,8 @@ router.get('/admin/settings/public', async (_req, res, next) => {
       imprint: imprint,
       imprintText: imprint ? (imprintText ?? '') : '',
       displayGithub: displayGithub === 'true',
+      openWorldEnabled,
+      openWorldGuestAccess,
     });
   } catch (err) {
     next(err);
@@ -111,6 +123,16 @@ router.get('/admin/settings/spectator_actions_enabled', async (_req, res, next) 
   try {
     const enabled = await settingsService.isSpectatorActionsEnabled();
     res.json({ enabled });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Public: open world status (no auth required — for landing page)
+router.get('/admin/settings/open_world/status', async (_req, res, next) => {
+  try {
+    const status = openWorldManager.getStatus();
+    res.json(status);
   } catch (err) {
     next(err);
   }
@@ -474,6 +496,69 @@ router.put(
         value: req.body.mode,
       });
       res.json({ message: 'Setting updated' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Admin: get open world settings
+router.get(
+  '/admin/settings/open_world',
+  authMiddleware,
+  adminOnlyMiddleware,
+  async (_req, res, next) => {
+    try {
+      const settings = await settingsService.getOpenWorldSettings();
+      res.json(settings);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Admin: update open world settings
+router.put(
+  '/admin/settings/open_world',
+  authMiddleware,
+  adminOnlyMiddleware,
+  async (req, res, next) => {
+    try {
+      const updates = req.body as Record<string, string | number | boolean>;
+      const keyMap: Record<string, string> = {
+        enabled: 'open_world_enabled',
+        guestAccess: 'open_world_guest_access',
+        maxPlayers: 'open_world_max_players',
+        roundTime: 'open_world_round_time',
+        mapWidth: 'open_world_map_width',
+        mapHeight: 'open_world_map_height',
+        wallDensity: 'open_world_wall_density',
+        respawnDelay: 'open_world_respawn_delay',
+      };
+
+      for (const [key, dbKey] of Object.entries(keyMap)) {
+        if (key in updates) {
+          await settingsService.setSetting(dbKey, String(updates[key]));
+        }
+      }
+
+      await execute(
+        'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+        [
+          req.user!.userId,
+          'update_setting',
+          'setting',
+          0,
+          JSON.stringify({ key: 'open_world', value: updates }),
+        ],
+      );
+
+      // Hot-reload open world manager
+      await openWorldManager.handleSettingsChange();
+
+      const io = getIO();
+      io.to('role:staff').emit('admin:settingsChanged', { key: 'open_world' });
+      res.json({ message: 'Open world settings updated' });
     } catch (err) {
       next(err);
     }

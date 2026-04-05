@@ -75,6 +75,35 @@ export class SocketClient {
     });
   }
 
+  /** Connect as guest (no auth token — for open world) */
+  connectAsGuest(): void {
+    if (this.socket?.connected) return;
+
+    this.socket = io(SOCKET_URL, {
+      auth: { guest: true, locale: i18n.language },
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+    });
+
+    this.socket.on('connect', () => {
+      console.log('Socket connected (guest)');
+      this.hideOverlay();
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      if (reason !== 'io client disconnect') {
+        this.showOverlay();
+      }
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('Socket connection error (guest):', error.message);
+      this.showOverlay();
+    });
+  }
+
   disconnect(): void {
     if (this.localeHandler) {
       window.removeEventListener('language-changed', this.localeHandler);

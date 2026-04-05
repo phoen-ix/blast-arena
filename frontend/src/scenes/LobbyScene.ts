@@ -76,6 +76,10 @@ export class LobbyScene extends Phaser.Scene {
       }
     });
 
+    // Check if entering as guest for open world
+    const guestOpenWorld = this.registry.get('guestOpenWorld') as boolean | undefined;
+    this.registry.remove('guestOpenWorld');
+
     // Check if returning from "Play Again" with a room already set
     const currentRoom = this.registry.get('currentRoom') as Room | undefined;
     const openCampaign = this.registry.get('openCampaign');
@@ -91,9 +95,12 @@ export class LobbyScene extends Phaser.Scene {
     } else if (returnToAdmin) {
       this.registry.remove('currentRoom');
       this.showLobby('admin', { initialTab: returnToAdmin });
+    } else if (guestOpenWorld) {
+      this.registry.remove('currentRoom');
+      this.showLobby('openWorld');
     } else {
       this.registry.remove('currentRoom');
-      this.showLobby();
+      this.showLobby('openWorld');
     }
 
     this.events.once('shutdown', this.shutdown, this);

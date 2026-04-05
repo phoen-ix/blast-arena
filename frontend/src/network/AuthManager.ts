@@ -8,6 +8,7 @@ export class AuthManager {
   private accessToken: string | null = null;
   private currentUser: PublicUser | null = null;
   private listeners: AuthChangeCallback[] = [];
+  private _isGuest: boolean = false;
 
   constructor() {
     ApiClient.setAuthManager(this);
@@ -23,6 +24,31 @@ export class AuthManager {
 
   isAuthenticated(): boolean {
     return this.currentUser !== null;
+  }
+
+  get isGuest(): boolean {
+    return this._isGuest;
+  }
+
+  /** Set guest identity (assigned by server on openworld:join) */
+  setGuestIdentity(id: number, username: string): void {
+    this._isGuest = true;
+    this.currentUser = {
+      id,
+      username,
+      role: 'user',
+      language: 'en',
+      emailVerified: false,
+    };
+    this.notify();
+  }
+
+  clearGuest(): void {
+    if (this._isGuest) {
+      this._isGuest = false;
+      this.currentUser = null;
+      this.notify();
+    }
   }
 
   onChange(callback: AuthChangeCallback): () => void {
