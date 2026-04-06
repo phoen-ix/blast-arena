@@ -33,7 +33,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Friendly fire config: when OFF, same-team explosions don't damage teammates (self-damage still applies)
 - Map dimensions should be odd numbers for proper indestructible wall grid pattern
 - Branding: "BLAST" in white, "ARENA" in primary (`--primary`). In sidebar: `<span>BLAST</span>ARENA` where parent is primary and span is text color. In Phaser: two separate text objects via `themeManager.getCanvasColors()`
-- Modal overlay uses `position: fixed` to prevent backdrop-filter repaint flashes from sibling DOM mutations. All modals use `trapFocus()` from `utils/html.ts` — returns a cleanup function called in `closeModal()`
+- Modal overlay uses `position: fixed` to prevent backdrop-filter repaint flashes from sibling DOM mutations. All modals use `trapFocus()` from `utils/html.ts` — returns a cleanup function called in `closeModal()`. `trapFocus` handles Tab wrapping and arrow key navigation (Up/Left = prev, Down/Right = next). Game overlays (pause/leave) disable Phaser keyboard captures while open so keys reach DOM buttons
 
 ## Frontend Architecture
 - **Themes**: 11 palettes in `frontend/src/themes/definitions.ts`. `ThemeManager` reads localStorage → admin default → 'inferno'. `[data-theme]` on `<html>`. Inline `<script>` in `<head>` prevents flash. Phaser uses `themeManager.getCanvasColors()`
@@ -160,7 +160,7 @@ Full-screen panel for admin/moderator roles. `staffMiddleware` (admin+moderator)
 - Phaser scene lifecycle: `shutdown()` must be registered via `this.events.once('shutdown', this.shutdown, this)` — Phaser does NOT auto-call. Phaser reuses scene instances — constructor runs once, `create()` runs on every scene start. ALL session-specific properties MUST be reset at top of create()
 - HUDScene listens for campaign state via Phaser event (`campaignStateUpdate`) — never register HUDScene on socket for `campaign:state` (GameScene's blanket `off()` cleanup would remove it)
 - `SocketClient.off()` without a handler removes ALL listeners for that event. Always pass specific handler references
-- Chain reaction tile snapshot: tiles snapshotted before processing detonations so chained bombs use original wall layout
+- Chain reaction tile snapshot: tiles snapshotted before processing detonations so chained bombs use original wall layout. Chain reactions always propagate regardless of remote detonate mode — FIFO "one at a time" is input-level only. `detonateBomb()` guards against stale references with `this.bombs.has()` check
 - Explosion damage cells exclude wall tiles — blast destroys walls but fire doesn't linger (prevents walk-into-destroyed-wall kills). Pierce bombs still damage through/beyond
 - Shield: no time limit, lasts until consumed. After break, 10 ticks invulnerability. Absorbs all damage sources
 - Game start: `room:start` uses atomic `START_ROOM_LUA` to prevent TOCTOU race. Cosmetics awaited before `game:start` broadcast
@@ -234,6 +234,8 @@ Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-sy
 - `Explosion.toState()` returns cells by reference — cells are immutable after construction
 - `mapEvents` serialization cached with dirty flag — only rebuilt when events change
 - Bomb slide position Sets only built when `hasSlidingBombs` is true (~5% of ticks)
+- **Explosion batching**: `AudioManager` coalesces same-frame explosion sounds into a single call with scaled intensity (1-3). `SoundGenerator.explosion()` takes `intensity` param — louder/deeper tone, same 8 audio nodes. Screen shake coalesced via `queueMicrotask` — one `cam.shake()` per frame using strongest params
+- **Particle budget**: `ExplosionRenderer.activeEmitterCount` tracks live emitters. Soft cap (20): reduced fire particles, no smoke. Hard cap (40): sprites only. Prevents frame drops during chain reactions
 - See [docs/performance-and-internals.md](docs/performance-and-internals.md)
 
 ## Internationalization (i18n)

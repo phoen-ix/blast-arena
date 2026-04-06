@@ -8,10 +8,14 @@ interface TrackedExplosion {
   fadingStarted: boolean;
 }
 
+const EMITTER_SOFT_CAP = 20;
+const EMITTER_HARD_CAP = 40;
+
 export class ExplosionRenderer {
   private scene: Phaser.Scene;
   private tracked: Map<string, TrackedExplosion> = new Map();
   public wrappingWorldSize: { w: number; h: number } | null = null;
+  private activeEmitterCount: number = 0;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -121,11 +125,12 @@ export class ExplosionRenderer {
           });
         }
 
-        if (settings.particles) {
-          const fireCount = 3 + Math.floor(Math.random() * 2);
+        if (settings.particles && this.activeEmitterCount < EMITTER_HARD_CAP) {
+          const isReduced = this.activeEmitterCount >= EMITTER_SOFT_CAP;
+          const fireCount = isReduced ? 2 : 3 + Math.floor(Math.random() * 2);
           const fireEmitter = this.scene.add.particles(pos.x, pos.y, 'particle_fire', {
             speed: { min: 50, max: 100 },
-            lifespan: 300,
+            lifespan: isReduced ? 200 : 300,
             scale: { start: 1, end: 0 },
             tint: [0xff6600, 0xff4400, 0xffaa00],
             emitting: false,
@@ -133,31 +138,37 @@ export class ExplosionRenderer {
           fireEmitter.setDepth(9);
           fireEmitter.explode(fireCount);
           emitters.push(fireEmitter);
+          this.activeEmitterCount++;
 
-          this.scene.time.delayedCall(400, () => {
+          this.scene.time.delayedCall(isReduced ? 300 : 400, () => {
             if (fireEmitter && fireEmitter.active) {
               fireEmitter.destroy();
             }
+            this.activeEmitterCount = Math.max(0, this.activeEmitterCount - 1);
           });
 
-          const smokeCount = 2 + Math.floor(Math.random() * 2);
-          const smokeEmitter = this.scene.add.particles(pos.x, pos.y, 'particle_smoke', {
-            speed: { min: 20, max: 40 },
-            lifespan: 600,
-            scale: { start: 1, end: 0.5 },
-            gravityY: -20,
-            alpha: { start: 0.5, end: 0 },
-            emitting: false,
-          });
-          smokeEmitter.setDepth(9);
-          smokeEmitter.explode(smokeCount);
-          emitters.push(smokeEmitter);
+          if (!isReduced) {
+            const smokeCount = 2 + Math.floor(Math.random() * 2);
+            const smokeEmitter = this.scene.add.particles(pos.x, pos.y, 'particle_smoke', {
+              speed: { min: 20, max: 40 },
+              lifespan: 600,
+              scale: { start: 1, end: 0.5 },
+              gravityY: -20,
+              alpha: { start: 0.5, end: 0 },
+              emitting: false,
+            });
+            smokeEmitter.setDepth(9);
+            smokeEmitter.explode(smokeCount);
+            emitters.push(smokeEmitter);
+            this.activeEmitterCount++;
 
-          this.scene.time.delayedCall(700, () => {
-            if (smokeEmitter && smokeEmitter.active) {
-              smokeEmitter.destroy();
-            }
-          });
+            this.scene.time.delayedCall(700, () => {
+              if (smokeEmitter && smokeEmitter.active) {
+                smokeEmitter.destroy();
+              }
+              this.activeEmitterCount = Math.max(0, this.activeEmitterCount - 1);
+            });
+          }
         }
 
         sprites.push(sprite);
@@ -181,6 +192,7 @@ export class ExplosionRenderer {
     for (const emitter of tracked.emitters) {
       if (emitter && emitter.active) {
         emitter.destroy();
+        this.activeEmitterCount = Math.max(0, this.activeEmitterCount - 1);
       }
     }
   }
@@ -190,5 +202,6 @@ export class ExplosionRenderer {
       this.destroyTracked(tracked);
     }
     this.tracked.clear();
+    this.activeEmitterCount = 0;
   }
 }

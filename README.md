@@ -201,7 +201,8 @@ Persistent bomb arena that serves as the default landing experience. Players aut
 - **Guest play**: Unauthenticated visitors can jump in immediately via the menu screen guest option
 - **Round cycle**: Configurable round duration (default 5 minutes) with freeze period between rounds and automatic map regeneration
 - **Live scoring**: Stats tracked in real-time with periodic database persistence
-- **Remote bombs**: Default to FIFO detonation (oldest first) in open world; toggle to all-at-once by pressing detonate with none placed
+- **Remote bombs**: Default to FIFO detonation (oldest first) in open world; toggle to all-at-once by pressing detonate with none placed. Chain reactions always propagate between adjacent bombs regardless of mode
+- **Explosion performance**: Audio batching (same-frame explosions → single louder sound), particle budget (graceful degradation with 20/40 emitter caps), screen shake coalescing
 - **Admin controls**: Server settings for enabling/disabling, round duration, and map configuration. Settings prefixed `open_world_` in the admin dashboard
 - **WIP items**: HUD round timer and leaderboard
 

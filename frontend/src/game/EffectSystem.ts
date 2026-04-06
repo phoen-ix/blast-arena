@@ -9,6 +9,9 @@ export class EffectSystem {
   private socketClient: SocketClient;
   private localPlayerId: number;
   private localPlayerAlive: boolean = true;
+  private pendingShakeIntensity: number = 0;
+  private pendingShakeDuration: number = 0;
+  private shakeScheduled: boolean = false;
 
   private explosionHandler:
     | ((data: { cells: { x: number; y: number }[]; ownerId: number }) => void)
@@ -153,11 +156,26 @@ export class EffectSystem {
     // Scale intensity inversely with distance
     const intensity = Math.max(0.003, 0.015 * (1 - tilesDist / 6));
     const duration = Math.max(80, 200 * (1 - tilesDist / 6));
-    cam.shake(duration, intensity);
 
-    // Flash for very close explosions
-    if (tilesDist <= 1.5) {
-      cam.flash(80, 255, 200, 100, true);
+    // Coalesce: keep the strongest shake, apply once per frame
+    if (intensity > this.pendingShakeIntensity) {
+      this.pendingShakeIntensity = intensity;
+      this.pendingShakeDuration = duration;
+    }
+
+    if (!this.shakeScheduled) {
+      this.shakeScheduled = true;
+      queueMicrotask(() => {
+        if (this.pendingShakeIntensity > 0) {
+          cam.shake(this.pendingShakeDuration, this.pendingShakeIntensity);
+          if (this.pendingShakeIntensity >= 0.012) {
+            cam.flash(80, 255, 200, 100, true);
+          }
+        }
+        this.pendingShakeIntensity = 0;
+        this.pendingShakeDuration = 0;
+        this.shakeScheduled = false;
+      });
     }
   }
 

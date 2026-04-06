@@ -33,6 +33,7 @@ import { EnemyTextureGenerator } from '../game/EnemyTextureGenerator';
 import { EmoteBubbleRenderer } from '../game/EmoteBubble';
 import { EmoteWheel } from '../game/EmoteWheel';
 import { generateThemedTileTextures, generateHazardTileTextures } from '../utils/campaignThemes';
+import { trapFocus } from '../utils/html';
 import { MapEventRenderer } from '../game/MapEventRenderer';
 import {
   LocalCoopInput,
@@ -126,6 +127,7 @@ export class GameScene extends Phaser.Scene {
   // Campaign pause
   private paused: boolean = false;
   private pauseOverlay: HTMLElement | null = null;
+  private releaseFocusTrap: (() => void) | null = null;
   private pauseKeyHandler: ((e: KeyboardEvent) => void) | null = null;
 
   // Spectator mode
@@ -1536,6 +1538,17 @@ export class GameScene extends Phaser.Scene {
       this.hideLeaveOverlay();
     });
 
+    // Disable Phaser keyboard captures so keys reach DOM buttons
+    if (this.input.keyboard) this.input.keyboard.enabled = false;
+
+    // Keyboard focus trap and ARIA
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    this.releaseFocusTrap = trapFocus(overlay);
+    // Focus cancel button (safer default than destructive Leave)
+    const cancelBtn = overlay.querySelector<HTMLElement>('#leave-cancel');
+    if (cancelBtn) cancelBtn.focus();
+
     // Enable gamepad navigation for overlay buttons
     const gpNav = UIGamepadNavigator.getInstance();
     gpNav.setActive(true);
@@ -1593,6 +1606,14 @@ export class GameScene extends Phaser.Scene {
       this.scene.start('LobbyScene');
     });
 
+    // Disable Phaser keyboard captures so keys reach DOM buttons
+    if (this.input.keyboard) this.input.keyboard.enabled = false;
+
+    // Keyboard focus trap and ARIA
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    this.releaseFocusTrap = trapFocus(overlay);
+
     // Enable gamepad navigation for overlay buttons
     const gpNav = UIGamepadNavigator.getInstance();
     gpNav.setActive(true);
@@ -1605,6 +1626,12 @@ export class GameScene extends Phaser.Scene {
 
   private hidePauseOverlay(): void {
     if (this.pauseOverlay) {
+      if (this.releaseFocusTrap) {
+        this.releaseFocusTrap();
+        this.releaseFocusTrap = null;
+      }
+      // Re-enable Phaser keyboard captures
+      if (this.input.keyboard) this.input.keyboard.enabled = true;
       const gpNav = UIGamepadNavigator.getInstance();
       gpNav.popContext('pause-overlay');
       gpNav.popContext('leave-overlay');

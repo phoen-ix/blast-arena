@@ -1,21 +1,35 @@
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-/** Trap Tab focus within a modal element. Returns a cleanup function. */
+/** Trap Tab/Arrow focus within a modal element. Returns a cleanup function. */
 export function trapFocus(modal: HTMLElement): () => void {
   const handler = (e: KeyboardEvent) => {
-    if (e.key !== 'Tab') return;
     const focusable = Array.from(modal.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
       (el) => !el.hasAttribute('disabled') && el.offsetParent !== null,
     );
     if (focusable.length === 0) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
+
+    if (e.key === 'Tab') {
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    } else if (
+      e.key === 'ArrowUp' ||
+      e.key === 'ArrowDown' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight'
+    ) {
+      const idx = focusable.indexOf(document.activeElement as HTMLElement);
+      if (idx < 0) return;
       e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
+      const dir = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1;
+      const next = (idx + dir + focusable.length) % focusable.length;
+      focusable[next].focus();
     }
   };
   modal.addEventListener('keydown', handler);

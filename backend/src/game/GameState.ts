@@ -2016,6 +2016,7 @@ export class GameStateManager {
   }
 
   private detonateBomb(bomb: Bomb, tileSnapshot?: TileType[][]): void {
+    if (!this.bombs.has(bomb.id)) return; // Already detonated by chain reaction
     this.bombs.delete(bomb.id);
 
     // Return bomb count to player
@@ -2074,15 +2075,10 @@ export class GameStateManager {
     }
 
     // Chain reaction: detonate other bombs caught in explosion
-    // In FIFO mode, skip chain-detonating other remote bombs from the same player
-    const fifoOwner =
-      owner && owner.remoteDetonateMode === 'fifo' && bomb.bombType === 'remote' ? owner.id : -1;
     const cellSet = new Set(cells.map((c: { x: number; y: number }) => `${c.x},${c.y}`));
     const chainingBombs: Bomb[] = [];
     for (const otherBomb of this.bombs.values()) {
       if (cellSet.has(`${otherBomb.position.x},${otherBomb.position.y}`)) {
-        // Don't chain-detonate own remote bombs in FIFO mode
-        if (otherBomb.ownerId === fifoOwner && otherBomb.bombType === 'remote') continue;
         chainingBombs.push(otherBomb);
       }
     }

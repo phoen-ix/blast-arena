@@ -28,6 +28,9 @@ class AudioManagerImpl {
   private generator: SoundGenerator | null = null;
   private settings: AudioSettings;
   private initialized = false;
+  private explosionBatchCount: number = 0;
+  private explosionBatchTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastExplosionDistance: number = 0;
 
   constructor() {
     this.settings = this.loadSettings();
@@ -66,7 +69,19 @@ class AudioManagerImpl {
 
   explosion(distance?: number): void {
     if (!this.ensureResumed()) return;
-    this.generator!.explosion(distance);
+    // Batch same-frame explosions into a single louder sound
+    this.explosionBatchCount++;
+    if (distance !== undefined && distance < this.lastExplosionDistance) {
+      this.lastExplosionDistance = distance;
+    }
+    if (this.explosionBatchTimer !== null) return;
+    this.lastExplosionDistance = distance ?? 0;
+    this.explosionBatchTimer = setTimeout(() => {
+      this.explosionBatchTimer = null;
+      const intensity = Math.min(this.explosionBatchCount, 3);
+      this.generator!.explosion(this.lastExplosionDistance, intensity);
+      this.explosionBatchCount = 0;
+    }, 0);
   }
 
   bombPlace(): void {

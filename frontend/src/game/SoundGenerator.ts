@@ -82,19 +82,21 @@ export class SoundGenerator {
     source.start(now);
   }
 
-  /** Explosion — rumbling boom with noise burst */
-  explosion(distance: number = 0): void {
-    const vol = Math.max(0.05, 0.4 - distance * 0.03);
-    this.playNoise(0.4, vol, 0.35);
+  /** Explosion — rumbling boom with noise burst. Intensity 1-3 scales volume/pitch for batched blasts. */
+  explosion(distance: number = 0, intensity: number = 1): void {
+    const baseVol = Math.max(0.05, 0.4 - distance * 0.03);
+    const vol = Math.min(0.6, baseVol * Math.sqrt(intensity));
+    const pitchMod = 1 - (intensity - 1) * 0.15;
+    this.playNoise(0.4 + (intensity - 1) * 0.05, vol, 0.35);
     this.playTone({
-      frequency: 80,
+      frequency: 80 * pitchMod,
       type: 'sine',
-      duration: 0.3,
+      duration: 0.3 + (intensity - 1) * 0.05,
       volume: vol * 0.6,
       pitchSlide: -40,
     });
     this.playTone({
-      frequency: 150,
+      frequency: 150 * pitchMod,
       type: 'square',
       duration: 0.15,
       volume: vol * 0.3,
