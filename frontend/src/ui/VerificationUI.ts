@@ -10,7 +10,8 @@ export class VerificationUI {
   private notifications: NotificationUI;
   private onVerified: () => void;
   private checkInterval: ReturnType<typeof setInterval> | null = null;
-  private resendUsed = false;
+  private resendCount = 0;
+  private readonly maxResends = 3;
   private countdownInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(authManager: AuthManager, notifications: NotificationUI, onVerified: () => void) {
@@ -70,7 +71,7 @@ export class VerificationUI {
   }
 
   private async handleResend(): Promise<void> {
-    if (this.resendUsed) return;
+    if (this.resendCount >= this.maxResends) return;
 
     const emailInput = this.overlay.querySelector('#verify-email-input') as HTMLInputElement;
     const email = emailInput.value.trim();
@@ -84,17 +85,32 @@ export class VerificationUI {
 
     btn.disabled = true;
     try {
-      await ApiClient.post('/auth/resend-verification', { email }, true);
-      this.resendUsed = true;
+      const resp = await ApiClient.post<{ remainingResends: number }>(
+        '/auth/resend-verification',
+        { email },
+        true,
+      );
+      this.resendCount++;
+      const remaining = resp.remainingResends ?? this.maxResends - this.resendCount;
       statusEl.innerHTML = `<span class="text-success">${t('auth:verification.resent')}</span>`;
-      this.startResendCountdown(btn);
+      if (remaining <= 0) {
+        this.startResendCountdown(btn, true);
+      } else {
+        this.startResendCountdown(btn, false);
+      }
     } catch (err: unknown) {
-      statusEl.innerHTML = `<span class="text-danger">${getErrorMessage(err)}</span>`;
-      btn.disabled = false;
+      const msg = getErrorMessage(err);
+      if (msg.includes('Resend limit')) {
+        this.resendCount = this.maxResends;
+        btn.textContent = t('auth:verification.resendLimitReached');
+      } else {
+        statusEl.innerHTML = `<span class="text-danger">${msg}</span>`;
+        btn.disabled = false;
+      }
     }
   }
 
-  private startResendCountdown(btn: HTMLButtonElement): void {
+  private startResendCountdown(btn: HTMLButtonElement, isFinalResend: boolean): void {
     let remaining = 120;
     btn.textContent = t('auth:verification.resendCountdown', { seconds: remaining });
     this.countdownInterval = setInterval(() => {
@@ -104,7 +120,12 @@ export class VerificationUI {
           clearInterval(this.countdownInterval);
           this.countdownInterval = null;
         }
-        btn.textContent = t('auth:verification.resendLimitReached');
+        if (isFinalResend) {
+          btn.textContent = t('auth:verification.resendLimitReached');
+        } else {
+          btn.disabled = false;
+          btn.textContent = t('auth:verification.resend');
+        }
       } else {
         btn.textContent = t('auth:verification.resendCountdown', { seconds: remaining });
       }

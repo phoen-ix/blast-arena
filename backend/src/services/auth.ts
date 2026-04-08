@@ -304,7 +304,7 @@ export async function logout(refreshTokenValue: string): Promise<void> {
 export async function verifyEmail(token: string): Promise<void> {
   const tokenHash = hashToken(token);
   const result = await execute(
-    'UPDATE users SET email_verified = TRUE, email_verify_token = NULL WHERE email_verify_token = ?',
+    'UPDATE users SET email_verified = TRUE, email_verify_token = NULL, verification_resend_count = 0 WHERE email_verify_token = ?',
     [tokenHash],
   );
   if (result.affectedRows === 0) {
@@ -312,31 +312,43 @@ export async function verifyEmail(token: string): Promise<void> {
   }
 }
 
-export async function resendVerificationEmail(userId: number, email: string): Promise<void> {
+const MAX_VERIFICATION_RESENDS = 3;
+
+export async function resendVerificationEmail(
+  userId: number,
+  email: string,
+): Promise<{ remainingResends: number }> {
   const config = getConfig();
   const normalizedEmail = email.toLowerCase().trim();
   const emailHash = hashEmail(normalizedEmail, config.EMAIL_PEPPER);
 
   const rows = await query<UserRow[]>(
-    'SELECT id, email_hash, email_verified, language FROM users WHERE id = ? AND email_hash = ?',
+    'SELECT id, email_hash, email_verified, language, verification_resend_count FROM users WHERE id = ? AND email_hash = ?',
     [userId, emailHash],
   );
   if (rows.length === 0) {
     // Email doesn't match — return silently to avoid enumeration
-    return;
+    return { remainingResends: 0 };
   }
   const user = rows[0];
   if (user.email_verified) {
-    return;
+    return { remainingResends: 0 };
+  }
+
+  const resendCount = user.verification_resend_count ?? 0;
+  if (resendCount >= MAX_VERIFICATION_RESENDS) {
+    throw new AppError('Resend limit reached', 429, 'RESEND_LIMIT_REACHED');
   }
 
   const newToken = generateToken();
-  await execute('UPDATE users SET email_verify_token = ? WHERE id = ?', [
-    hashToken(newToken),
-    userId,
-  ]);
+  await execute(
+    'UPDATE users SET email_verify_token = ?, verification_resend_count = verification_resend_count + 1 WHERE id = ?',
+    [hashToken(newToken), userId],
+  );
 
   await sendVerificationEmail(normalizedEmail, newToken, user.language || 'en');
+
+  return { remainingResends: MAX_VERIFICATION_RESENDS - resendCount - 1 };
 }
 
 export async function forgotPassword(email: string): Promise<void> {

@@ -35,6 +35,7 @@ export interface UserRow extends RowDataPacket {
   pending_email_hint: string | null;
   email_change_token: string | null;
   email_change_expires: Date | null;
+  verification_resend_count: number;
 }
 
 /** Refresh token joined with user */

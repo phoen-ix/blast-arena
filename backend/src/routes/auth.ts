@@ -159,8 +159,14 @@ router.post(
       if (!email || typeof email !== 'string') {
         return res.status(400).json({ error: 'Email is required' });
       }
-      await authService.resendVerificationEmail(req.user!.userId, email);
-      res.json({ message: 'If the email matches, a new verification link has been sent' });
+      const { remainingResends } = await authService.resendVerificationEmail(
+        req.user!.userId,
+        email,
+      );
+      res.json({
+        message: 'If the email matches, a new verification link has been sent',
+        remainingResends,
+      });
     } catch (err) {
       next(err);
     }
