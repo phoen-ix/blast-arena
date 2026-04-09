@@ -1,6 +1,6 @@
 import { NotificationUI } from './NotificationUI';
 import { ApiClient } from '../network/ApiClient';
-import { escapeHtml } from '../utils/html';
+import { escapeHtml, escapeAttr } from '../utils/html';
 import { drawPlayerSprite, getPlayerColorHex } from '../utils/playerCanvas';
 import { t } from '../i18n';
 import type { PublicProfile, AchievementProgress } from '@blast-arena/shared';
@@ -266,7 +266,7 @@ export class ProfilePanel {
   private renderActions(p: PublicProfile): string {
     return `
       <div class="profile-actions">
-        <button class="profile-add-friend btn btn-primary" data-user-id="${p.id}" data-username="${escapeHtml(p.username)}">
+        <button class="profile-add-friend btn btn-primary" data-user-id="${p.id}" data-username="${escapeAttr(p.username)}">
           ${t('ui:profile.addFriend')}
         </button>
       </div>`;

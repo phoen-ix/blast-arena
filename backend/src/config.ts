@@ -13,7 +13,7 @@ const configSchema = z.object({
   REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z.coerce.number().default(6379),
 
-  JWT_SECRET: z.string().min(16),
+  JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
@@ -53,6 +53,19 @@ export function loadConfig(): Config {
     }
     process.exit(1);
   }
+
+  // Validate SMTP fields are either all set or all empty
+  const { SMTP_HOST, SMTP_USER, SMTP_PASSWORD } = result.data;
+  const smtpFields = [SMTP_HOST, SMTP_USER, SMTP_PASSWORD];
+  const hasAny = smtpFields.some((f) => f.length > 0);
+  const hasAll = smtpFields.every((f) => f.length > 0);
+  if (hasAny && !hasAll) {
+    console.error(
+      'Invalid configuration: SMTP_HOST, SMTP_USER, and SMTP_PASSWORD must all be set together',
+    );
+    process.exit(1);
+  }
+
   config = result.data;
   return config;
 }

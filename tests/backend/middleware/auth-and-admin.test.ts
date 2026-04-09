@@ -7,7 +7,7 @@ jest.mock('jsonwebtoken', () => ({
 
 jest.mock('../../../backend/src/config', () => ({
   getConfig: () => ({
-    JWT_SECRET: 'test-secret-key-min16',
+    JWT_SECRET: 'test-secret-key-that-is-at-least-32-chars-long',
   }),
 }));
 
@@ -55,9 +55,7 @@ describe('Auth & Admin Middleware', () => {
       authMiddleware(mockReq, mockRes as any, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({ code: 'UNAUTHORIZED' }),
-      );
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'UNAUTHORIZED' }));
       expect(mockNext).not.toHaveBeenCalled();
     });
 
@@ -79,9 +77,7 @@ describe('Auth & Admin Middleware', () => {
       authMiddleware(mockReq, mockRes as any, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({ code: 'INVALID_TOKEN' }),
-      );
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'INVALID_TOKEN' }));
       expect(mockNext).not.toHaveBeenCalled();
     });
 
@@ -123,9 +119,7 @@ describe('Auth & Admin Middleware', () => {
       staffMiddleware(mockReq, mockRes as any, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(403);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({ code: 'FORBIDDEN' }),
-      );
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'FORBIDDEN' }));
       expect(mockNext).not.toHaveBeenCalled();
     });
 
@@ -155,9 +149,7 @@ describe('Auth & Admin Middleware', () => {
       adminOnlyMiddleware(mockReq, mockRes as any, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(403);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({ code: 'FORBIDDEN' }),
-      );
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'FORBIDDEN' }));
       expect(mockNext).not.toHaveBeenCalled();
     });
 

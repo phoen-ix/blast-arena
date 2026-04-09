@@ -41,10 +41,15 @@ export function rateLimiter(config: RateLimitConfig) {
     const windowSeconds = Math.ceil(config.windowMs / 1000);
 
     try {
-      const current = await redis.incr(key);
-      if (current === 1) {
-        await redis.expire(key, windowSeconds);
-      }
+      // Atomic INCR + EXPIRE via Lua to prevent orphaned keys on crash
+      const current = (await redis.eval(
+        `local c = redis.call('INCR', KEYS[1])
+if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+return c`,
+        1,
+        key,
+        windowSeconds,
+      )) as number;
 
       if (current > config.maxRequests) {
         const ttl = await redis.ttl(key);
@@ -60,7 +65,10 @@ export function rateLimiter(config: RateLimitConfig) {
       next();
     } catch {
       // Redis unavailable — fall back to in-memory rate limiting
-      logger.warn({ ip, path: req.path }, 'Redis unavailable for rate limiting, using in-memory fallback');
+      logger.warn(
+        { ip, path: req.path },
+        'Redis unavailable for rate limiting, using in-memory fallback',
+      );
       if (fallbackCheck(key, config)) {
         next();
       } else {

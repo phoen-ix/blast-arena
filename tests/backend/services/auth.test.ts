@@ -34,7 +34,7 @@ jest.mock('../../../backend/src/services/email', () => ({
 
 jest.mock('../../../backend/src/config', () => ({
   getConfig: () => ({
-    JWT_SECRET: 'test-secret-key-min16',
+    JWT_SECRET: 'test-secret-key-that-is-at-least-32-chars-long',
     JWT_EXPIRES_IN: '15m',
     JWT_REFRESH_EXPIRES_IN: '7d',
     EMAIL_PEPPER: 'test-pepper-minimum-32-characters-long',

@@ -154,7 +154,7 @@ class OpenWorldManager {
       playerData.kills = 0;
       playerData.deaths = 0;
       playerData.score = 0;
-      playerData.joinTick = 0;
+      playerData.joinTick = this.gameState.tick;
     }
 
     this.freezeTick = null;

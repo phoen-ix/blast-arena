@@ -3,6 +3,11 @@ services:
     image: mariadb:11
     container_name: ${COMPOSE_PROJECT_NAME:-blast-arena}-db
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
       MYSQL_DATABASE: ${DB_NAME:-blast_arena}
@@ -51,6 +56,11 @@ services:
       dockerfile: docker/backend/Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME:-blast-arena}-backend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
     environment:
       NODE_ENV: production
       DB_HOST: db
@@ -103,7 +113,9 @@ services:
       driver: json-file
       options:
         max-size: "100m"
-        max-file: "3"
+        max-file: "5"
+    # Note: data/gamelogs volume has no Docker-level rotation — game log cleanup
+    # is handled by the application (GameLogger) via file count limits
 
   nginx:
     build:
