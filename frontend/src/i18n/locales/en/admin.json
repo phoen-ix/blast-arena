@@ -28,6 +28,7 @@
       "wins": "Wins",
       "joined": "Joined",
       "lastLogin": "Last Login",
+      "twoFactor": "2FA",
       "actions": "Actions"
     },
     "roles": {
@@ -86,6 +87,16 @@
       "errorPasswordMismatch": "Passwords do not match",
       "successMessage": "Password reset for \"{{username}}\""
     },
+    "twoFactorOn": "Enabled",
+    "resetTotp": "Reset 2FA",
+    "resetTotpModal": {
+      "ariaLabel": "Reset Two-Factor Authentication",
+      "title": "Reset 2FA",
+      "description": "This will disable two-factor authentication for <strong style=\"color:var(--text);\">{{username}}</strong>. They will need to set it up again to re-enable 2FA.",
+      "cancel": "Cancel",
+      "confirm": "Reset 2FA"
+    },
+    "resetTotpSuccess": "Two-factor authentication reset",
     "roleChangeSuccess": "Role changed to {{role}}",
     "deactivateSuccess": "User deactivated",
     "reactivateSuccess": "User reactivated",

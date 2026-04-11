@@ -105,7 +105,7 @@ Admin-configurable achievement system with four condition types: cumulative stat
 | Tab | Access | Key Features |
 |-----|--------|-------------|
 | Dashboard | Admin | Stats, server settings (recordings, registration, email/SMTP, chat modes, XP multiplier, default theme, GitHub/imprint display), game/simulation defaults (incl. puzzle tiles, spectator actions), revoke all sessions |
-| Users | Staff | Search, roles, deactivate, delete (simple confirmation), password reset, revoke sessions, bulk account cleanup (unverified/inactive/deactivated) |
+| Users | Staff | Search, roles, deactivate, delete (simple confirmation), password reset, revoke sessions, 2FA status & reset, bulk account cleanup (unverified/inactive/deactivated) |
 | Matches | Staff | History, per-player stats, replay viewer, delete |
 | Rooms | Staff | Live rooms, spectate, kick, force close |
 | Logs | Admin | Audit trail with filters, click-to-expand detail rows |
@@ -135,7 +135,7 @@ All actions audit-logged. See [docs/admin-and-systems.md](docs/admin-and-systems
 - **Rematch Voting**: After game over, players vote for rematch. >50% triggers auto-restart with same settings. 30s timeout. Solo games (1 human + bots) show direct "Play Again" button instead of voting.
 - **Admin Chat Controls**: All chat features (party chat, lobby chat, DMs, emotes, spectator chat) individually configurable: everyone (default), staff only, admin only, or fully disabled.
 - **Imprint & GitHub**: Admin-toggled links displayed on the login page footer and as right-aligned items in the Help tab bar. Imprint text editable in Dashboard; shown as modal on login, inline tab in Help. GitHub link opens repo in new tab.
-- **Two-Factor Authentication**: Optional TOTP 2FA in Settings > Account. Enable by scanning a QR code (or entering the secret manually) with any authenticator app (Google Authenticator, Authy, 1Password, etc.). 10 one-time backup codes provided during setup. Login prompts for 6-digit code when 2FA is active. Disable requires password + authenticator code. TOTP secrets encrypted at rest with AES-256-GCM.
+- **Two-Factor Authentication**: Optional TOTP 2FA in Settings > Account. Enable by scanning a QR code (or entering the secret manually) with any authenticator app (Google Authenticator, Authy, 1Password, etc.). 10 one-time backup codes provided during setup. Login prompts for 6-digit code when 2FA is active. Disable requires password + authenticator code. TOTP secrets encrypted at rest with AES-256-GCM. Admins can view 2FA status and reset a user's 2FA from the Users tab.
 - **Account Deletion**: Self-service account deletion in Settings > Account. Password confirmation required. Permanently removes all user data (stats, replays, maps, messages, friends). Admin accounts are protected from self-deletion.
 
 ## Game Replays

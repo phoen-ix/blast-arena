@@ -1007,6 +1007,17 @@ router.delete('/admin/users/:id', adminOnlyMiddleware, async (req, res, next) =>
   }
 });
 
+router.post('/admin/users/:id/reset-totp', adminOnlyMiddleware, async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+    await adminService.resetUserTotp(req.user!.userId, userId);
+    res.json({ message: 'User 2FA reset' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/admin/users/:id/revoke-sessions', adminOnlyMiddleware, async (req, res, next) => {
   try {
     const userId = parseInt(req.params.id);

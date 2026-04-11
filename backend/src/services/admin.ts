@@ -58,7 +58,7 @@ export async function listUsers(page: number = 1, limit: number = 20, search?: s
   const offset = (page - 1) * limit;
   let sql = `
     SELECT u.id, u.username, u.email_hint, u.role, u.email_verified,
-           u.is_deactivated, u.deactivated_at,
+           u.totp_enabled, u.is_deactivated, u.deactivated_at,
            u.last_login, u.created_at,
            COALESCE(s.total_matches, 0) as total_matches,
            COALESCE(s.total_wins, 0) as total_wins
@@ -239,6 +239,29 @@ export async function resetUserPassword(
   await execute(
     'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
     [adminId, 'reset_password', 'user', userId, rows[0].username],
+  );
+}
+
+export async function resetUserTotp(adminId: number, userId: number): Promise<void> {
+  const rows = await query<AdminUserRow[]>(
+    'SELECT id, username, totp_enabled FROM users WHERE id = ?',
+    [userId],
+  );
+  if (rows.length === 0) {
+    throw new AppError('User not found', 404, 'NOT_FOUND');
+  }
+  if (!rows[0].totp_enabled) {
+    throw new AppError('User does not have 2FA enabled', 400, 'TOTP_NOT_ENABLED');
+  }
+
+  await execute(
+    'UPDATE users SET totp_secret = NULL, totp_enabled = FALSE, totp_backup_codes = NULL WHERE id = ?',
+    [userId],
+  );
+
+  await execute(
+    'INSERT INTO admin_actions (admin_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+    [adminId, 'reset_totp', 'user', userId, rows[0].username],
   );
 }
 

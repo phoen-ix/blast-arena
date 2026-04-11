@@ -89,6 +89,7 @@ export class UsersTab {
               <th>${t('admin:users.tableHeaders.email')}</th>
               <th>${t('admin:users.tableHeaders.role')}</th>
               <th>${t('admin:users.tableHeaders.status')}</th>
+              <th>${t('admin:users.tableHeaders.twoFactor')}</th>
               <th>${t('admin:users.tableHeaders.matches')}</th>
               <th>${t('admin:users.tableHeaders.wins')}</th>
               <th>${t('admin:users.tableHeaders.joined')}</th>
@@ -105,6 +106,7 @@ export class UsersTab {
                 <td>${escapeHtml(u.email_hint)}</td>
                 <td><span class="badge badge-${u.role}">${u.role}</span></td>
                 <td>${this.statusBadge(u)}</td>
+                <td>${u.totp_enabled ? `<span class="badge badge-active">${t('admin:users.twoFactorOn')}</span>` : `<span style="color:var(--text-dim);">—</span>`}</td>
                 <td>${u.total_matches}</td>
                 <td>${u.total_wins}</td>
                 <td>${new Date(u.created_at).toLocaleDateString()}</td>
@@ -123,6 +125,7 @@ export class UsersTab {
                     </button>
                     <button class="btn-sm" style="background:var(--accent);color:var(--bg-deep);" data-action="resetpw" data-id="${u.id}" data-username="${escapeAttr(u.username)}">${t('admin:users.resetPw')}</button>
                     <button class="btn-sm" style="background:var(--warning);color:var(--bg-deep);" data-action="revoke-sessions" data-id="${u.id}">${t('admin:users.revokeSessions')}</button>
+                    ${u.totp_enabled ? `<button class="btn-sm" style="background:var(--info, var(--accent));color:var(--bg-deep);" data-action="reset-totp" data-id="${u.id}" data-username="${escapeAttr(u.username)}">${t('admin:users.resetTotp')}</button>` : ''}
                     <button class="btn-danger btn-sm" data-action="delete" data-id="${u.id}" data-username="${escapeAttr(u.username)}">${t('admin:users.delete')}</button>
                   `
                       : ''
@@ -175,6 +178,8 @@ export class UsersTab {
       this.showResetPasswordModal(parseInt(id), target.dataset.username || '');
     } else if (action === 'revoke-sessions') {
       await this.doRevokeSessions(parseInt(id));
+    } else if (action === 'reset-totp') {
+      this.showResetTotpModal(parseInt(id), target.dataset.username || '');
     } else if (action === 'delete') {
       this.showDeleteModal(parseInt(id), target.dataset.username || '');
     }
@@ -509,6 +514,38 @@ export class UsersTab {
     try {
       await ApiClient.post(`/admin/users/${userId}/revoke-sessions`, {});
       this.notifications.success(t('admin:users.revokeSessionsSuccess'));
+    } catch (err: unknown) {
+      this.notifications.error(getErrorMessage(err));
+    }
+  }
+
+  private showResetTotpModal(userId: number, username: string): void {
+    const { overlay, content, close } = createModal({
+      ariaLabel: t('admin:users.resetTotpModal.ariaLabel'),
+      style: 'max-width:420px;',
+      parent: document.getElementById('ui-overlay')!,
+    });
+    content.innerHTML = `
+      <h2 style="margin-bottom:12px;color:var(--warning);">${t('admin:users.resetTotpModal.title')}</h2>
+      <p style="color:var(--text-dim);font-size:14px;">${t('admin:users.resetTotpModal.description', { username: escapeHtml(username) })}</p>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-secondary" id="reset-totp-cancel">${t('admin:users.resetTotpModal.cancel')}</button>
+        <button class="btn-warn" style="padding:8px 16px;font-size:14px;" id="reset-totp-confirm">${t('admin:users.resetTotpModal.confirm')}</button>
+      </div>
+    `;
+
+    overlay.querySelector('#reset-totp-cancel')!.addEventListener('click', close);
+    overlay.querySelector('#reset-totp-confirm')!.addEventListener('click', async () => {
+      close();
+      await this.doResetTotp(userId);
+    });
+  }
+
+  private async doResetTotp(userId: number): Promise<void> {
+    try {
+      await ApiClient.post(`/admin/users/${userId}/reset-totp`, {});
+      this.notifications.success(t('admin:users.resetTotpSuccess'));
+      await this.loadUsers();
     } catch (err: unknown) {
       this.notifications.error(getErrorMessage(err));
     }

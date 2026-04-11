@@ -455,6 +455,7 @@ export interface AdminUserRow extends RowDataPacket {
   email_hint: string;
   role: string;
   email_verified: boolean;
+  totp_enabled: boolean;
   is_deactivated: boolean;
   deactivated_at: Date | null;
   last_login: Date | null;

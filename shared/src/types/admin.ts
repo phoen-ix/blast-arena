@@ -6,6 +6,7 @@ export interface AdminUserListItem {
   emailHint: string;
   role: UserRole;
   emailVerified: boolean;
+  twoFactorEnabled: boolean;
   isDeactivated: boolean;
   deactivatedAt: Date | null;
   lastLogin: Date | null;
