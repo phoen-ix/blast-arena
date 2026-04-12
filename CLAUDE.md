@@ -177,11 +177,12 @@ Persistent bomb arena as the default landing experience. Players auto-join on pa
 - **Stats**: Live score tracking with batched DB writes every `OPENWORLD_STATS_FLUSH_TICKS`, flushed on player leave
 - **Constants**: `shared/src/constants/openworld.ts`. Settings in `server_settings` table (keys prefixed `open_world_`)
 - **Admin**: `GET/PUT /admin/settings/open_world`, public status: `GET /admin/settings/open_world/status`
-- **Socket events**: `openworld:join` (with ack callback), `openworld:leave`, `openworld:input`, `openworld:state`, `openworld:info`, `openworld:roundEnd`, `openworld:roundStart`, `openworld:playerJoined`, `openworld:playerLeft`
+- **AFK timeout**: Configurable inactivity kick (default 60s, 0 = disabled). `OpenWorldPlayer.lastInputTick` updated on every input. `checkAfkPlayers()` runs every `OPENWORLD_AFK_CHECK_TICKS` (5s) in `onTick()`. Emits `openworld:afkKick` before removal; pending stats flushed so registered users keep earned XP. Admin setting `open_world_afk_timeout` in Dashboard, hot-reloadable. Migration 037
+- **Socket events**: `openworld:join` (with ack callback), `openworld:leave`, `openworld:input`, `openworld:state`, `openworld:info`, `openworld:roundEnd`, `openworld:roundStart`, `openworld:playerJoined`, `openworld:playerLeft`, `openworld:afkKick`
 - **Frontend**: `OpenWorldView` (ILobbyView), auto-joins via socket emit in `render()`. Uses static `import game from '../../main'` (not dynamic import). MenuScene shows guest play option when not authenticated. LobbyScene defaults to openWorld view
 - **GameScene**: Handles open world via `openWorldMode` flag — uses `openworld:state`/`openworld:input` events, no game-over flow. Camera uses shortest-path wrapping interpolation. Respawn exits spectator mode and snaps camera to new position
 - **Remote detonate**: Defaults to `'fifo'` mode in open world (oldest bomb first). Players can toggle to `'all'` by pressing detonate with no remote bombs placed
-- **Migration**: `033_open_world.sql` seeds settings into `server_settings`
+- **Migrations**: `033_open_world.sql` seeds settings into `server_settings`, `037_open_world_afk_timeout.sql` adds AFK timeout setting
 - **WIP items**: HUD round timer/leaderboard
 
 ## Game Reference

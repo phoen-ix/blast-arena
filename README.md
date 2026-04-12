@@ -204,7 +204,8 @@ Persistent bomb arena that serves as the default landing experience. Players aut
 - **Live scoring**: Stats tracked in real-time with periodic database persistence
 - **Remote bombs**: Default to FIFO detonation (oldest first) in open world; toggle to all-at-once by pressing detonate with none placed. Chain reactions always propagate between adjacent bombs regardless of mode
 - **Explosion performance**: Audio batching (same-frame explosions → single louder sound), particle budget (graceful degradation with 20/40 emitter caps), screen shake coalescing, wrapped distance for accurate audio/shake near map edges
-- **Admin controls**: Server settings for enabling/disabling, round duration, and map configuration. Settings prefixed `open_world_` in the admin dashboard
+- **AFK timeout**: Idle players are automatically kicked after 60 seconds of inactivity (default). Admin-configurable (0-600s, 0 disables). Registered users keep earned XP on kick
+- **Admin controls**: Server settings for enabling/disabling, round duration, map configuration, and AFK timeout. Settings prefixed `open_world_` in the admin dashboard. All settings hot-reloadable
 - **WIP items**: HUD round timer and leaderboard
 
 ## Internationalization
