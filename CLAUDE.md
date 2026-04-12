@@ -213,7 +213,7 @@ Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-sy
 - OG image (`og-image.png`) deferred — meta tags reference it but file not yet created
 
 ## Security, Connection Resilience & Docker
-- HTTP security headers in `docker/nginx/security-headers.conf` (included per-location to avoid Nginx inheritance issues): CSP, HSTS, COOP, X-Frame-Options, X-Content-Type-Options
+- HTTP security headers in `docker/nginx/security-headers.conf` (included per-location to avoid Nginx inheritance issues): CSP (with `upgrade-insecure-requests`), HSTS, COOP, X-Frame-Options, X-Content-Type-Options
 - **Email hashing**: Emails never stored in plaintext. HMAC-SHA256 with `EMAIL_PEPPER` (env var, min 32 chars). DB stores `email_hash` (for lookups) + `email_hint` (masked display like `j***@g***.com`). Same pattern for `pending_email_hash`/`pending_email_hint`. Password reset and email change flows receive plaintext from user request, hash for DB lookup, send to provided address, then discard. `backfill-emails.ts` runs on startup to migrate any legacy plaintext rows. Admin email search: exact match only (hashed) when query contains `@`
 - **Email verification enforcement**: Users must verify email before accessing game features. Socket middleware queries DB for `email_verified` and rejects unverified users (`EMAIL_NOT_VERIFIED`). REST endpoints protected by `emailVerifiedMiddleware` (DB check, applied after `authMiddleware`). Exceptions: `GET /user/profile`, `PUT /user/language`, all auth routes. `PublicUser.emailVerified` field propagated through auth responses. `VerificationUI` shows pending screen with resend button (requires email input, validated against stored hash), auto-polls every 15s. `POST /auth/resend-verification` rate-limited to 1 request per 120s. Maximum 3 resends per account (tracked via `verification_resend_count` column, migration 034); backend returns 429 `RESEND_LIMIT_REACHED` when exhausted and `remainingResends` count on success. Frontend tracks resend count, re-enables button after 120s cooldown if resends remain, permanently disables on final resend or 429. Counter reset to 0 on successful verification. `GET /auth/verify-email/:token` redirects to `APP_URL?emailVerified=true`
 - **Email enumeration prevention**: Registration with an existing email returns generic 400 (not 409) and sends a warning email to the existing account owner. Email change with a taken address silently succeeds (no DB update) and sends a warning. Username conflicts remain explicit (usernames are public). Warning emails: `sendEmailTakenRegistrationWarning`, `sendEmailTakenChangeWarning`
@@ -225,7 +225,8 @@ Gzipped JSON replays with tile diffs. See [docs/replay-system.md](docs/replay-sy
 - **Local co-op P2 validation**: `campaign:start` requires a short-lived socket token (`local-coop-socket` purpose, 5min expiry) for positive P2 userIds. `GET /local-coop/socket-token` endpoint converts httpOnly cookie to JS-readable token. Invalid tokens fall back to guest (negative ID)
 - **Admin announcement rate limiting**: Toast/banner endpoints rate-limited to 10 req/min
 - **Markdown sanitization**: `DOMPurify.sanitize()` wraps all `marked.parse()` output in HelpUI
-- `room:create` validates `MatchConfig` via Zod schema
+- **Socket event validation**: `room:create` validates `MatchConfig` via Zod schema. `room:ready`, `admin:kick`, `admin:closeRoom` validated via Zod schemas in `socketValidation.ts`. `game:input` uses manual validation (hot path) with `Number.isFinite()` + non-negative bounds on `seq`/`tick`. `room:join` validates room code format (string, 1-20 chars)
+- **Socket rate limiting**: `socketRateLimit.ts` provides per-socket sliding window limiters. `lobbyActionLimiter` (5/sec) covers `room:ready`, `room:setTeam`, `room:setBotTeam`. `adminActionLimiter` (3/sec) covers `admin:kick`, `admin:closeRoom`. Plus existing `inputLimiter` (30/sec), `createLimiter` (2/sec), `joinLimiter` (5/sec), and per-IP variants
 - Health poll checks for `game-container` in body before triggering reload — prevents landing on 502.html during partial restarts
 - Game loop circuit breaker: stops after 10 consecutive tick failures
 - Frontend views use event delegation instead of per-render listener attachment
@@ -275,7 +276,7 @@ npm test                    # Run all workspace tests (backend + frontend)
 npx jest --config tests/backend/jest.config.ts  # Backend only (from project root)
 cd frontend && npx vitest run                   # Frontend only
 ```
-- 2408 tests: 2366 backend (Jest, 75 suites) + 42 frontend (Vitest, 3 suites)
+- 2412 tests: 2370 backend (Jest, 75 suites) + 42 frontend (Vitest, 3 suites)
 - See [docs/testing.md](docs/testing.md) for full inventory, mocking patterns, and guide for writing new tests
 
 ## Documentation

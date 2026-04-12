@@ -239,8 +239,9 @@ Full i18n support via [i18next](https://www.i18next.com/). All UI strings are ex
 - Self-hosted fonts (Chakra Petch + DM Sans) as woff2 in `frontend/public/fonts/`, critical fonts preloaded
 - SVG favicon, web app manifest (PWA-ready), robots.txt, sitemap.xml
 - Noscript fallback with branded content for JS-disabled crawlers
-- Full security header suite: CSP (with Trusted Types, script hashes, frame-ancestors), HSTS, COOP, X-Frame-Options, Permissions-Policy — all self-hosted, no external domains
+- Full security header suite: CSP (with Trusted Types, script hashes, frame-ancestors, upgrade-insecure-requests), HSTS, COOP, X-Frame-Options, Permissions-Policy — all self-hosted, no external domains
 - Nginx rate limiting: API (30r/s), Socket.io (10r/s), auth (5r/s) — defense-in-depth with Express middleware
+- Socket event validation: Zod schemas for room/admin events, bounds-checked game input, per-socket rate limiting on all lobby and admin actions
 - Modal focus trapping for WCAG 2.1 AA accessibility, keyboard-navigable interactive lists
 
 ## Tech Stack
@@ -252,7 +253,7 @@ Full i18n support via [i18next](https://www.i18next.com/). All UI strings are ex
 | Real-time | Socket.io |
 | Database | MariaDB 11 + Redis 7 |
 | Auth | JWT + bcrypt + httpOnly cookies, HMAC-SHA256 email hashing, email verification enforcement (max 3 resends), email enumeration prevention, optional TOTP 2FA |
-| Security | CSP + HSTS + COOP + Trusted Types, parameterized queries, nginx + Express rate limiting, Zod socket event validation, DOMPurify, email verification on REST + socket, atomic token operations, role-from-DB socket auth |
+| Security | CSP + HSTS + COOP + Trusted Types + upgrade-insecure-requests, parameterized queries, nginx + Express + socket rate limiting, Zod validation on REST + socket events, DOMPurify, email verification on REST + socket, atomic token operations, role-from-DB socket auth |
 | Validation | Zod |
 | Container | Docker Compose |
 
@@ -285,12 +286,12 @@ blast-arena/
 ## Testing & Linting
 
 ```bash
-npm test                    # Run all test suites (2407 tests)
+npm test                    # Run all test suites (2412 tests)
 npm run lint                # ESLint across all workspaces
 npm run format:check        # Prettier format check
 ```
 
-2407 tests across 78 suites: game logic (607), services (860), routes (547), handlers (62), middleware (55), simulation (69), utilities (165), frontend (42). See [docs/testing.md](docs/testing.md) for full test inventory, mocking patterns, and a guide for writing new tests.
+2412 tests across 78 suites: game logic (607), services (864), routes (547), handlers (62), middleware (55), simulation (69), utilities (166), frontend (42). See [docs/testing.md](docs/testing.md) for full test inventory, mocking patterns, and a guide for writing new tests.
 
 ## Documentation
 
