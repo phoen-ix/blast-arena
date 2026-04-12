@@ -51,6 +51,15 @@ export class OpenWorldView implements ILobbyView {
 
   async render(container: HTMLElement): Promise<void> {
     this.container = container;
+
+    // When auto-joining, hide the entire lobby UI so it doesn't flash over the canvas
+    // while waiting for the server response. Restored on error or when showing the lobby.
+    const willAutoJoin = !OpenWorldView.hasAutoJoined;
+    const appLayout = container.closest('.app-layout') as HTMLElement | null;
+    if (willAutoJoin && appLayout) {
+      appLayout.style.display = 'none';
+    }
+
     container.innerHTML = `<div class="panel-content" style="padding:2rem; text-align:center;">
       <p style="color:var(--text-muted); font-size:1.1rem;">${t('ui:openWorld.joining')}</p>
     </div>`;
@@ -67,6 +76,7 @@ export class OpenWorldView implements ILobbyView {
     }
 
     if (!status?.enabled) {
+      if (appLayout) appLayout.style.display = '';
       container.innerHTML = `
         <div class="panel-content" style="padding:2rem; text-align:center;">
           <p style="color:var(--text-muted); font-size:1.1rem;">${t('ui:openWorld.disabled')}</p>
@@ -78,7 +88,7 @@ export class OpenWorldView implements ILobbyView {
     this.bindSocketListeners();
     this.startTimerCountdown();
 
-    if (!OpenWorldView.hasAutoJoined) {
+    if (willAutoJoin) {
       // First visit this session — auto-join immediately
       OpenWorldView.hasAutoJoined = true;
       this.joinWorld();
@@ -124,9 +134,15 @@ export class OpenWorldView implements ILobbyView {
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
+  private restoreLobbyVisibility(): void {
+    const appLayout = this.container?.closest('.app-layout') as HTMLElement | null;
+    if (appLayout) appLayout.style.display = '';
+  }
+
   private joinWorld(): void {
     const socket = this.deps.socketClient.getSocket();
     if (!socket) {
+      this.restoreLobbyVisibility();
       this.showError('Not connected');
       return;
     }
@@ -143,7 +159,7 @@ export class OpenWorldView implements ILobbyView {
         game.registry.set('openWorldMode', true);
         game.registry.set('openWorldPlayerId', response.playerId);
 
-        // Clear DOM
+        // Remove all lobby DOM from the overlay so it doesn't cover the game canvas
         const uiOverlay = document.getElementById('ui-overlay');
         if (uiOverlay) {
           while (uiOverlay.firstChild) {
@@ -157,6 +173,7 @@ export class OpenWorldView implements ILobbyView {
           lobbyScene.scene.launch('HUDScene');
         }
       } else {
+        this.restoreLobbyVisibility();
         this.showError(response.error || 'Failed to join');
       }
     });
