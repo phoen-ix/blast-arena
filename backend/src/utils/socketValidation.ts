@@ -28,6 +28,20 @@ export const dmReadSchema = z.object({
   fromUserId: z.number().int().positive(),
 });
 
+export const readySchema = z.object({
+  ready: z.boolean(),
+});
+
+export const adminKickSchema = z.object({
+  roomCode: z.string().min(1).max(20),
+  userId: z.number().int().positive(),
+  reason: z.string().max(200).optional(),
+});
+
+export const adminCloseRoomSchema = z.object({
+  roomCode: z.string().min(1).max(20),
+});
+
 /**
  * Validate socket event data against a Zod schema.
  * Returns parsed data on success, or null on failure.

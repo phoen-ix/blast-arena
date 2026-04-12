@@ -53,13 +53,21 @@ export function createRateLimiters() {
   const inputLimiter = createSocketRateLimiter(30); // game:input — 30/sec (game is 20 tps)
   const createLimiter = createSocketRateLimiter(2); // room:create — 2/sec
   const joinLimiter = createSocketRateLimiter(5); // room:join — 5/sec
+  const lobbyActionLimiter = createSocketRateLimiter(5); // room:ready, setTeam, setBotTeam — 5/sec
+  const adminActionLimiter = createSocketRateLimiter(3); // admin:kick, admin:closeRoom — 3/sec
 
   // Per-IP limiters (higher limits — multiple legitimate users can share an IP)
   const ipInputLimiter = createSocketRateLimiter(100); // game:input — 100/sec per IP
   const ipCreateLimiter = createSocketRateLimiter(5); // room:create — 5/sec per IP
   const ipJoinLimiter = createSocketRateLimiter(10); // room:join — 10/sec per IP
 
-  const perSocketLimiters: SocketRateLimiter[] = [inputLimiter, createLimiter, joinLimiter];
+  const perSocketLimiters: SocketRateLimiter[] = [
+    inputLimiter,
+    createLimiter,
+    joinLimiter,
+    lobbyActionLimiter,
+    adminActionLimiter,
+  ];
   const allLimiters: SocketRateLimiter[] = [
     ...perSocketLimiters,
     ipInputLimiter,
@@ -90,6 +98,8 @@ export function createRateLimiters() {
     ipInputLimiter: ipInputLimiter.isAllowed,
     ipCreateLimiter: ipCreateLimiter.isAllowed,
     ipJoinLimiter: ipJoinLimiter.isAllowed,
+    lobbyActionLimiter: lobbyActionLimiter.isAllowed,
+    adminActionLimiter: adminActionLimiter.isAllowed,
     removeSocket,
   };
 }

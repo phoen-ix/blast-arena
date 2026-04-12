@@ -18,6 +18,7 @@ import {
   UserRole,
   getErrorMessage,
   EMOTES,
+  EMOTE_COOLDOWN_MS,
 } from '@blast-arena/shared';
 import {
   setupFriendHandlers,
@@ -43,6 +44,9 @@ import {
   rematchVoteSchema,
   setBotTeamSchema,
   setTeamSchema,
+  readySchema,
+  adminKickSchema,
+  adminCloseRoomSchema,
 } from './utils/socketValidation';
 import { query } from './db/connection';
 import { UserRow } from './db/types';
@@ -56,7 +60,6 @@ type TypedServer = Server<
   SocketData
 >;
 
-const EMOTE_COOLDOWN_MS = 3000;
 const REMATCH_VOTE_TIMEOUT_MS = 30000;
 const ROOM_CLEANUP_INTERVAL_MS = 30000;
 
@@ -163,7 +166,14 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
   const roomManager = new RoomManager(io);
   setRegistry(roomManager, io);
-  const { inputLimiter, createLimiter, joinLimiter, removeSocket } = createRateLimiters();
+  const {
+    inputLimiter,
+    createLimiter,
+    joinLimiter,
+    lobbyActionLimiter,
+    adminActionLimiter,
+    removeSocket,
+  } = createRateLimiters();
 
   // Auth middleware — allows guest connections for open world
   io.use(async (socket, next) => {
@@ -379,6 +389,9 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
     // Join room
     socket.on('room:join', async (data, callback) => {
       if (!joinLimiter(socket.id)) return;
+      if (typeof data.code !== 'string' || data.code.length === 0 || data.code.length > 20) {
+        return callback({ success: false, error: 'Invalid room code' });
+      }
       try {
         await cleanupStaleRoom(socket);
 
@@ -455,14 +468,18 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Ready toggle
     socket.on('room:ready', async (data) => {
+      if (!lobbyActionLimiter(socket.id)) return;
       const roomCode = requireRoom(socket);
       if (!roomCode) return;
 
+      const parsed = validateSocket(readySchema, data);
+      if (!parsed) return;
+
       try {
-        await lobbyService.setPlayerReady(roomCode, socket.data.userId, data.ready);
+        await lobbyService.setPlayerReady(roomCode, socket.data.userId, parsed.ready);
         io.to(`room:${roomCode}`).emit('room:playerReady', {
           userId: socket.data.userId,
-          ready: data.ready,
+          ready: parsed.ready,
         });
       } catch (err: unknown) {
         socket.emit('error', { message: getErrorMessage(err) });
@@ -675,6 +692,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Set player team (host only, teams mode)
     socket.on('room:setTeam', async (data) => {
+      if (!lobbyActionLimiter(socket.id)) return;
       const roomCode = requireRoom(socket);
       if (!roomCode) return;
 
@@ -696,6 +714,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Set bot team (host only, teams mode)
     socket.on('room:setBotTeam', async (data) => {
+      if (!lobbyActionLimiter(socket.id)) return;
       const roomCode = requireRoom(socket);
       if (!roomCode) return;
 
@@ -725,7 +744,11 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
         typeof input !== 'object' ||
         input === null ||
         typeof input.seq !== 'number' ||
+        !Number.isFinite(input.seq) ||
+        input.seq < 0 ||
         typeof input.tick !== 'number' ||
+        !Number.isFinite(input.tick) ||
+        input.tick < 0 ||
         (input.direction !== null &&
           input.direction !== 'up' &&
           input.direction !== 'down' &&
@@ -859,34 +882,39 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Admin: kick player from room
     socket.on('admin:kick', async (data, callback) => {
+      if (!adminActionLimiter(socket.id))
+        return callback({ success: false, error: 'Rate limited' });
       if (socket.data.role !== 'admin' && socket.data.role !== 'moderator') {
         return callback({ success: false, error: 'Insufficient permissions' });
       }
 
-      const gameRoom = roomManager.getRoom(data.roomCode);
+      const parsed = validateSocket(adminKickSchema, data, callback);
+      if (!parsed) return;
+
+      const gameRoom = roomManager.getRoom(parsed.roomCode);
       if (gameRoom) {
-        gameRoom.handlePlayerDisconnect(data.userId);
+        gameRoom.handlePlayerDisconnect(parsed.userId);
       }
 
-      const room = await lobbyService.leaveRoom(data.roomCode, data.userId);
+      const room = await lobbyService.leaveRoom(parsed.roomCode, parsed.userId);
 
       // Find target socket and notify
-      const sockets = await io.in(`room:${data.roomCode}`).fetchSockets();
+      const sockets = await io.in(`room:${parsed.roomCode}`).fetchSockets();
       for (const s of sockets) {
-        if (s.data.userId === data.userId) {
-          s.emit('admin:kicked', { reason: data.reason || 'Kicked by admin' });
-          s.leave(`room:${data.roomCode}`);
+        if (s.data.userId === parsed.userId) {
+          s.emit('admin:kicked', { reason: parsed.reason || 'Kicked by admin' });
+          s.leave(`room:${parsed.roomCode}`);
         }
       }
 
       if (room) {
-        io.to(`room:${data.roomCode}`).emit('room:playerLeft', data.userId);
-        io.to(`room:${data.roomCode}`).emit('room:state', room);
+        io.to(`room:${parsed.roomCode}`).emit('room:playerLeft', parsed.userId);
+        io.to(`room:${parsed.roomCode}`).emit('room:state', room);
       }
       broadcastRoomList();
 
       logger.info(
-        { admin: socket.data.username, targetUserId: data.userId, roomCode: data.roomCode },
+        { admin: socket.data.username, targetUserId: parsed.userId, roomCode: parsed.roomCode },
         'Admin kicked player',
       );
       callback({ success: true });
@@ -894,32 +922,37 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
     // Admin: force close room
     socket.on('admin:closeRoom', async (data, callback) => {
+      if (!adminActionLimiter(socket.id))
+        return callback({ success: false, error: 'Rate limited' });
       if (socket.data.role !== 'admin') {
         return callback({ success: false, error: 'Admin access required' });
       }
 
+      const parsed = validateSocket(adminCloseRoomSchema, data, callback);
+      if (!parsed) return;
+
       // Notify all players in the room
-      io.to(`room:${data.roomCode}`).emit('admin:kicked', { reason: 'Room closed by admin' });
+      io.to(`room:${parsed.roomCode}`).emit('admin:kicked', { reason: 'Room closed by admin' });
 
       // Remove all sockets from the room
-      const sockets = await io.in(`room:${data.roomCode}`).fetchSockets();
+      const sockets = await io.in(`room:${parsed.roomCode}`).fetchSockets();
       for (const s of sockets) {
-        await lobbyService.leaveRoom(data.roomCode, s.data.userId);
-        s.leave(`room:${data.roomCode}`);
+        await lobbyService.leaveRoom(parsed.roomCode, s.data.userId);
+        s.leave(`room:${parsed.roomCode}`);
       }
 
       // Clear any pending rematch votes for this room
-      const existingVotes = rematchVotes.get(data.roomCode);
+      const existingVotes = rematchVotes.get(parsed.roomCode);
       if (existingVotes) {
         clearTimeout(existingVotes.timeout);
-        rematchVotes.delete(data.roomCode);
+        rematchVotes.delete(parsed.roomCode);
       }
 
-      roomManager.removeRoom(data.roomCode);
-      await lobbyService.deleteRoom(data.roomCode);
+      roomManager.removeRoom(parsed.roomCode);
+      await lobbyService.deleteRoom(parsed.roomCode);
       broadcastRoomList();
 
-      logger.info({ admin: socket.data.username, roomCode: data.roomCode }, 'Admin closed room');
+      logger.info({ admin: socket.data.username, roomCode: parsed.roomCode }, 'Admin closed room');
       callback({ success: true });
     });
 

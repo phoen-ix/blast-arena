@@ -18,7 +18,13 @@ const configSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
   EMAIL_PEPPER: z.string().min(32),
-  TOTP_ENCRYPTION_KEY: z.string().min(32).default(''),
+  TOTP_ENCRYPTION_KEY: z
+    .string()
+    .default('')
+    .refine(
+      (v) => v === '' || v.length >= 32,
+      'TOTP_ENCRYPTION_KEY must be at least 32 characters when set',
+    ),
 
   SMTP_HOST: z.string().default(''),
   SMTP_PORT: z.coerce.number().default(587),
@@ -65,6 +71,10 @@ export function loadConfig(): Config {
       'Invalid configuration: SMTP_HOST, SMTP_USER, and SMTP_PASSWORD must all be set together',
     );
     process.exit(1);
+  }
+
+  if (!result.data.TOTP_ENCRYPTION_KEY) {
+    console.warn('Warning: TOTP_ENCRYPTION_KEY not set — two-factor authentication is disabled');
   }
 
   config = result.data;
