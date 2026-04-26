@@ -23,9 +23,12 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Grid-based movement: players occupy exactly one tile at a time
 - Movement cooldown system (MOVE_COOLDOWN_BASE ticks, reduced by speed power-ups). Enemy speed uses divisor formula: `Math.round(MOVE_COOLDOWN_BASE / speed)`
 - JWT (access token in memory) + httpOnly cookie (refresh token) auth. Cookie `secure` flag derived from APP_URL (not NODE_ENV)
+- ApiClient 401 interceptor auto-refreshes via `fetchWithAuth()`; auth endpoints use `skipAuthRetry` to avoid infinite loops. Cached `refreshPromise` prevents concurrent refresh calls
 - Zod for request validation; `ApiClient` appends field-level `details` from validation errors
-- Redis room mutations use atomic Lua scripts. All game constants in `shared/src/constants/`
+- Redis room mutations use atomic inline Lua scripts in `services/lobby.ts` (`JOIN_ROOM_LUA`, `LEAVE_ROOM_LUA`, `SET_READY_LUA`, `SET_TEAM_LUA`, `START_ROOM_LUA`). `ROOM_TTL_SECONDS = 3600`
+- All game constants in `shared/src/constants/`
 - Bot players use negative IDs (-(i+1)) to avoid DB conflicts; skipped in DB writes
+- Socket.io listeners use one-shot pattern for `game:start` to prevent leaks across scene transitions
 - Singleplayer: 1 human + 1+ bots is enough to start a game
 - Friendly fire config: when OFF, same-team explosions don't damage teammates (self-damage still applies)
 - Map dimensions should be odd numbers for proper indestructible wall grid pattern
@@ -38,9 +41,9 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Sidebar & Views**: `.app-layout` with collapsible sidebar + `.main-content`. `ILobbyView` with `render()`/`destroy()`. All lobby views render in `.main-body`. Views with own sub-header hide `.main-header`
 - **UI conventions**: Unified CSS classes: `.panel-header`/`.panel-content`, `.tab-bar`/`.tab-item`, `.data-table`, `.form-grid`/`.form-group`/`.input`/`.select`, `.toggle-switch`, `.setting-row`, `.option-chip`, `.mini-stat`, `.modal-header`/`.modal-body`/`.modal-footer`, `.btn`/`.btn-primary`/`.btn-secondary`/`.btn-ghost`/`.btn-sm`
 - **Gamepad UI nav**: `UIGamepadNavigator` spatial navigation — new interactive elements need `.sidebar-nav-item`, `.room-card`, or `.messages-conv-item` classes
-- **Rendering**: All sprites procedurally generated in `BootScene.generateTextures()` — no external image assets. Power-up icons are procedural Canvas2D (`powerUpIcons.ts`) — no emoji `fillText`
-- **Audio**: Web Audio API procedural SFX via `AudioManager` singleton + `SoundGenerator`. No external audio files. Phaser runs with `noAudio: true`
-- **HUD**: DOM-based overlay in HUDScene.ts. Minimap maintains its own `minimapTiles` copy (seeded from `initialGameState` registry, updated via `tileDiffs`). Kill feed shows cause icons via `KillCause` type
+- **Rendering**: All sprites procedurally generated in `BootScene.generateTextures()` — no external image assets. `activeMoveAnim` Set on PlayerSprite prevents tween stacking. Power-up icons are procedural Canvas2D (`powerUpIcons.ts`) — no emoji `fillText`
+- **Audio**: Web Audio API procedural SFX via `AudioManager` singleton + `SoundGenerator`. No external audio files. Phaser runs with `noAudio: true`. Lazy `AudioContext` init on first user gesture (browser autoplay policy). `ensureResumed()` gates all sound playback
+- **HUD**: DOM-based overlay in HUDScene.ts. Minimap maintains its own `minimapTiles` copy (seeded from `initialGameState` registry in `create()`, updated via `tileDiffs`) — GameScene emits `stateUpdate` before HUDScene registers its listener, so HUD seeds from registry. Kill feed shows cause icons via `KillCause` type
 - **Phaser lifecycle**: `shutdown()` must be registered via `this.events.once('shutdown', this.shutdown, this)` — Phaser does NOT auto-call. Phaser reuses scene instances — constructor runs once, `create()` runs on every scene start. ALL session-specific properties MUST be reset at top of `create()`
 - **Real-time lobby**: Room list auto-updates via `room:list` socket broadcast on every room mutation
 
@@ -80,14 +83,14 @@ Full-screen panel for admin/moderator roles. `staffMiddleware` and `adminOnlyMid
 - **Simulations**: Admin-only batch runner. See [docs/admin-and-systems.md](docs/admin-and-systems.md#bot-simulation-system)
 
 ## Game Architecture
-- 20 tick/sec server game loop. processTick order: bot AI → inputs → movement → conveyors → bomb slide → bomb timers → explosions → collisions → power-ups → hazards → puzzle tiles → KOTH → map events → spectator actions → zone → deathmatch respawns → time → win check
-- Chain reaction tile snapshot: tiles snapshotted before processing detonations so chained bombs use original wall layout. Chain reactions always propagate regardless of remote detonate mode
+- 20 tick/sec server game loop. processTick order: bot AI → inputs → movement → conveyors → hazard slowdown (vine/mud/quicksand) → bomb timers/slide → detonations → explosion timers → collisions → power-ups → hazard damage (lava/spikes/etc) → puzzle tiles → KOTH → map events → spectator actions → zone → deathmatch respawns → time → win check
+- Chain reaction tile snapshot: tiles snapshotted before processing detonations so chained bombs use original wall layout. Chain reactions always propagate regardless of remote detonate mode. `detonateBomb()` guards against stale references with `this.bombs.has()` check
 - Explosion damage cells exclude wall tiles — blast destroys walls but fire doesn't linger. Pierce bombs still damage through/beyond
 - `SocketClient.off()` without a handler removes ALL listeners for that event. Always pass specific handler references
 - HUDScene listens for campaign state via Phaser event (`campaignStateUpdate`) — never register HUDScene on socket for `campaign:state`
 - Self-kills subtract 1 from kill score. Power-up drop on kill: weighted random from collected stack
 - Grace period: 30 ticks after win condition before status='finished'. Mid-game leave: `room:leave` kills immediately, disconnect uses 10s grace
-- Game start: `room:start` uses atomic Lua to prevent TOCTOU race
+- Game start: `room:start` uses atomic `START_ROOM_LUA` to prevent TOCTOU race
 
 ## Open World Mode (WIP)
 Persistent bomb arena as default landing experience. Players auto-join on page load.
